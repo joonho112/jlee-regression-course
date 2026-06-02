@@ -134,20 +134,26 @@ a {
   }
 }
 
-.navbar-dark .navbar-nav {
+// Navbar uses Bootstrap 5.3 `data-bs-theme="dark"` (NOT the legacy .navbar-dark
+// class), so scope to .navbar to actually hit the dark navbar's links.
+.navbar .navbar-nav {
   .nav-link {
     color: rgba(255, 255, 255, 0.85) !important;
-    transition: color 0.2s ease;
+    transition: color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: inset 0 -3px 0 transparent;   // reserve space so hover/active don't shift
 
     &:hover {
       color: #fff !important;
+      box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.35);
     }
   }
 
+  // current section: gold label + gold "you are here" underline
   .active > .nav-link,
   .nav-link.active {
     color: $warning !important;
     font-weight: 600;
+    box-shadow: inset 0 -3px 0 $warning;
   }
 }
 
