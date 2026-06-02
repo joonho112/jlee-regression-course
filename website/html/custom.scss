@@ -383,6 +383,36 @@ div.sidebar-item-container .active {
 }
 
 // ============================================
+// Content date banner (title-metadata.html partial)
+// ============================================
+
+.date-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.4rem 0 1rem;
+  padding: 0.35rem 0.9rem;
+  background-color: rgba($slate, 0.12);
+  color: $navy;                       // dark text on a light slate tint -> strong AA
+  border-radius: 2rem;
+  font-family: $headings-font-family; // Libre Franklin
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.date-banner-icon {
+  color: $slate;
+  flex-shrink: 0;
+  position: relative;
+  top: -0.5px;
+}
+
+.date-banner-text {
+  line-height: 1;
+}
+
+// ============================================
 // Schedule Page
 // ============================================
 
