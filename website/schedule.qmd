@@ -9,14 +9,8 @@ page-layout: full
 
 Here is the 15-week learning journey for **BER 640**. Each week pairs a lecture chapter with a hands-on R lab and (when due) homework, project milestones, and quizzes. Click a **topic** to open that week's page.
 
-::: {.callout-tip}
-## How to Read This Schedule
-
-- {{< fa book-open >}} **Lecture**: Read the textbook chapter(s)
-- {{< fa laptop-code >}} **Lab**: Complete the hands-on R tutorial
-- {{< fa pencil >}} **Homework**: Submit assignments (when due)
-- {{< fa clipboard-list >}} **Project**: Submit project deliverables (when due)
-- {{< fa circle-check >}} **Quiz**: Take the module quiz (when due)
+::: {.schedule-legend}
+[How to read:]{.schedule-legend-title} {{< fa book-open >}} Lecture &nbsp;·&nbsp; {{< fa laptop-code >}} Lab &nbsp;·&nbsp; {{< fa pencil >}} Homework &nbsp;·&nbsp; {{< fa clipboard-list >}} Project &nbsp;·&nbsp; {{< fa circle-check >}} Quiz
 :::
 
 ```{ojs}
@@ -75,7 +69,7 @@ scheduleTable = {
       ${comps.map((c) => html`<td class="sched-${c.key}">${cell(d[c.key])}</td>`)}
     </tr>`);
   }
-  return html`<table class="schedule-table table">
+  const table = html`<table class="schedule-table table">
     <thead><tr>
       <th class="sched-week">Wk</th>
       <th class="sched-date">Date</th>
@@ -84,6 +78,7 @@ scheduleTable = {
     </tr></thead>
     <tbody>${body}</tbody>
   </table>`;
+  return html`<div class="schedule-scroll">${table}</div>`;
 }
 ```
 

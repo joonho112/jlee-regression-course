@@ -435,6 +435,86 @@ body.nav-sidebar main.content {
   }
 }
 
+// Compact icon legend ("How to read")
+.schedule-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.6rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0.7rem 1rem;
+  background-color: $gray-50;
+  border: 1px solid $gray-200;
+  border-left: 4px solid $accent;
+  border-radius: 0.4rem;
+  font-size: 0.92rem;
+  color: $gray-700;
+
+  i { color: $slate; margin-right: 0.2rem; }
+}
+
+.schedule-legend-title {
+  font-weight: 700;
+  color: $primary;
+  margin-right: 0.3rem;
+}
+
+// Horizontal scroll wrapper for the data-driven schedule table on small screens
+.schedule-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1rem 0 2rem;
+  border: 1px solid $gray-200;
+  border-radius: 0.5rem;
+}
+
+.schedule-table {
+  width: 100%;
+  min-width: 720px;           // forces horizontal scroll < this width
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+
+  thead th {
+    background-color: $primary;   // navy header
+    color: #fff;
+    font-weight: 600;
+    padding: 0.6rem 0.75rem;
+    white-space: nowrap;
+    border: none;
+    i { margin-right: 0.25rem; opacity: 0.9; }
+  }
+
+  tbody td {
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid $gray-200;
+    vertical-align: top;
+  }
+
+  // module group-header row
+  .sched-group th {
+    background-color: rgba($slate, 0.12);
+    color: $primary;
+    font-family: $headings-font-family;
+    font-weight: 700;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 2px solid $accent;
+  }
+
+  tbody tr:not(.sched-group):hover td {
+    background-color: $gray-50;
+  }
+
+  .sched-week { text-align: center; width: 3rem; }
+  .sched-date { white-space: nowrap; width: 5.5rem; }
+  td.sched-week { font-weight: 600; color: $gray-700; }
+  td.sched-date { color: $gray-600; }
+  .sched-topic a { font-weight: 600; }
+  .sched-empty { color: $gray-300; }
+}
+
 .table thead {
   background-color: $primary;
   color: #fff;
