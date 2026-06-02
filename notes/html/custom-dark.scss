@@ -10,6 +10,14 @@
 
 /*-- scss:rules --*/
 
+@import "brand-rules";   // shared theme-agnostic structural rules
+
+// ===== Step 1.6 — heading rhythm (dark colors) =====
+h1, h2, h3, h4, h5, h6 { color: #7FB3D5; }         // lightened slate-blue for dark contrast
+h2 { border-bottom-color: #3a3f44; }               // dark grey underline
+h6 { color: #9ca3af; }
+:not(pre) > code { background-color: #2b2f33; color: #e3e6e8; }
+
 // ===== Step 1.5 — four-color callout legend re-tint (dark) =====
 // Stronger tints + lighter edge colors so callouts read against the dark surface.
 .callout-note      { border-left-color: #9b6fae !important; background-color: rgba(146, 107, 160, 0.16); }  // plum (light)

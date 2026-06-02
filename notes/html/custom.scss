@@ -18,6 +18,14 @@ $code-color: $gray-900;
 
 /*-- scss:rules --*/
 
+@import "brand-rules";   // shared theme-agnostic structural rules
+
+// ===== Step 1.6 — heading rhythm (light colors) =====
+h1, h2, h3, h4, h5, h6 { color: $primary; }       // navy headings
+h2 { border-bottom-color: $gray-200; }             // subtle grey underline
+h6 { color: $gray-600; }
+:not(pre) > code { background-color: $gray-100; color: $gray-900; }
+
 // ===== Step 1.5 — four-color callout legend re-tint (Cividis Ink, light) =====
 // Semantic legend (fixed): note=Theory, tip=Practical, warning=Pitfall, important=Key Takeaway.
 div.callout { margin: 1.4rem 0; border-radius: 0.3rem; }
