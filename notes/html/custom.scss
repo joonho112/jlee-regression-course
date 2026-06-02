@@ -19,6 +19,16 @@ $code-color: $gray-900;
 /*-- scss:rules --*/
 
 @import "brand-rules";   // shared theme-agnostic structural rules
+@import "components";    // pedagogical component taxonomy (Phase 2)
+
+// ===== Step 2.1 — light surface CSS variables (consumed by components) =====
+:root {
+  --surface:     #{$gray-50};
+  --surface-2:   #ffffff;
+  --border:      #{$gray-200};
+  --muted:       #{$gray-600};
+  --accent-tint: rgba(44, 110, 145, 0.05);
+}
 
 // ===== Step 1.6 — heading rhythm (light colors) =====
 h1, h2, h3, h4, h5, h6 { color: $primary; }       // navy headings

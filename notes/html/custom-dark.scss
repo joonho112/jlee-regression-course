@@ -11,6 +11,16 @@
 /*-- scss:rules --*/
 
 @import "brand-rules";   // shared theme-agnostic structural rules
+@import "components";    // pedagogical component taxonomy (Phase 2)
+
+// ===== Step 2.1 — dark surface CSS variables =====
+:root {
+  --surface:     #26292c;
+  --surface-2:   #2b2f33;
+  --border:      #3a3f44;
+  --muted:       #a8b0b8;
+  --accent-tint: rgba(127, 179, 213, 0.08);
+}
 
 // ===== Step 1.6 — heading rhythm (dark colors) =====
 h1, h2, h3, h4, h5, h6 { color: #7FB3D5; }         // lightened slate-blue for dark contrast

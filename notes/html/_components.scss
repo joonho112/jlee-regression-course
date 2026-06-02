@@ -1,0 +1,97 @@
+// =====================================================================
+// BER 640 lecture-notes book — pedagogical component taxonomy (Phase 2)
+// =====================================================================
+// Shared, @imported into BOTH theme layers. Structure + brand-token accents live here;
+// surfaces use theme CSS variables (--surface / --surface-2 / --border / --muted) that
+// custom.scss (light) and custom-dark.scss (dark) each define, so one ruleset serves both
+// themes without forcing a light background into dark mode.
+//
+// Taxonomy (fenced divs authored as ::: {.class} in chapters):
+//   .objectives        chapter-opening advance organizer
+//   .summary           chapter-closing recap card (GLM-ladder line)
+//   .worked-example    numbered "Example N.M" box that WRAPS the 3-tab panel
+//   .your-turn         inline guided-practice prompt (+ collapsible solution)
+//   .exercises         end-of-chapter exercise container (numbering in Step 2.6)
+//   .assumption-check  "check the assumptions" box
+//   .interpretation    "how to read this" box
+//   .pitfall           common-mistake box
+//   .pronunciation     Greek-letter / term pronunciation aside
+
+// ---- shared primitives ----
+@mixin box-base {
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--surface-2);
+  padding: 1rem 1.25rem;
+  margin: 1.6rem 0;
+}
+@mixin box-label($color) {
+  font-family: $headings-font-family;
+  font-weight: 700;
+  color: $color;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// ---- .objectives (advance organizer) ----
+.objectives {
+  @include box-base;
+  border-left: 5px solid $navy;
+  background: var(--surface);
+  h4, .obj-title { @include box-label($navy); margin: 0.1rem 0 0.5rem; font-size: 1.05rem; }
+  ul { margin: 0.3rem 0 0.6rem; padding-left: 1.2rem; }
+  .ladder { font-size: 0.93rem; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 0.55rem; margin-top: 0.4rem;
+    b { color: $slate; } }
+  .meta { font-size: 0.85rem; color: var(--muted); margin-top: 0.45rem; }
+}
+
+// ---- .summary (chapter recap card) ----
+.summary {
+  @include box-base;
+  border-top: 4px solid $teal;
+  background: var(--surface);
+  h3, .sum-title { @include box-label($navy); margin-top: 0; font-size: 1.2rem; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1.6rem; }
+  h5 { font-family: $headings-font-family; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0.6rem 0 0.25rem; }
+  .glm { border-top: 1px dashed var(--border); padding-top: 0.6rem; margin-top: 0.5rem; font-size: 0.95rem;
+    b { color: $teal; } }
+}
+@media (max-width: 900px) { .summary .summary-grid { grid-template-columns: 1fr; } }
+
+// ---- .worked-example (wraps the 3-tab panel) ----
+.worked-example {
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  overflow: hidden;
+  margin: 1.7rem 0;
+  background: var(--surface-2);
+  > .wex-header, > p:first-child:has(strong) { background: $navy; color: #fff; padding: 0.7rem 1.1rem; margin: 0; font-family: $headings-font-family; }
+  .wex-tag { font-weight: 700; }
+  // the panel-tabset inside is styled in Step 2.2
+}
+
+// ---- .your-turn (guided practice) ----
+.your-turn {
+  border: 1px dashed $slate;
+  border-radius: 0.35rem;
+  background: var(--accent-tint);
+  padding: 0.75rem 1.1rem;
+  margin: 1.5rem 0;
+  .yt-title { @include box-label($slate); font-size: 0.92rem; }
+  .badge-r { font-family: $headings-font-family; font-size: 0.66rem; font-weight: 700; background: $slate; color: #fff; padding: 0.08rem 0.45rem; border-radius: 0.6rem; letter-spacing: 0.03em; }
+  details { margin-top: 0.5rem; }
+  summary { cursor: pointer; color: $slate; font-weight: 600; font-size: 0.92rem; }
+}
+
+// ---- supporting boxes: .assumption-check / .interpretation / .pitfall / .pronunciation ----
+.assumption-check, .interpretation, .pitfall, .pronunciation {
+  @include box-base;
+  border-left: 4px solid var(--border);
+  position: relative;
+  &::before { display: block; font-family: $headings-font-family; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.3rem; }
+}
+.assumption-check { border-left-color: $teal;  &::before { content: "Assumption check"; color: $teal; } }
+.interpretation   { border-left-color: $slate; &::before { content: "How to read this"; color: $slate; } }
+.pitfall          { border-left-color: $rust;  &::before { content: "Common pitfall";   color: $rust; } }
+.pronunciation    { border-left-color: $gold;  background: var(--surface); &::before { content: "Pronunciation"; color: #9a7b13; } }
