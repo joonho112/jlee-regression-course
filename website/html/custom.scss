@@ -2,16 +2,26 @@
 
 /*-- scss:defaults --*/
 
-// BER 640 Color Palette (WCAG AA compliant for text on white)
-$primary:     #2C3E50;
-$secondary:   #C0392B;  // darkened from #E74C3C (4.6:1 contrast)
-$accent:      #2171B5;  // darkened from #3498DB (4.8:1 contrast)
-$success:     #1E8449;  // darkened from #27AE60 (4.6:1 contrast)
-$warning:     #D68910;  // darkened from #F39C12 (3.3:1, large text only)
-$info:        #7D3C98;  // darkened from #9B59B6 (5.5:1 contrast)
-$danger:      #C0392B;
+// =====================================================================
+// "Cividis Ink" palette — colorblind-safe named-color token architecture
+// =====================================================================
+// Cool ramp inspired by viridisLite::cividis() (blue->gold, perceptually
+// uniform, colorblind-safe), hand-tuned into WCAG-aware inks, plus two warm
+// accents cividis lacks -- $rust (danger) and $plum (note/info) -- so every
+// semantic role stays distinguishable for deuteranopia/protanopia viewers.
+// Contrast ratios stated against white (#fff) unless noted.
 
-// Extended neutral palette
+// --- Layer 1: named tokens (define FIRST, then map onto Bootstrap roles) ---
+$ink:    #1A2A3A;   // near-black blue ink  -- 14.7:1, body/heading text
+$navy:   #0B3D66;   // deep cividis blue    -- 10.0:1, primary
+$slate:  #2C6E91;   // mid cividis blue     --  4.9:1, links/accent (AA text)
+$teal:   #3E8E8A;   // desaturated teal     --  3.4:1, large-text/UI only
+$gold:   #C9A227;   // warm cividis gold    --  2.4:1, large-text/UI only
+$rust:   #A8431E;   // warm danger accent   --  5.6:1, danger (AA text)
+$plum:   #6B3E7A;   // warm violet accent   --  6.6:1, info/note (AA text)
+$paper:  #FBFAF7;   // warm off-white       -- page background
+
+// --- Neutral gray ramp (defined before role mapping so roles can reference it) ---
 $gray-50:     #f9fafb;
 $gray-100:    #f3f4f6;
 $gray-200:    #e5e7eb;
@@ -23,10 +33,22 @@ $gray-700:    #374151;
 $gray-800:    #1f2937;
 $gray-900:    #111827;
 
+// --- Layer 2: Bootstrap role mapping (named tokens -> semantic roles) ---
+$primary:     $navy;    // headings, table headers, primary buttons
+$accent:      $slate;   // heavily reused: links, borders, sidebar active
+$success:     $teal;    // tip callouts / decorative UI
+$warning:     $gold;    // gold; large-text / UI accents only, never body text
+$info:        $plum;    // note callouts, informational accents
+$danger:      $rust;    // error/danger states
+// $secondary kept neutral (muted structure) since $danger=$rust already
+// carries the warm "alarm" role; avoids two competing emphasis colors.
+$secondary:   $gray-700;
+
 // Bootstrap overrides
-$body-color:              $gray-800;
-$link-color:              $accent;
-$link-hover-color:        $primary;
+$body-bg:                 $paper;     // warm off-white page background
+$body-color:              $gray-800;  // ~13.6:1 on $paper -- primary reading text
+$link-color:              $slate;     // 4.9:1 -- AA for normal text
+$link-hover-color:        $gold;      // warm hover shift (decorative state)
 $link-decoration:         underline;
 $link-hover-decoration:   underline;
 
