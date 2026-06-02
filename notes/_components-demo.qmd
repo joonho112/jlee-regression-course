@@ -106,3 +106,14 @@ Reading a slope causally from observational data ignores confounding.
 ::: {.pronunciation}
 $\beta$ is "BAY-tuh"; $\hat{y}$ is "y-hat".
 :::
+
+## `.exercises` — styled exercise container
+
+::: {.exercises}
+### Exercises
+
+1. Using `regdatasets::star`, fit reading score on the small-class indicator and report the slope with its 95% CI. [warm-up]{.chip .easy}
+   a. State the interpretation of the intercept in plain language.
+   b. Re-express the slope in standard-deviation units.
+2. Explain why, with randomized class assignment, the simple-regression slope equals a two-sample mean difference. [core]{.chip .med}
+:::
