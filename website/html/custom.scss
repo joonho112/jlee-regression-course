@@ -412,6 +412,15 @@ div.sidebar-item-container .active {
   line-height: 1;
 }
 
+// Brand the leading list icons on the docked content/assignment/resource pages
+// (scoped to body.nav-sidebar so the homepage's own lists are unaffected).
+body.nav-sidebar main.content {
+  li > i,
+  li > svg:first-child {
+    color: $slate;
+  }
+}
+
 // ============================================
 // Schedule Page
 // ============================================
