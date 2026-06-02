@@ -373,6 +373,11 @@ blockquote {
 
   .course-details {
     padding: 1rem;
+    grid-template-columns: 1fr;   // stack the 3 info cards; g-col-4 stays 3-wide otherwise -> 3rd card clipped
+
+    .g-col-4 {
+      grid-column: 1 / -1;
+    }
   }
 
   pre.sourceCode {
