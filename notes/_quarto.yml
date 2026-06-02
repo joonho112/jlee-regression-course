@@ -60,8 +60,8 @@ csl: apa.csl
 format:
   html:
     theme:
-      light: cosmo
-      dark: darkly
+      light: [cosmo, html/custom.scss]
+      dark: [darkly, html/custom.scss]
     css: ojs/interactive.css
     code-fold: false
     code-tools: true

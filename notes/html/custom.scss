@@ -1,0 +1,17 @@
+/*-- scss:defaults --*/
+
+// BER 640 lecture-notes book theme layer — added OVER cosmo (light) / darkly (dark),
+// never replacing them, so the whole layer reverts by deleting this file + the two
+// theme lines in _quarto.yml. Used for BOTH the light and dark theme entries; any
+// dark-specific rules live below under [data-bs-theme="dark"].
+//
+// SCAFFOLD STATE (Step 0.3): intentionally EMPTY so wiring the theme renders
+// byte-identical chrome (no Cividis hexes, no Pairing-B fonts in the compiled CSS),
+// proving the mechanism is reversible before any token lands.
+//
+// Step 1.2 ACTIVATES the brand tokens by uncommenting the import below:
+// @import "brand-tokens";
+
+/*-- scss:rules --*/
+
+// (empty — component rules are added in Phase 1.5/1.6 and Phase 2)
