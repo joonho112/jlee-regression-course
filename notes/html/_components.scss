@@ -95,3 +95,16 @@
 .interpretation   { border-left-color: $slate; &::before { content: "How to read this"; color: $slate; } }
 .pitfall          { border-left-color: $rust;  &::before { content: "Common pitfall";   color: $rust; } }
 .pronunciation    { border-left-color: $gold;  background: var(--surface); &::before { content: "Pronunciation"; color: #9a7b13; } }
+
+// ---- Step 2.2: elevate the signature 3-tab panel-tabset ----
+.panel-tabset {
+  .nav-tabs { border-bottom-color: var(--border); }
+  .nav-link { color: var(--muted); font-family: $headings-font-family; font-weight: 600; }
+  .nav-link.active { color: $slate; border-bottom: 2px solid $slate; background: transparent; }
+}
+// "answer-key" tint on the 2nd (Output Interpretation) tab inside a worked-example
+.worked-example .panel-tabset .tab-content > .tab-pane:nth-of-type(2) {
+  background: rgba(62, 142, 138, 0.06);
+  border-radius: 0 0 0.3rem 0.3rem;
+  padding: 0.6rem 0.8rem;
+}
