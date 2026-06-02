@@ -435,6 +435,15 @@ body.nav-sidebar main.content {
   }
 }
 
+// Small term/modality caption above the schedule
+.schedule-meta {
+  font-size: 0.9rem;
+  color: $gray-600;
+  margin: -0.25rem 0 1rem;
+
+  i { color: $slate; margin-right: 0.2rem; }
+}
+
 // Compact icon legend ("How to read")
 .schedule-legend {
   display: flex;

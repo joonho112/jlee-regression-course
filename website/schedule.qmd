@@ -9,6 +9,10 @@ page-layout: full
 
 Here is the 15-week learning journey for **BER 640**. Each week pairs a lecture chapter with a hands-on R lab and (when due) homework, project milestones, and quizzes. Click a **topic** to open that week's page.
 
+::: {.schedule-meta}
+{{< fa calendar >}} {{< var course.semester >}} · {{< var course.dates >}} &nbsp;·&nbsp; {{< fa globe >}} {{< var course.days >}} — listed dates mark the start of each week; all coursework is asynchronous.
+:::
+
 ::: {.schedule-legend}
 [How to read:]{.schedule-legend-title} {{< fa book-open >}} Lecture &nbsp;·&nbsp; {{< fa laptop-code >}} Lab &nbsp;·&nbsp; {{< fa pencil >}} Homework &nbsp;·&nbsp; {{< fa clipboard-list >}} Project &nbsp;·&nbsp; {{< fa circle-check >}} Quiz
 :::
