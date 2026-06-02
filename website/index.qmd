@@ -117,3 +117,10 @@ All course materials are open-access and published on GitHub Pages:
 | [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | Hands-on R tutorials for each topic (12 labs) |
 | [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines and examples for the two course projects |
 | [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package with 24 curated datasets |
+
+::: {.cta-secondary}
+[New to the course? Start here.]{.cta-secondary-title}
+
+[{{< fa download >}} Set up R & RStudio](resource/r-setup.qmd){.btn .btn-primary role="button"}
+[{{< fa play >}} Begin with Week 1](content/01-content.qmd){.btn .btn-outline-primary role="button"}
+:::

@@ -510,6 +510,18 @@ blockquote {
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   }
+
+  // Keyboard focus ring (navy on the light page; AAA on white)
+  &:focus-visible {
+    outline: 2px solid $primary;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+// On the dark hero band a navy ring is invisible -> use gold
+.hero-cta .btn:focus-visible {
+  outline-color: $gold;
 }
 
 .btn-primary {
@@ -521,6 +533,40 @@ blockquote {
   background-color: $accent;
   border-color: $accent;
   color: #fff;
+}
+
+// ============================================
+// Homepage - secondary "Start here" CTA
+// ============================================
+
+.cta-secondary {
+  margin: 2.75rem 0 1rem;
+  padding: 1.75rem;
+  background-color: $gray-50;
+  border: 1px solid $gray-200;
+  border-left: 4px solid $accent;
+  border-radius: 0.5rem;
+  text-align: center;
+
+  p:first-child {
+    margin-top: 0;
+  }
+
+  .cta-secondary-title {
+    display: block;
+    font-family: $headings-font-family;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: $primary;
+    margin-bottom: 1rem;
+  }
+
+  .btn {
+    margin: 0.3rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
 }
 
 // ============================================
