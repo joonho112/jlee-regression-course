@@ -62,3 +62,11 @@ reg_table <- function(model, ...) {
     bold_labels() |>
     bold_p(t = 0.05)
 }
+
+# Key-terms / notation glossary table (adapts IMS make_terms_table() to a
+# term + symbol + meaning layout). Pass a tibble/data.frame; renders as a
+# Bootstrap .table so it inherits the book's table house style + .notation styling.
+# Usage in a chapter:  make_key_terms(tibble::tribble(~Term, ~Symbol, ~Meaning, ...))
+make_key_terms <- function(df) {
+  knitr::kable(df, col.names = tools::toTitleCase(names(df)))
+}

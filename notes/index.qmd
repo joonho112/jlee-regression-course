@@ -96,6 +96,10 @@ See [Appendix A: R Setup Guide](appendices/a-r-setup-guide.qmd) for detailed ins
 
 ## Notation Conventions
 
+Key terms are **bold on first use**, where they are defined; they are gathered with their symbols in the Notation appendix and each chapter's *New notation & terms* summary.
+
+::: {.notation}
+
 | Symbol | Meaning |
 |:-------|:--------|
 | $y_i$ | Response (dependent) variable for observation $i$ |
@@ -107,6 +111,8 @@ See [Appendix A: R Setup Guide](appendices/a-r-setup-guide.qmd) for detailed ins
 | $n$ | Sample size |
 | $p$ | Number of predictors |
 | $R^2$ | Coefficient of determination |
+
+:::
 
 ## Acknowledgments
 

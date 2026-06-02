@@ -172,3 +172,8 @@
 }
 // keep inline code legible inside the navy header
 .table thead code { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+// ---- Step 2.10: notation / glossary reference ----
+.notation table td:first-child,
+.notation table th:first-child { font-family: $font-family-monospace; white-space: nowrap; }
+.notation { margin: 1.4rem 0; }
