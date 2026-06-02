@@ -21,12 +21,13 @@
  * @type {Object}
  */
 export const ber640 = Object.freeze({
-  primary:   "#2C3E50",
-  secondary: "#E74C3C",
-  accent:    "#3498DB",
-  success:   "#27AE60",
-  warning:   "#F39C12",
-  info:      "#9B59B6"
+  // Cividis Ink palette (values migrated; KEYS unchanged to mirror _common.R)
+  primary:   "#0B3D66",  // navy
+  secondary: "#A8431E",  // rust
+  accent:    "#2C6E91",  // slate
+  success:   "#3E8E8A",  // teal
+  warning:   "#C9A227",  // gold
+  info:      "#6B3E7A"   // plum
 });
 
 /**
@@ -35,19 +36,19 @@ export const ber640 = Object.freeze({
  * @type {string[]}
  */
 export const categorical = Object.freeze([
-  ber640.accent,     // #3498DB — blue
-  ber640.secondary,  // #E74C3C — red
-  ber640.success,    // #27AE60 — green
-  ber640.warning,    // #F39C12 — orange
-  ber640.info,       // #9B59B6 — purple
-  ber640.primary     // #2C3E50 — dark blue-grey
+  ber640.accent,     // #2C6E91 — slate
+  ber640.secondary,  // #A8431E — rust
+  ber640.success,    // #3E8E8A — teal
+  ber640.warning,    // #C9A227 — gold
+  ber640.info,       // #6B3E7A — plum
+  ber640.primary     // #0B3D66 — navy
 ]);
 
 /**
  * Apply alpha/opacity to a hex color string.
  * Returns an rgba() CSS string.
  *
- * @param {string} hex - 6-digit hex color (e.g. "#2C3E50")
+ * @param {string} hex - 6-digit hex color (e.g. "#0B3D66")
  * @param {number} alpha - Opacity from 0 to 1
  * @returns {string} CSS rgba() string
  */
@@ -102,7 +103,7 @@ export function themeColors() {
     return {
       isDark:  true,
       text:    "#dee2e6",
-      bg:      "#222222",
+      bg:      "#111827",
       grid:    "#444444",
       muted:   "#888888",
       axis:    "#adb5bd"
@@ -110,8 +111,8 @@ export function themeColors() {
   }
   return {
     isDark:  false,
-    text:    "#2C3E50",
-    bg:      "#ffffff",
+    text:    "#1f2937",
+    bg:      "#FBFAF7",
     grid:    "#e0e0e0",
     muted:   "#999999",
     axis:    "#495057"
