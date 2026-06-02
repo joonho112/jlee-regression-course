@@ -364,7 +364,7 @@ div.sidebar-item-container .active {
 .learning-arc-panel {
   margin: 1.5rem auto 2rem;
   padding: 1.5rem 1.25rem;
-  max-width: 720px;
+  max-width: 480px;   // hug the narrow top-down diagram (was 720 -> empty gutters)
   background-color: #fff;
   border: 1px solid $gray-200;
   border-top: 3px solid $accent;
