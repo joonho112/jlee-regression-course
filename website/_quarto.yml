@@ -28,6 +28,9 @@ website:
   navbar:
     pinned: true
     background: "#1A2A3A"   # $ink (Cividis Ink) — matches custom.scss token
+    logo: "files/img/favicon-192.png"
+    logo-alt: "BER 640 regression hex logo"
+    title: "BER 640"        # short navbar brand; website:title keeps the full SEO/OG title
     left:
       - text: "{{< fa house >}}"
         file: index.qmd

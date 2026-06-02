@@ -124,6 +124,14 @@ a {
 
 .navbar-brand {
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+
+  img {
+    max-height: 38px;
+    width: auto;
+    margin-right: 0.5rem;
+  }
 }
 
 .navbar-dark .navbar-nav {
