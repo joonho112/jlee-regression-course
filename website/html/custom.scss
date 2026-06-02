@@ -166,6 +166,134 @@ div.sidebar-item-container .active {
 }
 
 // ============================================
+// Homepage - Hero band
+// ============================================
+// Contained full-width band (NOT 100vw) on purpose: a viewport-width hero
+// risks a horizontal scrollbar and, via the usual body{overflow-x:hidden}
+// workaround, would break position:sticky TOCs on the content pages. With
+// page-layout:full the content column already spans most of the viewport.
+
+.hero {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: -1.5rem 0 2.5rem;                 // tuck flush under the navbar accent border
+  background: linear-gradient(135deg, $ink 0%, $navy 100%);
+  color: $paper;
+  border-bottom: 3px solid $gold;
+  border-radius: 0 0 0.5rem 0.5rem;
+  overflow: hidden;                         // keep the gradient inside the rounded corners
+}
+
+.hero-inner {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(2.75rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 3rem);
+  text-align: left;
+}
+
+.hero-eyebrow {
+  display: inline-block;
+  font-family: $headings-font-family;       // Libre Franklin
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: $gold;                             // large/UI use of gold -> AA-safe
+  margin-bottom: 1rem;
+}
+
+.hero-title {
+  color: $paper;                            // override global h1 { color: $primary }
+  font-family: $headings-font-family;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 5.2vw, 3.4rem);
+  line-height: 1.13;
+  letter-spacing: -0.01em;
+  border-bottom: none;                      // cancel any inherited heading rule
+  margin: 0 0 0.5rem;
+  overflow-wrap: break-word;                // never let a long word overflow the band
+}
+
+.hero-subtitle {
+  display: block;
+  font-family: $headings-font-family;
+  font-weight: 500;
+  font-size: 1.25rem;
+  color: rgba($paper, 0.85);
+  margin-bottom: 1.25rem;
+}
+
+.hero-lead {
+  display: block;
+  max-width: 60ch;
+  font-size: 1.2rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: rgba($paper, 0.92);
+  margin-bottom: 1.75rem;
+}
+
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+// Dark-band CTA buttons (kept separate from light-page .btn-primary/.btn-secondary)
+.btn-hero-primary {
+  background-color: $gold;
+  border-color: $gold;
+  color: $ink;                              // ink on gold ~6:1 -> AA normal text
+  font-weight: 700;
+
+  &:hover {
+    background-color: #b18e1f;              // gold darkened ~7%
+    border-color: #b18e1f;
+    color: $ink;
+  }
+}
+
+.btn-hero-secondary {
+  background-color: rgba($paper, 0.12);
+  border: 1px solid rgba($paper, 0.45);
+  color: $paper;
+
+  &:hover {
+    background-color: rgba($paper, 0.22);
+    color: $paper;
+  }
+}
+
+.btn-hero-outline {
+  background-color: transparent;
+  border: 1px solid rgba($paper, 0.55);
+  color: $paper;
+
+  &:hover {
+    background-color: rgba($paper, 0.12);
+    color: $paper;
+  }
+}
+
+.hero-meta {
+  display: block;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: rgba($paper, 0.70);                // ~6:1 on navy -> AA
+}
+
+// ============================================
 // Homepage - Course Details Grid
 // ============================================
 
@@ -378,6 +506,17 @@ blockquote {
   h1 { font-size: 2rem; }
   h2 { font-size: 1.6rem; }
   h3 { font-size: 1.3rem; }
+
+  .hero-inner { padding: 2.25rem 1.25rem 2.5rem; }
+  .hero-title { font-size: clamp(1.55rem, 6.5vw, 2rem); }
+  .hero-subtitle { font-size: 1.1rem; }
+  .hero-lead { font-size: 1.05rem; }
+  .hero-cta {
+    flex-direction: column;
+    align-items: stretch;
+
+    .btn { justify-content: center; }
+  }
 
   .course-details {
     padding: 1rem;
