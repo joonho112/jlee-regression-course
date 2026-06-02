@@ -61,6 +61,8 @@ This course adopts a **"specific to general"** pedagogical approach, beginning w
 
 ### Learning Arc
 
+::: {.learning-arc-panel}
+
 ```{mermaid}
 %%| fig-width: 9
 %%| fig-alt: "Course learning arc diagram showing four parts: Part I Foundations (SLR, ANCOVA/ANOVA), Part II Extensions (Multiple Regression, Interactions), Part III Model Quality (Diagnostics), Part IV Beyond Linear (Logistic Regression, GLM/Ordinal). Arrows show the progressive flow from simple to complex models."
@@ -95,6 +97,8 @@ flowchart TD
     style P3 fill:#EFEAF2,stroke:#6B3E7A,stroke-width:2px,color:#1A2A3A
     style P4 fill:#F6E9E3,stroke:#A8431E,stroke-width:2px,color:#1A2A3A
 ```
+
+:::
 
 The course progresses from foundational regression models (Part I) through extensions and diagnostics (Parts II--III) to categorical outcomes and the unifying GLM framework (Part IV).
 

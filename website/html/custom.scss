@@ -358,6 +358,31 @@ div.sidebar-item-container .active {
 }
 
 // ============================================
+// Homepage - Learning Arc / roadmap panel
+// ============================================
+
+.learning-arc-panel {
+  margin: 1.5rem auto 2rem;
+  padding: 1.5rem 1.25rem;
+  max-width: 720px;
+  background-color: #fff;
+  border: 1px solid $gray-200;
+  border-top: 3px solid $accent;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  text-align: center;
+
+  // centre the rendered mermaid diagram and keep it responsive
+  svg,
+  .mermaid {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+// ============================================
 // Schedule Page
 // ============================================
 
