@@ -1,0 +1,13 @@
+/*-- scss:defaults --*/
+
+// BER 640 lecture-notes book — DARK theme layer: [darkly, html/custom-dark.scss].
+// Inherits the Cividis Ink brand tokens + Pairing B fonts from the shared partial, but
+// deliberately does NOT override the surface variables ($body-bg/$body-color/$code-bg/
+// $code-color) so the darkly base keeps mode genuinely dark. Dark-specific component
+// rules (heading color lightening, callout tints, code panel) are added in Phase 1.6 / Phase 2.
+
+@import "brand-tokens";
+
+/*-- scss:rules --*/
+
+// (dark-specific rules added in Phase 1.6 / Phase 2)

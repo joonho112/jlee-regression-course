@@ -61,7 +61,7 @@ format:
   html:
     theme:
       light: [cosmo, html/custom.scss]
-      dark: [darkly, html/custom.scss]
+      dark: [darkly, html/custom-dark.scss]
     css: ojs/interactive.css
     code-fold: false
     code-tools: true

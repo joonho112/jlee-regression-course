@@ -5,12 +5,16 @@
 // theme lines in _quarto.yml. Used for BOTH the light and dark theme entries; any
 // dark-specific rules live below under [data-bs-theme="dark"].
 //
-// SCAFFOLD STATE (Step 0.3): intentionally EMPTY so wiring the theme renders
-// byte-identical chrome (no Cividis hexes, no Pairing-B fonts in the compiled CSS),
-// proving the mechanism is reversible before any token lands.
-//
-// Step 1.2 ACTIVATES the brand tokens by uncommenting the import below:
-// @import "brand-tokens";
+// Step 1.2: brand tokens ACTIVATED — the Cividis Ink palette + Pairing B fonts
+// now reach the book via the import below. Component rules follow in 1.5/1.6 and Phase 2.
+@import "brand-tokens";
+
+// Light-surface variables — this file is the LIGHT theme layer ([cosmo, html/custom.scss]).
+// Kept out of the shared partial so the dark theme (darkly) retains its own dark surfaces.
+$body-bg:    $paper;
+$body-color: $gray-800;
+$code-bg:    $gray-100;
+$code-color: $gray-900;
 
 /*-- scss:rules --*/
 
