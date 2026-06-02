@@ -1,5 +1,6 @@
 ---
 title: "Week 13: Latent Response & GLM"
+date: "2026-11-09"
 ---
 
 ## Overview

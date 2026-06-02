@@ -1,5 +1,6 @@
 ---
 title: "Week 7: Interactions"
+date: "2026-09-28"
 ---
 
 ## Overview

@@ -1,5 +1,6 @@
 ---
 title: "Week 12: Logistic Diagnostics"
+date: "2026-11-02"
 ---
 
 ## Overview

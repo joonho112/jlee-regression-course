@@ -1,5 +1,6 @@
 ---
 title: "Week 1: Welcome & R Setup"
+date: "2026-08-19"
 ---
 
 ## Overview

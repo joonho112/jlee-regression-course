@@ -1,5 +1,6 @@
 ---
 title: "Week 2: Simple Linear Regression I"
+date: "2026-08-24"
 ---
 
 ## Overview

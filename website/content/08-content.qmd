@@ -1,5 +1,6 @@
 ---
 title: "Week 8: Nonlinear Relationships"
+date: "2026-10-05"
 ---
 
 ## Overview

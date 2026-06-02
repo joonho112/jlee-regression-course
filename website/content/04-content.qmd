@@ -1,5 +1,6 @@
 ---
 title: "Week 4: ANCOVA"
+date: "2026-09-07"
 ---
 
 ## Overview

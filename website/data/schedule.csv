@@ -1,16 +1,16 @@
-week,module,title,lecture,lab,homework,project,quiz
-1,Welcome,Welcome & R Setup,--,Lab 01: Intro to R,--,--,--
-2,M1,Simple Linear Regression I,Ch 01,Lab 02: Simple Regression,--,--,--
-3,M1,Simple Linear Regression II,Ch 01 (cont.),Lab 02 (cont.),HW 01; HW 02,--,Quiz 1
-4,M2,ANCOVA,Ch 02,Lab 03: ANOVA & ANCOVA,--,--,--
-5,M2,One-Way ANOVA,Ch 03,Lab 04: Categorical Contrasts,HW 03; HW 04,--,Quiz 2
-6,M3,Continuous Predictors,Ch 04,Lab 05: Multiple Regression,--,--,--
-7,M3,Interactions,Ch 05,Lab 06: Interactions,HW 05; HW 06,Project 1 Proposal,Quiz 3
-8,M4,Nonlinear Relationships,Ch 06,Lab 07: Model Building,--,--,--
-9,M4,Model Building & Diagnostics,Ch 07; Ch 08,Lab 08: Diagnostics,--,Project 1 Draft,Quiz 4
-10,M5,Simple Logistic Regression,Ch 09,Lab 09: Logistic Intro,--,--,--
-11,M5,Multiple Logistic Regression,Ch 10,Lab 10: Logistic Extended,HW 07; HW 08,--,Quiz 5
-12,M6,Logistic Diagnostics,Ch 11,Lab 11: Logistic Diagnostics,--,Project 1 Final; Project 2 Proposal,Quiz 6
-13,M7,Latent Response & GLM,Ch 12,Lab 12: Logistic Advanced,--,--,--
-14,M7,Ordinal Models,Ch 13,--,--,Project 2 Draft,--
-15,M8,Course Synthesis,--,--,--,Project 2 Final,--
+week,date,module,title,lecture,lab,homework,project,quiz
+1,2026-08-19,Welcome,Welcome & R Setup,--,Lab 01: Intro to R,--,--,--
+2,2026-08-24,M1,Simple Linear Regression I,Ch 01,Lab 02: Simple Regression,--,--,--
+3,2026-08-31,M1,Simple Linear Regression II,Ch 01 (cont.),Lab 02 (cont.),HW 01; HW 02,--,Quiz 1
+4,2026-09-07,M2,ANCOVA,Ch 02,Lab 03: ANOVA & ANCOVA,--,--,--
+5,2026-09-14,M2,One-Way ANOVA,Ch 03,Lab 04: Categorical Contrasts,HW 03; HW 04,--,Quiz 2
+6,2026-09-21,M3,Continuous Predictors,Ch 04,Lab 05: Multiple Regression,--,--,--
+7,2026-09-28,M3,Interactions,Ch 05,Lab 06: Interactions,HW 05; HW 06,Project 1 Proposal,Quiz 3
+8,2026-10-05,M4,Nonlinear Relationships,Ch 06,Lab 07: Model Building,--,--,--
+9,2026-10-12,M4,Model Building & Diagnostics,Ch 07; Ch 08,Lab 08: Diagnostics,--,Project 1 Draft,Quiz 4
+10,2026-10-19,M5,Simple Logistic Regression,Ch 09,Lab 09: Logistic Intro,--,--,--
+11,2026-10-26,M5,Multiple Logistic Regression,Ch 10,Lab 10: Logistic Extended,HW 07; HW 08,--,Quiz 5
+12,2026-11-02,M6,Logistic Diagnostics,Ch 11,Lab 11: Logistic Diagnostics,--,Project 1 Final; Project 2 Proposal,Quiz 6
+13,2026-11-09,M7,Latent Response & GLM,Ch 12,Lab 12: Logistic Advanced,--,--,--
+14,2026-11-16,M7,Ordinal Models,Ch 13,--,--,Project 2 Draft,--
+15,2026-11-30,M8,Course Synthesis,--,--,--,Project 2 Final,--

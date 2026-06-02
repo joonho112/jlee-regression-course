@@ -1,4 +1,5 @@
 page-layout: article
+date-format: "MMMM D, YYYY"   # weekly session date shown in the .date-banner
 
 # Use the date-banner title-metadata partial on all content pages
 format:

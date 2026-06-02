@@ -1,5 +1,6 @@
 ---
 title: "Week 15: Course Synthesis"
+date: "2026-11-30"
 ---
 
 ## Overview
