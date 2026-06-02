@@ -166,9 +166,19 @@ a {
   line-height: 1.4;
 }
 
+// brighten docked-sidebar links on hover (dark bg)
+.sidebar-navigation .sidebar-link {
+  transition: color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
 div.sidebar-item-container .active {
   color: $warning;   // gold reads on the dark sidebar (slate $accent failed at 2.6:1)
   font-weight: 600;
+  box-shadow: inset 3px 0 0 $warning;   // gold "you are here" bar (no layout shift)
 }
 
 // ============================================
