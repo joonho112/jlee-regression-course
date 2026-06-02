@@ -117,3 +117,17 @@ $\beta$ is "BAY-tuh"; $\hat{y}$ is "y-hat".
    b. Re-express the slope in standard-deviation units.
 2. Explain why, with randomized class assignment, the simple-regression slope equals a two-sample mean difference. [core]{.chip .med}
 :::
+
+## Definition / Theorem / Example environments
+
+::: {#def-residual}
+## Residual
+The **residual** $e_i = y_i - \hat{y}_i$ is the part of observation $i$'s outcome the model does not explain.
+:::
+
+::: {#thm-blue}
+## Gauss–Markov
+Under the standard linear-model assumptions, the OLS estimator is the Best Linear Unbiased Estimator (BLUE).
+:::
+
+Later chapters back-reference @def-residual and @thm-blue.

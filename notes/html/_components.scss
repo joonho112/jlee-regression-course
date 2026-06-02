@@ -141,3 +141,14 @@
 .chip.easy { background: rgba(62, 142, 138, 0.18); color: $teal; }
 .chip.med  { background: rgba(201, 162, 39, 0.20); color: #9a7b13; }
 .chip.hard { background: rgba(168, 67, 30, 0.16); color: $rust; }
+
+// ---- Step 2.7: Definition / Theorem / Example environments (#def- / #thm- / #exm-) ----
+.theorem, .definition, .example, .proof {
+  border-left: 4px solid $slate;
+  background: var(--surface);
+  border-radius: 0.35rem;
+  padding: 0.7rem 1.1rem;
+  margin: 1.4rem 0;
+}
+.example { border-left-color: $teal; }
+.theorem-title, .proof-title { font-family: $headings-font-family; font-weight: 700; color: $navy; }
