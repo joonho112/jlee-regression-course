@@ -660,6 +660,19 @@ blockquote {
   border-top: 3px solid $accent;
   font-size: 0.9rem;
   color: $gray-600;
+  padding-top: 1.3rem;
+  padding-bottom: 1.3rem;
+  line-height: 1.6;
+
+  a {
+    color: $slate;
+    text-decoration: none;
+
+    &:hover {
+      color: $primary;
+      text-decoration: underline;
+    }
+  }
 }
 
 .nav-footer-center {
