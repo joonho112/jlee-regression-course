@@ -156,3 +156,19 @@
 // ---- Step 2.8: lightbox caption tint ----
 .gslide-description { font-size: 1.4em; }
 .gslide-title { color: $navy; }
+
+// ---- Step 2.9: model/result table house style ----
+// Applies to kable/df-print Bootstrap tables and Quarto cell-output tables.
+.table, .cell-output-display > table, table.table {
+  thead {
+    background: $navy;
+    color: #fff;
+    th { font-family: $headings-font-family; font-weight: 600; border-color: $navy; }
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:nth-child(odd) { background: var(--surface); }
+  td, th { padding: 0.5rem 0.8rem; }
+  caption, & + .table-caption { color: var(--muted); font-size: 0.88rem; text-align: left; }
+}
+// keep inline code legible inside the navy header
+.table thead code { background: rgba(255, 255, 255, 0.2); color: #fff; }
