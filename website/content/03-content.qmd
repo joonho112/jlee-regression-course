@@ -1,0 +1,45 @@
+---
+title: "Week 3: Simple Linear Regression II"
+---
+
+## Overview
+
+This week completes our coverage of simple linear regression by turning from estimation to inference. You will learn how to test whether a regression slope is statistically significant, construct confidence intervals for parameters and predictions, and verify model assumptions. A key insight is the equivalence between the regression t-test and the independent-samples t-test when the predictor is binary.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Conduct and interpret a hypothesis test for the regression slope
+- Construct and interpret confidence intervals for the slope and for predicted values
+- Distinguish between a confidence interval for the mean response and a prediction interval
+- Demonstrate that a two-group t-test is a special case of simple linear regression
+- Check regression assumptions using residual plots and diagnostic statistics
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 1: Simple Linear Regression]({{< var books.lecture_notes >}}/chapters/01-simple-linear-regression.html){target="_blank"} (inference sections)
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 02: Simple Regression in R]({{< var books.r_lab_book >}}/labs/lab02-simple-regression.html){target="_blank"} (continued)
+
+## Homework
+
+- {{< fa pencil >}} [HW 01: Simple Regression](/assignment/hw01.qmd)
+- {{< fa pencil >}} [HW 02: Dummy Regression](/assignment/hw02.qmd)
+
+## Quiz
+
+- {{< fa circle-check >}} Quiz 1
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Hypothesis test** | A formal procedure for deciding whether a population parameter differs from a null value |
+| **p-value** | The probability of observing a test statistic as extreme as the one obtained, assuming the null is true |
+| **Confidence interval** | A range of plausible values for a parameter, based on repeated-sampling logic |
+| **Prediction interval** | A wider interval that accounts for both parameter uncertainty and individual variability |
+| **t-test equivalence** | The result that a two-group t-test is identical to SLR with a binary predictor |
+| **Assumptions** | Conditions (linearity, independence, normality, equal variance) required for valid inference |

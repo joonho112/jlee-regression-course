@@ -1,0 +1,51 @@
+author: JoonHo Lee
+
+instructor:
+  name: "Dr. JoonHo Lee"
+  name_no_title: "JoonHo Lee"
+  email: jlee296@ua.edu
+  url: "https://education.ua.edu/people/joonho-lee/"
+  github: joonho112
+  office: "Carmichael Hall, Room 307C"
+  office_hours: "By appointment"
+  contact_policy: >-
+    Email is the best way to contact me. I will try to respond to all
+    course-related emails within 48 hours. For urgent matters, please
+    include "BER 640 - URGENT" in the subject line.
+  appointment_url: "https://calendly.com/joonho112"
+
+course:
+  number: "BER 640"
+  title: "Advanced Statistical Methods in Education"
+  subtitle: "A Regression Approach with R"
+  semester: "Fall 2026"
+  days: "Asynchronous Online"
+  time: "Asynchronous"
+  location: "Online (Blackboard)"
+  dates: "August 19 – December 4, 2026"
+  github: "https://github.com/joonho112/jlee-regression-course"
+  url: "https://joonho112.github.io/jlee-regression-course"
+  copyright_year: "2026"
+
+university:
+  name: "University of Alabama"
+  url: "https://www.ua.edu"
+
+school:
+  name: "College of Education"
+  url: "https://education.ua.edu/"
+
+department:
+  name: "Department of Educational Studies in Psychology, Research Methodology, and Counseling"
+  url: "https://education.ua.edu/departments/educational-studies/"
+
+# External course material URLs (now consolidated under the jlee-regression-course site)
+books:
+  # Site-root-relative paths (leading slash). Quarto rewrites these to the
+  # correct page-relative link, so they work both locally (served at root)
+  # and in production (served under /jlee-regression-course/).
+  lecture_notes: "/notes"
+  # homework_solutions removed from student-facing site (instructor-only resource)
+  r_lab_book: "/labs"
+  project_guide: "/project"
+  regdatasets: "/regdatasets"

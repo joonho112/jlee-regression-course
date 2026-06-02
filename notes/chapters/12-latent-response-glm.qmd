@@ -1,0 +1,1217 @@
+# Latent Response Models and GLMs {#sec-ch12}
+
+{{< include ../_common.qmd >}}
+
+
+## Introduction {#sec-ch12-intro}
+
+In @sec-ch9 and @sec-ch10, we introduced logistic regression as a tool for modeling binary outcomes. We motivated the logit link function pragmatically: it maps any real number to a valid probability. But there is a deeper theoretical question: **Why the logit link?** Is there a principled reason to prefer it over other functions that map $\mathbb{R}$ to $(0, 1)$?
+
+This chapter answers that question from two complementary perspectives. First, we develop the **latent variable formulation**, which shows that the logit and probit models arise from assuming an unobserved continuous variable underlies the binary response. Second, we introduce the **generalized linear model (GLM) framework**, which unifies logistic regression, probit regression, and ordinary linear regression under a single theoretical umbrella. Together, these ideas connect everything we have studied from @sec-ch1 through @sec-ch10.
+
+::: {.callout-note}
+## Learning Objectives
+After completing this chapter, you will be able to:
+
+1. Explain the latent variable formulation of binary regression and show how it gives rise to both the logit and probit models
+2. Describe the historical Pearson--Yule debate and its connection to the latent variable perspective
+3. Fit a probit regression model in R and compare its estimates to a logit model
+4. State the three components of a generalized linear model: random component, systematic component, and link function
+5. Identify how linear regression, logistic regression, and probit regression each fit within the GLM framework
+6. Apply the rule of thumb that probit coefficients $\approx$ logit coefficients $/$ 1.7
+:::
+
+
+::: {.callout-note}
+## Connection to Previous Chapters
+This chapter builds directly on your knowledge from several earlier chapters:
+
+- **@sec-ch9 (Logistic Regression)**: You learned to fit and interpret logistic regression models. Here we ask: *why* does the logit link work?
+- **@sec-ch10 (Multiple Logistic Regression)**: You extended logistic regression to multiple predictors. The latent variable formulation applies to those models too.
+- **@sec-ch11 (Diagnostics)**: The diagnostic tools you learned carry over to probit models, since both are fit via `glm()`.
+- **@sec-ch1--@sec-ch8 (Linear Regression)**: The GLM framework shows that linear regression is a special case of the same unified family.
+:::
+
+
+## The Latent Variable Formulation {#sec-ch12-latent}
+
+### The Idea of a Latent Continuous Variable
+
+Consider the Titanic survival example from @sec-ch9. Each passenger either survived ($y_i = 1$) or did not ($y_i = 0$). But we can imagine an underlying, unobserved **latent propensity to survive**, call it $y_i^*$, that varies continuously across passengers. This propensity depends on observable characteristics --- sex, age, ticket class --- and on unobservable factors like exact location on the ship, luck, and physical fitness.
+
+The latent variable model posits:
+
+$$
+y_i^* = \alpha + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots + \varepsilon_i
+$$ {#eq-ch12-latent}
+
+where $\varepsilon_i$ is a random error term. The observed binary outcome is determined by a threshold rule:
+
+$$
+y_i = \begin{cases} 1 & \text{if } y_i^* > 0 \\ 0 & \text{if } y_i^* \leq 0 \end{cases}
+$$ {#eq-ch12-threshold}
+
+We never observe $y_i^*$ directly --- it is **latent**. We only observe whether it exceeds the threshold of zero.
+
+::: {.callout-tip}
+## Intuition
+Think of $y_i^*$ as a "survival score." Passengers with higher propensity (more favorable characteristics, better luck) have positive scores and survive. Those with lower propensity have negative scores and do not. The threshold at zero is arbitrary --- shifting it just changes the intercept $\alpha$.
+:::
+
+### Visualizing the Latent Variable and Threshold
+
+The following diagram illustrates the latent variable concept. The continuous curve represents the distribution of the latent propensity $y^*$, and the vertical dashed line at zero marks the threshold. Observations falling to the right are classified as $y = 1$; those to the left as $y = 0$.
+
+::: {.panel-tabset}
+#### R Code
+```{r}
+#| label: fig-ch12-latent-threshold
+#| fig-cap: "The latent variable threshold model. The bell curve represents the distribution of the latent propensity y*. The vertical dashed line at zero is the threshold: observations to the right (shaded blue) produce y = 1, and those to the left (shaded red) produce y = 0."
+#| fig-alt: "Density plot showing a single bell-shaped logistic distribution of the latent propensity y-star along the horizontal axis, with density on the vertical axis. A vertical dashed line at zero marks the classification threshold. The area to the right of the threshold is shaded blue, representing observations classified as y equals 1, while the area to the left is shaded red, representing observations classified as y equals 0. The distribution is centered slightly above zero, so the blue shaded region is larger than the red region."
+#| fig-width: 9
+#| fig-height: 5
+
+# Simulate a latent variable distribution
+z_seq <- seq(-5, 5, length.out = 500)
+df_latent <- tibble(
+  z = z_seq,
+  density = dlogis(z_seq, location = 0.8, scale = 1)
+)
+
+ggplot(df_latent, aes(x = z, y = density)) +
+  # Shaded region for y = 0 (left of threshold)
+  geom_area(data = df_latent |> filter(z <= 0),
+            aes(x = z, y = density),
+            fill = ber640_colors["secondary"], alpha = 0.3) +
+  # Shaded region for y = 1 (right of threshold)
+  geom_area(data = df_latent |> filter(z >= 0),
+            aes(x = z, y = density),
+            fill = ber640_colors["accent"], alpha = 0.3) +
+  # Density curve
+  geom_line(linewidth = 1.2, color = ber640_colors["primary"]) +
+  # Threshold line
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1,
+             color = ber640_colors["primary"]) +
+  # Annotations
+  annotate("text", x = -2.5, y = max(df_latent$density) * 0.85,
+           label = "y = 0\n(below threshold)",
+           size = 5, fontface = "bold", color = ber640_colors["secondary"]) +
+  annotate("text", x = 3.2, y = max(df_latent$density) * 0.85,
+           label = "y = 1\n(above threshold)",
+           size = 5, fontface = "bold", color = ber640_colors["accent"]) +
+  annotate("text", x = 0.3, y = max(df_latent$density) * 1.05,
+           label = "Threshold = 0", hjust = 0,
+           size = 4, fontface = "italic", color = ber640_colors["primary"]) +
+  labs(
+    title = "Latent Variable Threshold Model",
+    subtitle = expression(paste("Latent propensity ", y^"*", " = ", alpha, " + ", bold(x), "'", beta, " + ", epsilon,
+                                "    |    ", y, " = 1 if ", y^"*", " > 0")),
+    x = expression(paste("Latent propensity ", y^"*")),
+    y = "Density"
+  ) +
+  scale_x_continuous(breaks = seq(-4, 4, by = 2))
+```
+
+#### Code Explanation
+- `dlogis()` generates the density of a logistic distribution centered at 0.8 (representing a positive linear predictor $\eta_i$)
+- `geom_area()` shades the regions below and above the threshold of zero
+- The **red region** (left of zero) represents cases classified as $y = 0$
+- The **blue region** (right of zero) represents cases classified as $y = 1$
+- The dashed vertical line marks the threshold at zero
+- The location parameter (0.8) shifts the distribution so that more mass falls above zero, reflecting a positive propensity
+
+#### Output Interpretation
+The diagram shows how a continuous latent variable generates a binary outcome. The bell-shaped curve is the distribution of $y^*$ for a particular combination of predictor values. Because the center of the distribution (0.8) is above zero, most of the area falls in the $y = 1$ region, meaning this observation has a higher probability of the positive outcome. Shifting the linear predictor $\eta_i$ left or right moves the entire curve, changing the relative areas and thus the predicted probability.
+:::
+
+### Interactive Exploration: Latent Variable Threshold {.unnumbered}
+
+::: {.callout-tip collapse="true"}
+## Try It: Shift the Latent Distribution
+
+Adjust the linear predictor (η) and see how the latent variable distribution shifts relative to the threshold at zero. The shaded area above zero equals the predicted probability P(Y=1).
+:::
+
+```{ojs}
+//| echo: false
+import { ber640 as latent_ber640, plotDefaults as latent_plotDefaults, themeColors as latent_themeColors, sigmoid as latent_sigmoid, seq as latent_seq, formatCoef as latent_formatCoef, withAlpha as latent_withAlpha } from "../ojs/shared.js"
+
+latent_tc = latent_themeColors()
+```
+
+```{ojs}
+//| echo: false
+viewof latent_beta = Inputs.range([-3, 3], {label: "β (effect of X)", value: 1.0, step: 0.1})
+viewof latent_xval = Inputs.range([-2, 2], {label: "X value", value: 0.5, step: 0.1})
+viewof latent_link = Inputs.radio(["Logit", "Probit"], {label: "Link function", value: "Logit"})
+```
+
+```{ojs}
+//| echo: false
+
+latent_alpha = 0.5
+latent_eta = latent_alpha + latent_beta * latent_xval
+
+latent_scale_logistic = Math.PI / Math.sqrt(3)
+
+latent_logisticDensity = function(x, mu, s) {
+  const z = -(x - mu) / s;
+  const ez = Math.exp(z);
+  return ez / (s * Math.pow(1 + ez, 2));
+}
+
+latent_normalDensity = function(x, mu, sigma) {
+  const z = (x - mu) / sigma;
+  return Math.exp(-0.5 * z * z) / (sigma * Math.sqrt(2 * Math.PI));
+}
+
+latent_normalCDF = function(x) {
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  const z = Math.abs(x) / Math.sqrt(2);
+  const t = 1.0 / (1.0 + p * z);
+  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-z * z);
+  return 0.5 * (1.0 + sign * y);
+}
+
+latent_prob_logit = latent_sigmoid(latent_eta)
+latent_prob_probit = latent_normalCDF(latent_eta)
+latent_prob = latent_link === "Logit" ? latent_prob_logit : latent_prob_probit
+
+latent_xRange = latent_seq(-6, 8, 300)
+
+latent_densityData = latent_xRange.map(x => ({
+  x: x,
+  y: latent_link === "Logit"
+    ? latent_logisticDensity(x, latent_eta, latent_scale_logistic)
+    : latent_normalDensity(x, latent_eta, 1),
+  region: x >= 0 ? "P(Y=1)" : "P(Y=0)"
+}))
+
+latent_peakY = Math.max(...latent_densityData.map(d => d.y))
+
+latent_plot = Plot.plot(latent_plotDefaults({
+  width: 700,
+  height: 380,
+  marginTop: 30,
+  marginRight: 20,
+  x: { domain: [-6, 8], label: "y* (latent variable)" },
+  y: { domain: [0, latent_peakY * 1.15], label: "Density", grid: true },
+  marks: [
+    Plot.areaY(latent_densityData.filter(d => d.x <= 0), {
+      x: "x", y: "y", fill: latent_withAlpha(latent_ber640.secondary, 0.35),
+      curve: "basis"
+    }),
+    Plot.areaY(latent_densityData.filter(d => d.x >= 0), {
+      x: "x", y: "y", fill: latent_withAlpha(latent_ber640.accent, 0.35),
+      curve: "basis"
+    }),
+    Plot.lineY(latent_densityData, {
+      x: "x", y: "y", stroke: latent_ber640.primary, strokeWidth: 2.5,
+      curve: "basis"
+    }),
+    Plot.ruleX([0], {
+      stroke: latent_tc.text, strokeWidth: 1.5, strokeDasharray: "6,4"
+    }),
+    Plot.text(["Threshold"], {
+      x: [0], y: [latent_peakY * 1.08],
+      fill: latent_tc.text, fontSize: 12, fontWeight: 600,
+      textAnchor: "middle"
+    }),
+    Plot.dot([latent_eta], {
+      x: d => d, y: 0, fill: latent_ber640.warning, r: 6, stroke: latent_tc.text, strokeWidth: 1
+    }),
+    Plot.text([latent_eta], {
+      x: d => d, y: [0],
+      text: d => `η = ${d.toFixed(2)}`, fill: latent_ber640.warning,
+      fontSize: 12, fontWeight: 700, textAnchor: "middle", dy: 16
+    }),
+    Plot.text(["P(Y=0)"], {
+      x: [Math.min(-1.5, latent_eta - 1.5)], y: [latent_peakY * 0.5],
+      fill: latent_ber640.secondary, fontSize: 14, fontWeight: 700,
+      textAnchor: "middle"
+    }),
+    Plot.text(["P(Y=1)"], {
+      x: [Math.max(1.5, latent_eta + 1.5)], y: [latent_peakY * 0.5],
+      fill: latent_ber640.accent, fontSize: 14, fontWeight: 700,
+      textAnchor: "middle"
+    })
+  ]
+}))
+
+latent_infoPanel = {
+  const probLogitPct = (latent_prob_logit * 100).toFixed(1);
+  const probProbitPct = (latent_prob_probit * 100).toFixed(1);
+  const activeColor = latent_ber640.accent;
+  const inactiveColor = latent_tc.muted;
+
+  return html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px;">
+    <div style="background: ${latent_tc.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}; border-radius: 10px; padding: 18px; text-align: center; border: 2px solid ${latent_link === 'Logit' ? activeColor : 'transparent'};">
+      <div style="font-size: 13px; color: ${latent_tc.muted}; margin-bottom: 4px; font-weight: 600;">Logit → P(Y=1)</div>
+      <div style="font-size: 36px; font-weight: 800; color: ${latent_link === 'Logit' ? activeColor : inactiveColor};">${probLogitPct}%</div>
+      <div style="font-size: 12px; color: ${latent_tc.muted}; margin-top: 4px;">logistic(${latent_eta.toFixed(2)}) = ${latent_prob_logit.toFixed(4)}</div>
+    </div>
+    <div style="background: ${latent_tc.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}; border-radius: 10px; padding: 18px; text-align: center; border: 2px solid ${latent_link === 'Probit' ? activeColor : 'transparent'};">
+      <div style="font-size: 13px; color: ${latent_tc.muted}; margin-bottom: 4px; font-weight: 600;">Probit → P(Y=1)</div>
+      <div style="font-size: 36px; font-weight: 800; color: ${latent_link === 'Probit' ? activeColor : inactiveColor};">${probProbitPct}%</div>
+      <div style="font-size: 12px; color: ${latent_tc.muted}; margin-top: 4px;">Φ(${latent_eta.toFixed(2)}) = ${latent_prob_probit.toFixed(4)}</div>
+    </div>
+  </div>
+  <div style="margin-top: 12px; padding: 14px 18px; background: ${latent_tc.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}; border-radius: 10px;">
+    <div style="font-size: 13px; color: ${latent_tc.muted}; margin-bottom: 6px; font-weight: 600;">Linear Predictor</div>
+    <div style="font-size: 16px; color: ${latent_tc.text};">η = α + β · X = ${latent_alpha.toFixed(1)} + (${latent_formatCoef(latent_beta)})(${latent_xval.toFixed(1)}) = <strong>${latent_eta.toFixed(2)}</strong></div>
+    <div style="font-size: 13px; color: ${latent_tc.muted}; margin-top: 8px;">
+      ${latent_link === "Logit"
+        ? `y* ~ Logistic(η = ${latent_eta.toFixed(2)}, s = π/√3 ≈ ${latent_scale_logistic.toFixed(3)}). P(Y=1) = P(y* > 0) = shaded blue area.`
+        : `y* ~ Normal(η = ${latent_eta.toFixed(2)}, σ = 1). P(Y=1) = P(y* > 0) = shaded blue area.`
+      }
+    </div>
+  </div>`
+}
+
+html`<div style="max-width: 720px;">
+  ${latent_plot}
+  ${latent_infoPanel}
+</div>`
+```
+
+### From Latent Variable to Probability
+
+Given the latent variable model, the probability of $y_i = 1$ is:
+
+$$
+P(y_i = 1 \mid x_i) = P(y_i^* > 0) = P(\varepsilon_i > -(\alpha + \mathbf{x}_i'\boldsymbol{\beta})) = 1 - F(-\eta_i) = F(\eta_i)
+$$
+
+where $\eta_i = \alpha + \mathbf{x}_i'\boldsymbol{\beta}$ is the **linear predictor** and $F$ is the CDF of $\varepsilon_i$. The last equality holds when $F$ is symmetric around zero (so $1 - F(-z) = F(z)$).
+
+**The distribution we choose for $\varepsilon_i$ determines the model:**
+
+| Error Distribution | CDF $F(\cdot)$ | Model Name |
+|:-------------------|:----------------|:-----------|
+| Standard logistic | $\Lambda(z) = \frac{e^z}{1 + e^z}$ | **Logit** (logistic regression) |
+| Standard normal | $\Phi(z)$ | **Probit** regression |
+
+- **Logistic errors** $\Rightarrow$ $P(y_i = 1) = \Lambda(\eta_i) = \frac{e^{\eta_i}}{1 + e^{\eta_i}}$ --- this is exactly the logistic regression model from @sec-ch9.
+- **Normal errors** $\Rightarrow$ $P(y_i = 1) = \Phi(\eta_i)$ --- this is the **probit** model.
+
+::: {.callout-important}
+## Key Insight
+The logit and probit models are not ad hoc choices. They arise naturally from different assumptions about the distribution of unobserved factors. In practice, the logistic and normal distributions are so similar that the two models usually give nearly identical predicted probabilities.
+:::
+
+
+## The Pearson--Yule Debate {#sec-ch12-debate}
+
+The distinction between latent continuous variables and observed binary outcomes has deep historical roots. In the early 1900s, Karl Pearson and G. Udny Yule clashed over the proper way to measure association in 2$\times$2 tables.
+
+**Pearson (1900, 1913)** argued that a continuous bivariate normal distribution underlies the observed dichotomy. He proposed the **tetrachoric correlation**, which estimates what the Pearson correlation would be between the latent continuous variables. This is essentially the probit perspective.
+
+**Yule (1900, 1912)** countered that binary data should be analyzed as they are, using the **odds ratio** as the natural measure of association. He saw no need to posit an unobserved continuum. This is the logistic regression perspective.
+
+::: {.callout-note}
+## Historical Note
+The Pearson--Yule debate was never fully resolved in their lifetimes. Modern statistics uses both approaches: the probit model when a latent normal variable is theoretically motivated (e.g., psychometrics, item response theory), and the logit model when the odds ratio is the target quantity (e.g., epidemiology, social science). In practice, the choice often comes down to disciplinary convention.
+:::
+
+
+## Probit Regression {#sec-ch12-probit}
+
+### Fitting a Probit Model
+
+The probit model replaces the logistic CDF with the normal CDF. In R, we simply change the `link` argument in `glm()`:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch12-probit-fit
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Load the Titanic data
+data(titanic)
+titanic <- titanic |>
+  mutate(sex_label = factor(ifelse(sex == 1, "Female", "Male")))
+
+# Logit model (for comparison)
+fit_logit <- glm(survived ~ sex + age, family = binomial(link = "logit"),
+                 data = titanic)
+
+# Probit model
+fit_probit <- glm(survived ~ sex + age, family = binomial(link = "probit"),
+                  data = titanic)
+
+# Compare coefficients side by side
+tibble(
+  term    = names(coef(fit_logit)),
+  logit   = coef(fit_logit),
+  probit  = coef(fit_probit),
+  ratio   = coef(fit_logit) / coef(fit_probit)
+) |>
+  kable(digits = 4, col.names = c("Term", "Logit β", "Probit β", "Logit / Probit"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch12-probit-fit"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The logit coefficients are systematically larger than the probit coefficients. The ratio of logit to probit coefficients is approximately **1.7** for all terms. This is not a coincidence --- it reflects the mathematical relationship between the logistic and normal distributions.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch12-probit-fit"
+#| eval: false
+```
+- `family = binomial(link = "logit")` fits the standard logistic regression (default)
+- `family = binomial(link = "probit")` fits the probit model using the normal CDF
+- The ratio column shows how logit and probit coefficients compare
+- Both models use the same predictors and maximum likelihood estimation
+
+
+:::
+
+### The 1.7 Rule of Thumb
+
+The logistic distribution with variance $\pi^2/3 \approx 3.29$ closely approximates the standard normal distribution scaled by $\pi / \sqrt{3} \approx 1.814$. In practice, this leads to a widely used approximation:
+
+$$
+\hat{\beta}_{\text{logit}} \approx 1.7 \times \hat{\beta}_{\text{probit}}
+$$ {#eq-ch12-scaling}
+
+Or equivalently:
+
+$$
+\hat{\beta}_{\text{probit}} \approx \frac{\hat{\beta}_{\text{logit}}}{1.7}
+$$
+
+::: {.callout-note}
+## Why 1.7?
+The logistic distribution has variance $\pi^2/3$, while the standard normal has variance 1. To make the two CDFs as similar as possible, we need to scale by $\sqrt{\pi^2/3} \approx 1.814$. The traditional approximation rounds this down to 1.7 or sometimes 1.8.
+:::
+
+### Comparing Predicted Probabilities
+
+Despite different coefficients, logit and probit models produce nearly identical predicted probabilities:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch12-logit-probit-compare
+#| fig-cap: "Predicted probability of survival as a function of age, from logit and probit models. The two curves are virtually indistinguishable, differing by at most 1--2 percentage points."
+#| fig-alt: "Line plot comparing predicted probability of survival on the vertical axis against age on the horizontal axis for logit and probit models. Two S-shaped curves, one for each model, are overlaid and appear nearly identical, both declining from high probability at young ages to low probability at older ages. The curves differ by at most one to two percentage points across the entire age range, demonstrating the practical equivalence of logit and probit specifications for binary outcomes."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Generate predictions from both models
+age_grid <- datagrid(model = fit_logit, age = seq(1, 75, by = 1), sex = 1)
+
+pred_logit  <- predictions(fit_logit, newdata = age_grid) |>
+  as_tibble() |>
+  mutate(model = "Logit")
+
+pred_probit <- predictions(fit_probit, newdata = age_grid) |>
+  as_tibble() |>
+  mutate(model = "Probit")
+
+bind_rows(pred_logit, pred_probit) |>
+  ggplot(aes(x = age, y = estimate, color = model)) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = c(ber640_colors["accent"], ber640_colors["secondary"])) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Logit vs Probit: Predicted Probabilities",
+    subtitle = "Female passengers, Titanic dataset",
+    x = "Age (years)",
+    y = "P(Survived)",
+    color = "Model"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch12-logit-probit-compare"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The logit and probit predicted probabilities are nearly identical across the entire age range. The maximum difference is typically 1--2 percentage points, occurring where the curve is steepest (around $\pi = 0.5$). For practical purposes, the two models are interchangeable.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch12-logit-probit-compare"
+#| eval: false
+```
+- `datagrid()` from `marginaleffects` creates a grid of predictor values for prediction
+- `predictions()` computes predicted probabilities from each model
+- We plot predictions for female passengers (`sex = 1`) across the age range
+- The two curves are overlaid for direct comparison
+
+
+:::
+
+### Interactive Exploration: Logit vs. Probit {.unnumbered}
+
+::: {.callout-tip collapse="true"}
+## Try It: Compare the Two Link Functions
+
+Adjust β to see how the logistic (logit) and normal (probit) curves differ. The ratio of logit to probit coefficients is approximately 1.7, so the curves nearly overlap when properly scaled.
+:::
+
+```{ojs}
+//| echo: false
+import { ber640 as lp_ber640, plotDefaults as lp_plotDefaults, themeColors as lp_themeColors, sigmoid as lp_sigmoid, seq as lp_seq, formatCoef as lp_formatCoef, withAlpha as lp_withAlpha } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+lp_tc = lp_themeColors()
+
+lp_normalCDF = function(z) {
+  // A&S 26.2.17 via erfc (fixed v1.4)
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
+  const p = 0.3275911;
+  const x = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + p * x);
+  const erfc = (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return z >= 0 ? 1 - 0.5 * erfc : 0.5 * erfc;
+}
+
+viewof lp_beta = Inputs.range([-3, 3], {value: 1.0, step: 0.1, label: "β (slope coefficient)", width: 320})
+```
+
+```{ojs}
+//| echo: false
+lp_alpha = -0.5
+
+lp_xGrid = lp_seq(-5, 5, 201)
+
+lp_logitData = lp_xGrid.map(x => ({x, p: lp_sigmoid(lp_alpha + lp_beta * x), model: "Logit"}))
+lp_probitData = lp_xGrid.map(x => ({x, p: lp_normalCDF(lp_alpha + lp_beta * x), model: "Probit"}))
+lp_scaledProbitData = lp_xGrid.map(x => ({x, p: lp_normalCDF(lp_alpha + (lp_beta / 1.7) * x), model: "Scaled Probit (β/1.7)"}))
+
+lp_maxDiffRaw = Math.max(...lp_xGrid.map((x, i) => Math.abs(lp_logitData[i].p - lp_probitData[i].p)))
+lp_maxDiffScaled = Math.max(...lp_xGrid.map((x, i) => Math.abs(lp_logitData[i].p - lp_scaledProbitData[i].p)))
+lp_crossingX = lp_beta !== 0 ? -lp_alpha / lp_beta : null
+
+lp_plot = {
+  const marks = [
+    Plot.ruleY([0.5], {stroke: lp_tc.muted, strokeDasharray: "4,4", strokeWidth: 1}),
+    ...(lp_crossingX !== null && Math.abs(lp_crossingX) <= 5
+      ? [Plot.ruleX([lp_crossingX], {stroke: lp_tc.muted, strokeDasharray: "4,4", strokeWidth: 1})]
+      : []),
+    Plot.line(lp_logitData, {x: "x", y: "p", stroke: lp_ber640.accent, strokeWidth: 2.5}),
+    Plot.line(lp_probitData, {x: "x", y: "p", stroke: lp_ber640.secondary, strokeWidth: 2.5}),
+    Plot.line(lp_scaledProbitData, {x: "x", y: "p", stroke: lp_ber640.info, strokeWidth: 2.5, strokeDasharray: "6,4"})
+  ];
+
+  return Plot.plot(lp_plotDefaults({
+    width: 680,
+    height: 400,
+    marginTop: 40,
+    x: {domain: [-5, 5], label: "X"},
+    y: {domain: [0, 1], label: "P(Y = 1)"},
+    marks
+  }))
+}
+
+lp_legend = html`<div style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-top:4px; margin-bottom:12px;">
+  <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; color:${lp_tc.text};">
+    <svg width="28" height="4" aria-hidden="true"><line x1="0" y1="2" x2="28" y2="2" stroke="${lp_ber640.accent}" stroke-width="2.5"/></svg>Logit
+  </span>
+  <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; color:${lp_tc.text};">
+    <svg width="28" height="4" aria-hidden="true"><line x1="0" y1="2" x2="28" y2="2" stroke="${lp_ber640.secondary}" stroke-width="2.5"/></svg>Probit
+  </span>
+  <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; color:${lp_tc.text};">
+    <svg width="28" height="4" aria-hidden="true"><line x1="0" y1="2" x2="28" y2="2" stroke="${lp_ber640.info}" stroke-width="2.5" stroke-dasharray="6,4"/></svg>Scaled Probit (β/1.7)
+  </span>
+</div>`
+
+lp_cards = {
+  const cardStyle = `background: ${lp_withAlpha(lp_tc.isDark ? '#ffffff' : '#000000', 0.04)}; border: 1px solid ${lp_withAlpha(lp_tc.isDark ? '#ffffff' : '#000000', 0.1)}; border-radius: 8px; padding: 12px 16px; flex: 1; min-width: 180px; text-align: center;`;
+  const labelStyle = `font-size:0.78rem; color:${lp_tc.muted}; margin-bottom:4px;`;
+  const valueStyle = `font-size:1.1rem; font-weight:600; color:${lp_tc.text};`;
+
+  return html`<div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
+    <div style="${cardStyle}">
+      <div style="${labelStyle}">Max |Logit − Probit|</div>
+      <div style="${valueStyle}">${lp_maxDiffRaw.toFixed(4)}</div>
+    </div>
+    <div style="${cardStyle}">
+      <div style="${labelStyle}">Max |Logit − Scaled Probit|</div>
+      <div style="${valueStyle}">${lp_maxDiffScaled.toFixed(4)}</div>
+    </div>
+    <div style="${cardStyle}">
+      <div style="${labelStyle}">β<sub>logit</sub> / β<sub>probit</sub> scaling</div>
+      <div style="${valueStyle}">≈ 1.7</div>
+      <div style="font-size:0.75rem; color:${lp_tc.muted}; margin-top:2px;">${lp_formatCoef(lp_beta)} × (1/1.7) = ${lp_formatCoef(lp_beta / 1.7)}</div>
+    </div>
+  </div>`
+}
+```
+
+
+## The Generalized Linear Model Framework {#sec-ch12-glm}
+
+### Unifying Linear, Logistic, and Probit Regression
+
+Up to this point in the course, we have studied what appear to be two separate families of models:
+
+- **Chapters 1--8**: Linear regression models for continuous outcomes
+- **Chapters 9--10**: Logistic regression for binary outcomes
+
+The **generalized linear model (GLM)** framework, introduced by Nelder and Wedderburn (1972), reveals that these are special cases of a single, unified approach. Every GLM has three components:
+
+::: {.callout-important}
+## The Three Components of a GLM
+
+1. **Random component** (distribution family): Specifies the probability distribution of the response variable $y$
+   - Normal distribution $\rightarrow$ linear regression
+   - Binomial distribution $\rightarrow$ logistic or probit regression
+
+2. **Systematic component** (linear predictor): The linear combination of predictors
+   $$\eta_i = \alpha + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots$$
+   This is the same for all GLMs --- it is always linear in the parameters.
+
+3. **Link function**: Connects the mean of $y$ to the linear predictor
+   $$g(\mu_i) = \eta_i$$
+   where $\mu_i = E(y_i \mid \mathbf{x}_i)$ and $g(\cdot)$ is a monotonic function.
+:::
+
+::: {.callout-note}
+## Why GLMs Matter for Your Research
+The GLM framework is not just theoretical elegance --- it has practical consequences. Once you understand that linear and logistic regression share the same structure, you can:
+
+1. **Transfer your intuition**: Concepts like multicollinearity, confounding, and interaction effects work the same way across all GLMs
+2. **Use the same R tools**: `glm()`, `marginaleffects`, `easystats`, and `gtsummary` all work with any GLM family
+3. **Extend to new outcome types**: Count data (Poisson regression), ordinal data (@sec-ch13), and other outcomes all fit the same framework
+:::
+
+### GLM Components for Models We Know
+
+The following table shows how the models from this course fit within the GLM framework:
+
+| Model | Random Component | Link Function $g(\mu)$ | $g(\mu) = \eta$ |
+|:------|:----------------|:----------------------|:----------------|
+| Linear regression (@sec-ch1) | Normal | Identity: $g(\mu) = \mu$ | $\mu_i = \alpha + \mathbf{x}_i'\boldsymbol{\beta}$ |
+| Logistic regression (@sec-ch9) | Binomial | Logit: $g(\mu) = \log\frac{\mu}{1-\mu}$ | $\log\frac{\pi_i}{1-\pi_i} = \alpha + \mathbf{x}_i'\boldsymbol{\beta}$ |
+| Probit regression | Binomial | Probit: $g(\mu) = \Phi^{-1}(\mu)$ | $\Phi^{-1}(\pi_i) = \alpha + \mathbf{x}_i'\boldsymbol{\beta}$ |
+
+::: {.callout-tip}
+## The Big Picture
+Linear regression is a GLM with an identity link and normal family. Logistic regression is a GLM with a logit link and binomial family. The linear predictor $\eta = \alpha + \mathbf{x}'\boldsymbol{\beta}$ is the same in every case --- only the link function and error distribution change.
+:::
+
+### The Link Function as a Bridge
+
+The link function $g(\cdot)$ serves as a bridge between the linear predictor (which ranges over $\mathbb{R}$) and the mean of the response (which may be constrained). For binary outcomes, $\mu = \pi \in (0, 1)$, so we need a function that maps $(0, 1)$ to $\mathbb{R}$:
+
+- The **logit** link: $g(\pi) = \log\frac{\pi}{1-\pi}$ maps $(0,1) \to (-\infty, +\infty)$
+- The **probit** link: $g(\pi) = \Phi^{-1}(\pi)$ also maps $(0,1) \to (-\infty, +\infty)$
+
+For continuous outcomes with no constraints on $\mu$, the **identity** link $g(\mu) = \mu$ works directly.
+
+### Visualizing Link Functions
+
+The following plot compares three common link functions for binary outcomes: logit, probit, and complementary log-log (cloglog). Each maps the linear predictor $\eta \in \mathbb{R}$ to a probability $\pi \in (0, 1)$.
+
+::: {.panel-tabset}
+#### R Code
+```{r}
+#| label: fig-ch12-link-comparison
+#| fig-cap: "Comparison of three inverse link functions: logit (logistic CDF), probit (normal CDF), and complementary log-log. The logit and probit curves are nearly identical and symmetric. The cloglog curve is asymmetric, rising more slowly on the left and more steeply on the right."
+#| fig-alt: "Line plot with the linear predictor eta on the horizontal axis and predicted probability on the vertical axis, showing three inverse link function curves. The logit and probit curves are symmetric S-shapes that nearly overlap, both passing through 0.5 at eta equals zero. The complementary log-log curve is visibly asymmetric, approaching zero more slowly on the left side and rising steeply toward one on the right side, crossing 0.5 at a value of eta slightly below zero."
+#| fig-width: 9
+#| fig-height: 6
+
+# Create a grid of linear predictor values
+eta_seq <- seq(-6, 6, length.out = 500)
+
+df_links <- tibble(
+  eta = rep(eta_seq, 3),
+  link = rep(c("Logit (logistic CDF)", "Probit (normal CDF)", "Cloglog"), each = length(eta_seq)),
+  probability = c(
+    plogis(eta_seq),                       # Logistic CDF
+    pnorm(eta_seq),                        # Normal CDF
+    1 - exp(-exp(eta_seq))                 # Cloglog inverse
+  )
+)
+
+ggplot(df_links, aes(x = eta, y = probability, color = link)) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = 0.5, linetype = "dotted", color = "grey50") +
+  scale_color_manual(
+    values = c(
+      "Logit (logistic CDF)"  = ber640_colors["accent"],
+      "Probit (normal CDF)"   = ber640_colors["secondary"],
+      "Cloglog"               = ber640_colors["success"]
+    )
+  ) +
+  scale_y_continuous(labels = scales::percent, breaks = seq(0, 1, by = 0.25)) +
+  labs(
+    title = "Inverse Link Functions for Binary Regression",
+    subtitle = expression(paste("Each curve maps the linear predictor ", eta, " to a probability ", pi)),
+    x = expression(paste("Linear predictor ", eta, " = ", alpha, " + ", bold(x), "'", beta)),
+    y = expression(paste("Predicted probability ", pi)),
+    color = "Link Function"
+  )
+```
+
+#### Code Explanation
+- `plogis()` computes the logistic CDF (inverse logit link)
+- `pnorm()` computes the normal CDF (inverse probit link)
+- `1 - exp(-exp(eta))` computes the inverse complementary log-log link
+- The horizontal dotted line at 0.5 helps compare where each curve crosses the midpoint
+- The cloglog link is included to show that other link functions exist beyond logit and probit
+
+#### Output Interpretation
+The logit and probit curves are nearly indistinguishable --- both are symmetric S-shaped curves centered near $\eta = 0$. The maximum difference between them occurs in the tails. The **complementary log-log (cloglog)** curve is asymmetric: it approaches 0 more gradually (left tail) but approaches 1 more rapidly (right tail). The cloglog link is used when the probability of the event changes more rapidly at higher values of the predictor (e.g., in survival analysis or dose-response studies). For most applications in education and social science, the logit and probit links are sufficient.
+:::
+
+
+## GLM Estimation in R {#sec-ch12-estimation}
+
+### The `glm()` Function
+
+R's `glm()` function handles all generalized linear models through a consistent interface. The only thing that changes is the `family` argument:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch12-glm-comparison
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Linear regression as a GLM
+fit_lm <- glm(age ~ sex + fare, family = gaussian(link = "identity"),
+              data = titanic)
+
+# Logistic regression as a GLM
+fit_logit2 <- glm(survived ~ sex + age, family = binomial(link = "logit"),
+                  data = titanic)
+
+# Probit regression as a GLM
+fit_probit2 <- glm(survived ~ sex + age, family = binomial(link = "probit"),
+                   data = titanic)
+
+# Show the family and link for each model
+tibble(
+  Model  = c("Linear", "Logistic", "Probit"),
+  Family = c("gaussian", "binomial", "binomial"),
+  Link   = c("identity", "logit", "probit"),
+  `R Code` = c("gaussian(link='identity')",
+               "binomial(link='logit')",
+               "binomial(link='probit')")
+) |>
+  kable()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch12-glm-comparison"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The table summarizes the three model types. The `glm()` function in R is the universal tool: by changing the `family` and `link`, you switch between entirely different model types while keeping the formula syntax identical.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch12-glm-comparison"
+#| eval: false
+```
+- `gaussian(link = "identity")` specifies normal family with identity link --- this is standard linear regression
+- `binomial(link = "logit")` specifies binomial family with logit link --- logistic regression
+- `binomial(link = "probit")` specifies binomial family with probit link --- probit regression
+- Note: `lm(y ~ x)` and `glm(y ~ x, family = gaussian)` produce identical results
+
+
+:::
+
+### Comparing Model Parameters
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch12-model-params
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Detailed parameter comparison: logit vs probit
+model_parameters(fit_logit) |>
+  print_md()
+
+model_parameters(fit_probit) |>
+  print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch12-model-params"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Comparing the two outputs:
+
+- The **logit** coefficients are approximately 1.7 times the **probit** coefficients (confirming @eq-ch12-scaling)
+- The $p$-values and statistical significance are virtually identical
+- The direction and relative magnitude of effects are the same
+
+### Code Explanation
+```{r}
+#| ref.label: "ch12-model-params"
+#| eval: false
+```
+- `model_parameters()` from `easystats` provides a clean summary of model coefficients
+- Both models are fit to the same data with the same predictors
+- The coefficients differ in scale but convey the same information
+
+
+:::
+
+### Comparing Average Marginal Effects
+
+Since logit and probit coefficients are on different scales, we use **average marginal effects** to compare on a common scale --- the probability scale:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch12-ame-comparison
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# AME from logit model
+ame_logit <- avg_slopes(fit_logit, type = "response") |>
+  as_tibble() |>
+  select(term, estimate, std.error) |>
+  mutate(model = "Logit")
+
+# AME from probit model
+ame_probit <- avg_slopes(fit_probit, type = "response") |>
+  as_tibble() |>
+  select(term, estimate, std.error) |>
+  mutate(model = "Probit")
+
+bind_rows(ame_logit, ame_probit) |>
+  pivot_wider(names_from = model, values_from = c(estimate, std.error)) |>
+  kable(digits = 4,
+        col.names = c("Term", "AME (Logit)", "AME (Probit)", "SE (Logit)", "SE (Probit)"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch12-ame-comparison"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The average marginal effects from logit and probit are nearly identical. This confirms that the models agree on the substantive conclusions, even though their coefficients differ in scale. **When choosing between logit and probit, the practical difference in results is negligible.**
+
+### Code Explanation
+```{r}
+#| ref.label: "ch12-ame-comparison"
+#| eval: false
+```
+- `avg_slopes(type = "response")` computes average marginal effects on the probability scale
+- These are directly comparable across models because they answer the same question: "On average, how much does a one-unit change in $x$ change the predicted probability?"
+- The `pivot_wider()` step arranges the results side by side
+
+
+:::
+
+
+### Visualizing the GLM Framework
+
+The following visualization provides a comprehensive comparison of how the three GLM families we have studied produce different fitted curves for the same data structure.
+
+::: {.panel-tabset}
+#### R Code
+```{r}
+#| label: fig-ch12-glm-family-comparison
+#| fig-cap: "Three GLM families applied to their respective outcome types. Left: linear regression (Gaussian family, identity link) for a continuous outcome. Center: logistic regression (Binomial family, logit link) for a binary outcome. Right: probit regression (Binomial family, probit link) for the same binary outcome. The S-shaped curves in the center and right panels are virtually identical."
+#| fig-alt: "Three-panel figure comparing GLM families. The left panel shows a scatterplot of continuous outcomes with a straight fitted regression line from the Gaussian family with identity link. The center panel shows binary zero-one outcomes with an S-shaped logistic curve from the binomial family with logit link. The right panel shows the same binary data with an S-shaped probit curve from the binomial family with probit link. The logistic and probit curves in the center and right panels are virtually identical in shape, both mapping the predictor to probabilities between zero and one."
+#| fig-width: 12
+#| fig-height: 5
+
+# --- Panel 1: Linear regression (Gaussian) ---
+set.seed(640)
+n_sim <- 200
+df_gauss <- tibble(
+  x = runif(n_sim, 0, 10),
+  y = 3 + 1.5 * x + rnorm(n_sim, sd = 2)
+)
+
+p1 <- ggplot(df_gauss, aes(x = x, y = y)) +
+  geom_point(alpha = 0.4, color = ber640_colors["primary"]) +
+  geom_smooth(method = "glm", formula = y ~ x,
+              method.args = list(family = gaussian(link = "identity")),
+              color = ber640_colors["accent"], linewidth = 1.2, se = FALSE) +
+  labs(
+    title = "Gaussian / Identity",
+    subtitle = "Linear regression",
+    x = "x", y = "E(y | x)"
+  )
+
+# --- Panel 2: Logistic regression (Binomial/logit) ---
+df_binom <- titanic |> filter(!is.na(age))
+
+p2 <- ggplot(df_binom, aes(x = age, y = survived)) +
+  geom_jitter(height = 0.05, alpha = 0.2, color = ber640_colors["primary"]) +
+  geom_smooth(method = "glm", formula = y ~ x,
+              method.args = list(family = binomial(link = "logit")),
+              color = ber640_colors["secondary"], linewidth = 1.2, se = FALSE) +
+  labs(
+    title = "Binomial / Logit",
+    subtitle = "Logistic regression",
+    x = "Age", y = "P(Survived)"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+
+# --- Panel 3: Probit regression (Binomial/probit) ---
+p3 <- ggplot(df_binom, aes(x = age, y = survived)) +
+  geom_jitter(height = 0.05, alpha = 0.2, color = ber640_colors["primary"]) +
+  geom_smooth(method = "glm", formula = y ~ x,
+              method.args = list(family = binomial(link = "probit")),
+              color = ber640_colors["success"], linewidth = 1.2, se = FALSE) +
+  labs(
+    title = "Binomial / Probit",
+    subtitle = "Probit regression",
+    x = "Age", y = "P(Survived)"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+
+# Combine with patchwork
+p1 + p2 + p3 +
+  plot_annotation(
+    title = "The GLM Framework: Three Model Families",
+    subtitle = "Same structure (linear predictor), different families and link functions",
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 16),
+      plot.subtitle = element_text(color = "grey40")
+    )
+  )
+```
+
+#### Code Explanation
+- **Left panel**: `gaussian(link = "identity")` produces a straight-line fit --- this is ordinary linear regression
+- **Center panel**: `binomial(link = "logit")` produces the familiar S-shaped logistic curve
+- **Right panel**: `binomial(link = "probit")` produces a nearly identical S-curve using the normal CDF
+- `geom_smooth(method = "glm", formula = y ~ x, ...)` fits a GLM directly within ggplot
+- `patchwork` arranges the three panels side by side for easy comparison
+- The simulated continuous data (left) contrasts with the real Titanic binary data (center, right)
+
+#### Output Interpretation
+This triptych illustrates the GLM framework in action. The **linear predictor** $\eta = \alpha + \beta x$ is the same concept across all three panels --- only the **family** (distribution) and **link function** change. For the Gaussian family, the relationship between $x$ and $E(y)$ is a straight line. For the binomial family, the link function bends the straight line into an S-curve that respects the $(0, 1)$ probability bounds. The logit and probit panels look virtually identical, confirming that the choice between them rarely matters in practice.
+:::
+
+
+## Poisson Regression {#sec-ch12-poisson}
+
+So far in this chapter, we have focused on binary outcomes. But many outcomes in the social and behavioral sciences are *counts*: the number of disciplinary incidents in a school, the number of publications a faculty member has produced, the number of absences a student accumulates. These outcomes are non-negative integers, and they require a different modeling approach.
+
+**Poisson regression** fits naturally into the GLM framework from @sec-ch12-glm, with a specific choice of distributional family and link function.
+
+### The Poisson Distribution
+
+The Poisson distribution describes the probability of observing $k$ events in a fixed interval when events occur independently at a constant average rate $\lambda$:
+
+$$
+P(Y = k) = \frac{\lambda^k e^{-\lambda}}{k!}, \quad k = 0, 1, 2, \ldots
+$$ {#eq-ch12-poisson-pmf}
+
+A key property is the **mean-variance equality**: $E(Y) = \text{Var}(Y) = \lambda$.
+
+### The Log Link
+
+In Poisson regression, we model the natural logarithm of the expected count:
+
+$$
+\log(\mu_i) = \alpha + \beta_1 x_{1i} + \cdots + \beta_p x_{pi}
+$$ {#eq-ch12-poisson-log-link}
+
+The log link ensures $\mu_i > 0$ (counts cannot be negative) and gives coefficients a **multiplicative** interpretation: $\exp(\beta_1)$ is the **incidence rate ratio** (IRR)---the factor by which the expected count is multiplied for each one-unit increase in $x_1$.
+
+### Example: Faculty Publications
+
+::: {.panel-tabset}
+
+#### R Code
+
+```{r}
+#| label: ch12-poisson-sim-data
+#| message: false
+
+# Simulate count data: faculty publications by experience
+set.seed(640)
+n <- 200
+teach_data <- tibble(
+  experience = runif(n, 1, 30),
+  publications = rpois(n, lambda = exp(0.5 + 0.03 * experience))
+)
+
+# Fit Poisson regression
+pois_model <- glm(publications ~ experience,
+                  family = poisson,
+                  data = teach_data)
+
+summary(pois_model)
+```
+
+#### Code Explanation
+
+We simulate 200 faculty members with random experience levels (1--30 years). Publication counts are drawn from a Poisson distribution with $\log(\lambda) = 0.5 + 0.03 \times \text{experience}$. The `glm()` call with `family = poisson` estimates the model via maximum likelihood using the canonical log link.
+
+#### Output Interpretation
+
+The intercept should be close to the true value of 0.5, and the experience coefficient close to 0.03. The exponentiated coefficient $\exp(0.03) \approx 1.030$ means each additional year of experience is associated with roughly a 3% increase in expected publications.
+
+:::
+
+::: {.panel-tabset}
+
+#### R Code
+
+```{r}
+#| label: fig-ch12-poisson-curve
+#| fig-cap: "Poisson regression fitted curve showing the exponential relationship between years of experience and expected number of publications."
+#| fig-alt: "Scatter plot of publications versus years of experience with an exponential curve fitted by Poisson regression. Points show increasing spread at higher experience levels."
+
+pred_data <- tibble(experience = seq(1, 30, length.out = 200))
+pred_data$predicted <- predict(pois_model, newdata = pred_data, type = "response")
+
+ggplot(teach_data, aes(x = experience, y = publications)) +
+  geom_point(alpha = 0.4, color = ber640_colors["primary"]) +
+  geom_line(data = pred_data, aes(x = experience, y = predicted),
+            color = ber640_colors["secondary"], linewidth = 1.2) +
+  labs(x = "Years of Experience", y = "Number of Publications",
+       title = "Poisson Regression: Publications by Experience")
+```
+
+#### Code Explanation
+
+`predict()` with `type = "response"` gives predicted counts on the original scale ($\hat{\mu}$, not $\log(\hat{\mu})$). The fitted curve is exponential due to the log link.
+
+#### Output Interpretation
+
+The scatter plot shows two features typical of count data: the mean increases with experience (exponential curve), and the variance increases with the mean---wider spread at higher experience levels, consistent with $\text{Var}(Y) = \mu$.
+
+:::
+
+
+## Overdispersion {#sec-ch12-overdispersion}
+
+A critical assumption of the Poisson model is $\text{Var}(Y) = E(Y) = \lambda$. In practice, count data often exhibit **overdispersion**: observed variance exceeds the mean. This leads to standard errors that are too small and artificially significant p-values.
+
+### Detecting Overdispersion
+
+Compare the **residual deviance** to the **residual degrees of freedom**. Under the Poisson assumption, the ratio should be approximately 1. A ratio substantially greater than 1 suggests overdispersion: $\hat{\phi} = \text{Residual Deviance} / \text{Residual df}$.
+
+### Two Remedies
+
+**Quasi-Poisson** keeps the same coefficient estimates but inflates standard errors by $\sqrt{\hat{\phi}}$:
+
+```r
+quasi_model <- glm(publications ~ experience,
+                   family = quasipoisson, data = teach_data)
+```
+
+**Negative binomial** estimates a separate dispersion parameter $\theta$, where $\text{Var}(Y) = \mu + \mu^2/\theta$:
+
+```r
+library(MASS)
+nb_model <- glm.nb(publications ~ experience, data = teach_data)
+```
+
+| Feature | Poisson | Quasi-Poisson | Negative Binomial |
+|:--------|:--------|:--------------|:------------------|
+| Variance | $\mu$ | $\phi\mu$ | $\mu + \mu^2/\theta$ |
+| Coefficients | MLE | Same as Poisson | Different |
+| SE adjustment | None | $\times \sqrt{\hat{\phi}}$ | Built-in |
+| AIC available | Yes | No | Yes |
+| Best for | Equidispersed | Mild overdispersion | Substantial overdispersion |
+
+**Practical guidance:** Start with Poisson. If $\hat{\phi} \approx 1$, done. If $1.2 < \hat{\phi} < 2$, use quasi-Poisson. If $\hat{\phi} > 2$ or you need AIC, use negative binomial.
+
+
+## GLM Family Summary {#sec-ch12-glm-summary}
+
+| Family | Canonical Link | Variance Function | Typical Use |
+|:-------|:---------------|:------------------|:------------|
+| Gaussian | Identity: $g(\mu) = \mu$ | $\sigma^2$ (constant) | Continuous outcomes (OLS) |
+| Binomial | Logit: $g(\mu) = \log\!\left(\frac{\mu}{1-\mu}\right)$ | $\mu(1-\mu)$ | Binary / proportional |
+| Poisson | Log: $g(\mu) = \log(\mu)$ | $\mu$ | Count data |
+| Gamma | Inverse: $g(\mu) = 1/\mu$ | $\mu^2$ | Positive continuous, right-skewed |
+| Inv. Gaussian | $g(\mu) = 1/\mu^2$ | $\mu^3$ | Positive continuous, strong right skew |
+
+The canonical link is not the only option---the binomial family can use logit, probit, or cloglog links. The Gamma family is often used with a log link for more interpretable coefficients. These five families cover most outcome types, but extensions (negative binomial, beta, zero-inflated) build on the same conceptual foundation.
+
+
+## When to Use Logit vs Probit {#sec-ch12-choice}
+
+Given that the two models produce nearly identical results, how do you choose?
+
+| Consideration | Logit | Probit |
+|:-------------|:------|:-------|
+| **Interpretability** | Coefficients are log-odds ratios --- a familiar quantity | Coefficients lack a direct interpretation |
+| **Disciplinary convention** | Epidemiology, social science, education | Economics, finance, psychometrics |
+| **Latent variable motivation** | Logistic error distribution | Normal error distribution |
+| **Computational convenience** | Closed-form log-odds; slightly simpler derivatives | Normal CDF evaluated via fast polynomial approximation; equally efficient in practice |
+| **Extension to ordinal** | Cumulative logit model (@sec-ch13) | Cumulative probit model |
+
+::: {.callout-tip}
+## Practical Advice
+In BER 640, we default to the **logit** model because the odds ratio is a widely used and interpretable quantity. The probit model is most useful when you have a strong theoretical reason to assume normally distributed latent errors (as in certain psychometric models) or when your audience expects probit coefficients (common in economics).
+
+**A note on computation:** Both logit and probit models are estimated via Iteratively Reweighted Least Squares (IRLS) in R's `glm()`, and the normal CDF $\Phi(z)$ can be evaluated to machine precision using fast polynomial approximations. Numerical integration (e.g., Gauss--Hermite quadrature) becomes relevant only for **multilevel** probit models with random effects, not for standard single-level models.
+:::
+
+
+## Summary and Key Takeaways {#sec-ch12-summary}
+
+This chapter connected the logistic regression models of @sec-ch9 and @sec-ch10 to deeper theoretical foundations.
+
+::: {.callout-important}
+## Key Takeaways
+
+1. **Binary outcomes can arise from a latent continuum.** The latent variable model posits $y^* = \alpha + \mathbf{x}'\boldsymbol{\beta} + \varepsilon$, with $y = 1$ if $y^* > 0$. The distribution of $\varepsilon$ determines the model type.
+
+2. **Logistic errors yield the logit model; normal errors yield the probit model.** The logit function $\Lambda(z) = e^z / (1+e^z)$ and the normal CDF $\Phi(z)$ are both symmetric S-shaped curves that map $\mathbb{R}$ to $(0,1)$.
+
+3. **Logit coefficients $\approx$ 1.7 $\times$ probit coefficients.** This scaling rule reflects the different variances of the logistic ($\pi^2/3$) and normal (1) distributions.
+
+4. **Predicted probabilities and marginal effects are nearly identical** across the two models. The choice between logit and probit rarely affects substantive conclusions.
+
+5. **The GLM framework unifies regression models.** Every GLM has three components: a distribution family (random component), a linear predictor (systematic component), and a link function connecting the two. Linear regression, logistic regression, and probit regression are all special cases.
+
+6. **In R, `glm()` handles all GLMs.** The `family` argument --- `gaussian()`, `binomial(link = "logit")`, `binomial(link = "probit")` --- is the only thing that changes.
+
+7. **The Pearson--Yule debate foreshadowed modern practice.** Pearson's latent normal view (probit) and Yule's direct binary view (logit) are both valid, and both survive in modern statistics as complementary approaches.
+:::
+
+
+## Exercises {#sec-ch12-exercises}
+
+::: {.callout-caution collapse="true"}
+## Exercise 12.1: Logit vs Probit with a Continuous Predictor
+Using the `titanic` dataset, fit both a logit and a probit model predicting `survived` from `fare`.
+
+a. Report the coefficient for `fare` from both models. Verify that the ratio is approximately 1.7.
+b. Compute predicted probabilities of survival at fare = 10, 50, and 100 from both models. How large is the difference?
+c. Compute the average marginal effect of `fare` from both models and compare.
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 12.1
+`glm(survived ~ fare, family = binomial(link = "probit"), data = titanic)` fits the probit model. For part (b), use `predictions()` from `marginaleffects` with a `newdata` argument created via `datagrid(fare = c(10, 50, 100))`. For part (c), use `avg_slopes(type = "response")`.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 12.2: GLM Components
+For each of the following models, identify the three GLM components (random component, link function, linear predictor):
+
+a. A simple linear regression of exam score on study hours
+b. A logistic regression of graduation (yes/no) on GPA and income
+c. A probit regression of voting (yes/no) on age and education level
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 12.2
+The linear predictor always has the form $\alpha + \beta_1 x_1 + \cdots$. The family and link differ. For part (a), think about what distribution is appropriate for a continuous outcome. For parts (b) and (c), both have a binomial random component --- the only difference is the link function.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 12.3: Simulating from the Latent Variable Model
+Use the following code skeleton to simulate data from a latent variable model and verify that logistic regression recovers the true parameters:
+
+```r
+set.seed(640)
+n <- 1000
+x <- rnorm(n)
+
+# Latent variable with logistic errors
+y_star <- 0.5 + 1.2 * x + rlogis(n)
+y <- ifelse(y_star > 0, 1, 0)
+
+# Fit the logit model
+fit <- glm(y ~ x, family = binomial(link = "logit"))
+coef(fit)
+```
+
+a. Run the simulation and compare the estimated coefficients to the true values ($\alpha = 0.5$, $\beta = 1.2$).
+b. Repeat with `rnorm(n)` instead of `rlogis(n)` and fit a **probit** model. Do you recover the true parameters?
+c. What happens if you fit a logit model to probit-generated data, or vice versa? Are the predicted probabilities still reasonable?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 12.3
+For part (a), with $n = 1000$ the estimates should be close to the true values but not exact (sampling variability). For part (b), the key insight is that probit assumes standard normal errors, so using `rnorm(n)` matches the model assumption. For part (c), compare predicted probabilities using `fitted(fit)` from both the "correct" and "misspecified" models --- you should find that they are still very similar.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 12.4: The Complementary Log-Log Link
+The **complementary log-log (cloglog)** link is another option for binary outcomes: $g(\pi) = \log(-\log(1 - \pi))$.
+
+a. Fit a cloglog model predicting `survived` from `sex` and `age` using `glm(survived ~ sex + age, family = binomial(link = "cloglog"), data = titanic)`.
+b. Compare the predicted probabilities from the cloglog model to those from the logit and probit models for female passengers aged 1--75.
+c. Unlike the logit and probit, the cloglog link is **asymmetric**. In what practical situations might this asymmetry be useful? (Think about rare events.)
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 12.4
+For part (b), use the same `datagrid()` and `predictions()` approach from the chapter. For part (c), consider situations where the probability of the event is mostly near 0 or mostly near 1. The cloglog link approaches 1 faster than it approaches 0, which is useful in dose-response studies and interval-censored survival analysis.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 12.5: From Coefficients to Predicted Probabilities (By Hand)
+A logistic regression model yields $\hat{\alpha} = -1.5$ and $\hat{\beta} = 0.8$.
+
+a. Compute the predicted probability when $x = 0$, $x = 2$, and $x = 5$ using the logistic CDF: $\hat{\pi} = e^{\eta} / (1 + e^{\eta})$.
+b. Convert these logit coefficients to approximate probit coefficients using the 1.7 rule. Compute the predicted probabilities using the normal CDF: $\hat{\pi} = \Phi(\eta)$.
+c. Compare your answers from (a) and (b). How close are the predicted probabilities?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 12.5
+For part (a), compute $\eta = -1.5 + 0.8x$ for each value, then apply $\hat{\pi} = e^{\eta}/(1 + e^{\eta})$. In R, this is `plogis(eta)`. For part (b), divide by 1.7 to get $\hat{\alpha}_{\text{probit}} \approx -1.5/1.7$ and $\hat{\beta}_{\text{probit}} \approx 0.8/1.7$, then use `pnorm(eta_probit)`. The differences should be small (within 1--2 percentage points).
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 12.6: Why the Latent Variable Interpretation Matters
+A researcher fits a probit model predicting whether a student passes an exam (1 = pass) from hours of study. The coefficient for hours is $\hat{\beta} = 0.35$.
+
+a. Using the latent variable framework, describe what $y^*$ represents in this context. What does the threshold represent, and what happens when $y^* > 0$?
+b. The probit coefficient of 0.35 means that one additional hour of study shifts the latent variable by 0.35 standard deviations. Why is this "standard deviation" interpretation specific to probit and not available for logit? What assumption about the error distribution makes it possible?
+c. A colleague suggests that the latent variable is "just a mathematical trick with no real meaning." Argue for or against this position. Can you think of a context where the latent continuous variable has a plausible real-world interpretation?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 12.6
+For part (a), $y^* = \beta_0 + \beta_1 \times \text{hours} + \epsilon$ represents latent "exam readiness." The student passes when this readiness exceeds the threshold (normalized to zero). For part (b), the probit model assumes $\epsilon \sim N(0,1)$, so the scale of $y^*$ is in standard-deviation units. The logistic error has variance $\pi^2/3$, so its scale is not directly 1 SD. For part (c), think about examples like credit scoring (latent creditworthiness) or medical testing (latent disease severity).
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 12.7: Choosing Between Link Functions
+You are modeling whether a manufactured component fails quality inspection (1 = fail) as a function of temperature during production. You suspect that extreme high temperatures cause failures, but moderate-to-low temperatures rarely do.
+
+a. Sketch (or describe in words) what the probability curve $P(\text{fail} \mid \text{temperature})$ might look like if failures only become common at high temperatures. Is this curve symmetric around the inflection point, or asymmetric?
+b. Which link function---logit, probit, or complementary log-log---would best capture this asymmetric pattern? Explain why.
+c. If the logit and clog-log models produce very similar predicted probabilities for your data, does the choice of link function matter in practice? Under what conditions would the choice make a substantive difference?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 12.7
+For part (a), a curve that rises slowly at first, then accelerates sharply at high temperatures, is asymmetric---it approaches 0 gradually but approaches 1 quickly. For part (b), the complementary log-log link is asymmetric: it has a longer left tail (slow rise from 0) and a shorter right tail (rapid approach to 1). The logit and probit are both symmetric. For part (c), when predicted probabilities are mostly in the 0.2--0.8 range, all three links give similar results. Differences emerge in the tails---especially when modeling rare events or extreme-value processes.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 12.8: The Three Components of a GLM
+A generalized linear model (GLM) is defined by three components: the random component, the systematic component, and the link function.
+
+a. For a logistic regression model, identify each of the three components. What distribution does the random component assume, and why is this appropriate for binary data?
+b. Suppose you replaced the binomial random component with a Poisson distribution but kept the logit link. Would this be a valid GLM? What type of outcome would such a model be designed for?
+c. Explain why the link function is the key piece that connects the linear predictor (which can range from $-\infty$ to $+\infty$) to the parameter of the response distribution (which is bounded). What would go wrong if we used an identity link with a binomial random component?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 12.8
+For part (a): random = $Y_i \sim \text{Binomial}(1, \pi_i)$; systematic = $\eta_i = \mathbf{x}_i'\boldsymbol{\beta}$; link = $\text{logit}(\pi_i) = \eta_i$. For part (b), a Poisson GLM with a log link is used for count data; using a logit link with Poisson would be unusual but the concept illustrates how components can be mixed. For part (c), the identity link sets $\pi_i = \eta_i$ directly, which means predicted probabilities can fall outside [0, 1]---this is exactly the linear probability model's flaw.
+:::

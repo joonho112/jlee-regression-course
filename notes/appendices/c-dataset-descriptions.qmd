@@ -1,0 +1,991 @@
+# Dataset Descriptions {#sec-app-datasets .unnumbered}
+
+{{< include ../_common.qmd >}}
+
+This appendix documents every dataset used in this book. All datasets are available in the `regdatasets` package (see @sec-app-regdatasets for installation instructions).
+
+
+## Overview {#sec-app-data-overview}
+
+The `regdatasets` package bundles cleaned, ready-to-use datasets for teaching regression analysis in the social and behavioral sciences. Each dataset has been selected to illustrate specific statistical concepts and is used in one or more chapters of this book.
+
+### Listing All Datasets
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-list
+
+# List all datasets in the regdatasets package
+data(package = "regdatasets")$results |>
+  as_tibble() |>
+  select(Item, Title) |>
+  knitr::kable(col.names = c("Dataset", "Description"))
+```
+
+### Code Explanation
+- `data(package = "regdatasets")` returns metadata about all datasets in the package
+- The `$results` element contains a matrix with dataset names and descriptions
+- We convert it to a tibble and display as a formatted table
+
+### Output Interpretation
+- The table lists all 25 datasets available in the package, with the `Dataset` column showing the name to use with `data()` and the `Description` column providing a brief summary
+- Use the dataset name exactly as shown (e.g., `data(gcse)`) to load it into your R environment
+:::
+
+
+### Dataset-Chapter Map
+
+The table below shows which datasets are used in each chapter, so you can quickly locate the relevant data for any topic.
+
+| Dataset | Chapters | Primary Topic |
+|:--------|:---------|:--------------|
+| `gcse` | @sec-ch1, @sec-ch2, @sec-ch5, @sec-ch6, @sec-ch8 | Simple & multiple regression, ANCOVA, interactions, nonlinear, diagnostics |
+| `crime` | @sec-ch4, @sec-ch5, @sec-ch6 | Continuous predictors, interactions, nonlinear relationships |
+| `faculty` | @sec-ch5 | Categorical x categorical interaction |
+| `instruction` | @sec-ch3 | One-way ANOVA |
+| `hsb_sub` | @sec-ch5, @sec-ch6, @sec-ch7 | Interactions, nonlinear relationships, model building |
+| `nels_data` | @sec-ch7, @sec-ch8 | Model building, diagnostics |
+| `titanic` | @sec-ch9, @sec-ch10, @sec-ch11, @sec-ch12 | Logistic regression, diagnostics, latent response & GLM |
+| `penalty` | @sec-ch11 | Logistic diagnostics |
+| `grades` | @sec-ch13 | Ordinal models |
+| `satisfaction` | @sec-ch13 | Ordinal models (exercises) |
+| `alcohol1_pp` | Supplementary | Longitudinal / person-period analysis |
+| `berk_sub` | Supplementary | Logistic regression, Simpson's paradox |
+| `berkeley` | Supplementary | Logistic regression, Simpson's paradox |
+| `civic_ed` | Supplementary | Pre-post survey, civic education |
+| `classdata_07` | Supplementary | In-class survey demonstration |
+| `disc` / `disc2` | Supplementary | Discipline, school experiences, achievement |
+| `gss_1` | Supplementary | Social attitudes and demographics |
+| `hsbs1` | Supplementary | Full HS&B sample, psychometric measures |
+| `individuals` | Supplementary | Earnings, labor economics |
+| `lambert` | Supplementary | Longitudinal child development |
+| `pisa2000` | Supplementary | International reading assessment |
+| `reading` | Supplementary | Reading instruction experiment |
+| `womenlf` | Supplementary | Multinomial logit, labor force participation |
+
+
+## Dataset Details {#sec-app-data-details}
+
+### gcse {#sec-app-data-gcse}
+
+**General Certificate of Secondary Education exam data from London schools.**
+
+- **Source**: Goldstein et al. (1993); distributed in the `mlmRev` package
+- **Context**: Students nested within secondary schools in London. The GCSE exam is taken at age 16; the London Reading Test (LRT) is administered at age 11 as an intake measure.
+- **n**: 4,059 students in 65 schools
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `school` | Factor | School identifier |
+| `student` | Integer | Student identifier |
+| `girl` | Factor | Gender (0 = boy, 1 = girl) |
+| `gcse` | Numeric | Standardized GCSE exam score (mean = 0, SD $\approx$ 10) |
+| `lrt` | Numeric | Standardized London Reading Test score at intake (mean = 0, SD $\approx$ 10) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-gcse
+
+data(gcse)
+glimpse(gcse)
+```
+
+### Code Explanation
+- `data(gcse)`: Loads the dataset into the global environment
+- `glimpse()`: Displays variable names, types, and first few values
+
+### Output Interpretation
+- 4,059 rows (students) and 5 columns --- a manageable size for learning regression
+- `school` and `girl` are stored as factors, ready for use as categorical predictors in `lm()`
+- `gcse` and `lrt` are continuous numeric scores, both standardized around zero
+:::
+
+::: {.callout-note}
+## Chapter usage
+`gcse` serves as the primary motivating dataset in @sec-ch1 (simple linear regression), @sec-ch2 (ANCOVA with school and gender effects), and @sec-ch8 (model diagnostics).
+:::
+
+
+### crime {#sec-app-data-crime}
+
+**State-level crime data from the United States.**
+
+- **Source**: U.S. Census Bureau and FBI Uniform Crime Reports
+- **Context**: Cross-sectional data on crime rates and socioeconomic indicators across U.S. states, used to illustrate multiple regression with continuous predictors.
+- **n**: 51 observations (50 states + District of Columbia)
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `state` | Character | State name |
+| `crime_rate` | Numeric | Violent crimes per 100,000 population |
+| `poverty` | Numeric | Percent of population below the poverty line |
+| `single_parent` | Numeric | Percent of single-parent households |
+| `metro` | Numeric | Percent of population in metropolitan areas |
+| `education` | Numeric | Percent with high school diploma or higher |
+| `unemployment` | Numeric | Unemployment rate (%) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-crime
+
+data(crime)
+glimpse(crime)
+```
+
+### Code Explanation
+- This dataset illustrates regression with multiple continuous predictors (@sec-ch4) and model building strategies (@sec-ch7)
+
+### Output Interpretation
+- 51 rows represent all 50 U.S. states plus D.C. --- a small, complete cross-sectional dataset
+- All predictor variables are continuous and measured on different scales; consider standardizing when comparing effect sizes
+:::
+
+
+### faculty {#sec-app-data-faculty}
+
+**Faculty salary data from a U.S. university.**
+
+- **Source**: Adapted from academic salary studies
+- **Context**: Faculty members across different ranks, used to illustrate categorical × categorical interactions (gender × rank) in regression.
+- **n**: 514 faculty members
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `salary` | Numeric | Annual salary (in dollars) |
+| `rank` | Numeric | Academic rank (1 = Assistant, 2 = Associate, 3 = Full) |
+| `male` | Numeric | Gender (1 = male, 0 = female) |
+| `exprior` | Numeric | Years of prior experience |
+| `yearsbg` | Numeric | Years since beginning appointment |
+| `yearsrank` | Numeric | Years in current rank |
+| `market` | Numeric | Market adjustment factor |
+| `termdeg` | Numeric | Terminal degree (1 = yes) |
+| `admin` | Numeric | Administrative duties (1 = yes) |
+| `yearsdg` | Numeric | Years since degree |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-faculty
+
+data(faculty)
+glimpse(faculty)
+```
+
+### Code Explanation
+- Primary dataset for @sec-ch5 (categorical x categorical interaction), where the gender salary gap is examined across academic ranks
+
+### Output Interpretation
+- 514 rows and 10 columns; note that `rank`, `male`, `termdeg`, and `admin` are stored as numeric but represent categorical variables
+- Convert these to factors before modeling: `mutate(faculty, rank = factor(rank), male = factor(male))`
+:::
+
+
+### hsb_sub {#sec-app-data-hsb}
+
+**High School and Beyond survey subset.**
+
+- **Source**: National Center for Education Statistics (NCES), High School and Beyond longitudinal study
+- **Context**: A subset of the HS&B survey, a nationally representative sample of U.S. high school students, used to illustrate interactions and nonlinear relationships.
+- **n**: ~200 students (subset)
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `math` | Numeric | Math achievement score |
+| `science` | Numeric | Science achievement score |
+| `reading` | Numeric | Reading achievement score |
+| `ses` | Numeric | Socioeconomic status (composite) |
+| `female` | Factor | Gender (0 = male, 1 = female) |
+| `race` | Factor | Race/ethnicity |
+| `schtyp` | Factor | School type (public, private) |
+| `prog` | Factor | Program type (academic, general, vocational) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-hsb
+
+data(hsb_sub)
+glimpse(hsb_sub)
+```
+
+### Code Explanation
+- Used in @sec-ch5 (interactions between predictors), @sec-ch6 (nonlinear relationships such as polynomial regression), and @sec-ch7 (model building)
+
+### Output Interpretation
+- Approximately 200 rows with a mix of factor and numeric variables
+- `female`, `race`, `schtyp`, and `prog` are already stored as factors, ready for use as categorical predictors
+- Multiple achievement scores (`math`, `science`, `reading`) allow for comparing models with different outcomes
+:::
+
+
+### titanic {#sec-app-data-titanic}
+
+**Passenger survival data from the RMS Titanic.**
+
+- **Source**: Encyclopedia Titanica and British Board of Trade inquiry
+- **Context**: The sinking of the Titanic in 1912 provides a compelling case for logistic regression --- survival depended on passenger class, age, and gender.
+- **n**: ~1,309 passengers
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `survived` | Factor | Survival (0 = no, 1 = yes) |
+| `pclass` | Factor | Passenger class (1st, 2nd, 3rd) |
+| `name` | Character | Passenger name |
+| `sex` | Factor | Gender (male, female) |
+| `age` | Numeric | Age in years |
+| `sibsp` | Integer | Number of siblings/spouses aboard |
+| `parch` | Integer | Number of parents/children aboard |
+| `fare` | Numeric | Ticket fare (in British pounds) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-titanic
+
+data(titanic)
+glimpse(titanic)
+```
+
+### Code Explanation
+- Primary dataset for @sec-ch9 (simple logistic regression), @sec-ch10 (multiple logistic regression), and @sec-ch11 (logistic regression diagnostics)
+
+### Output Interpretation
+- Approximately 1,309 rows; `survived`, `pclass`, and `sex` are factors ready for logistic regression
+- `age` contains missing values --- check with `sum(is.na(titanic$age))` before modeling
+- `fare` is right-skewed; consider a log transformation in exploratory analysis
+:::
+
+
+### penalty {#sec-app-data-penalty}
+
+**Death penalty sentencing data.**
+
+- **Source**: Adapted from Agresti (2013); originally from legal studies on sentencing disparities
+- **Context**: Binary outcome (death sentence yes/no) with predictors related to case characteristics, illustrating simple logistic regression.
+- **n**: Varies by version
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `death` | Factor | Death sentence (0 = no, 1 = yes) |
+| `black_defendant` | Factor | Defendant race (0 = other, 1 = Black) |
+| `white_victim` | Factor | Victim race (0 = other, 1 = White) |
+| `aggravation` | Numeric | Aggravation level of the crime |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-penalty
+
+data(penalty)
+glimpse(penalty)
+```
+
+### Code Explanation
+- Introduced in @sec-ch9 as a supplementary example for simple logistic regression, illustrating the relationship between case characteristics and sentencing outcomes
+
+### Output Interpretation
+- A compact dataset with binary and numeric variables; `death`, `black_defendant`, and `white_victim` are factors
+- `aggravation` is a continuous numeric scale measuring crime severity
+:::
+
+
+### grades {#sec-app-data-grades}
+
+**Essay grading data (ordinal outcome).**
+
+- **Source**: Adapted from educational assessment studies
+- **Context**: Student essays scored on an ordinal scale from 1 (Poor) to 4 (Excellent), with several writing quality features measured for each essay. Used to illustrate ordinal regression models.
+- **n**: 198 essays
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `essay` | Numeric | Essay identifier |
+| `grade` | Numeric | Essay grade from 1 (Poor) to 4 (Excellent) |
+| `wordlength` | Numeric | Average word length |
+| `sqrtwords` | Numeric | Square root of number of words |
+| `commas` | Numeric | Number of commas × 100 ÷ number of words |
+| `errors` | Numeric | Percentage of words with spelling errors |
+| `prepos` | Numeric | Percentage of words that are prepositions |
+| `sentlength` | Numeric | Average number of words per sentence |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-grades
+
+data(grades)
+glimpse(grades)
+```
+
+### Code Explanation
+- Primary dataset for @sec-ch13 (ordinal logistic regression models), where essay grades are predicted from writing features such as word length and spelling errors
+
+### Output Interpretation
+- 198 rows and 8 columns; `grade` is numeric (1--4) but should be converted to an ordered factor for ordinal regression: `mutate(grades, grade = ordered(grade))`
+- All predictor variables are continuous writing quality measures
+:::
+
+
+### satisfaction {#sec-app-data-satisfaction}
+
+**Course satisfaction survey data (ordinal outcome).**
+
+- **Source**: Adapted from educational survey research
+- **Context**: Student satisfaction ratings on an ordinal scale, with gender and income level as predictors. Used in exercises to practice ordinal regression modeling.
+- **n**: 110 respondents
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `gender` | Character | Gender (`"F"` = Female, `"M"` = Male) |
+| `income` | Numeric | Income level (1 = low, 2, 3, 4 = high) |
+| `satisfaction` | Numeric | Satisfaction rating (ordinal scale) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-satisfaction
+
+data(satisfaction)
+glimpse(satisfaction)
+```
+
+### Code Explanation
+- Used in @sec-ch13 exercises to practice fitting ordinal logistic regression with `polr()`, interpreting odds ratios, and testing the proportional odds assumption
+
+### Output Interpretation
+- 110 rows with 3 variables; `gender` is character (convert with `factor()`), `income` and `satisfaction` are numeric ordinal scales
+- For ordinal modeling, convert `satisfaction` to an ordered factor: `mutate(satisfaction, satisfaction = ordered(satisfaction))`
+:::
+
+
+### instruction {#sec-app-data-instruction}
+
+**Instructional method experiment data.**
+
+- **Source**: Adapted from educational intervention studies
+- **Context**: Comparison of different instructional methods on student outcomes, used to illustrate ANOVA and interaction effects.
+- **n**: Varies by version
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `score` | Numeric | Post-test achievement score |
+| `method` | Factor | Instructional method (e.g., lecture, discussion, active learning) |
+| `prior` | Numeric | Pre-test or prior knowledge score |
+| `group` | Factor | Additional grouping variable |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-instruction
+
+data(instruction)
+glimpse(instruction)
+```
+
+### Code Explanation
+- Used in @sec-ch3 (one-way ANOVA comparing instructional methods) and @sec-ch5 (interactions between method and student characteristics)
+
+### Output Interpretation
+- `method` is a factor with multiple levels representing different instructional approaches
+- `score` is the continuous outcome; `prior` is a continuous covariate useful for ANCOVA designs
+:::
+
+
+### nels_data {#sec-app-data-nels}
+
+**National Education Longitudinal Study of 1988 (NELS:88).**
+
+- **Source**: National Center for Education Statistics (NCES)
+- **Context**: Longitudinal study following a nationally representative sample of 8th-graders through high school. Contains extensive student, family, and school variables. Used for model building and diagnostics.
+- **n**: 2,000 students (subset)
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `id` | Numeric | Student identifier |
+| `byses` | Numeric | Base-year socioeconomic status composite |
+| `bypared` | Numeric | Parents' highest education level |
+| `byfaminc` | Numeric | Family income category |
+| `by2xrstd` | Numeric | Standardized reading score (base year) |
+| `by2xmstd` | Numeric | Standardized math score (base year) |
+| `f12xrstd` | Numeric | Standardized reading score (first follow-up) |
+
+::: {.callout-note}
+This is a wide dataset with 299 variables from the NELS:88 survey. Most analyses in this book use only a handful of key variables. See @sec-ch7 and @sec-ch8 for model building and diagnostics applications.
+:::
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-nels
+
+data(nels_data)
+glimpse(nels_data[, 1:10])
+```
+
+### Code Explanation
+- Only the first 10 columns are shown; the full dataset has 299 variables from the NELS:88 longitudinal study
+- Variable names follow NCES naming conventions: `by` = base year, `f1` = first follow-up
+
+### Output Interpretation
+- 2,000 rows represent a manageable subset of the full NELS:88 sample
+- Many variables are coded numerically; some special codes (e.g., 99, 98) represent missing or not-applicable values
+:::
+
+
+### alcohol1_pp {#sec-app-data-alcohol}
+
+**Adolescent alcohol use person-period data.**
+
+- **Source**: Adapted from longitudinal studies on adolescent substance use
+- **Context**: Person-period format data tracking alcohol use across multiple time points, suitable for longitudinal or growth-curve modeling.
+- **n**: 246 person-period observations
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `id` | Numeric | Participant identifier |
+| `age` | Numeric | Age at measurement occasion |
+| `coa` | Numeric | Child of alcoholic (0 = no, 1 = yes) |
+| `male` | Numeric | Gender (1 = male, 0 = female) |
+| `age_14` | Numeric | Age centered at 14 |
+| `alcuse` | Numeric | Alcohol use frequency |
+| `peer` | Numeric | Peer alcohol use |
+| `cpeer` | Numeric | Centered peer alcohol use |
+| `ccoa` | Numeric | Centered COA indicator |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-alcohol
+
+data(alcohol1_pp)
+glimpse(alcohol1_pp)
+```
+
+### Code Explanation
+- Person-period format: each row is one measurement occasion for one individual
+- Centered variables (`age_14`, `cpeer`, `ccoa`) are pre-computed for modeling convenience
+
+### Output Interpretation
+- 246 rows spanning multiple individuals across time points; `id` groups observations within the same person
+- `alcuse` and `peer` are the key outcome and predictor variables for longitudinal models
+:::
+
+
+### berk_sub {#sec-app-data-berksub}
+
+**UC Berkeley graduate admissions subset (Engineering and Psychology).**
+
+- **Source**: Bickel et al. (1975); UC Berkeley graduate admissions records
+- **Context**: A simplified two-department subset of the Berkeley admissions data, used to introduce logistic regression and illustrate Simpson's paradox.
+- **n**: 1,169 applicants
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `admitted` | Numeric | Admission status (1 = admitted, 0 = rejected) |
+| `male` | Numeric | Gender (1 = male, 0 = female) |
+| `engineering` | Numeric | Department (1 = Engineering, 0 = Psychology) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-berksub
+
+data(berk_sub)
+glimpse(berk_sub)
+```
+
+### Code Explanation
+- A compact 3-variable dataset ideal for demonstrating logistic regression and confounding
+- `admitted` is the binary outcome; `male` and `engineering` are binary predictors
+
+### Output Interpretation
+- 1,169 rows with only 3 variables --- a clean dataset for illustrating how aggregated and disaggregated analyses can yield opposite conclusions (Simpson's paradox)
+:::
+
+
+### berkeley {#sec-app-data-berkeley}
+
+**UC Berkeley graduate admissions data (five departments).**
+
+- **Source**: Bickel et al. (1975); UC Berkeley graduate admissions records
+- **Context**: Admissions data across five departments, the classic dataset for demonstrating Simpson's paradox in logistic regression.
+- **n**: 3,593 applicants
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `departme` | Character | Department identifier (A through E) |
+| `female` | Numeric | Gender (1 = female, 0 = male) |
+| `admitted` | Numeric | Admission status (1 = admitted, 0 = rejected) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-berkeley
+
+data(berkeley)
+glimpse(berkeley)
+```
+
+### Code Explanation
+- The five-department version allows for richer analyses of confounding across multiple groups
+- `departme` should be converted to a factor for use as a categorical predictor
+
+### Output Interpretation
+- 3,593 rows across 5 departments; compare admission rates by gender within and across departments to observe Simpson's paradox
+:::
+
+
+### civic_ed {#sec-app-data-civiced}
+
+**Civic education study: pre-post survey data.**
+
+- **Source**: Adapted from civic education intervention studies
+- **Context**: Pre- and post-survey data from a civic education program, measuring attitudes toward government, political efficacy, tolerance, and civic participation.
+- **n**: 794 students in multiple schools
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `id_match` | Numeric | Student identifier |
+| `school` | Numeric | School identifier |
+| `wtp` | Numeric | Willingness to participate indicator |
+| `t_q1`--`t_q99` | Numeric | Pre-test (treatment) survey items |
+| `r_q1`--`r_q84` | Numeric | Post-test (result) survey items |
+| `attn_pre`, `attn_pos` | Numeric | Attention composite (pre/post) |
+
+::: {.callout-note}
+This is a wide dataset with 237 variables including individual survey items. Most analyses use composite scores (e.g., `attn_pre`, `inf_post`, `tol_t_m`) rather than individual items.
+:::
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-civiced
+
+data(civic_ed)
+glimpse(civic_ed[, c("id_match", "school", "attn_pre", "attn_pos")])
+```
+
+### Code Explanation
+- Showing only selected composite variables for readability; the full dataset has 237 columns
+- Composite scores ending in `_m` are scale means; `_pre`/`_pos` indicate measurement occasion
+
+### Output Interpretation
+- 794 rows represent individual students; `school` can be used as a grouping variable for multilevel analyses
+:::
+
+
+### classdata_07 {#sec-app-data-classdata}
+
+**Class survey data (2007).**
+
+- **Source**: In-class survey collected for instructional purposes
+- **Context**: A small survey dataset from a statistics class, useful for in-class demonstrations of basic regression.
+- **n**: 44 students
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `actual_study` | Numeric | Actual hours of study per week |
+| `desired_study` | Numeric | Desired hours of study per week |
+| `actual_work` | Numeric | Actual hours of work per week |
+| `desired_work` | Numeric | Desired hours of work per week |
+| `gender` | Numeric | Gender |
+| `height` | Numeric | Height |
+| `desired_weight` | Numeric | Desired weight |
+| `exer` | Numeric | Hours of exercise per week |
+| `sleep` | Numeric | Hours of sleep per night |
+| `alcohol` | Numeric | Alcoholic drinks per week |
+| `overage` | Numeric | Over 25 years old (1 = yes) |
+| `age` | Numeric | Age in years |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-classdata
+
+data(classdata_07)
+glimpse(classdata_07)
+```
+
+### Code Explanation
+- A small, intuitive dataset for hands-on classroom demonstrations
+- Variables are self-reported and easy to interpret
+
+### Output Interpretation
+- 44 rows and 12 columns --- small enough to view entirely with `print(classdata_07)`
+- Good for demonstrating simple regression, scatterplots, and correlation
+:::
+
+
+### disc {#sec-app-data-disc}
+
+**NELS:88 discipline and school experiences study.**
+
+- **Source**: National Education Longitudinal Study of 1988 (NCES)
+- **Context**: Subset of NELS:88 focusing on disciplinary outcomes and school experiences, used for logistic regression modeling.
+- **n**: 2,000 students
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `sentoff` | Numeric | Ever sent to the office (0 = no, 1 = yes) |
+| `male` | Numeric | Gender (1 = male, 0 = female) |
+| `race` | Numeric | Race/ethnicity code |
+| `fath_ed` | Numeric | Father's education level |
+| `moth_ed` | Numeric | Mother's education level |
+| `bedroom` | Numeric | Has own bedroom (0 = no, 1 = yes) |
+| `discuss` | Numeric | Discusses school with parents (0 = no, 1 = yes) |
+| `osentoff` | Numeric | Number of times sent to the office |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-disc
+
+data(disc)
+glimpse(disc)
+```
+
+### Code Explanation
+- `sentoff` is a binary outcome suitable for logistic regression; `osentoff` is a count version of the same variable
+- `disc2` is a companion dataset that adds achievement score variables
+
+### Output Interpretation
+- 2,000 rows and 15 variables; binary outcomes (`sentoff`) and count outcomes (`osentoff`) allow for comparing logistic and count regression approaches
+:::
+
+
+### disc2 {#sec-app-data-disc2}
+
+**NELS:88 discipline study with achievement scores.**
+
+- **Source**: National Education Longitudinal Study of 1988 (NCES)
+- **Context**: Extended version of `disc` that includes reading and math achievement scores, allowing for richer models.
+- **n**: 2,000 students
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `sentoff` | Numeric | Ever sent to the office (0 = no, 1 = yes) |
+| `ses` | Numeric | Socioeconomic status composite |
+| `reading1` | Numeric | Reading score (base year) |
+| `math1` | Numeric | Math score (base year) |
+| `reading2` | Numeric | Reading score (follow-up) |
+| `minority` | Numeric | Minority status (0 = no, 1 = yes) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-disc2
+
+data(disc2)
+glimpse(disc2)
+```
+
+### Code Explanation
+- Extends `disc` with continuous achievement variables (`reading1`, `math1`, `reading2`)
+- `ses` is a continuous composite; `minority` is binary
+
+### Output Interpretation
+- 2,000 rows and 15 variables; contains some missing values (`NA`) in education and achievement variables
+:::
+
+
+### gss_1 {#sec-app-data-gss}
+
+**General Social Survey data.**
+
+- **Source**: National Opinion Research Center (NORC), General Social Survey
+- **Context**: Survey data on social attitudes, demographics, and behavior from a representative sample of U.S. adults.
+- **n**: 2,832 respondents
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `abortion` | Numeric | Abortion attitude scale |
+| `cohabit` | Numeric | Cohabitation attitude |
+| `income` | Numeric | Income category |
+| `conserv` | Numeric | Political conservatism scale |
+| `educat` | Numeric | Years of education |
+| `male` | Numeric | Gender (1 = male, 0 = female) |
+| `respage` | Numeric | Respondent age |
+| `relosity` | Numeric | Religiosity composite score |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-gss
+
+data(gss_1)
+glimpse(gss_1)
+```
+
+### Code Explanation
+- A rich survey dataset with attitudinal, demographic, and behavioral variables
+- Contains some missing values; check with `colSums(is.na(gss_1))` before modeling
+
+### Output Interpretation
+- 2,832 rows and 16 variables covering a broad range of social science topics
+- Suitable for multiple regression examples examining how demographics predict attitudes
+:::
+
+
+### hsbs1 {#sec-app-data-hsbs1}
+
+**High School and Beyond survey (full sample).**
+
+- **Source**: National Center for Education Statistics (NCES), High School and Beyond
+- **Context**: A larger sample from the HS&B study with psychometric composites (locus of control, self-concept, motivation) and achievement scores.
+- **n**: 350 students
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `id` | Numeric | Student identifier |
+| `gender` | Numeric | Gender (1 = male, 2 = female) |
+| `race` | Numeric | Race/ethnicity code |
+| `ses` | Numeric | Socioeconomic status (1 = low, 2 = middle, 3 = high) |
+| `prog` | Numeric | Program type (1 = academic, 2 = general, 3 = vocational) |
+| `locus` | Numeric | Locus of control composite |
+| `concept` | Numeric | Self-concept composite |
+| `read` | Numeric | Reading achievement score |
+| `math` | Numeric | Math achievement score |
+| `sci` | Numeric | Science achievement score |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-hsbs1
+
+data(hsbs1)
+glimpse(hsbs1)
+```
+
+### Code Explanation
+- Extends `hsb_sub` with psychometric variables (`locus`, `concept`, `mot`) and additional achievement measures
+- Numeric codes for `gender`, `race`, `ses`, and `prog` should be converted to factors for modeling
+
+### Output Interpretation
+- 350 rows and 16 variables; includes both categorical predictors (coded numerically) and continuous achievement/psychometric outcomes
+:::
+
+
+### individuals {#sec-app-data-individuals}
+
+**Bureau of Labor Statistics March 2000 CPS individual data.**
+
+- **Source**: Current Population Survey (CPS), Bureau of Labor Statistics
+- **Context**: Individual-level labor market data including earnings, education, and demographic characteristics. Useful for wage regression and labor economics examples.
+- **n**: 55,899 individuals
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `id` | Numeric | Individual identifier |
+| `age` | Numeric | Age in years |
+| `educ` | Numeric | Education level code |
+| `sex` | Numeric | Sex (1 = male, 2 = female) |
+| `earn` | Numeric | Annual earnings (dollars) |
+| `job` | Numeric | Job category code |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-individuals
+
+data(individuals)
+glimpse(individuals)
+```
+
+### Code Explanation
+- A large dataset useful for demonstrating regression with large sample sizes
+- `earn` is the typical outcome variable; `educ`, `age`, and `sex` are common predictors
+
+### Output Interpretation
+- 55,899 rows --- the largest dataset in the package; useful for demonstrating large-sample regression properties
+- `earn` likely has a right-skewed distribution; consider log transformation
+:::
+
+
+### lambert {#sec-app-data-lambert}
+
+**Lambert longitudinal study data.**
+
+- **Source**: Lambert longitudinal child development study
+- **Context**: Longitudinal data tracking children's behavioral, psychological, and social development from childhood through adulthood. Contains teacher ratings, parent ratings, and adult outcome measures.
+- **n**: 492 participants
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `pupil` | Character | Participant identifier |
+| `rclass` | Numeric | Classroom identifier |
+| `byear` | Numeric | Birth year |
+| `b3005` | Character | Sex (F/M) |
+| `ethnic` | Numeric | Ethnicity code |
+| `tagg`--`tadhd` | Numeric | Teacher-rated behavior scales |
+| `depress`, `anxiety` | Numeric | Adult mental health outcomes |
+
+::: {.callout-note}
+This is a wide dataset with 109 variables spanning multiple developmental periods. Most analyses use selected subsets of variables.
+:::
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-lambert
+
+data(lambert)
+glimpse(lambert[, 1:10])
+```
+
+### Code Explanation
+- Showing only the first 10 of 109 variables; includes childhood predictors and adult outcomes
+- Variable prefixes indicate the source: `t` = teacher rating, `p` = parent rating, `wh` = adult well-being
+
+### Output Interpretation
+- 492 rows; a moderate-sized longitudinal dataset with many potential predictor-outcome combinations
+:::
+
+
+### pisa2000 {#sec-app-data-pisa}
+
+**PISA 2000 international reading assessment data.**
+
+- **Source**: OECD Programme for International Student Assessment (PISA) 2000
+- **Context**: International reading assessment data from 15-year-olds in the UK, Germany, and USA, including student background and school characteristics.
+- **n**: 4,528 students
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `country` | Character | Country code |
+| `female` | Numeric | Gender (1 = female, 0 = male) |
+| `isei` | Numeric | International Socio-Economic Index of occupational status |
+| `wleread` | Numeric | Reading proficiency score (continuous) |
+| `pass_rea` | Numeric | Passed reading threshold (0 = no, 1 = yes) |
+| `uk` | Numeric | UK indicator (1 = yes) |
+| `germany` | Numeric | Germany indicator (1 = yes) |
+| `usa` | Numeric | USA indicator (1 = yes) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-pisa
+
+data(pisa2000)
+glimpse(pisa2000)
+```
+
+### Code Explanation
+- Country indicators (`uk`, `germany`, `usa`) are pre-coded dummy variables
+- `wleread` is the continuous reading proficiency; `pass_rea` is a dichotomized version suitable for logistic regression
+
+### Output Interpretation
+- 4,528 rows across 3 countries; compare reading proficiency across nations with regression models
+- `isei` provides a continuous measure of socioeconomic status
+:::
+
+
+### reading {#sec-app-data-reading}
+
+**Reading comprehension instruction experiment.**
+
+- **Source**: Adapted from educational intervention studies
+- **Context**: Experimental study comparing reading instruction methods (Basal, DRTA, Strat) with pre- and post-test measures.
+- **n**: 66 students
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `subject` | Numeric | Student identifier |
+| `group` | Character | Instructional method (Basal, DRTA, Strat) |
+| `pre1`, `pre2` | Numeric | Pre-test scores |
+| `post1`, `post2`, `post3` | Numeric | Post-test scores |
+| `method` | Numeric | Numeric method code |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-reading
+
+data(reading)
+glimpse(reading)
+```
+
+### Code Explanation
+- `group` is a character variable with three levels; convert to factor for ANOVA or regression
+- Multiple pre- and post-test scores allow for examining treatment effects from different angles
+
+### Output Interpretation
+- 66 rows across 3 groups --- a small experimental dataset ideal for ANOVA demonstrations
+- `group` identifies the treatment condition; compare post-test scores controlling for pre-test performance
+:::
+
+
+### womenlf {#sec-app-data-womenlf}
+
+**Canadian women's labor force participation.**
+
+- **Source**: Canadian Survey of Consumer Finances; Fox (2008)
+- **Context**: Women's labor force participation decisions (not working, part-time, full-time) as a function of husband's income, region, and presence of children. Classic dataset for multinomial logit.
+- **n**: 263 women
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `obs` | Numeric | Observation number |
+| `husbinc` | Numeric | Husband's income (thousands of dollars) |
+| `region` | Character | Canadian region (e.g., Ontario, Quebec) |
+| `workstat` | Numeric | Work status (0 = not working, 1 = part-time, 2 = full-time) |
+| `chilpres` | Numeric | Children present (0 = no, 1 = yes) |
+
+::: {.panel-tabset}
+### R Code
+```{r}
+#| label: app-data-womenlf
+
+data(womenlf)
+glimpse(womenlf)
+```
+
+### Code Explanation
+- `workstat` has 3 categories, making this suitable for multinomial logistic regression (`nnet::multinom()`)
+- `region` is a character variable; convert to factor for use as a predictor
+
+### Output Interpretation
+- 263 rows and 5 variables --- a compact dataset with a 3-category outcome
+- For multinomial logit, convert `workstat` to a factor with meaningful labels: `factor(workstat, labels = c("not working", "part-time", "full-time"))`
+:::
+
+
+## Loading Any Dataset {#sec-app-data-loading}
+
+To use any dataset from this book in your own analysis:
+
+::: {.panel-tabset}
+### R Code
+```r
+# Load the regdatasets package
+library(regdatasets)
+
+# Load a specific dataset
+data(gcse)
+
+# Or load and assign to a custom name
+my_data <- regdatasets::gcse
+```
+
+### Code Explanation
+- `data(gcse)` loads the dataset into an object named `gcse` in your environment
+- You can also use `regdatasets::gcse` to access it directly with the package prefix, which is useful when you want to assign it to a different name
+
+### Output Interpretation
+- After `data(gcse)`, you will see `gcse` appear in your Environment pane (top-right in RStudio)
+- Using `regdatasets::gcse` does not add the object to your environment until you assign it with `<-`
+:::
+
+::: {.callout-tip}
+## Exploring a Dataset
+For any dataset, use this quick exploration workflow:
+
+```r
+data(gcse)          # Load
+glimpse(gcse)       # Structure
+summary(gcse)       # Descriptive statistics
+head(gcse, 10)      # First 10 rows
+```
+:::

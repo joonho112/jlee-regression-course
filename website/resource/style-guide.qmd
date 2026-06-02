@@ -1,0 +1,129 @@
+---
+title: "Writing & Style Guide"
+---
+
+## Overview
+
+Clear statistical writing is a core skill in this course. This guide provides conventions for formatting tables and figures, reporting regression results, and writing project reports. Following these guidelines will help you communicate your findings effectively and prepare you for academic and professional writing.
+
+::: {.callout-note}
+## Where do these conventions apply?
+These guidelines apply primarily to your **final project report** and **project milestones**. Homework assignments use a more flexible format, but practicing these conventions early is encouraged.
+:::
+
+
+## General Writing Guidelines
+
+### Structure and Clarity
+
+- **Write in complete sentences.** Avoid bullet-point-only sections in your report narrative.
+- **Define terms on first use.** For example: "Analysis of Covariance (ANCOVA) adjusts group means for pre-existing differences."
+- **Use active voice** when describing your analysis: "We fitted a multiple regression model" rather than "A multiple regression model was fitted."
+- **Be specific about statistical claims.** Instead of "X was significant," write "X was positively associated with Y, *b* = 0.45, *p* < .001."
+
+### Tone and Audience
+
+- Write for an audience of fellow graduate students who have taken an introductory statistics course.
+- Avoid unnecessary jargon, but use technical terms when they add precision.
+- Explain your reasoning: *why* did you choose this model? *What* does the coefficient mean in context?
+
+
+## Table Formatting
+
+### General Rules
+
+- Every table needs a **number** and a **descriptive title** (e.g., "Table 1. Descriptive Statistics for Key Variables").
+- Place the title **above** the table.
+- Use horizontal rules to separate the header row from the body. Avoid vertical rules and excessive gridlines.
+- Report numbers to a consistent number of **decimal places** (typically 2--3 for coefficients, 3 for *p*-values).
+- Include a note below the table if abbreviations or significance markers are used.
+
+### Example: Regression Results Table
+
+> **Table 1.** OLS Regression of Math Achievement on Student and School Characteristics
+
+| Predictor | *b* | *SE* | *t* | *p* |
+|-----------|----:|-----:|----:|----:|
+| Intercept | 52.31 | 2.14 | 24.44 | < .001 |
+| Prior achievement | 0.56 | 0.04 | 14.00 | < .001 |
+| Free lunch (%) | -0.18 | 0.05 | -3.60 | < .001 |
+| Class size | -0.22 | 0.11 | -2.00 | .046 |
+
+*Note.* *N* = 420. *R*^2^ = .38.
+
+
+## Figure Formatting
+
+### General Rules
+
+- Every figure needs a **number** and a **descriptive caption** (e.g., "Figure 1. Scatterplot of math scores by prior achievement").
+- Place the caption **below** the figure.
+- Label both axes with clear, human-readable names and units (not variable names like `math_score`).
+- Use a clean, minimal theme (`theme_minimal()` or `theme_bw()` in ggplot2).
+- Ensure figures are legible in grayscale for accessibility.
+
+### ggplot2 Tips
+
+```r
+ggplot(df, aes(x = prior_ach, y = math_score)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(
+    x = "Prior Achievement Score",
+    y = "Math Achievement Score",
+    title = NULL    # Use Quarto figure captions instead
+  ) +
+  theme_minimal()
+```
+
+::: {.callout-tip}
+## Let Quarto handle captions
+Use Quarto's `#| fig-cap:` chunk option rather than `ggtitle()` so that figure numbering is automatic and consistent.
+:::
+
+
+## Reporting Regression Results (APA Style)
+
+### In-Text Reporting
+
+When reporting regression results in the body of your paper, include the unstandardized coefficient, standard error or confidence interval, test statistic, and *p*-value:
+
+- **Simple coefficient**: "For each one-unit increase in prior achievement, math scores increased by 0.56 points, *b* = 0.56, *SE* = 0.04, *t*(416) = 14.00, *p* < .001."
+- **Overall model fit**: "The model explained 38% of the variance in math achievement, *R*^2^ = .38, *F*(3, 416) = 84.52, *p* < .001."
+- **Logistic regression**: "Students with higher GPA had greater odds of admission, OR = 2.31, 95% CI [1.45, 3.68], *p* < .001."
+
+### Key Formatting Rules
+
+- Italicize statistical symbols: *b*, *SE*, *t*, *F*, *p*, *R*^2^, OR
+- Do not use a leading zero for values that cannot exceed 1 (e.g., *p* = .023, not *p* = 0.023)
+- Use "< .001" rather than "= .000" for very small *p*-values
+- Report exact *p*-values (e.g., *p* = .034) rather than threshold statements (e.g., *p* < .05) when possible
+- Include degrees of freedom for *t* and *F* statistics
+
+
+## Report Structure
+
+A standard project report for this course should include the following sections:
+
+1. **Introduction** --- Research question, motivation, and brief literature context
+2. **Data and Variables** --- Dataset description, variable definitions, and any data cleaning steps
+3. **Exploratory Data Analysis** --- Descriptive statistics, visualizations, and preliminary patterns
+4. **Methods** --- Model specification and justification (why this model for this question?)
+5. **Results** --- Regression output, interpretation of coefficients, model diagnostics
+6. **Discussion** --- Substantive implications, limitations, and future directions
+7. **References** --- APA-formatted citations
+
+::: {.callout-important}
+## Reproducibility requirement
+All analyses must be reproducible. Submit your `.qmd` source file alongside the rendered report so that your code and narrative are integrated.
+:::
+
+
+## Common Mistakes to Avoid
+
+- Reporting only *p*-values without effect sizes or confidence intervals
+- Using "significant" without specifying the alpha level or providing the actual *p*-value
+- Presenting raw R output without formatting it into a table
+- Forgetting to label axes and provide figure captions
+- Using causal language ("X caused Y") for observational data
+- Omitting units of measurement for variables

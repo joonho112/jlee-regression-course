@@ -1,0 +1,48 @@
+---
+title: "Week 12: Logistic Diagnostics"
+---
+
+## Overview
+
+This week covers diagnostic and evaluation tools specific to logistic regression. Because there is no single R-squared equivalent for logistic models, you will learn several alternative measures of model performance: pseudo-R-squared statistics, the Hosmer-Lemeshow goodness-of-fit test, classification tables, sensitivity and specificity, and the ROC curve. You will also learn to use binned residual plots --- the logistic analogue of standard residual plots --- to assess model adequacy.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Compute and interpret deviance and pseudo-R-squared measures for logistic models
+- Apply the Hosmer-Lemeshow test to assess goodness of fit
+- Construct and interpret a classification table using a chosen probability threshold
+- Define and calculate sensitivity, specificity, and overall accuracy
+- Construct and interpret an ROC curve and compute the area under the curve (AUC)
+- Create and interpret binned residual plots for logistic regression
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 11: Logistic Regression Diagnostics]({{< var books.lecture_notes >}}/chapters/11-logistic-diagnostics.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 11: Logistic Regression Diagnostics]({{< var books.r_lab_book >}}/labs/lab11-logistic-diagnostics.html){target="_blank"}
+
+## Project
+
+- {{< fa file-circle-check >}} [Project 1 Final](/assignment/project-1-final.qmd) — Due this week
+- {{< fa diagram-project >}} [Project 2 Proposal](/assignment/project-2-proposal.qmd) — Due this week
+
+## Quiz
+
+- {{< fa circle-question >}} **Quiz 6** — Covers Weeks 10--12 material
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Deviance** | A measure of model fit for logistic regression analogous to the residual sum of squares in linear regression |
+| **Pseudo-R-squared** | An approximation of explained variance for logistic models, such as McFadden's or Nagelkerke's R-squared |
+| **Hosmer-Lemeshow test** | A goodness-of-fit test that groups observations by predicted probability and compares observed to expected frequencies |
+| **Sensitivity** | The proportion of actual positive cases correctly classified by the model (true positive rate) |
+| **Specificity** | The proportion of actual negative cases correctly classified by the model (true negative rate) |
+| **ROC curve** | A plot of sensitivity versus one minus specificity across all possible classification thresholds |
+| **AUC** | Area under the ROC curve; a single-number summary of discriminative ability ranging from 0.5 (chance) to 1.0 (perfect) |
+| **Binned residual plot** | A diagnostic plot that groups observations into bins by predicted probability and plots average residuals per bin |

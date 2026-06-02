@@ -1,0 +1,90 @@
+project:
+  type: book
+  output-dir: _book
+  resources:
+    - "ojs/**"
+
+book:
+  title: "Advanced Statistical Methods in Education"
+  subtitle: "A Regression Approach with R"
+  author: "JoonHo Lee"
+  date: "2026"
+  date-format: "YYYY"
+  site-url: https://joonho112.github.io/jlee-regression-course/notes/
+  repo-url: https://github.com/joonho112/jlee-regression-course
+  repo-subdir: notes
+  repo-actions: [edit, issue]
+  search: true
+  reader-mode: true
+
+  sidebar:
+    style: floating
+    collapse-level: 2
+
+  chapters:
+    - index.qmd
+    - part: "Part I: Foundations of Linear Regression"
+      chapters:
+        - chapters/01-simple-linear-regression.qmd
+        - chapters/02-ancova.qmd
+    - part: "Part II: Extensions of Linear Regression"
+      chapters:
+        - chapters/03-one-way-anova.qmd
+        - chapters/04-continuous-predictors.qmd
+        - chapters/05-interactions.qmd
+        - chapters/06-nonlinear-relationships.qmd
+    - part: "Part III: Model Evaluation"
+      chapters:
+        - chapters/07-model-building.qmd
+        - chapters/08-model-diagnostics.qmd
+    - part: "Part IV: Categorical Outcomes"
+      chapters:
+        - chapters/09-simple-logistic-regression.qmd
+        - chapters/10-multiple-logistic-regression.qmd
+        - chapters/11-logistic-diagnostics.qmd
+        - chapters/12-latent-response-glm.qmd
+        - chapters/13-ordinal-models.qmd
+    - part: "Appendices"
+      chapters:
+        - appendices/a-r-setup-guide.qmd
+        - appendices/b-stata-to-r-cheat-sheet.qmd
+        - appendices/c-dataset-descriptions.qmd
+    - references.qmd
+
+  page-navigation: true
+  back-to-top-navigation: true
+
+bibliography: references.bib
+csl: apa.csl
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    css: ojs/interactive.css
+    code-fold: false
+    code-tools: true
+    code-link: true
+    code-line-numbers: true
+    highlight-style: github
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    fig-width: 8
+    fig-height: 5
+    fig-dpi: 300
+    fig-align: center
+    df-print: kable
+
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+
+crossref:
+  fig-prefix: "Figure"
+  tbl-prefix: "Table"
+  eq-prefix: "Eq."
+  sec-prefix: "Section"

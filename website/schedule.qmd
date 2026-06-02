@@ -1,0 +1,175 @@
+---
+title: "Schedule"
+sidebar: false
+toc: true
+toc-depth: 2
+page-layout: full
+---
+
+::: {.schedule-page}
+
+Here is the 15-week learning journey for BER 640. Each week includes readings, lab exercises, and assessments designed to build your statistical skills progressively.
+
+::: {.callout-tip}
+## How to Read This Schedule
+
+- {{< fa book-open >}} **Lecture**: Read the textbook chapter(s)
+- {{< fa laptop-code >}} **Lab**: Complete the hands-on R tutorial
+- {{< fa pencil >}} **Homework**: Submit assignments (when due)
+- {{< fa clipboard-list >}} **Project**: Submit project deliverables (when due)
+- {{< fa circle-check >}} **Quiz**: Take the module quiz (when due)
+:::
+
+---
+
+## Module 1: Foundations of Regression (Weeks 1--3)
+
+### Week 1: Welcome & R Setup {#week-1}
+
+- {{< fa book-open >}} [Content](/content/01-content.qmd)
+- {{< fa laptop-code >}} Lab 01: Intro to R ([R Lab Book]({{< var books.r_lab_book >}}){target="_blank"})
+- **Topics**: Course orientation, R/RStudio setup, data structures, basic operations
+
+### Week 2: Simple Linear Regression I {#week-2}
+
+- {{< fa book-open >}} [Content](/content/02-content.qmd)
+- {{< fa laptop-code >}} Lab 02: Simple Regression
+- **Reading**: [Ch 01: Simple Linear Regression]({{< var books.lecture_notes >}}/chapters/01-simple-linear-regression.html){target="_blank"}
+- **Topics**: OLS estimation, R-squared, equivalence to *t*-test
+
+### Week 3: Simple Linear Regression II {#week-3}
+
+- {{< fa book-open >}} [Content](/content/03-content.qmd)
+- {{< fa laptop-code >}} Lab 02 (continued)
+- **Reading**: Ch 01 (continued)
+- {{< fa pencil >}} [HW 01: Simple Regression](/assignment/hw01.qmd) --- due this week
+- {{< fa pencil >}} [HW 02: Dummy Regression](/assignment/hw02.qmd) --- due this week
+- {{< fa circle-check >}} Quiz 1
+
+---
+
+## Module 2: Categorical Predictors (Weeks 4--5)
+
+### Week 4: ANCOVA {#week-4}
+
+- {{< fa book-open >}} [Content](/content/04-content.qmd)
+- {{< fa laptop-code >}} Lab 03: ANOVA & ANCOVA
+- **Reading**: [Ch 02: ANCOVA]({{< var books.lecture_notes >}}/chapters/02-ancova.html){target="_blank"}
+- **Topics**: Categorical predictors, covariate adjustment, group comparisons
+
+### Week 5: One-Way ANOVA {#week-5}
+
+- {{< fa book-open >}} [Content](/content/05-content.qmd)
+- {{< fa laptop-code >}} Lab 04: Categorical Contrasts
+- **Reading**: [Ch 03: One-Way ANOVA]({{< var books.lecture_notes >}}/chapters/03-one-way-anova.html){target="_blank"}
+- **Topics**: F-test, multiple comparisons, planned contrasts
+- {{< fa pencil >}} [HW 03: Confounding](/assignment/hw03.qmd) --- due this week
+- {{< fa pencil >}} [HW 04: One-Way ANOVA](/assignment/hw04.qmd) --- due this week
+- {{< fa circle-check >}} Quiz 2
+
+---
+
+## Module 3: Multiple Regression & Interactions (Weeks 6--7)
+
+### Week 6: Continuous Predictors {#week-6}
+
+- {{< fa book-open >}} [Content](/content/06-content.qmd)
+- {{< fa laptop-code >}} Lab 05: Multiple Regression
+- **Reading**: [Ch 04: Continuous Predictors]({{< var books.lecture_notes >}}/chapters/04-continuous-predictors.html){target="_blank"}
+- **Topics**: Partial regression, confounding, centering and scaling
+
+### Week 7: Interactions {#week-7}
+
+- {{< fa book-open >}} [Content](/content/07-content.qmd)
+- {{< fa laptop-code >}} Lab 06: Interactions
+- **Reading**: [Ch 05: Interactions]({{< var books.lecture_notes >}}/chapters/05-interactions.html){target="_blank"}
+- **Topics**: Interaction terms, simple slopes, Johnson-Neyman technique
+- {{< fa pencil >}} [HW 05: Interactions](/assignment/hw05.qmd) --- due this week
+- {{< fa pencil >}} [HW 06: Two-Way ANOVA](/assignment/hw06.qmd) --- due this week
+- {{< fa clipboard-list >}} [Project 1 Proposal](/assignment/project-1-proposal.qmd) --- due this week
+- {{< fa circle-check >}} Quiz 3
+
+---
+
+## Module 4: Model Building & Diagnostics (Weeks 8--9)
+
+### Week 8: Nonlinear Relationships {#week-8}
+
+- {{< fa book-open >}} [Content](/content/08-content.qmd)
+- {{< fa laptop-code >}} Lab 07: Model Building
+- **Reading**: [Ch 06: Nonlinear Relationships]({{< var books.lecture_notes >}}/chapters/06-nonlinear-relationships.html){target="_blank"}
+- **Topics**: Polynomial regression, log transformations, splines
+
+### Week 9: Model Building & Diagnostics {#week-9}
+
+- {{< fa book-open >}} [Content](/content/09-content.qmd)
+- {{< fa laptop-code >}} Lab 08: Diagnostics
+- **Reading**: [Ch 07: Model Building]({{< var books.lecture_notes >}}/chapters/07-model-building.html){target="_blank"} and [Ch 08: Model Diagnostics]({{< var books.lecture_notes >}}/chapters/08-model-diagnostics.html){target="_blank"}
+- **Topics**: Variable selection, residual plots, Cook's distance, DFBETAS
+- {{< fa clipboard-list >}} [Project 1 Draft](/assignment/project-1-draft.qmd) --- due this week
+- {{< fa circle-check >}} Quiz 4
+
+---
+
+## Module 5: Logistic Regression (Weeks 10--11)
+
+### Week 10: Simple Logistic Regression {#week-10}
+
+- {{< fa book-open >}} [Content](/content/10-content.qmd)
+- {{< fa laptop-code >}} Lab 09: Logistic Intro
+- **Reading**: [Ch 09: Simple Logistic Regression]({{< var books.lecture_notes >}}/chapters/09-simple-logistic-regression.html){target="_blank"}
+- **Topics**: Binary outcomes, odds ratios, predicted probabilities
+
+### Week 11: Multiple Logistic Regression {#week-11}
+
+- {{< fa book-open >}} [Content](/content/11-content.qmd)
+- {{< fa laptop-code >}} Lab 10: Logistic Extended
+- **Reading**: [Ch 10: Multiple Logistic Regression]({{< var books.lecture_notes >}}/chapters/10-multiple-logistic-regression.html){target="_blank"}
+- **Topics**: Multiple predictors, average marginal effects, Simpson's Paradox
+- {{< fa pencil >}} [HW 07: Logistic Interpretation](/assignment/hw07.qmd) --- due this week
+- {{< fa pencil >}} [HW 08: Simpson's Paradox](/assignment/hw08.qmd) --- due this week
+- {{< fa circle-check >}} Quiz 5
+
+---
+
+## Module 6: Logistic Diagnostics (Week 12)
+
+### Week 12: Logistic Diagnostics {#week-12}
+
+- {{< fa book-open >}} [Content](/content/12-content.qmd)
+- {{< fa laptop-code >}} Lab 11: Logistic Diagnostics
+- **Reading**: [Ch 11: Logistic Diagnostics]({{< var books.lecture_notes >}}/chapters/11-logistic-diagnostics.html){target="_blank"}
+- **Topics**: Goodness-of-fit, pseudo-R², classification accuracy, binned residuals
+- {{< fa clipboard-list >}} [Project 1 Final](/assignment/project-1-final.qmd) --- due this week
+- {{< fa clipboard-list >}} [Project 2 Proposal](/assignment/project-2-proposal.qmd) --- due this week
+- {{< fa circle-check >}} Quiz 6
+
+---
+
+## Module 7: Generalized Linear Models (Weeks 13--14)
+
+### Week 13: Latent Response & GLM {#week-13}
+
+- {{< fa book-open >}} [Content](/content/13-content.qmd)
+- {{< fa laptop-code >}} Lab 12: Logistic Advanced
+- **Reading**: [Ch 12: Latent Response & GLM]({{< var books.lecture_notes >}}/chapters/12-latent-response-glm.html){target="_blank"}
+- **Topics**: Latent variable formulation, logit vs. probit, GLM components
+
+### Week 14: Ordinal Models {#week-14}
+
+- {{< fa book-open >}} [Content](/content/14-content.qmd)
+- **Reading**: [Ch 13: Ordinal Models]({{< var books.lecture_notes >}}/chapters/13-ordinal-models.html){target="_blank"}
+- **Topics**: Ordinal logistic regression, proportional odds assumption
+- {{< fa clipboard-list >}} [Project 2 Draft](/assignment/project-2-draft.qmd) --- due this week
+
+---
+
+## Module 8: Synthesis (Week 15)
+
+### Week 15: Course Synthesis {#week-15}
+
+- {{< fa book-open >}} [Content](/content/15-content.qmd)
+- **Topics**: Reviewing the full learning arc (SLR → GLM), course reflection
+- {{< fa file-lines >}} [Project 2 Final](/assignment/project-2-final.qmd) --- due this week
+
+:::

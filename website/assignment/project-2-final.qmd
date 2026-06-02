@@ -1,0 +1,79 @@
+---
+title: "Project 2 Final Report"
+---
+
+| | |
+|---|---|
+| **Project** | Project 2: Logistic Regression |
+| **Due** | Week 15 |
+| **Weight** | 70% of Project 2 (which is 20% of final grade) |
+| **Related Guide** | [Project Guide]({{< var books.project_guide >}}){target="_blank"} |
+
+::: {.callout-tip}
+## {{< fa book >}} Project Guide
+Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for the complete rubric, formatting guidelines, and examples of polished logistic regression reports.
+:::
+
+## Purpose
+
+The final report is a polished, complete logistic regression analysis that demonstrates your ability to work with binary outcomes, interpret odds ratios, assess model fit, and communicate findings. This submission should incorporate feedback received on your proposal.
+
+## Requirements
+
+Your final report should include all of the following sections:
+
+### 1. Introduction
+
+- Clear statement of the research question
+- Motivation and context for the analysis
+- Why logistic regression is the appropriate method
+
+### 2. Data and Variables
+
+- Complete dataset description with source and sample information
+- Variable definitions, coding, and measurement scales
+- Outcome variable distribution (frequency table with counts and percentages)
+- Descriptive statistics for all predictors
+
+### 3. Exploratory Data Analysis
+
+- Visualizations of key relationships (grouped bar charts, mosaic plots, etc.)
+- Cross-tabulations of the outcome with key predictors
+- Discussion of patterns and potential issues
+
+### 4. Model Specification and Results
+
+- Clearly stated logistic regression model(s)
+- Complete output with coefficient estimates, standard errors, Wald statistics, and $p$-values
+- **Odds ratios** with 95% confidence intervals for all predictors
+- Substantive interpretation of key odds ratios
+- Predicted probabilities for selected covariate patterns (optional but encouraged)
+
+### 5. Model Diagnostics and Fit
+
+- Goodness-of-fit test (e.g., Hosmer-Lemeshow)
+- Classification accuracy (confusion matrix, sensitivity, specificity)
+- Pseudo-$R^2$ measures
+- Discussion of model adequacy
+
+### 6. Discussion and Conclusion
+
+- Summary of key findings in relation to the research question
+- Comparison of unadjusted vs. adjusted associations (if applicable)
+- Limitations of the analysis
+- Suggestions for future research
+
+## Formatting
+
+- Use clear headings and subheadings
+- Number all tables and figures with descriptive captions
+- Report statistics using proper notation
+- Length: approximately 8--12 pages (excluding code appendix)
+
+## Submission
+
+Submit the following to Blackboard:
+
+- A rendered PDF or HTML document
+- Your `.qmd` source file
+- The dataset (or a link to it)

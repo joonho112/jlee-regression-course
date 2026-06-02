@@ -1,0 +1,154 @@
+project:
+  type: website
+  render:
+    - "*.qmd"
+  resources:
+    - "files/"
+
+execute:
+  freeze: auto
+
+website:
+  title: "Advanced Statistical Methods in Education"
+  description: "BER 640 - A regression approach with R for graduate students in education"
+  site-url: "https://joonho112.github.io/jlee-regression-course"
+
+  # favicon: "/files/img/icon-512.png"  # TODO: add favicon image
+
+  search: true
+  page-navigation: true
+  repo-url: "https://github.com/joonho112/jlee-regression-course"
+  repo-subdir: website
+  repo-actions: [edit, issue]
+
+  navbar:
+    pinned: true
+    background: "#2C3E50"
+    left:
+      - text: "{{< fa house >}}"
+        file: index.qmd
+    right:
+      - text: "Syllabus"
+        file: syllabus.qmd
+      - text: "Schedule"
+        file: schedule.qmd
+      - text: "Content"
+        file: content/index.qmd
+      - text: "Assignments"
+        file: assignment/index.qmd
+      - text: "Resources"
+        file: resource/index.qmd
+
+  sidebar:
+    - title: "Content"
+      style: "docked"
+      search: true
+      background: dark
+      collapse-level: 3
+      contents:
+        - section: "Overview"
+          contents:
+            - content/index.qmd
+        - section: "Weekly Content"
+          contents:
+            - text: "1: Welcome & R Setup"
+              file: content/01-content.qmd
+            - text: "2: Simple Linear Regression I"
+              file: content/02-content.qmd
+            - text: "3: Simple Linear Regression II"
+              file: content/03-content.qmd
+            - text: "4: ANCOVA"
+              file: content/04-content.qmd
+            - text: "5: One-Way ANOVA"
+              file: content/05-content.qmd
+            - text: "6: Multiple Regression"
+              file: content/06-content.qmd
+            - text: "7: Interactions"
+              file: content/07-content.qmd
+            - text: "8: Nonlinear Relationships"
+              file: content/08-content.qmd
+            - text: "9: Model Building & Diagnostics"
+              file: content/09-content.qmd
+            - text: "10: Simple Logistic Regression"
+              file: content/10-content.qmd
+            - text: "11: Multiple Logistic Regression"
+              file: content/11-content.qmd
+            - text: "12: Logistic Diagnostics"
+              file: content/12-content.qmd
+            - text: "13: Latent Response & GLM"
+              file: content/13-content.qmd
+            - text: "14: Ordinal Models"
+              file: content/14-content.qmd
+            - text: "15: Course Synthesis"
+              file: content/15-content.qmd
+
+    - title: "Assignments"
+      style: "docked"
+      search: false
+      background: dark
+      collapse-level: 3
+      contents:
+        - section: "Overview"
+          contents:
+            - assignment/index.qmd
+        - section: "Homework"
+          contents:
+            - assignment/hw01.qmd
+            - assignment/hw02.qmd
+            - assignment/hw03.qmd
+            - assignment/hw04.qmd
+            - assignment/hw05.qmd
+            - assignment/hw06.qmd
+            - assignment/hw07.qmd
+            - assignment/hw08.qmd
+        - section: "Project 1: Linear Regression"
+          contents:
+            - text: "Projects Overview"
+              file: assignment/final-project.qmd
+            - assignment/project-1-proposal.qmd
+            - assignment/project-1-draft.qmd
+            - assignment/project-1-final.qmd
+        - section: "Project 2: Logistic Regression"
+          contents:
+            - assignment/project-2-proposal.qmd
+            - assignment/project-2-draft.qmd
+            - assignment/project-2-final.qmd
+        - section: "Quizzes"
+          contents:
+            - assignment/quizzes.qmd
+
+    - title: "Resources"
+      style: "docked"
+      search: false
+      background: dark
+      collapse-level: 3
+      contents:
+        - section: "Getting Started"
+          contents:
+            - resource/index.qmd
+            - resource/r-setup.qmd
+            - resource/stata-to-r.qmd
+        - section: "Reference"
+          contents:
+            - resource/datasets.qmd
+            - resource/style-guide.qmd
+            - resource/faq.qmd
+
+  page-footer:
+    left: |
+      Content {{< fa brands creative-commons >}} {{< var course.copyright_year >}} by [{{< var instructor.name_no_title >}}]({{< var instructor.url >}}) <br>
+      All content licensed under a {{< fa brands creative-commons >}}
+      {{< fa brands creative-commons-by >}} {{< fa brands creative-commons-nc >}} {{< fa brands creative-commons-sa >}}
+      [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+    right: |
+      Made with [Quarto](https://quarto.org/)<br>
+      [View the source at {{< fa brands github >}} GitHub]({{< var course.github >}})
+
+format:
+  html:
+    theme:
+      - cosmo
+      - html/custom.scss
+    toc: true
+    highlight-style: monokai
+    code-copy: true

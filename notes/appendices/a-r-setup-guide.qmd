@@ -1,0 +1,332 @@
+# R Setup Guide {#sec-app-r-setup .unnumbered}
+
+This appendix walks you through setting up your computing environment for BER 640. By the end, you will have R, RStudio, and all required packages installed and ready to use.
+
+
+## Installing R and RStudio {#sec-app-install}
+
+You need two pieces of software:
+
+1. **R** --- the statistical computing language itself
+2. **RStudio** --- an integrated development environment (IDE) that makes working with R much easier
+
+### Step 1: Install R
+
+Download R from the Comprehensive R Archive Network (CRAN):
+
+- **Windows**: <https://cran.r-project.org/bin/windows/base/>
+- **macOS**: <https://cran.r-project.org/bin/macosx/>
+- **Linux**: <https://cran.r-project.org/bin/linux/>
+
+::: {.callout-tip}
+## Which version?
+Always install the latest release. As of this writing, R 4.4.x is current. If you already have R installed, check your version by typing `R.version.string` in the console. We recommend R 4.2.0 or later for full compatibility with the code in this book.
+:::
+
+### Step 2: Install RStudio
+
+Download RStudio Desktop (free) from:
+
+- <https://posit.co/download/rstudio-desktop/>
+
+Choose the installer for your operating system and follow the prompts. RStudio will automatically detect your R installation.
+
+### Step 3: Verify the Installation
+
+Open RStudio. You should see four panes:
+
+| Pane | Location | Purpose |
+|:-----|:---------|:--------|
+| Source | Top-left | Write and edit scripts |
+| Console | Bottom-left | Run commands interactively |
+| Environment | Top-right | View objects in memory |
+| Files/Plots/Help | Bottom-right | Browse files, view plots, read help |
+
+Type the following in the Console to confirm everything works:
+
+```r
+1 + 1
+```
+
+If you see `[1] 2`, you are ready to proceed.
+
+::: {.callout-tip}
+## Recommended RStudio Settings
+Go to **Tools > Global Options** and make these changes for a better experience:
+
+- **General > Workspace**: Uncheck "Restore .RData into workspace at startup" and set "Save workspace to .RData on exit" to **Never**. This ensures a clean environment each session.
+- **Code > Display**: Check "Show line numbers" and "Highlight selected line."
+- **Code > Saving**: Set default encoding to **UTF-8**.
+:::
+
+
+## Installing Packages {#sec-app-packages}
+
+R packages extend the base functionality. This course uses `pacman` for streamlined package management.
+
+### Installing pacman
+
+Run this once:
+
+```r
+install.packages("pacman")
+```
+
+### Loading Course Packages
+
+The `pacman::p_load()` function installs packages if they are missing *and* loads them in one step. Our standard setup loads:
+
+```r
+pacman::p_load(
+  tidyverse,          # Data wrangling and visualization
+  broom,              # Tidy model output
+  performance,        # Model diagnostics
+  parameters,         # Model summaries
+  marginaleffects,    # Marginal effects, predictions, contrasts
+  ggeffects,          # Predicted values for plotting
+  car,                # VIF and other diagnostics
+  sandwich,           # Robust standard errors
+  haven,              # Import Stata/SPSS files
+  here,               # Project-relative file paths
+  knitr,              # Tables and document rendering
+  remotes             # Install from GitHub
+)
+```
+
+::: {.callout-note}
+## Why pacman?
+With base R, you must first `install.packages()` and then `library()` separately. `pacman::p_load()` combines both steps and skips installation if the package is already present. This makes scripts more portable across machines.
+:::
+
+
+## The regdatasets Package {#sec-app-regdatasets}
+
+All datasets used in this book are distributed in the `regdatasets` package, hosted on GitHub.
+
+### Installation
+
+```r
+# Install remotes if you haven't already
+install.packages("remotes")
+
+# Install regdatasets from GitHub
+remotes::install_github("joonho112/regdatasets")
+```
+
+If installation fails behind a firewall or proxy, try:
+
+```r
+remotes::install_github("joonho112/regdatasets",
+                        INSTALL_opts = "--no-multiarch")
+```
+
+::: {.callout-warning}
+## GitHub Rate Limits
+If you see an error about "API rate limit exceeded," you are hitting GitHub's anonymous download limit. Wait 15--30 minutes and try again, or set a personal access token:
+
+```r
+# Create a token at https://github.com/settings/tokens (no scopes needed)
+Sys.setenv(GITHUB_PAT = "your_token_here")
+remotes::install_github("joonho112/regdatasets")
+```
+:::
+
+### Verifying the Installation
+
+::: {.panel-tabset}
+### R Code
+```r
+# Load the package
+library(regdatasets)
+
+# List all available datasets
+data(package = "regdatasets")
+
+# Load the GCSE dataset used in Chapter 1
+data(gcse)
+glimpse(gcse)
+```
+
+### Code Explanation
+- `library(regdatasets)`: Attaches the package so its datasets are accessible
+- `data(package = "regdatasets")`: Lists every dataset in the package
+- `data(gcse)`: Loads a specific dataset into the global environment
+- `glimpse()`: Displays the structure --- number of rows, columns, and variable types
+
+### Output Interpretation
+- `glimpse()` output shows each variable on one line: the variable name, its type (e.g., `<dbl>`, `<fct>`), and the first few values
+- The header line tells you the total number of rows (observations) and columns (variables)
+- If you see `<fct>` next to a variable, it is already stored as a factor; if you see `<dbl>` or `<int>`, it is numeric
+:::
+
+::: {.callout-tip}
+## Updating regdatasets
+If new datasets are added during the semester, simply re-run `remotes::install_github("joonho112/regdatasets")` to update.
+:::
+
+
+## RStudio Projects {#sec-app-projects}
+
+### Why Use Projects?
+
+An RStudio Project keeps all files for a single analysis in one folder and sets the working directory automatically. This eliminates the need for `setwd()` and makes your work portable.
+
+### Creating a Project
+
+1. In RStudio, go to **File > New Project...**
+2. Choose **New Directory > New Project**
+3. Name the directory (e.g., `BER640`) and pick a location
+4. Click **Create Project**
+
+RStudio creates a `.Rproj` file. Double-click it anytime to reopen the project with the correct working directory.
+
+### Recommended Folder Structure
+
+```
+BER640/
+├── BER640.Rproj
+├── data/               # Raw data files
+├── scripts/            # R scripts for each assignment
+├── output/             # Saved tables, figures
+└── notes/              # Personal notes
+```
+
+::: {.callout-important}
+## Never use `setwd()`
+Hard-coded paths like `setwd("C:/Users/myname/Desktop/stuff")` break on every other computer. Use RStudio Projects and the `here` package instead:
+
+```r
+# Instead of setwd() + read.csv("data/myfile.csv")
+read.csv(here::here("data", "myfile.csv"))
+```
+
+`here::here()` always builds paths relative to the project root, regardless of which subfolder your script is in.
+:::
+
+
+## Basic R Syntax {#sec-app-syntax}
+
+### The Pipe Operator `|>`
+
+R 4.1+ includes a native pipe operator. It passes the result on the left as the first argument to the function on the right:
+
+::: {.panel-tabset}
+### R Code
+```r
+# Without pipe
+summary(select(gcse, gcse, lrt))
+
+# With pipe (much easier to read)
+gcse |>
+  select(gcse, lrt) |>
+  summary()
+```
+
+### Code Explanation
+- `|>` passes the left-hand side as the first argument to the right-hand side
+- Reading top-to-bottom: "Take `gcse`, then select columns, then summarize"
+- The pipe makes multi-step operations readable as a sequence of verbs
+
+### Output Interpretation
+- Both versions produce identical `summary()` output: the minimum, 1st quartile, median, mean, 3rd quartile, and maximum for each selected variable
+- The pipe version is preferred because it reads as a natural sequence of steps, making the code easier to understand and debug
+:::
+
+::: {.callout-note}
+## `|>` vs `%>%`
+The native pipe `|>` (R 4.1+) and the magrittr pipe `%>%` (from tidyverse) work identically for the code in this book. We use `|>` throughout because it requires no additional package.
+:::
+
+### Tibbles
+
+A tibble is the tidyverse version of a data frame. It prints more neatly and never converts strings to factors automatically:
+
+```r
+# Create a tibble
+my_data <- tibble(
+  student = c("Alice", "Bob", "Carol"),
+  score   = c(85, 92, 78)
+)
+my_data
+```
+
+### Factors
+
+Factors represent categorical variables with a fixed set of levels. They are essential for regression with dummy variables:
+
+::: {.panel-tabset}
+### R Code
+```r
+# Character vector (no inherent ordering)
+gender_chr <- c("male", "female", "female", "male")
+
+# Convert to factor
+gender_fct <- factor(gender_chr)
+levels(gender_fct)
+
+# Set a specific reference level
+gender_fct <- relevel(gender_fct, ref = "male")
+levels(gender_fct)
+```
+
+### Code Explanation
+- `factor()`: Converts a character vector to a factor with automatically detected levels
+- `levels()`: Shows the ordered set of categories
+- `relevel(..., ref = "male")`: Makes "male" the reference (baseline) category in regression
+
+### Output Interpretation
+- The first `levels()` call returns `"female" "male"` --- R defaults to alphabetical ordering, so "female" is the reference
+- After `relevel()`, levels become `"male" "female"` --- now "male" is the baseline category
+- In regression, the first level is the reference group; all other levels are compared to it via dummy variables
+:::
+
+
+## Troubleshooting {#sec-app-troubleshooting}
+
+### Common Errors and Solutions
+
+| Error Message | Likely Cause | Solution |
+|:--------------|:-------------|:---------|
+| `could not find function "..."` | Package not loaded | Run `library(packagename)` or `pacman::p_load(packagename)` |
+| `object '...' not found` | Variable does not exist | Check spelling; make sure you ran `data(datasetname)` |
+| `there is no package called '...'` | Package not installed | Run `install.packages("packagename")` |
+| `non-numeric argument to binary operator` | Wrong data type | Check `class(variable)`; convert with `as.numeric()` |
+| `unexpected '}'` or `unexpected ')'` | Mismatched brackets | Check for missing opening brackets |
+
+### Package Installation Issues
+
+::: {.callout-warning}
+## "Package was built under a different version of R"
+This warning is usually harmless. The package will still work. If you encounter actual errors, update R to the latest version.
+:::
+
+If `install.packages()` fails:
+
+1. **Check your internet connection**
+2. **Try a different CRAN mirror**: `install.packages("pkg", repos = "https://cloud.r-project.org")`
+3. **Update R** to the latest version
+4. **On macOS**: Install Xcode command-line tools with `xcode-select --install` in Terminal
+5. **On Windows**: Install [Rtools](https://cran.r-project.org/bin/windows/Rtools/) for packages that need compilation
+
+### Getting Help
+
+When you encounter an error you cannot resolve:
+
+1. **Read the error message carefully** --- R messages are often informative
+2. **Check the help file**: `?function_name`
+3. **Search online**: Copy the error message into a search engine
+4. **Ask on the course discussion board** --- include the error message and a minimal reproducible example
+5. **Consult the R for Data Science book**: <https://r4ds.hadley.nz/>
+
+::: {.callout-tip}
+## Reproducible Examples
+When asking for help, provide a minimal reproducible example (reprex). The `reprex` package makes this easy:
+
+```r
+install.packages("reprex")
+# Copy your problematic code, then run:
+reprex::reprex()
+```
+
+This copies a formatted, self-contained example to your clipboard that you can paste into a discussion board or email.
+:::

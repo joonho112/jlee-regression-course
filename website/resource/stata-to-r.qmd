@@ -1,0 +1,64 @@
+---
+title: "Stata-to-R Cheat Sheet"
+---
+
+## Overview
+
+If you are coming from a Stata background, this page provides a quick reference for translating common Stata commands into R equivalents. For a comprehensive cheat sheet with detailed examples, see **Appendix B** of the Lecture Notes:
+
+{{< fa book-open >}} [**Appendix B: Stata-to-R Cheat Sheet**]({{< var books.lecture_notes >}}/appendices/b-stata-to-r-cheat-sheet.html){target="_blank"}
+
+
+## Key Differences
+
+Before diving into commands, keep these general differences in mind:
+
+- **One dataset vs. many objects.** Stata works with one dataset at a time; R can hold multiple data frames simultaneously.
+- **Assignment.** Stata modifies data in place; R requires explicit assignment (`<-`) to save results.
+- **Packages.** Stata includes most statistical functions by default; R relies on packages for extended functionality.
+- **Indexing.** Stata uses `in` and `if`; R uses bracket notation (`[]`) or `dplyr` verbs.
+
+::: {.callout-tip}
+## The tidyverse advantage
+The `tidyverse` family of packages (especially `dplyr` and `ggplot2`) makes R syntax more readable and consistent. All R examples in this course use tidyverse conventions.
+:::
+
+
+## Quick Comparison Table
+
+The table below maps common Stata operations to their R equivalents using tidyverse syntax.
+
+| Task | Stata | R (tidyverse) |
+|------|-------|---------------|
+| **Load data** | `use "data.dta"` | `df <- read_csv("data.csv")` |
+| **View data** | `browse` | `View(df)` |
+| **Summary statistics** | `summarize x` | `df %>% summarize(mean(x))` |
+| **Frequency table** | `tabulate group` | `df %>% count(group)` |
+| **Filter rows** | `keep if age > 18` | `df %>% filter(age > 18)` |
+| **Create variable** | `gen y = x^2` | `df <- df %>% mutate(y = x^2)` |
+| **Rename variable** | `rename old new` | `df <- df %>% rename(new = old)` |
+| **Simple regression** | `regress y x` | `lm(y ~ x, data = df)` |
+| **Multiple regression** | `regress y x1 x2` | `lm(y ~ x1 + x2, data = df)` |
+| **Logistic regression** | `logit y x1 x2` | `glm(y ~ x1 + x2, family = binomial, data = df)` |
+| **Scatterplot** | `scatter y x` | `ggplot(df, aes(x, y)) + geom_point()` |
+| **Histogram** | `histogram x` | `ggplot(df, aes(x)) + geom_histogram()` |
+
+
+## Regression-Specific Commands
+
+Since this course centers on regression, here are additional translations for model-related tasks.
+
+| Task | Stata | R |
+|------|-------|---|
+| **Model summary** | `regress y x` (output is automatic) | `summary(lm(y ~ x, data = df))` |
+| **Confidence intervals** | `regress y x` then `estat ci` | `confint(model)` |
+| **Predicted values** | `predict yhat` | `augment(model)` or `predict(model)` |
+| **Residuals** | `predict r, residuals` | `augment(model)$.resid` or `residuals(model)` |
+| **ANOVA table** | `anova y x` | `anova(model)` or `car::Anova(model)` |
+| **VIF** | `estat vif` | `car::vif(model)` |
+| **Marginal effects** | `margins` | `marginaleffects::avg_slopes(model)` |
+
+::: {.callout-note}
+## Getting help
+In R, type `?function_name` in the console to access documentation. For example, `?lm` opens the help page for the linear model function.
+:::

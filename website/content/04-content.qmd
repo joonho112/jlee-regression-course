@@ -1,0 +1,36 @@
+---
+title: "Week 4: ANCOVA"
+---
+
+## Overview
+
+This week introduces analysis of covariance (ANCOVA) through the lens of multiple regression with dummy variables. You will learn how adding a continuous covariate to a group-comparison model adjusts for pre-existing differences, producing more precise and less biased estimates of group effects. Understanding ANCOVA also sets the stage for the broader multiple regression framework in later weeks.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Create and interpret dummy-coded variables for categorical predictors
+- Explain how ANCOVA adjusts group means for a continuous covariate
+- Interpret regression coefficients in a model with both categorical and continuous predictors
+- Describe the parallel regression lines assumption and its implications
+- Identify situations where omitted variable bias threatens causal inference
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 2: ANCOVA]({{< var books.lecture_notes >}}/chapters/02-ancova.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 03: ANOVA and ANCOVA in R]({{< var books.r_lab_book >}}/labs/lab03-anova-ancova.html){target="_blank"}
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Dummy coding** | Representing a categorical variable with 0/1 indicator variables |
+| **ANCOVA** | A model that compares group means after adjusting for one or more continuous covariates |
+| **Adjusted means** | Group means recalculated as if all groups had the same covariate value |
+| **Parallel lines** | The assumption that the covariate has the same slope in every group |
+| **Confounding** | When a third variable is associated with both the predictor and the outcome |
+| **Omitted variable bias (OVB)** | Bias in a coefficient caused by leaving a relevant variable out of the model |

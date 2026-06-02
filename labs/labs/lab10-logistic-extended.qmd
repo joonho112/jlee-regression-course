@@ -1,0 +1,472 @@
+---
+title: "Lab 10: Logistic Regression with Multiple Predictors"
+---
+
+{{< include ../_common.qmd >}}
+
+## Goals
+
+::: {.callout-note}
+## What You'll Learn in This Lab
+- Compute and interpret confidence intervals for odds ratios
+- Standardize continuous predictors so odds ratios have practical meaning
+- Plot predicted probability curves (the logistic S-curve)
+- Include categorical predictors with 3+ levels in logistic regression
+- Change reference groups and compute pairwise comparisons
+- **Lecture Notes Reference:** Chapters 9--10: *Logistic Regression with Multiple Predictors*
+:::
+
+**Dataset:** `titanic` from the `regdatasets` package
+
+## Setup
+
+```{r}
+#| label: lab10-setup
+
+library(regdatasets)
+data(titanic)
+
+# The 'sex' variable is already coded as 0 = male, 1 = female
+# Rename it to 'female' for clarity (same as Lab 9)
+titanic <- titanic |>
+  rename(female = sex)
+
+glimpse(titanic)
+```
+
+
+## Part 1: Review and Confidence Intervals
+
+In Lab 9 we fit a simple logistic regression predicting survival from gender. Let's revisit that model and add something new: **confidence intervals for the odds ratio**.
+
+### Step 1: Quick Review
+
+```{r}
+#| label: review-female-model
+
+model_female <- glm(survived ~ female, data = titanic, family = binomial)
+exp(coef(model_female))
+```
+
+> Recall: the odds ratio of `r round(exp(coef(model_female)[2]), 2)` means females had roughly `r round(exp(coef(model_female)[2]), 1)` times the odds of surviving compared to males. But how precise is that estimate? We need a confidence interval.
+
+### Step 2: Confidence Intervals for Odds Ratios
+
+R provides profile-likelihood confidence intervals with `confint()`. We exponentiate them to get CIs on the odds ratio scale:
+
+```{r}
+#| label: ci-odds-ratio
+
+# Profile-likelihood CI (the default for glm)
+exp(confint(model_female))
+```
+
+> The 95% CI for the odds ratio of `female` runs from roughly `r round(exp(confint(model_female)[2, 1]), 2)` to `r round(exp(confint(model_female)[2, 2]), 2)`. Since this interval does not include 1, we are confident that gender has a statistically significant association with survival. More importantly, we can say the true odds ratio is at least about 8---a substantial effect by any standard.
+
+### Step 3: Manual CI Using the Wald Method
+
+You can also compute CIs manually using the formula: $\exp\!\bigl(b \pm 1.96 \times SE\bigr)$.
+
+```{r}
+#| label: ci-manual
+
+# Extract coefficient and SE
+b  <- coef(summary(model_female))["female", "Estimate"]
+se <- coef(summary(model_female))["female", "Std. Error"]
+
+# Wald 95% CI on the log-odds scale
+ci_logit <- b + c(-1.96, 1.96) * se
+
+# Convert to odds ratio scale
+ci_or <- exp(ci_logit)
+cat("Manual 95% CI for OR:", round(ci_or[1], 2), "to", round(ci_or[2], 2), "\n")
+```
+
+> The manual Wald CI and the profile-likelihood CI will be similar but not identical. Profile CIs are slightly more accurate because they account for the curvature of the likelihood function. In practice, both approaches lead to the same conclusion.
+
+::: {.callout-warning}
+## Profile vs. Wald Confidence Intervals
+R's `confint()` computes **profile-likelihood** CIs by default, while Stata computes **Wald** CIs. The two methods give slightly different numbers (especially in small samples). For Wald CIs that match Stata more closely, use `confint.default()` instead of `confint()`. In practice, the differences are usually small and both methods lead to the same conclusions.
+:::
+
+::: {.callout-tip}
+## When to Report CIs
+Always report confidence intervals alongside odds ratios. A point estimate like OR = 11.4 is incomplete without knowing its precision. The CI tells your reader whether the effect could plausibly be small, large, or anywhere in between.
+:::
+
+
+## Part 2: Making Continuous Predictors Meaningful
+
+### Step 1: The Interpretation Problem
+
+In Lab 9 we fit a model with `fare` as a continuous predictor. Let's look at that odds ratio again:
+
+```{r}
+#| label: fare-model
+
+model_fare <- glm(survived ~ fare, data = titanic, family = binomial)
+exp(coef(model_fare))
+```
+
+> The OR for fare is about `r round(exp(coef(model_fare)[2]), 4)`. That means for each additional **one pound** of fare, the odds of survival increase by about `r round((exp(coef(model_fare)[2]) - 1) * 100, 2)`%. Technically correct, but not very informative. One pound is a tiny change on a scale that ranges from 0 to over 500.
+
+### Step 2: Standardize the Predictor
+
+The solution is to **standardize** fare so the OR describes the effect of a one standard deviation change:
+
+$$z_{\text{fare}} = \frac{\text{fare} - \overline{\text{fare}}}{SD_{\text{fare}}}$$
+
+```{r}
+#| label: standardize-fare
+
+titanic <- titanic |>
+  mutate(z_fare = (fare - mean(fare, na.rm = TRUE)) / sd(fare, na.rm = TRUE))
+
+# Check that standardization worked
+titanic |>
+  summarise(
+    fare_mean = round(mean(fare, na.rm = TRUE), 2),
+    fare_sd   = round(sd(fare, na.rm = TRUE), 2),
+    z_fare_mean = round(mean(z_fare, na.rm = TRUE), 2),
+    z_fare_sd   = round(sd(z_fare, na.rm = TRUE), 2)
+  )
+```
+
+> After standardizing, `z_fare` has a mean of 0 and a SD of 1. Now a one-unit change in `z_fare` corresponds to a one SD change in the original fare.
+
+### Step 3: Fit the Model with the Standardized Predictor
+
+```{r}
+#| label: model-z-fare
+
+model_z_fare <- glm(survived ~ z_fare, data = titanic, family = binomial)
+```
+
+:::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: z-fare-summary
+
+summary(model_z_fare)
+```
+
+#### Advanced
+
+```{r}
+#| label: z-fare-gtsummary
+
+model_z_fare |>
+  tbl_regression(exponentiate = TRUE) |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+::::
+
+### Step 4: Compare Unstandardized vs. Standardized
+
+```{r}
+#| label: compare-ors
+
+tibble(
+  Model = c("Unstandardized (per 1 pound)", "Standardized (per 1 SD)"),
+  OR = c(exp(coef(model_fare)[2]), exp(coef(model_z_fare)[2])),
+  CI_lower = c(exp(confint(model_fare)[2, 1]), exp(confint(model_z_fare)[2, 1])),
+  CI_upper = c(exp(confint(model_fare)[2, 2]), exp(confint(model_z_fare)[2, 2]))
+) |>
+  mutate(across(where(is.numeric), \(x) round(x, 4))) |>
+  knitr::kable()
+```
+
+> Now we can say: a one SD increase in fare (about `r round(sd(titanic$fare, na.rm = TRUE), 0)` pounds) is associated with an odds ratio of roughly `r round(exp(coef(model_z_fare)[2]), 2)`. That is much more interpretable than saying each single pound changes the odds by 1.25%.
+
+::: {.callout-important}
+## When to Standardize
+Standardize continuous predictors when the natural unit of measurement is awkward for interpretation (e.g., one pound, one year, one test point). The OR per 1 SD change gives a "practical effect size" that readers can understand without knowing the original scale.
+:::
+
+
+## Part 3: Predicted Probability Curves
+
+One of the most informative ways to present logistic regression results is through **predicted probability plots**. These show the S-shaped curve that is the hallmark of logistic regression.
+
+### Step 1: The Quick Way with ggplot
+
+`ggplot2` can fit and display the logistic curve in a single call using `geom_smooth()`:
+
+```{r}
+#| label: quick-s-curve
+#| fig-alt: "S-shaped logistic curve with 95% confidence band showing predicted survival probability increasing with fare, with jittered binary outcomes"
+#| fig-cap: "Predicted probability of survival by fare (quick method)"
+
+ggplot(titanic, aes(x = fare, y = survived)) +
+  geom_jitter(height = 0.03, alpha = 0.15, size = 1, color = "#2C3E50") +
+  geom_smooth(method = "glm",
+              method.args = list(family = binomial),
+              color = "#E74C3C", linewidth = 1.2, se = TRUE) +
+  labs(x = "Ticket Fare (British Pounds)",
+       y = "Predicted P(Survived)",
+       title = "Logistic Regression: Survival by Fare",
+       subtitle = "Shaded band shows the 95% confidence envelope") +
+  scale_y_continuous(limits = c(0, 1))
+```
+
+> The gray shaded region is the 95% confidence band around the predicted probability. Notice how the band is narrower where we have more data (middle fare values) and wider at the extremes.
+
+### Step 2: The Manual Way (More Control)
+
+For presentations or publications, you often want more control. The manual approach uses `predict()` with `type = "response"` to get predicted probabilities:
+
+```{r}
+#| label: manual-s-curve
+#| fig-alt: "S-shaped logistic curve with shaded 95% confidence interval showing predicted survival probability increasing with fare, narrower in the data-rich middle range"
+#| fig-cap: "Predicted probability of survival by fare (manual method)"
+
+# Create a grid of fare values
+new_data <- tibble(fare = seq(0, 300, length.out = 300))
+
+# Get predicted probabilities and confidence intervals
+preds <- predict(model_fare, newdata = new_data, type = "link", se.fit = TRUE)
+
+new_data <- new_data |>
+  mutate(
+    prob    = plogis(preds$fit),
+    ci_low  = plogis(preds$fit - 1.96 * preds$se.fit),
+    ci_high = plogis(preds$fit + 1.96 * preds$se.fit)
+  )
+
+ggplot() +
+  geom_jitter(data = titanic, aes(x = fare, y = survived),
+              height = 0.03, alpha = 0.15, size = 1, color = "#2C3E50") +
+  geom_ribbon(data = new_data, aes(x = fare, ymin = ci_low, ymax = ci_high),
+              fill = "#E74C3C", alpha = 0.2) +
+  geom_line(data = new_data, aes(x = fare, y = prob),
+            color = "#E74C3C", linewidth = 1.2) +
+  labs(x = "Ticket Fare (British Pounds)",
+       y = "Predicted P(Survived)",
+       title = "Logistic Regression: Survival by Fare",
+       subtitle = "Manual predictions with 95% CI") +
+  scale_y_continuous(limits = c(0, 1))
+```
+
+> We used `type = "link"` (log-odds scale) for the predictions, then applied `plogis()` to convert to probabilities. The key trick is to compute the CI on the log-odds scale first, then transform --- this ensures the CI stays within [0, 1].
+
+### Step 3: Interpreting the S-Curve
+
+```{r}
+#| label: interpret-s-curve
+
+# Predicted probabilities at specific fare values
+check_fares <- tibble(fare = c(10, 30, 50, 100, 200))
+
+check_fares <- check_fares |>
+  mutate(
+    predicted_prob = predict(model_fare, newdata = check_fares, type = "response")
+  ) |>
+  mutate(predicted_prob = round(predicted_prob, 3))
+
+knitr::kable(check_fares, col.names = c("Fare (pounds)", "P(Survived)"))
+```
+
+> The predicted probability of survival increases with fare, but not linearly. At low fares, the probability is relatively flat and low. In the middle range, it climbs steeply. At high fares, it levels off again. This S-shape is the **logistic function** in action.
+
+::: {.callout-tip}
+## The Logistic (Sigmoid) Function
+The S-curve is described by the logistic function:
+
+$$P(Y = 1) = \frac{1}{1 + e^{-(b_0 + b_1 X)}}$$
+
+At the middle of the curve, small changes in $X$ produce large changes in probability. At the extremes (very high or very low $X$), changes in $X$ have little effect on the predicted probability. This is why logistic regression is better than linear regression for binary outcomes --- it naturally captures this ceiling and floor behavior.
+:::
+
+
+## Part 4: Categorical Predictors with 3+ Levels
+
+So far we have worked with a binary predictor (`female`) and a continuous predictor (`fare`). Now let's tackle a categorical predictor with **three levels**: passenger class (`pclass`), coded 1, 2, or 3.
+
+### Step 1: Prepare the Variable
+
+The `pclass` variable is numeric (1, 2, 3), so we need to tell R to treat it as a factor:
+
+```{r}
+#| label: pclass-factor
+
+titanic <- titanic |>
+  mutate(pclass_f = factor(pclass, labels = c("1st", "2nd", "3rd")))
+
+titanic |>
+  count(pclass_f, survived) |>
+  group_by(pclass_f) |>
+  mutate(prop = round(n / sum(n), 3)) |>
+  filter(survived == 1) |>
+  select(pclass_f, n_survived = n, survival_rate = prop)
+```
+
+> First class passengers had the highest survival rate and third class the lowest --- a pattern that reflects both cabin location and social privilege.
+
+### Step 2: Fit the Model
+
+```{r}
+#| label: model-pclass
+
+model_pclass <- glm(survived ~ pclass_f, data = titanic, family = binomial)
+```
+
+:::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: pclass-summary
+
+summary(model_pclass)
+```
+
+#### Advanced
+
+```{r}
+#| label: pclass-gtsummary
+
+model_pclass |>
+  tbl_regression(exponentiate = TRUE) |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+::::
+
+### Step 3: Interpret the Coefficients
+
+With a three-level factor, R creates two dummy variables: `pclass_f2nd` and `pclass_f3rd`. The reference category is **1st class** (the first level of the factor).
+
+```{r}
+#| label: pclass-or
+
+exp(coef(model_pclass))
+exp(confint(model_pclass))
+```
+
+> - **2nd class vs. 1st class:** The OR of `r round(exp(coef(model_pclass)["pclass_f2nd"]), 2)` means that 2nd class passengers had about `r round(exp(coef(model_pclass)["pclass_f2nd"]) * 100, 0)`% of the odds of surviving compared to 1st class passengers.
+> - **3rd class vs. 1st class:** The OR of `r round(exp(coef(model_pclass)["pclass_f3rd"]), 2)` is even lower. Third class passengers had much lower odds of survival than first class.
+
+Both comparisons use 1st class as the baseline. But what if we want 3rd class as the reference instead?
+
+### Step 4: Change the Reference Group
+
+Use `relevel()` to change which category serves as the reference:
+
+```{r}
+#| label: relevel-pclass
+
+titanic <- titanic |>
+  mutate(pclass_f = relevel(pclass_f, ref = "3rd"))
+
+model_pclass_ref3 <- glm(survived ~ pclass_f, data = titanic, family = binomial)
+```
+
+::: {.callout-note}
+Note that `relevel()` permanently changes the factor levels in the data. If you re-run earlier code chunks after this point, the reference group will be different.
+:::
+
+:::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: ref3-summary
+
+summary(model_pclass_ref3)
+```
+
+#### Advanced
+
+```{r}
+#| label: ref3-gtsummary
+
+model_pclass_ref3 |>
+  tbl_regression(exponentiate = TRUE) |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+::::
+
+```{r}
+#| label: ref3-or
+
+exp(coef(model_pclass_ref3))
+exp(confint(model_pclass_ref3))
+```
+
+> Now the comparisons are flipped. The OR for 1st class vs. 3rd class is the reciprocal of what we saw before. Both models fit the data identically --- only the parameterization (which group is the baseline) changes.
+
+::: {.callout-tip}
+## Choosing a Reference Group
+There is no single "correct" reference group. Choose the one that makes your research question easiest to answer:
+
+- If you want to compare other classes **against the most privileged** group, use 1st class as reference.
+- If you want to compare other classes **against the least privileged** group, use 3rd class as reference.
+- The model fit statistics (deviance, AIC) are identical regardless of your choice.
+:::
+
+### Step 5: Pairwise Comparisons with emmeans
+
+Changing the reference group only gives us comparisons against one baseline at a time. What if we want **all pairwise comparisons** (1st vs. 2nd, 1st vs. 3rd, 2nd vs. 3rd) simultaneously? The `emmeans` package makes this easy:
+
+```{r}
+#| label: pairwise-emmeans
+
+# Estimated marginal means on the response (probability) scale
+em <- emmeans(model_pclass_ref3, ~ pclass_f, type = "response")
+em
+```
+
+> These are the model-predicted survival probabilities for each class --- they match the observed proportions exactly (as they should, since `pclass_f` is the only predictor).
+
+```{r}
+#| label: pairwise-contrasts
+
+# Pairwise comparisons on the odds ratio scale
+pairs(em, type = "response", reverse = TRUE)
+```
+
+> Now we see all three pairwise odds ratios at once: 1st vs. 2nd, 1st vs. 3rd, and 2nd vs. 3rd. The `reverse = TRUE` option puts the higher-survival group in the numerator, so all ORs are greater than 1. Notice that the p-values are adjusted for multiple comparisons (Tukey method by default).
+
+```{r}
+#| label: pairwise-plot
+#| fig-alt: "Point-and-error-bar plot showing estimated survival probabilities decreasing from 1st class (about 63%) to 2nd class (about 47%) to 3rd class (about 24%) with non-overlapping 95% confidence intervals"
+#| fig-cap: "Estimated survival probabilities by passenger class with 95% CIs"
+
+em_df <- as.data.frame(em)
+
+ggplot(em_df, aes(x = pclass_f, y = prob)) +
+  geom_point(size = 4, color = "#E74C3C") +
+  geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL),
+                width = 0.15, linewidth = 1, color = "#E74C3C") +
+  labs(x = "Passenger Class",
+       y = "Predicted P(Survived)",
+       title = "Survival Probability by Passenger Class",
+       subtitle = "Error bars show 95% confidence intervals") +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent)
+```
+
+> The plot makes the survival gradient crystal clear. First class passengers had roughly a 63% chance of surviving, while third class passengers had only about 24%. The non-overlapping confidence intervals confirm these differences are statistically significant.
+
+
+## Key Takeaways
+
+::: {.callout-note}
+## What We Learned
+
+1. **Confidence intervals for odds ratios:** Always report CIs alongside point estimates. Use `exp(confint(model))` for profile-likelihood CIs or `exp(coef +/- 1.96 * SE)` for Wald CIs.
+
+2. **Standardizing continuous predictors:** When the natural unit is awkward (e.g., one pound of fare), standardize the predictor so the OR describes a one SD change. This gives a practical effect size that is easier to communicate.
+
+3. **Predicted probability curves:** The S-shaped logistic curve is the best way to communicate how a continuous predictor relates to a binary outcome. Use `geom_smooth(method = "glm")` for quick plots or `predict(type = "response")` for full control.
+
+4. **Categorical predictors with 3+ levels:** Convert to a factor, and R creates dummy variables automatically. The first level is the reference group by default. Use `relevel()` to change the reference.
+
+5. **Pairwise comparisons:** `emmeans` computes all pairwise odds ratios with appropriate multiple-comparison adjustments, so you are not limited to comparisons against a single reference group.
+:::

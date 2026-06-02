@@ -1,0 +1,2434 @@
+# Simple Linear Regression {#sec-ch1}
+
+{{< include ../_common.qmd >}}
+
+## Introduction {#sec-ch1-intro}
+
+Regression analysis is the most widely used statistical technique in the social and behavioral sciences. At its core, regression answers a simple question: *How does one variable relate to another?* In education research, we constantly ask questions like: Does prior reading ability predict later exam performance? Do students in one school outperform students in another? Does a new instructional method improve learning outcomes?
+
+Simple linear regression provides the foundation for all the models we will encounter in this course. It describes the relationship between a single predictor variable $x$ and a continuous outcome variable $y$ using a straight line. While this may seem restrictive, as we will see throughout this book, even the most complex models --- ANCOVA, logistic regression, ordinal models --- are extensions of this basic idea.
+
+This chapter follows a "specific to general" approach: we start with a concrete example from education, build the mathematical model, learn how to estimate and interpret it, and then explore important extensions including prediction intervals, regression to the mean, and the connection between regression and the $t$-test.
+
+::: {.callout-note}
+## Learning Objectives
+After completing this chapter, you will be able to:
+
+1. Specify and interpret a simple linear regression model
+2. Explain and compute OLS estimates of the intercept and slope
+3. Interpret $R^2$ and the Pearson correlation coefficient
+4. Check model assumptions using diagnostic plots
+5. Conduct hypothesis tests and construct confidence intervals for regression coefficients
+6. Distinguish between confidence intervals for the mean response and prediction intervals for individual observations
+7. Explain regression to the mean and its implications for education research
+8. Show that the independent-samples $t$-test is a special case of regression with a dummy variable
+:::
+
+
+## Motivating Example: GCSE and LRT {#sec-ch1-example}
+
+In the United Kingdom, education is compulsory between ages five and sixteen. Secondary school begins at age 11. At age 16, students take the General Certificate of Secondary Education (GCSE) exams across several subjects. Five good GCSE results and three A-levels (taken at age 18) are typically required for university admission.
+
+The **London Reading Test (LRT)**, administered at age 11, serves as a measure of intake achievement. It allows educators to make "fair" comparisons of outcomes between schools by accounting for the abilities students bring with them when they arrive.
+
+Our motivating question is: **How well does the LRT score at age 11 predict GCSE exam performance at age 16?**
+
+Both GCSE and LRT have been standardized to have a mean of 0 and a standard deviation of approximately 10.
+
+### Loading the Data
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-data-load
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Load the gcse dataset from the regdatasets package
+data(gcse)
+
+# Inspect the structure
+glimpse(gcse)
+```
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-data-load"
+#| eval: false
+```
+- `data(gcse)`: Loads the `gcse` dataset from the `regdatasets` package (already loaded by `_common.R`)
+- `glimpse()`: Shows the number of rows, columns, and a preview of each variable's type and values
+
+:::
+
+### Exploring the Data
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-data-explore
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Summary statistics for key variables
+gcse |>
+  select(gcse, lrt) |>
+  summarise(
+    across(everything(), list(
+      mean = \(x) mean(x, na.rm = TRUE),
+      sd   = \(x) sd(x, na.rm = TRUE),
+      min  = \(x) min(x, na.rm = TRUE),
+      max  = \(x) max(x, na.rm = TRUE)
+    ))
+  ) |>
+  pivot_longer(everything(),
+    names_to = c("variable", "stat"),
+    names_pattern = "(.+)_(mean|sd|min|max)",
+    values_to = "value"
+  ) |>
+  pivot_wider(names_from = stat, values_from = value) |>
+  kable(digits = 2)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch1-data-explore"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Mean**: Both GCSE and LRT have means near 0 because the full dataset is standardized. Check whether the means differ noticeably in your subsample
+- **SD**: Standard deviations near 10 confirm the approximate standardization. Compare the SDs of the two variables --- similar spread suggests the raw slope will approximate the correlation
+- **Min/Max**: The range tells you the span of observed scores. Look for extreme values that might indicate data entry errors or unusual observations
+- A quick scan of these statistics helps you spot anomalies *before* fitting a model
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-data-explore"
+#| eval: false
+```
+- `select(gcse, lrt)`: Selects only the two variables we need
+- `summarise(across(...))`: Computes summary statistics for each variable
+- The `pivot_longer()` and `pivot_wider()` calls reshape the output into a readable table
+- `kable()`: Formats the output as a clean table
+
+
+:::
+
+### Visualizing the Relationship
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-scatter
+#| fig-cap: "Scatter plot of GCSE exam scores versus LRT scores at intake for a school in Battersea, London. The blue line shows the OLS regression line."
+#| fig-alt: "Scatter plot with LRT score on the horizontal axis and GCSE exam score on the vertical axis for students at a Battersea school. Points show a moderate positive linear trend. A blue ordinary least squares regression line is overlaid, sloping upward from left to right, indicating that higher LRT intake scores are associated with higher GCSE outcomes."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Filter to Battersea school (school == 1) for the initial example
+battersea <- gcse |> filter(school == 1)
+
+ggplot(battersea, aes(x = lrt, y = gcse)) +
+  geom_point(alpha = 0.6, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", formula = y ~ x, se = TRUE,
+              color = ber640_colors["accent"], fill = ber640_colors["accent"],
+              alpha = 0.2) +
+  labs(
+    title = "GCSE vs LRT: School in Battersea",
+    x = "LRT Score (age 11)",
+    y = "GCSE Score (age 16)"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-scatter"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The scatter plot shows a **positive linear trend**: as LRT scores increase (left to right), GCSE scores tend to increase as well
+- The blue regression line summarizes this trend, and the shaded band is the 95% confidence interval for the mean response at each LRT value
+- Notice that points are scattered around the line --- individual students deviate from the trend, reflecting the influence of other unmeasured factors
+- There are no obvious outliers or nonlinear patterns, suggesting a straight line is a reasonable starting point
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-scatter"
+#| eval: false
+```
+- `filter(school == 1)`: Selects only students from the Battersea school
+- `geom_point()`: Creates the scatter plot; `alpha = 0.6` makes points semi-transparent
+- `geom_smooth(method = "lm")`: Adds the OLS regression line with a confidence band
+- The plot shows a clear positive relationship: students with higher LRT scores tend to earn higher GCSE scores
+
+
+:::
+
+The scatter plot reveals a clear positive trend: students who scored higher on the LRT at age 11 tend to score higher on the GCSE at age 16. But how do we *quantify* this trend? How steep is it? How precise is our estimate? To answer these questions, we need a mathematical model that captures the systematic pattern while acknowledging that individual students deviate from the trend.
+
+::: {.callout-note}
+## Why Start with a Straight Line?
+A straight line is the simplest model for a relationship between two variables. In practice, many relationships in education are approximately linear over the observed range, even if the "true" relationship is more complex. Starting linear gives us:
+
+1. A **baseline** to compare more complex models against
+2. An **interpretable** summary --- the slope tells us the rate of change
+3. A **building block** --- nonlinear relationships can be captured by adding polynomial terms or transformations (@sec-ch6)
+:::
+
+
+## The Simple Linear Regression Model {#sec-ch1-model}
+
+### The Regression Function
+
+The simple linear regression model relates a response variable $y_i$ to a single predictor $x_i$ through a linear function plus a random error:
+
+$$
+y_i = \alpha + \beta x_i + \epsilon_i
+$$ {#eq-ch1-slr}
+
+where:
+
+- $y_i$ is the **response** (dependent, criterion) variable for subject $i$ (numbered $i = 1, 2, \ldots, n$)
+- $x_i$ is the **predictor** (independent, explanatory) variable for subject $i$
+- $\alpha$ is the true **intercept** (or constant)
+- $\beta$ is the true **slope** (or regression coefficient)
+- $\epsilon_i$ is the **error term** (or theoretical residual)
+
+The **regression function** describes the conditional expectation (mean) of $y_i$ given $x_i$:
+
+$$
+\text{E}(y_i \mid x_i) = \alpha + \beta x_i
+$$ {#eq-ch1-regfn}
+
+::: {.callout-tip}
+## Interpreting the Intercept and Slope
+- **Intercept** $\alpha$: The expected (mean) value of $y$ when $x = 0$
+- **Slope** $\beta$: The expected change in $y$ for a one-unit increase in $x$
+
+In our example:
+
+- $\alpha$ is the expected GCSE score for a student with an LRT score of 0. Note: while the full dataset is standardized to mean 0, the Battersea subsample has a mean LRT of approximately 1.7, so LRT = 0 is *below* this school's average --- the intercept does not represent the school-average student
+- $\beta$ is the expected difference in GCSE scores between students who differ by one point in their LRT scores
+:::
+
+::: {.callout-warning}
+## Association, Not Causation
+The slope $\beta$ describes how $y$ and $x$ *co-vary*, not whether changing $x$ would *cause* $y$ to change. In our example, a higher LRT score is associated with a higher GCSE score, but we cannot conclude that improving LRT would cause GCSE to improve --- other factors (motivation, home environment, school quality) may drive both. Causal interpretation requires a design that rules out confounders, such as a randomized experiment. Throughout this course, we carefully distinguish between *predictive* and *causal* interpretations.
+:::
+
+### Model Assumptions
+
+The error term $\epsilon_i$ has three key properties:
+
+1. **Mean zero**: $\text{E}(\epsilon_i \mid x_i) = 0$, which implies $y_i$ has mean $\alpha + \beta x_i$
+2. **Constant variance** (homoscedasticity): $\text{Var}(\epsilon_i \mid x_i) = \sigma^2$
+3. **Independence**: For different subjects $i$ and $j$, $\epsilon_i$ and $\epsilon_j$ are independent
+
+For inference (hypothesis tests and confidence intervals), we additionally assume:
+
+4. **Normality**: $\epsilon_i$ is normally distributed for each $x_i$
+
+::: {.callout-note}
+## What Do These Assumptions Buy Us?
+| Assumption | What It Guarantees |
+|:-----------|:-------------------|
+| Mean zero / Linearity (1) | OLS estimates are **unbiased** |
+| Constant variance (2) + Independence (3) | Standard errors are **valid** |
+| Normality (4) | $t$-tests and $F$-tests have exact sampling distributions |
+
+With a large sample, assumption (4) can be relaxed due to the Central Limit Theorem.
+:::
+
+
+## OLS Estimation {#sec-ch1-ols}
+
+In practice, the true values $\alpha$ and $\beta$ are unknown. Given data $(x_i, y_i)$ for $n$ subjects, we estimate them using **Ordinary Least Squares (OLS)**, which finds the values $a$ and $b$ that minimize the sum of squared errors:
+
+$$
+\text{SSE} = \sum_{i=1}^{n} \left[ y_i - (a + b x_i) \right]^2
+$$ {#eq-ch1-sse}
+
+The OLS estimates are:
+
+- $\hat{y}_i = a + b x_i$ is the **predicted** (fitted) value
+- $e_i = y_i - \hat{y}_i$ is the **residual** (observed minus predicted)
+
+::: {.callout-tip}
+## Intuition Behind OLS
+OLS finds the line that makes the sum of squared vertical distances from the data points to the line as small as possible. The resulting estimates $a$ and $b$ are **unbiased**: on average across many repeated samples, they equal the true $\alpha$ and $\beta$.
+:::
+
+
+### The OLS Formulas
+
+Setting the partial derivatives of SSE with respect to $a$ and $b$ to zero yields the closed-form solutions:
+
+$$
+b = \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^{n} (x_i - \bar{x})^2} = \frac{S_{xy}}{S_{xx}}
+$$ {#eq-ch1-slope}
+
+$$
+a = \bar{y} - b\bar{x}
+$$ {#eq-ch1-intercept}
+
+::: {.callout-tip}
+## Two Key Consequences of the OLS Formulas
+1. **The regression line always passes through** $(\bar{x}, \bar{y})$. Plugging $x = \bar{x}$ into the fitted equation gives $\hat{y} = \bar{y}$.
+2. **The slope is a weighted average of the $y$-values**, where observations far from $\bar{x}$ receive more weight. This is why extreme $x$-values have high *leverage* --- they pull the line toward themselves (see @sec-ch8).
+:::
+
+### Fitting the Model in R
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-model-fit
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Fit simple linear regression: GCSE predicted by LRT
+model1 <- lm(gcse ~ lrt, data = battersea)
+
+# View the model summary using easystats
+model_parameters(model1) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch1-model-fit"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Intercept** ($a$): The estimated mean GCSE score for students with an LRT score of 0. Although the full dataset is standardized to mean 0, the Battersea subsample has a mean LRT of approximately 1.7, so LRT = 0 is below the school average --- the intercept does not represent the typical Battersea student
+- **lrt** ($b$): For each one-point increase in LRT, the estimated GCSE score changes by $b$ points. A positive value confirms that higher intake achievement predicts higher GCSE scores
+- **SE**: Standard error of the estimate --- measures the precision of each coefficient. Smaller SE means more precise estimation
+- **95% CI**: We are 95% confident the true parameter lies within this interval. If the CI for the slope excludes zero, the relationship is statistically significant at the 5% level
+- **$t$** and **$p$**: Test statistics for the null hypothesis that the coefficient is zero. A small $p$-value provides evidence against the null
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-model-fit"
+#| eval: false
+```
+- `lm(gcse ~ lrt, data = battersea)`: Fits a linear model with `gcse` as the response and `lrt` as the predictor
+- The formula syntax `y ~ x` means "regress y on x"
+- `model_parameters() |> print_md()` from the `easystats` package provides a clean, formatted summary of the estimated coefficients, standard errors, confidence intervals, $t$-statistics, and $p$-values
+
+
+:::
+
+### Visualizing OLS Residuals
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-ols-residuals
+#| fig-cap: "OLS minimizes the sum of squared vertical distances (residuals) from each data point to the regression line. Selected residuals are annotated with their squared values."
+#| fig-alt: "Scatter plot of GCSE versus LRT scores with a fitted regression line. Vertical line segments connect several data points to the regression line, representing residuals. Each selected residual is annotated with its squared value. The visualization demonstrates that OLS estimation works by minimizing the total area of these squared residual segments."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+aug <- broom::augment(model1)
+set.seed(42)
+idx <- sample(nrow(aug), 5)
+aug$highlight <- seq_len(nrow(aug)) %in% idx
+
+ggplot(aug, aes(x = lrt, y = gcse)) +
+  geom_segment(aes(xend = lrt, yend = .fitted),
+               color = ber640_colors["secondary"], alpha = 0.3) +
+  geom_segment(data = filter(aug, highlight),
+               aes(xend = lrt, yend = .fitted),
+               color = ber640_colors["secondary"], linewidth = 1) +
+  geom_label(data = filter(aug, highlight),
+             aes(x = lrt + 1, y = (.fitted + gcse) / 2,
+                 label = paste0("e² = ", round(.resid^2, 1))),
+             size = 3, color = ber640_colors["secondary"],
+             fill = "white", label.size = 0.3) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE,
+              color = ber640_colors["accent"], linewidth = 1) +
+  geom_point(alpha = 0.5, color = ber640_colors["primary"]) +
+  labs(
+    title = "What OLS Minimizes",
+    subtitle = paste0("SSE = Σe² = ", round(sum(aug$.resid^2), 1)),
+    x = "LRT Score", y = "GCSE Score"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-ols-residuals"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- Each vertical segment represents a residual $e_i = y_i - \hat{y}_i$. Longer segments indicate observations that are poorly predicted by the model
+- The labeled $e^2$ values show how much each highlighted observation contributes to SSE. Squaring means large residuals are penalized disproportionately
+- The total SSE in the subtitle is the sum of all squared residuals --- OLS finds the intercept and slope that make this number as small as possible
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-ols-residuals"
+#| eval: false
+```
+- `broom::augment(model1)` adds fitted values (`.fitted`) and residuals (`.resid`) to the original data
+- `geom_segment()` draws vertical lines from each point to the regression line --- these are the residuals
+- Five randomly selected residuals are highlighted with thicker segments and labeled with their squared values ($e^2$)
+- The subtitle displays the total SSE, which is the quantity OLS minimizes
+
+
+:::
+
+### Interactive Exploration: Fit Your Own Regression Line {.unnumbered}
+
+::: {.callout-tip}
+## Try It Yourself
+
+Can you find the best-fitting line by hand? Use the sliders below to adjust the intercept ($\alpha$) and slope ($\beta$), and watch how the Sum of Squared Errors (SSE) changes. Try to minimize SSE, then toggle the OLS line to see how close you got. This exercise builds intuition for what OLS does: it finds the unique intercept and slope that make SSE as small as possible.
+:::
+
+```{r}
+#| echo: false
+#| label: ch1-ojs-fit-line-data
+
+# Prepare Battersea subsample for the OJS interactive app
+battersea_ojs <- gcse |>
+  filter(school == 1) |>
+  select(lrt, gcse) |>
+  filter(!is.na(lrt), !is.na(gcse))
+
+ojs_define(battersea_data = battersea_ojs)
+```
+
+```{ojs}
+//| echo: false
+
+import { ber640, withAlpha,
+         themeColors,
+         plotDefaults,
+         olsRegression, residuals, sse,
+         formatCoef } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+
+// Transpose R data to row-major format
+battersea_interactive = transpose(battersea_data)
+```
+
+```{ojs}
+//| echo: false
+
+viewof userIntercept = Inputs.range([-15, 15], {
+  value: 0,
+  step: 0.1,
+  label: "Intercept (α)",
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+viewof userSlope = Inputs.range([-1, 2], {
+  value: 0.3,
+  step: 0.01,
+  label: "Slope (β)",
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+viewof showOLS = Inputs.toggle({
+  label: "Show OLS best-fit line",
+  value: false
+})
+```
+
+```{ojs}
+//| echo: false
+
+// Reactive computations
+ols = olsRegression(battersea_interactive, "lrt", "gcse")
+userSSE = sse(battersea_interactive, "lrt", "gcse", userIntercept, userSlope)
+olsSSE = sse(battersea_interactive, "lrt", "gcse", ols.intercept, ols.slope)
+userResids = residuals(battersea_interactive, "lrt", "gcse", userIntercept, userSlope)
+sseRatio = userSSE / olsSSE
+
+xExtent = {
+  const xs = battersea_interactive.map(d => d.lrt);
+  return [Math.min(...xs) - 1, Math.max(...xs) + 1];
+}
+```
+
+```{ojs}
+//| echo: false
+
+// Equation display
+html`<div style="
+  font-family: 'Cambria Math', 'STIX Two Math', Georgia, serif;
+  font-size: 16px;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  margin: 0.25rem 0 0.75rem 0;
+  background: ${themeColors().isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'};
+  border-radius: 6px;
+  color: ${themeColors().text};
+">
+  <em>ŷ</em> = <span style="color:${ber640.secondary}; font-weight:700;">${formatCoef(userIntercept, 1)}</span> + <span style="color:${ber640.secondary}; font-weight:700;">${formatCoef(userSlope, 2)}</span> × <em>x</em>
+  ${showOLS ? html`<span style="margin-left:2rem; color:${ber640.accent};">OLS: <em>ŷ</em> = ${formatCoef(ols.intercept, 2)} + ${formatCoef(ols.slope, 2)} × <em>x</em></span>` : ''}
+</div>`
+```
+
+```{ojs}
+//| echo: false
+
+// Interactive scatter plot
+Plot.plot(plotDefaults({
+  width: 640,
+  height: 440,
+  x: { label: "LRT Score (age 11)", grid: true },
+  y: { label: "GCSE Score (age 16)", grid: true },
+  marks: [
+    // Residual segments (user's line)
+    Plot.link(userResids, {
+      x1: "x",
+      y1: "y",
+      x2: "x",
+      y2: "fitted",
+      stroke: ber640.secondary,
+      strokeOpacity: 0.25,
+      strokeWidth: 1.5
+    }),
+
+    // User's regression line (dashed, red)
+    Plot.line(
+      [
+        { lrt: xExtent[0], gcse: userIntercept + userSlope * xExtent[0] },
+        { lrt: xExtent[1], gcse: userIntercept + userSlope * xExtent[1] }
+      ],
+      {
+        x: "lrt",
+        y: "gcse",
+        stroke: ber640.secondary,
+        strokeWidth: 2.5,
+        strokeDasharray: "8,4"
+      }
+    ),
+
+    // OLS best-fit line (solid, blue) — conditional on toggle
+    showOLS ? Plot.line(
+      [
+        { lrt: xExtent[0], gcse: ols.intercept + ols.slope * xExtent[0] },
+        { lrt: xExtent[1], gcse: ols.intercept + ols.slope * xExtent[1] }
+      ],
+      {
+        x: "lrt",
+        y: "gcse",
+        stroke: ber640.accent,
+        strokeWidth: 2.5
+      }
+    ) : null,
+
+    // Data points
+    Plot.dot(battersea_interactive, {
+      x: "lrt",
+      y: "gcse",
+      r: 4,
+      fill: ber640.primary,
+      fillOpacity: 0.6,
+      stroke: ber640.primary,
+      strokeOpacity: 0.3
+    })
+  ].filter(d => d !== null)
+}))
+```
+
+```{ojs}
+//| echo: false
+
+// Readout cards
+html`<div style="
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+">
+  <div style="
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: ${withAlpha(ber640.secondary, 0.08)};
+    border: 1px solid ${withAlpha(ber640.secondary, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${ber640.secondary};">Your SSE</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${themeColors().text};">
+      ${formatCoef(userSSE, 1)}
+    </div>
+  </div>
+  <div style="
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: ${withAlpha(ber640.accent, 0.08)};
+    border: 1px solid ${withAlpha(ber640.accent, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${ber640.accent};">OLS SSE</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${themeColors().text};">
+      ${formatCoef(olsSSE, 1)}
+    </div>
+  </div>
+  <div style="
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: ${withAlpha(sseRatio < 1.05 ? ber640.success : sseRatio < 1.5 ? ber640.warning : ber640.secondary, 0.08)};
+    border: 1px solid ${withAlpha(sseRatio < 1.05 ? ber640.success : sseRatio < 1.5 ? ber640.warning : ber640.secondary, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${themeColors().text};">Your SSE / OLS SSE</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${themeColors().text};">
+      ${sseRatio.toFixed(2)}x
+    </div>
+    <div style="font-size: 0.8rem; color: ${themeColors().muted};">
+      ${sseRatio < 1.05 ? 'Excellent! You matched the OLS line.' :
+        sseRatio < 1.2 ? 'Very close — fine-tune to get closer.' :
+        sseRatio < 1.5 ? 'Getting warm — keep adjusting.' :
+        'Keep trying — adjust both sliders.'}
+    </div>
+  </div>
+</div>`
+```
+
+
+### SSE as a Function of Intercept and Slope
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-sse-surface
+#| fig-cap: "The SSE surface as a function of the intercept and slope. OLS finds the unique minimum (red dot). Contour lines connect parameter combinations with equal SSE."
+#| fig-alt: "Filled contour plot with the intercept on the horizontal axis and the slope on the vertical axis. The color gradient represents the sum of squared errors surface, ranging from dark blue at the minimum to yellow at high values. Concentric elliptical contour lines surround a red dot marking the OLS solution at the unique global minimum of the SSE surface."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+a_hat <- coef(model1)[1]
+b_hat <- coef(model1)[2]
+
+sse_grid <- expand.grid(
+  a = seq(a_hat - 8, a_hat + 8, length.out = 100),
+  b = seq(b_hat - 0.6, b_hat + 0.6, length.out = 100)
+) |>
+  rowwise() |>
+  mutate(SSE = sum((battersea$gcse - (a + b * battersea$lrt))^2)) |>
+  ungroup()
+
+ggplot(sse_grid, aes(x = a, y = b, z = SSE)) +
+  geom_contour_filled(alpha = 0.8, bins = 15) +
+  geom_contour(color = "white", alpha = 0.3, bins = 15) +
+  annotate("point", x = a_hat, y = b_hat,
+           color = ber640_colors["secondary"], size = 4) +
+  annotate("label", x = a_hat, y = b_hat + 0.08,
+           label = paste0("OLS: (", round(a_hat, 2), ", ", round(b_hat, 2), ")"),
+           color = ber640_colors["secondary"], size = 3.5, fontface = "bold") +
+  scale_fill_viridis_d(option = "plasma", guide = "none") +
+  labs(
+    title = "SSE as a Function of Intercept and Slope",
+    subtitle = "OLS finds the unique minimum of this bowl-shaped surface",
+    x = expression(paste("Intercept (", italic(a), ")")),
+    y = expression(paste("Slope (", italic(b), ")"))
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-sse-surface"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The contour plot shows that SSE forms a **bowl-shaped** (convex) surface in parameter space. This guarantees that OLS has a unique minimum
+- The red dot at the center marks the OLS estimates $(a, b)$ that minimize SSE
+- Moving away from the OLS solution in any direction increases SSE --- there is no other combination of intercept and slope that fits the data better (in the least-squares sense)
+- The elliptical shape of the contours reflects the correlation between the intercept and slope estimates
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-sse-surface"
+#| eval: false
+```
+- `expand.grid()` creates a grid of candidate intercept and slope values centered around the OLS estimates
+- For each combination, we compute SSE --- the sum of squared residuals if those were the parameter values
+- `geom_contour_filled()` displays the SSE surface as a filled contour plot; darker regions indicate lower SSE
+- The red dot marks the OLS solution --- the unique point at the bottom of the bowl-shaped surface
+
+
+:::
+
+### Model Performance
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-model-perf
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Model performance summary
+performance::model_performance(model1) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch1-model-perf"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **$R^2$**: The proportion of variance in GCSE scores explained by LRT. Values closer to 1 indicate a stronger predictive relationship
+- **Adjusted $R^2$**: Penalizes for the number of predictors; more appropriate for model comparison
+- **AIC / BIC**: Information criteria for model comparison --- lower values indicate better fit (useful when comparing alternative models in later chapters, see @sec-ch7)
+- **RMSE**: The typical size of a prediction error in the original units of $y$ (GCSE points)
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-model-perf"
+#| eval: false
+```
+- `model_performance()` from the `performance` package provides a comprehensive set of model fit statistics
+- `print_md()` renders the output in a clean markdown format
+
+
+:::
+
+### Estimating the Residual Variance
+
+The residual variance $\sigma^2$ is estimated by the **Mean Squared Error**:
+
+$$
+\text{MSE} = \frac{\text{SSE}}{n - 2}
+$$
+
+where $n - 2$ is the error degrees of freedom (we "use up" 2 degrees of freedom estimating $\alpha$ and $\beta$). The **Root Mean Squared Error (RMSE)** estimates $\sigma$:
+
+$$
+\hat{\sigma} = \sqrt{\text{MSE}}
+$$
+
+::: {.callout-note}
+## What Are Degrees of Freedom?
+Degrees of freedom (df) represent the number of independent pieces of information available for estimation. With $n$ data points:
+
+- Estimating $\bar{y}$ uses 1 df, leaving $n - 1$ for the sample variance
+- In regression, estimating both $\alpha$ and $\beta$ uses 2 df, leaving $n - 2$ for $\sigma^2$
+
+Intuition: with only 2 data points, you can draw a perfect line --- but have *zero* information left to estimate the noise. You need at least 3 points to estimate both the line and the scatter around it.
+:::
+
+In practical terms, $\hat{\sigma}$ tells us the typical size of a prediction error. If $\hat{\sigma} = 8$ GCSE points, a rough 95% prediction interval for any individual student is approximately $\hat{y} \pm 2\hat{\sigma}$. We formalize this in @sec-ch1-prediction.
+
+
+## Coefficient of Determination {#sec-ch1-r2}
+
+### Decomposing Variability
+
+To assess how well the model fits, we decompose the total variability in $y$ into two components:
+
+- **Total Sum of Squares (TSS)**: Variability in $y$ around its mean
+
+$$
+\text{TSS} = \sum_{i=1}^{n} (y_i - \bar{y})^2
+$$
+
+- **Model Sum of Squares (MSS)**: Variability "explained" by $x$
+
+$$
+\text{MSS} = \sum_{i=1}^{n} (\hat{y}_i - \bar{y})^2
+$$
+
+- **Sum of Squared Errors (SSE)**: Residual (unexplained) variability
+
+$$
+\text{SSE} = \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
+$$
+
+These are linked by the fundamental identity:
+
+$$
+\text{TSS} = \text{MSS} + \text{SSE}
+$$
+
+### The $R^2$ Statistic
+
+The **coefficient of determination** $R^2$ is the proportion of variance in $y$ explained by $x$:
+
+$$
+R^2 = \frac{\text{MSS}}{\text{TSS}} = \frac{\text{TSS} - \text{SSE}}{\text{TSS}} = 1 - \frac{\text{SSE}}{\text{TSS}}
+$$ {#eq-ch1-r2}
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-r2
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# R-squared using easystats
+performance::r2(model1)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch1-r2"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **$R^2$**: The proportion of total variance in GCSE explained by LRT. For example, $R^2 = 0.30$ means 30% of the variation in GCSE scores is accounted for by the linear relationship with LRT
+- **Adjusted $R^2$**: A slightly conservative version that adjusts for the number of predictors. In simple regression with one predictor, the adjustment is minimal
+- In simple regression, $R^2 = r^2$ where $r$ is the Pearson correlation between $x$ and $y$ (see @sec-ch1-correlation)
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-r2"
+#| eval: false
+```
+- `r2()` from the `performance` package computes $R^2$ and adjusted $R^2$
+- $R^2$ ranges from 0 (model explains nothing) to 1 (model explains everything)
+
+
+:::
+
+::: {.callout-note}
+## Think About It: Is $R^2 = 0.30$ Good or Bad?
+It depends on the context. In education research:
+
+- **Predicting individual outcomes** from a single measure? $R^2 = 0.30$ is quite good --- human behavior is complex and a single predictor rarely explains more than 30-40% of variance.
+- **Evaluating a measurement instrument**? You might need $R^2 > 0.80$.
+- **Testing a theoretical claim**? Even $R^2 = 0.05$ can be meaningful if the relationship is theoretically important.
+
+$R^2$ tells us about *explained variance at the group level*. Even with $R^2 = 0.50$, individual predictions can be far off --- this is why prediction intervals (@sec-ch1-prediction) are much wider than confidence intervals.
+:::
+
+### Variance Decomposition
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-r2-bar
+#| fig-cap: "Variance decomposition: the proportion of total variance in GCSE explained by LRT (blue) versus unexplained residual variance (red)."
+#| fig-alt: "Horizontal stacked bar chart showing the proportion of total variance in GCSE scores. The blue segment represents the variance explained by LRT, corresponding to R-squared, and the red segment represents the unexplained residual variance. The bar illustrates that LRT accounts for a substantial share of the variability in GCSE outcomes."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+r2_val <- performance::r2(model1)$R2
+aug <- broom::augment(model1)
+tss <- sum((aug$gcse - mean(aug$gcse))^2)
+mss <- sum((aug$.fitted - mean(aug$gcse))^2)
+sse_val <- sum(aug$.resid^2)
+
+var_df <- tibble(
+  Component = factor(c("Explained (MSS)", "Unexplained (SSE)"),
+                     levels = c("Explained (MSS)", "Unexplained (SSE)")),
+  Proportion = c(r2_val, 1 - r2_val),
+  label = paste0(round(Proportion * 100, 1), "%")
+)
+
+ggplot(var_df, aes(x = "", y = Proportion, fill = Component)) +
+  geom_col(width = 0.5, color = "white", linewidth = 1) +
+  geom_text(aes(label = label), position = position_stack(vjust = 0.5),
+            color = "white", fontface = "bold", size = 6) +
+  scale_fill_manual(values = c(ber640_colors["accent"], ber640_colors["secondary"])) +
+  coord_flip() +
+  labs(
+    title = expression(paste(R^2, ": How Much Variance Does LRT Explain?")),
+    subtitle = paste0("R² = ", round(r2_val, 3)),
+    x = NULL, y = "Proportion of Total Variance", fill = NULL
+  ) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+        legend.position = "top")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-r2-bar"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The blue segment shows the proportion of GCSE variance that LRT explains --- this is $R^2$
+- The red segment shows the proportion left unexplained --- the residual variance that other unmeasured factors contribute
+- Together these proportions sum to 1.0 (100% of the total variance)
+- This visualization makes concrete what $R^2$ means: it is a partition of the total variability in the outcome
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-r2-bar"
+#| eval: false
+```
+- `performance::r2(model1)$R2` extracts the $R^2$ value from the model
+- `broom::augment()` provides fitted values and residuals needed to compute TSS, MSS, and SSE
+- The stacked bar chart shows $R^2$ (blue, explained) and $1 - R^2$ (red, unexplained) as proportions of total variance
+- `coord_flip()` makes the bar horizontal for easier reading
+
+
+:::
+
+### Visualizing the Sums of Squares
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-ss
+#| fig-cap: "Decomposition of total variability into model (explained) and residual (unexplained) components. Total deviations from the mean (left) equal the sum of model deviations (middle) and residual deviations (right)."
+#| fig-alt: "Three-panel scatter plot decomposing total variability in GCSE scores. The left panel shows total sum of squares with vertical segments from each point to the overall mean. The middle panel shows the model sum of squares with segments from the mean to the fitted regression line. The right panel shows residual sum of squares with segments from the fitted line to each observed point, illustrating that TSS equals MSS plus SSE."
+#| fig-width: 11
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Augment the model to get fitted values and residuals
+aug <- broom::augment(model1)
+
+# Create three-panel visualization
+p_total <- ggplot(aug, aes(x = lrt, y = gcse)) +
+  geom_segment(aes(xend = lrt, yend = mean(gcse)),
+               color = "grey60", alpha = 0.4) +
+  geom_point(alpha = 0.5, color = ber640_colors["primary"]) +
+  geom_hline(yintercept = mean(aug$gcse), linetype = "dashed", color = ber640_colors["secondary"]) +
+  labs(title = "TSS: Total deviations", x = "LRT", y = "GCSE")
+
+p_model <- ggplot(aug, aes(x = lrt, y = gcse)) +
+  geom_segment(aes(x = lrt, xend = lrt, y = mean(gcse), yend = .fitted),
+               color = ber640_colors["accent"], alpha = 0.4) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = ber640_colors["accent"]) +
+  geom_hline(yintercept = mean(aug$gcse), linetype = "dashed", color = ber640_colors["secondary"]) +
+  geom_point(alpha = 0.3, color = "grey60") +
+  labs(title = "MSS: Explained by model", x = "LRT", y = "GCSE")
+
+p_resid <- ggplot(aug, aes(x = lrt, y = gcse)) +
+  geom_segment(aes(xend = lrt, yend = .fitted),
+               color = ber640_colors["secondary"], alpha = 0.4) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = ber640_colors["accent"]) +
+  geom_point(alpha = 0.5, color = ber640_colors["primary"]) +
+  labs(title = "SSE: Residual", x = "LRT", y = "GCSE")
+
+p_total + p_model + p_resid
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-ss"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Left panel (TSS)**: Shows every student's deviation from the overall mean GCSE score (dashed red line). The total length of all these segments, squared and summed, gives the Total Sum of Squares
+- **Middle panel (MSS)**: Shows the "explained" part --- how far each fitted value on the regression line is from the overall mean. These segments represent the variability that LRT accounts for
+- **Right panel (SSE)**: Shows the "unexplained" residuals --- vertical distances from each point to the regression line. These are the prediction errors that remain after accounting for LRT
+- The fundamental identity TSS = MSS + SSE means the left panel's total variability splits exactly into the middle and right panels
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-ss"
+#| eval: false
+```
+- `broom::augment()` adds fitted values (`.fitted`) and residuals (`.resid`) to the original data
+- The three panels show: (1) total deviations from $\bar{y}$, (2) explained deviations (fitted values from $\bar{y}$), (3) residual deviations (observed from fitted)
+- `patchwork` arranges the three plots side by side with the `+` operator
+
+
+:::
+
+
+## Pearson Correlation {#sec-ch1-correlation}
+
+The **Pearson correlation coefficient** $r$ measures the strength and direction of the linear relationship between $x$ and $y$:
+
+$$
+r = \frac{1}{n-1} \frac{\sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})}{s_x \, s_y}
+$$ {#eq-ch1-pearson}
+
+where $s_x$ and $s_y$ are the sample standard deviations of $x$ and $y$.
+
+Key properties:
+
+- $r > 0$: positive linear relationship
+- $r < 0$: negative linear relationship
+- $r = \pm 1$: perfect linear relationship (all points fall exactly on a line)
+- $r = 0$: no linear relationship
+
+In simple linear regression, $r^2 = R^2$, and $r$ equals the standardized regression coefficient:
+
+$$
+r = \frac{s_x}{s_y} b
+$$
+
+This means $r$ expresses by how many standard deviations $y$ changes, on average, when $x$ changes by one standard deviation.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-cor-gallery
+#| fig-cap: "What different Pearson correlations look like. Each panel shows 100 simulated observations from a bivariate normal distribution with the stated correlation."
+#| fig-alt: "Five-panel gallery of scatter plots, each containing 100 simulated bivariate normal observations. Panels display Pearson correlations of negative 0.9, negative 0.5, 0, 0.5, and 0.9 from left to right. The strong negative correlation shows a tight downward cloud, the zero correlation shows a circular cloud with no trend, and the strong positive correlation shows a tight upward cloud, illustrating how correlation strength and direction appear visually."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+set.seed(640)
+r_vals <- c(-0.9, -0.5, 0, 0.5, 0.9)
+cor_sim <- purrr::map_dfr(r_vals, function(r) {
+  Sigma <- matrix(c(1, r, r, 1), 2, 2)
+  d <- MASS::mvrnorm(100, mu = c(0, 0), Sigma = Sigma)
+  tibble(x = d[, 1], y = d[, 2], r_label = paste0("r = ", r))
+}) |>
+  mutate(r_label = factor(r_label, levels = paste0("r = ", r_vals)))
+
+ggplot(cor_sim, aes(x = x, y = y)) +
+  geom_point(alpha = 0.5, color = ber640_colors["primary"], size = 1.5) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE,
+              color = ber640_colors["accent"], linewidth = 0.8) +
+  facet_wrap(~ r_label, nrow = 1) +
+  labs(title = "Correlation Gallery: Calibrating Your Eye", x = NULL, y = NULL) +
+  theme(strip.text = element_text(face = "bold", size = 13))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-cor-gallery"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- At $r = 0$, the points form a circular cloud with a flat regression line --- no linear relationship
+- As $|r|$ increases, the cloud becomes more elongated and tightly clustered around the regression line
+- At $|r| = 0.9$, the points cluster closely around the line, indicating a strong linear relationship
+- The sign of $r$ determines the direction: negative correlations slope downward, positive correlations slope upward
+- Use this gallery as a visual reference when interpreting correlations in your own data
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-cor-gallery"
+#| eval: false
+```
+- `MASS::mvrnorm()`: Generates bivariate normal data with a specified correlation matrix
+- Five values of $r$ are simulated: $-0.9$, $-0.5$, $0$, $0.5$, $0.9$
+- `facet_wrap(~ r_label, nrow = 1)`: Displays all five panels in a single row for easy comparison
+- `geom_smooth(method = "lm")`: Adds the regression line to each panel to show the direction and steepness of the relationship
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-correlation
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Pearson correlation with confidence interval
+cor.test(battersea$lrt, battersea$gcse)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch1-correlation"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **$r$**: The Pearson correlation coefficient. A positive value indicates that higher LRT scores are associated with higher GCSE scores. The magnitude tells us the strength of the linear association
+- **$p$-value**: Tests whether the true population correlation is zero. A small $p$-value provides evidence that the linear relationship is not due to chance
+- **95% CI**: The interval estimate for the true population correlation $\rho$. If it does not include 0, the correlation is statistically significant
+- Remember: $r^2 = R^2$ in simple regression, so squaring the correlation gives the proportion of variance explained
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-correlation"
+#| eval: false
+```
+- `cor.test()` computes the Pearson correlation, tests $H_0: \rho = 0$, and provides a 95% confidence interval
+- The output includes: sample correlation $r$, $t$-statistic, $p$-value, and CI
+
+
+:::
+
+
+## Model Assumptions and Diagnostics {#sec-ch1-assumptions}
+
+Before trusting the results of our regression analysis, we should check the model assumptions. The `easystats` ecosystem provides a convenient one-stop diagnostic tool.
+
+### The check_model() Dashboard
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-diagnostics
+#| fig-cap: "Comprehensive model diagnostics from the easystats check_model() function."
+#| fig-alt: "Multi-panel diagnostic dashboard produced by the easystats check_model function for the simple linear regression of GCSE on LRT. Panels include residuals versus fitted values to assess linearity and homoscedasticity, a Q-Q plot to evaluate normality of residuals, a scale-location plot, leverage diagnostics, and other checks. Together the panels provide a comprehensive visual assessment of whether the regression assumptions are met."
+#| fig-height: 10
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+check_model(model1)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-diagnostics"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Linearity panel (Residuals vs Fitted)**: The green reference line should be approximately flat and centered at zero. Curvature suggests the linear model is misspecified
+- **Homoscedasticity panel (Scale-Location)**: The spread of points should be roughly constant across fitted values. A widening funnel indicates heteroscedasticity, which invalidates standard errors
+- **Normality panel (Q-Q plot)**: Points should follow the diagonal line. Systematic departures at the tails indicate heavy-tailed or skewed residuals
+- **Influential observations panel (Cook's distance)**: Look for points with high Cook's distance (typically > 0.5 or > 1). These observations disproportionately affect the regression estimates
+- **Collinearity panel**: Not relevant for simple regression (one predictor), but becomes important in multiple regression (@sec-ch5)
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-diagnostics"
+#| eval: false
+```
+- `check_model()` from the `performance` package produces a multi-panel diagnostic dashboard
+- It checks: linearity, homoscedasticity (constant variance), normality of residuals, influential observations, and collinearity (for multiple regression)
+
+
+:::
+
+### Checking Each Assumption
+
+**Linearity**: We look at the scatter plot and the residual-vs-fitted plot. If the relationship is linear, the residuals should scatter randomly around zero with no systematic pattern.
+
+**Constant variance (homoscedasticity)**: In the residual-vs-fitted plot, the spread of residuals should be roughly constant across all fitted values. A "funnel" shape suggests heteroscedasticity.
+
+**Normality**: A Q-Q plot compares the distribution of residuals to a theoretical normal distribution. If residuals are approximately normal, the points should fall near the diagonal line.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-resid-plots
+#| fig-cap: "Individual diagnostic plots: (left) residuals vs fitted values, (right) Q-Q plot of residuals."
+#| fig-alt: "Two-panel diagnostic figure. The left panel is a residuals versus fitted values plot with fitted GCSE values on the horizontal axis and residuals on the vertical axis, showing a roughly random scatter around zero with no obvious pattern. The right panel is a Q-Q plot comparing residual quantiles to theoretical normal quantiles, with points falling approximately along the diagonal reference line, suggesting the normality assumption is reasonable."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+aug <- broom::augment(model1)
+
+p1 <- ggplot(aug, aes(x = .fitted, y = .resid)) +
+  geom_point(alpha = 0.5, color = ber640_colors["primary"]) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = ber640_colors["secondary"]) +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = ber640_colors["accent"]) +
+  labs(title = "Residuals vs Fitted",
+       x = "Fitted values", y = "Residuals")
+
+p2 <- ggplot(aug, aes(sample = .resid)) +
+  stat_qq(alpha = 0.5, color = ber640_colors["primary"]) +
+  stat_qq_line(color = ber640_colors["secondary"]) +
+  labs(title = "Q-Q Plot of Residuals",
+       x = "Theoretical quantiles", y = "Sample quantiles")
+
+p1 + p2
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-resid-plots"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Residuals vs Fitted (left)**: Look for two things: (1) Is the LOWESS curve approximately flat? If so, the linearity assumption is satisfied. (2) Is the vertical spread roughly constant? If the residuals fan out (or narrow) as fitted values increase, this suggests heteroscedasticity
+- **Q-Q Plot (right)**: Points near the diagonal line indicate normally distributed residuals. Departures at the tails (S-shaped or banana-shaped patterns) suggest heavy tails or skewness. Mild departures are common and usually not problematic with moderate-to-large samples
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-resid-plots"
+#| eval: false
+```
+- `geom_smooth()` in the residual plot adds a LOWESS curve --- if the relationship is linear, this should be flat
+- `stat_qq()` and `stat_qq_line()` create the normal Q-Q plot
+- Deviations from the diagonal indicate departures from normality
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-assumption-gallery
+#| fig-cap: "What assumption violations look like in residual plots. Top row: well-behaved (assumptions met). Bottom row: violations. Compare your diagnostic plots to these templates."
+#| fig-alt: "Multi-panel reference gallery of residual diagnostic plots arranged in two rows. The top row shows well-behaved residual patterns where assumptions are satisfied, including a random scatter in the residuals versus fitted plot and points on the diagonal in the Q-Q plot. The bottom row shows common violations such as nonlinearity producing a curved pattern, heteroscedasticity producing a fan shape, and non-normality producing systematic departures from the Q-Q diagonal."
+#| fig-height: 8
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+set.seed(2024)
+n_sim <- 150
+x_sim <- runif(n_sim, -3, 3)
+
+d_all <- bind_rows(
+  tibble(fitted = 2 + 1.5 * x_sim,
+         resid = rnorm(n_sim, 0, 1),
+         panel = "A: Linear + Constant Variance ✓"),
+  tibble(fitted = 2 + 1.5 * x_sim,
+         resid = 0.4 * x_sim^2 + rnorm(n_sim, 0, 0.8),
+         panel = "B: Nonlinearity ✗"),
+  tibble(fitted = 2 + 1.5 * x_sim,
+         resid = rnorm(n_sim, 0, 0.3 + 0.5 * abs(x_sim)),
+         panel = "C: Heteroscedasticity ✗"),
+  tibble(fitted = 2 + 1.5 * x_sim,
+         resid = rt(n_sim, df = 2) * 0.7,
+         panel = "D: Heavy-Tailed Residuals ✗")
+) |>
+  mutate(panel = factor(panel))
+
+ggplot(d_all, aes(x = fitted, y = resid)) +
+  geom_point(alpha = 0.4, color = ber640_colors["primary"]) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = ber640_colors["secondary"]) +
+  geom_smooth(se = FALSE, method = "loess", formula = y ~ x,
+              color = ber640_colors["accent"], linewidth = 0.8) +
+  facet_wrap(~ panel, scales = "free_y", ncol = 2) +
+  labs(title = "Diagnostic Reference: What to Look For",
+       x = "Fitted Values", y = "Residuals")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-assumption-gallery"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Panel A**: The ideal pattern --- residuals scatter randomly around zero with constant spread. The LOWESS curve is approximately flat
+- **Panel B**: A curved LOWESS line reveals nonlinearity --- the model is missing a quadratic (or other nonlinear) term
+- **Panel C**: The spread of residuals increases with fitted values (funnel shape), indicating heteroscedasticity --- standard errors and $p$-values may be unreliable
+- **Panel D**: Most residuals are well-behaved, but there are extreme outliers in both directions, suggesting heavy-tailed errors --- confidence intervals may be too narrow
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-assumption-gallery"
+#| eval: false
+```
+- Four simulated datasets illustrate different residual patterns: (A) well-behaved residuals, (B) a U-shaped pattern indicating nonlinearity, (C) a funnel shape indicating heteroscedasticity, (D) heavy tails from a $t$-distribution with 2 df
+- `geom_smooth(method = "loess")`: Adds a LOWESS curve to each panel to highlight systematic patterns
+- `facet_wrap(~ panel, ncol = 2)`: Arranges the four panels in a 2×2 grid
+
+
+:::
+
+::: {.callout-warning}
+## Outliers vs Influential Observations
+- **Outliers** are observations with large residuals (inconsistent with the model). A residual exceeding $2\hat{\sigma}$ is suspicious (expected in only ~5% of cases); exceeding $3\hat{\sigma}$ is very suspicious (~0.3%).
+- **Influential observations** are those that substantially change the estimated intercept or slope if removed. An observation can be influential without being an outlier (e.g., a point with high leverage but small residual).
+:::
+
+
+## Statistical Inference {#sec-ch1-inference}
+
+### The $t$-test for the Slope
+
+To test whether the predictor $x$ has a statistically significant relationship with $y$, we test:
+
+- $H_0$: $\beta = 0$ (no linear relationship)
+- $H_1$: $\beta \neq 0$ (there is a linear relationship)
+
+The test statistic is:
+
+$$
+t = \frac{b}{\hat{\sigma}_b}
+$$ {#eq-ch1-ttest}
+
+where $b$ is the estimated slope and $\hat{\sigma}_b$ is its standard error. Under $H_0$ and the model assumptions, $t$ follows a $t$-distribution with $n - 2$ degrees of freedom.
+
+The standard error of the slope is:
+
+$$
+\hat{\sigma}_b = \frac{\hat{\sigma}}{\sqrt{\sum_{i=1}^{n}(x_i - \bar{x})^2}} = \frac{\hat{\sigma}}{\sqrt{S_{xx}}}
+$$ {#eq-ch1-se-slope}
+
+This formula reveals three ways to get a more precise slope estimate:
+
+1. **Reduce residual variance** ($\hat{\sigma}$): Add relevant predictors to the model (@sec-ch4)
+2. **Increase sample size** ($n$): More data increases $S_{xx}$
+3. **Increase the spread of $x$**: More variability in the predictor increases $S_{xx}$
+
+This is why experimental designs often sample at extreme values of the predictor --- it maximizes precision.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-sampling-dist
+#| fig-cap: "Left: bootstrap distribution of the slope from 5,000 resamples shows the variability in our estimate. Right: the null distribution with the observed t-statistic and rejection regions."
+#| fig-alt: "Two-panel figure about sampling distributions. The left panel shows a histogram of bootstrap slope estimates from 5000 resamples, forming an approximately normal bell-shaped distribution centered near the observed slope, with a vertical line marking the point estimate. The right panel overlays the theoretical t-distribution under the null hypothesis of zero slope, with shaded rejection regions in both tails and a vertical line at the observed t-statistic falling well into the rejection region."
+#| fig-width: 10
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+set.seed(640)
+boot_slopes <- replicate(5000, {
+  idx <- sample(nrow(battersea), replace = TRUE)
+  coef(lm(gcse ~ lrt, data = battersea[idx, ]))[2]
+})
+
+b_obs <- coef(model1)[2]
+se_obs <- summary(model1)$coefficients[2, 2]
+t_obs <- b_obs / se_obs
+df_obs <- model1$df.residual
+t_crit <- qt(0.975, df_obs)
+
+p_boot <- ggplot(tibble(slope = boot_slopes), aes(x = slope)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50,
+                 fill = ber640_colors["accent"], alpha = 0.6, color = "white") +
+  geom_vline(xintercept = b_obs, color = ber640_colors["secondary"],
+             linewidth = 1) +
+  annotate("text", x = b_obs + 0.02, y = Inf, vjust = 2,
+           label = paste0("b = ", round(b_obs, 3)),
+           color = ber640_colors["secondary"], fontface = "bold", size = 4) +
+  labs(title = "Bootstrap Distribution of Slope",
+       subtitle = "5,000 resamples from Battersea data",
+       x = expression(paste("Estimated slope ", italic(b))), y = "Density")
+
+t_df <- tibble(t = seq(-5, 5, length.out = 300),
+               density = dt(t, df_obs))
+
+p_null <- ggplot(t_df, aes(x = t, y = density)) +
+  geom_area(data = filter(t_df, t <= -t_crit),
+            fill = ber640_colors["secondary"], alpha = 0.3) +
+  geom_area(data = filter(t_df, t >= t_crit),
+            fill = ber640_colors["secondary"], alpha = 0.3) +
+  geom_line(linewidth = 0.8, color = ber640_colors["primary"]) +
+  geom_vline(xintercept = t_obs, color = ber640_colors["accent"], linewidth = 1) +
+  annotate("text", x = t_obs - 0.3, y = max(t_df$density) * 0.8,
+           label = paste0("t = ", round(t_obs, 2)),
+           color = ber640_colors["accent"], fontface = "bold", size = 4, hjust = 1) +
+  labs(title = "Null Distribution (t-distribution)",
+       subtitle = paste0("df = ", df_obs, "; shaded = rejection region (α = .05)"),
+       x = "t-statistic", y = "Density")
+
+p_boot + p_null
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-sampling-dist"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The **bootstrap distribution** (left) shows how much the slope estimate would vary across repeated samples. Its spread approximates the standard error of $b$
+- The **null distribution** (right) shows the $t$-distribution we would expect if the true slope were zero. The observed $t$-statistic falls far into the rejection region, providing strong evidence against $H_0: \beta = 0$
+- Together, these panels illustrate the logic of hypothesis testing: we compare our observed statistic to what we would expect under the null hypothesis
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-sampling-dist"
+#| eval: false
+```
+- `replicate(5000, ...)`: Draws 5,000 bootstrap resamples (sampling rows with replacement) and refits the model each time, recording the slope
+- `b_obs`, `se_obs`, `t_obs`: The observed slope, its standard error, and the $t$-statistic from our original model
+- `qt(0.975, df_obs)`: The critical value for a two-sided test at $\alpha = 0.05$
+- Left panel: histogram of bootstrap slopes with the observed slope marked by a vertical line
+- Right panel: the theoretical $t$-distribution under $H_0$, with shaded rejection regions and the observed $t$-statistic
+
+
+:::
+
+::: {.callout-tip}
+## Quick Rule of Thumb
+For large samples, the slope is statistically significant at the 5% level if $|t| > 2$.
+:::
+
+### The $F$-test
+
+The $F$-test approaches the same question from the perspective of variance decomposition:
+
+| Source | SS | df | MS |
+|:-------|:---|:---|:---|
+| Model | MSS | 1 | MMS = MSS/1 |
+| Error | SSE | $n-2$ | MSE = SSE/$(n-2)$ |
+| Total | TSS | $n-1$ | |
+
+$$
+F = \frac{\text{MMS}}{\text{MSE}}
+$$ {#eq-ch1-ftest}
+
+In simple regression, $F = t^2$.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-inference
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# ANOVA table (F-test)
+anova(model1)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch1-inference"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Sum Sq (lrt)**: The Model Sum of Squares (MSS) --- the amount of variability in GCSE explained by LRT
+- **Sum Sq (Residuals)**: The Error Sum of Squares (SSE) --- the remaining unexplained variability
+- **Df**: Degrees of freedom --- 1 for the model (one predictor) and $n - 2$ for the error
+- **F value**: The ratio MMS/MSE. A large $F$ indicates that the model explains substantially more variance than expected by chance
+- **Pr(>F)**: The $p$-value for the $F$-test. In simple regression, this $p$-value is identical to the $p$-value from the $t$-test for the slope (since $F = t^2$)
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-inference"
+#| eval: false
+```
+- `anova()` produces the ANOVA (Analysis of Variance) table
+- It shows the Model Sum of Squares (MSS), Error Sum of Squares (SSE), their degrees of freedom, the $F$-statistic, and the $p$-value
+
+
+:::
+
+::: {.callout-note}
+## Concept Check: Connecting the ANOVA Table to $R^2$
+From the ANOVA table above, verify that:
+
+$$
+R^2 = \frac{\text{MSS}}{\text{MSS} + \text{SSE}} = \frac{\text{MSS}}{\text{TSS}}
+$$
+
+matches the $R^2$ value from `r2(model1)`. This confirms that $R^2$ and the $F$-test are different views of the same variance decomposition.
+:::
+
+### Confidence Interval for the Slope
+
+A significant test does not tell us about the **magnitude** of the effect. A 95% confidence interval for $\beta$ provides this information:
+
+$$
+b \pm t_{.025} \hat{\sigma}_b \approx b \pm 2 \hat{\sigma}_b
+$$
+
+::: {.callout-important}
+## Significance vs Importance
+- A **significant** test does not imply the effect is practically important
+- A **non-significant** test does not imply the effect is zero or unimportant
+- Always report and interpret confidence intervals alongside $p$-values
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-ci
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Confidence intervals for all coefficients
+confint(model1)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch1-ci"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Intercept CI**: The interval for the true mean GCSE when LRT = 0. If the interval is wide, we have limited precision in estimating the intercept --- but this is often of secondary interest
+- **Slope CI**: This is the key result. If the interval **excludes zero**, we have evidence at the 5% level that LRT is a significant predictor of GCSE. The width of the interval conveys precision --- a narrow CI means the effect is estimated precisely
+- Always interpret the CI alongside the point estimate: the CI tells you not just *whether* the effect exists, but *how large* it plausibly is
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-ci"
+#| eval: false
+```
+- `confint()` computes 95% confidence intervals for the intercept and slope
+- The CI for the slope tells us the range of plausible values for the true effect of LRT on GCSE
+
+
+:::
+
+### Regression Table
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: tbl-ch1-reg
+#| tbl-cap: "Simple linear regression of GCSE on LRT (Battersea school)"
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+reg_table(model1)
+```
+
+### Code Explanation
+```{r}
+#| ref.label: "tbl-ch1-reg"
+#| eval: false
+```
+- `reg_table()` is a helper function defined in `_common.R` that creates a publication-quality regression table using `gtsummary`
+- It includes: coefficient estimates, 95% CIs, and $p$-values with bold formatting for significant results
+
+:::
+
+
+## Prediction Intervals {#sec-ch1-prediction}
+
+There are two types of intervals we can compute at a given value of $x$:
+
+1. **Confidence interval for the mean response** $\text{E}(y \mid x)$: Accounts only for uncertainty in estimating $\alpha$ and $\beta$
+2. **Prediction interval for an individual response** $y$: Also accounts for the residual variance $\sigma^2$
+
+The prediction interval is always wider than the confidence interval because individual observations vary around the regression line.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-prediction
+#| fig-cap: "Confidence interval for the mean response (dark band) and prediction interval for individual observations (light band). The prediction interval is wider because it accounts for individual variability around the regression line."
+#| fig-alt: "Scatter plot of GCSE versus LRT with the OLS regression line and two shaded bands. A narrow dark band around the line represents the confidence interval for the mean response, and a wider light band represents the prediction interval for individual observations. Both bands widen as LRT moves away from its mean, and the prediction interval is substantially wider than the confidence interval because it includes individual-level variability."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Generate prediction data
+pred_data <- data.frame(lrt = seq(min(battersea$lrt), max(battersea$lrt), length.out = 100))
+pred_ci <- predict(model1, newdata = pred_data, interval = "confidence")
+pred_pi <- predict(model1, newdata = pred_data, interval = "prediction")
+
+pred_df <- bind_cols(pred_data, as_tibble(pred_ci)) |>
+  rename(ci_lwr = lwr, ci_upr = upr) |>
+  bind_cols(as_tibble(pred_pi) |> select(lwr, upr) |> rename(pi_lwr = lwr, pi_upr = upr))
+
+ggplot(pred_df, aes(x = lrt)) +
+  geom_ribbon(aes(ymin = pi_lwr, ymax = pi_upr),
+              fill = ber640_colors["accent"], alpha = 0.15) +
+  geom_ribbon(aes(ymin = ci_lwr, ymax = ci_upr),
+              fill = ber640_colors["accent"], alpha = 0.35) +
+  geom_line(aes(y = fit), color = ber640_colors["accent"], linewidth = 1) +
+  geom_point(data = battersea, aes(x = lrt, y = gcse),
+             alpha = 0.4, color = ber640_colors["primary"]) +
+  labs(
+    title = "Confidence and Prediction Intervals",
+    subtitle = "Dark band: CI for mean response | Light band: PI for individual observation",
+    x = "LRT Score",
+    y = "GCSE Score"
+  )
+```
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-prediction"
+#| eval: false
+```
+- `predict(..., interval = "confidence")`: CI for $\text{E}(y \mid x)$ at each LRT value
+- `predict(..., interval = "prediction")`: PI for an individual $y$ at each LRT value
+- The CI narrows toward $\bar{x}$ because we are most certain about the mean response at the center of the data
+- The PI is much wider, reflecting that individual students vary considerably around the regression line
+
+:::
+
+### Interactive Exploration: CI vs PI Band Explorer {.unnumbered}
+
+::: {.callout-tip}
+## Try It Yourself
+
+How much wider is a prediction interval than a confidence interval? Adjust the **confidence level** and **reference point** to explore. Notice that both bands are narrowest at the mean of $x$ and widen as you move away. The prediction interval is always wider because it must account for individual variability ($\sigma^2$) on top of the uncertainty in estimating the regression line.
+:::
+
+```{r}
+#| echo: false
+#| label: ch1-ojs-cipi-data
+
+# Reuse Battersea subsample for CI vs PI explorer
+battersea_cipi_ojs <- gcse |>
+  filter(school == 1) |>
+  select(lrt, gcse) |>
+  filter(!is.na(lrt), !is.na(gcse))
+
+ojs_define(battersea_cipi_data = battersea_cipi_ojs)
+```
+
+```{ojs}
+//| echo: false
+
+import { ber640 as cipi_ber640, withAlpha as cipi_withAlpha,
+         alphaColors as cipi_alphaColors,
+         themeColors as cipi_themeColors,
+         plotDefaults as cipi_plotDefaults,
+         olsRegression as cipi_olsRegression,
+         confidenceInterval as cipi_confidenceInterval,
+         predictionInterval as cipi_predictionInterval,
+         seq as cipi_seq, formatCoef as cipi_formatCoef } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+
+// Transpose R data to row-major format
+battersea_cipi = transpose(battersea_cipi_data)
+```
+
+```{ojs}
+//| echo: false
+
+// Fit OLS model
+cipi_ols = cipi_olsRegression(battersea_cipi, "lrt", "gcse")
+```
+
+```{ojs}
+//| echo: false
+
+viewof cipi_confLevel = Inputs.range([80, 99], {
+  value: 95,
+  step: 1,
+  label: "Confidence level (%)",
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+viewof cipi_showBand = Inputs.radio(["Both", "CI only", "PI only"], {
+  value: "Both",
+  label: "Show bands"
+})
+```
+
+```{ojs}
+//| echo: false
+
+viewof cipi_xref = Inputs.range([-20, 25], {
+  value: Math.round(cipi_ols.meanX),
+  step: 0.5,
+  label: "Reference x₀",
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+// Compute alpha from confidence level
+cipi_alpha = (100 - cipi_confLevel) / 100
+
+// Generate x grid for bands
+cipi_xGrid = {
+  const xs = battersea_cipi.map(d => d.lrt);
+  return cipi_seq(Math.min(...xs) - 2, Math.max(...xs) + 2, 150);
+}
+
+// Compute CI and PI bands over x grid
+cipi_bandData = cipi_xGrid.map(x => {
+  const ci = cipi_confidenceInterval(x, cipi_ols, cipi_alpha);
+  const pi = cipi_predictionInterval(x, cipi_ols, cipi_alpha);
+  return {
+    x,
+    ci_lower: ci.lower, ci_upper: ci.upper,
+    pi_lower: pi.lower, pi_upper: pi.upper,
+    fitted: ci.fitted
+  };
+})
+
+// Evaluate at reference point
+cipi_refCI = cipi_confidenceInterval(cipi_xref, cipi_ols, cipi_alpha)
+cipi_refPI = cipi_predictionInterval(cipi_xref, cipi_ols, cipi_alpha)
+cipi_ciWidth = cipi_refCI.upper - cipi_refCI.lower
+cipi_piWidth = cipi_refPI.upper - cipi_refPI.lower
+cipi_ratio = cipi_piWidth / cipi_ciWidth
+```
+
+```{ojs}
+//| echo: false
+
+// CI vs PI scatter plot
+Plot.plot(cipi_plotDefaults({
+  width: 640,
+  height: 440,
+  x: { label: "LRT Score (age 11)", grid: true },
+  y: { label: "GCSE Score (age 16)", grid: true },
+  marks: [
+    // PI band (wider, lighter)
+    cipi_showBand !== "CI only" ? Plot.areaY(cipi_bandData, {
+      x: "x",
+      y1: "pi_lower",
+      y2: "pi_upper",
+      fill: cipi_ber640.accent,
+      fillOpacity: 0.10
+    }) : null,
+
+    // CI band (narrower, darker)
+    cipi_showBand !== "PI only" ? Plot.areaY(cipi_bandData, {
+      x: "x",
+      y1: "ci_lower",
+      y2: "ci_upper",
+      fill: cipi_ber640.accent,
+      fillOpacity: 0.25
+    }) : null,
+
+    // Regression line
+    Plot.line(cipi_bandData, {
+      x: "x",
+      y: "fitted",
+      stroke: cipi_ber640.accent,
+      strokeWidth: 2.5
+    }),
+
+    // Vertical reference line at x_ref
+    Plot.ruleX([cipi_xref], {
+      stroke: cipi_ber640.warning,
+      strokeWidth: 1.5,
+      strokeDasharray: "6,3"
+    }),
+
+    // CI bracket at reference
+    cipi_showBand !== "PI only" ? Plot.link([{
+      x1: cipi_xref, y1: cipi_refCI.lower,
+      x2: cipi_xref, y2: cipi_refCI.upper
+    }], {
+      x1: "x1", y1: "y1", x2: "x2", y2: "y2",
+      stroke: cipi_ber640.accent,
+      strokeWidth: 3,
+      strokeOpacity: 0.8
+    }) : null,
+
+    // PI bracket at reference
+    cipi_showBand !== "CI only" ? Plot.link([{
+      x1: cipi_xref, y1: cipi_refPI.lower,
+      x2: cipi_xref, y2: cipi_refPI.upper
+    }], {
+      x1: "x1", y1: "y1", x2: "x2", y2: "y2",
+      stroke: cipi_ber640.secondary,
+      strokeWidth: 3,
+      strokeOpacity: 0.5
+    }) : null,
+
+    // Data points
+    Plot.dot(battersea_cipi, {
+      x: "lrt",
+      y: "gcse",
+      r: 4,
+      fill: cipi_ber640.primary,
+      fillOpacity: 0.6,
+      stroke: cipi_ber640.primary,
+      strokeOpacity: 0.3
+    })
+  ].filter(d => d !== null)
+}))
+```
+
+```{ojs}
+//| echo: false
+
+// Readout cards: CI width, PI width, ratio
+html`<div style="
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+">
+  <div style="
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: ${cipi_withAlpha(cipi_ber640.accent, 0.08)};
+    border: 1px solid ${cipi_withAlpha(cipi_ber640.accent, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${cipi_ber640.accent};">CI Width</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${cipi_themeColors().text};">
+      ${cipi_formatCoef(cipi_ciWidth, 2)}
+    </div>
+    <div style="font-size: 0.75rem; color: ${cipi_themeColors().muted};">
+      [${cipi_formatCoef(cipi_refCI.lower, 1)}, ${cipi_formatCoef(cipi_refCI.upper, 1)}]
+    </div>
+  </div>
+  <div style="
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: ${cipi_withAlpha(cipi_ber640.secondary, 0.08)};
+    border: 1px solid ${cipi_withAlpha(cipi_ber640.secondary, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${cipi_ber640.secondary};">PI Width</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${cipi_themeColors().text};">
+      ${cipi_formatCoef(cipi_piWidth, 2)}
+    </div>
+    <div style="font-size: 0.75rem; color: ${cipi_themeColors().muted};">
+      [${cipi_formatCoef(cipi_refPI.lower, 1)}, ${cipi_formatCoef(cipi_refPI.upper, 1)}]
+    </div>
+  </div>
+  <div style="
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: ${cipi_withAlpha(cipi_ber640.warning, 0.08)};
+    border: 1px solid ${cipi_withAlpha(cipi_ber640.warning, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${cipi_ber640.warning};">PI / CI Ratio</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${cipi_themeColors().text};">
+      ${cipi_ratio.toFixed(2)}x
+    </div>
+    <div style="font-size: 0.75rem; color: ${cipi_themeColors().muted};">
+      ${cipi_ratio > 3 ? 'Individual prediction is far harder than estimating the mean.' :
+        cipi_ratio > 2 ? 'PI is substantially wider — individual variability dominates.' :
+        'PI is wider — individual variability adds uncertainty.'}
+    </div>
+  </div>
+</div>`
+```
+
+```{ojs}
+//| echo: false
+
+// Contextual note
+html`<div style="
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 0.25rem;
+  color: ${cipi_themeColors().muted};
+  font-style: italic;
+">
+  At x₀ = ${cipi_formatCoef(cipi_xref, 1)} (mean LRT ≈ ${cipi_formatCoef(cipi_ols.meanX, 1)}):
+  ${Math.abs(cipi_xref - cipi_ols.meanX) < 1 ?
+    'Near the mean — both bands are at their narrowest.' :
+    Math.abs(cipi_xref - cipi_ols.meanX) < 8 ?
+    'Moving away from the mean — both bands widen.' :
+    'Far from the mean — notice how much wider the bands become.'}
+</div>`
+```
+
+::: {.callout-warning}
+## Extrapolation
+Both confidence and prediction intervals assume the linear model holds over the range of prediction. Extrapolating beyond the observed range of $x$ is dangerous because the relationship may be nonlinear outside the data range.
+:::
+
+
+## Regression to the Mean {#sec-ch1-regression-mean}
+
+The term "regression" itself comes from Francis Galton's studies of heredity in the 1880s. Galton noticed that if sons' heights ($y$) are regressed on fathers' heights ($x$):
+
+- The average height of fathers is approximately the same as the average height of sons
+- But tall fathers tend to have sons who are *shorter* than themselves (closer to the average)
+- And short fathers tend to have sons who are *taller* than themselves (closer to the average)
+
+This phenomenon --- **regression to the mean** --- occurs whenever the correlation between two measurements is less than perfect ($|r| < 1$).
+
+Mathematically, from the regression equation:
+
+$$
+\begin{aligned}
+y_i &= a + b x_i + e_i \\
+\bar{y} &= a + b \bar{x} \\
+y_i - \bar{y} &= b(x_i - \bar{x}) + e_i, \quad \text{where } b < 1
+\end{aligned}
+$$
+
+Since $b < 1$ (whenever $|r| < 1$), the deviation of the predicted value from the mean is smaller than the deviation of $x$ from its mean. When both variables are on the same scale (as here), $b < 1$ whenever $|r| < 1$. More generally, in standardized units the predicted $z$-score of $y$ is $r$ times the $z$-score of $x$, so regression to the mean always occurs when $|r| < 1$.
+
+::: {.callout-important}
+## Implications for Education Research
+Regression to the mean has profound implications for evaluating interventions:
+
+- **Pre-post designs without a control group are misleading.** If you select students who scored lowest on a pretest and then give them an intervention, they will tend to improve on average *even without the intervention* --- simply due to regression to the mean.
+- **Always use a control group** when evaluating the effect of an intervention targeted at extreme scorers.
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-regmean
+#| fig-cap: "Regression to the mean: students who score far from the mean on LRT tend to score closer to the mean on GCSE. The dashed 45-degree line shows where points would fall if there were no regression to the mean."
+#| fig-alt: "Scatter plot of standardized GCSE scores versus standardized LRT scores. A dashed 45-degree identity line shows where points would lie if scores were perfectly correlated. The OLS regression line has a shallower slope, demonstrating regression to the mean: students with extreme LRT scores tend to have less extreme GCSE scores. Points far from the mean on LRT cluster closer to the mean on GCSE."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+ggplot(battersea, aes(x = lrt, y = gcse)) +
+  geom_point(alpha = 0.4, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = ber640_colors["accent"],
+              linewidth = 1) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed",
+              color = ber640_colors["secondary"]) +
+  labs(
+    title = "Regression to the Mean",
+    subtitle = "Regression line (blue) vs 45-degree line (dashed red)",
+    x = "LRT Score (age 11)",
+    y = "GCSE Score (age 16)"
+  ) +
+  coord_equal()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-regmean"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The **gap between the two lines** visualizes regression to the mean. The dashed $y = x$ line represents "no regression to the mean" (a student scoring 10 points above average on LRT would also score 10 above on GCSE). The blue regression line, with slope less than 1, shows the actual prediction is closer to the mean
+- For students **above the mean** on LRT, the regression line falls *below* the $y = x$ line --- their predicted GCSE is lower than their LRT (they "regress" toward the mean)
+- For students **below the mean** on LRT, the regression line falls *above* the $y = x$ line --- their predicted GCSE is higher than their LRT (again regressing toward the mean)
+- The weaker the correlation between LRT and GCSE, the more pronounced this effect. With $r = 1$, the two lines would coincide
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-regmean"
+#| eval: false
+```
+- The blue regression line has a slope less than 1, showing regression to the mean
+- The red dashed line ($y = x$) shows where points would fall if there were no regression to the mean
+- Students above average on LRT are predicted to be closer to average on GCSE (and vice versa)
+
+
+:::
+
+### Interactive Exploration: Regression to the Mean Explorer {.unnumbered}
+
+::: {.callout-tip}
+## Try It Yourself
+
+Drag the **correlation (ρ) slider** and watch the regression lines rotate. When ρ = 1, the regression line coincides with the 45-degree identity line — no regression to the mean. As ρ decreases, predictions move closer to the mean. Toggle the **X-on-Y regression line** to see that the phenomenon works symmetrically in both directions.
+:::
+
+```{ojs}
+//| echo: false
+
+import { ber640 as rtm_ber640, withAlpha as rtm_withAlpha,
+         themeColors as rtm_themeColors,
+         plotDefaults as rtm_plotDefaults,
+         bivariateNormal, formatCoef as rtm_formatCoef,
+         seq as rtm_seq, correlation as rtm_correlation } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+
+viewof rtm_rho = Inputs.range([0, 0.99], {
+  value: 0.55,
+  step: 0.01,
+  label: "Correlation (ρ)",
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+viewof rtm_showXonY = Inputs.toggle({
+  label: "Show X-on-Y regression line",
+  value: false
+})
+```
+
+```{ojs}
+//| echo: false
+
+// Generate bivariate normal data (standardized, SD = 10)
+rtm_data = bivariateNormal(200, rtm_rho, 42, {meanX: 0, meanY: 0, sdX: 10, sdY: 10})
+```
+
+```{ojs}
+//| echo: false
+
+// Regression slopes (standardized: b_yx = ρ)
+rtm_slope_yx = rtm_rho
+rtm_xref = 15
+rtm_yhat_yx = rtm_slope_yx * rtm_xref
+rtm_regress_pct = (1 - rtm_rho) * 100
+
+// Line data
+rtm_lineYX = rtm_seq(-35, 35, 100).map(x => ({x, y: rtm_slope_yx * x}))
+rtm_lineXY = rtm_rho > 0.01
+  ? rtm_seq(-35, 35, 100).map(x => ({x, y: x / rtm_rho}))
+  : []
+rtm_lineIdentity = rtm_seq(-35, 35, 100).map(x => ({x, y: x}))
+```
+
+```{ojs}
+//| echo: false
+
+// Regression to the Mean scatter plot
+Plot.plot(rtm_plotDefaults({
+  width: 640,
+  height: 500,
+  x: { label: "X Score (standardized)", domain: [-35, 35], grid: true },
+  y: { label: "Y Score (standardized)", domain: [-35, 35], grid: true },
+  marks: [
+    // Identity line (y = x) — dashed gray reference
+    Plot.line(rtm_lineIdentity, {
+      x: "x", y: "y",
+      stroke: rtm_themeColors().muted,
+      strokeWidth: 1.5,
+      strokeDasharray: "8,5",
+      strokeOpacity: 0.7
+    }),
+
+    // X-on-Y regression line (dotted, secondary)
+    rtm_showXonY && rtm_rho > 0.01 ? Plot.line(rtm_lineXY, {
+      x: "x", y: "y",
+      stroke: rtm_ber640.secondary,
+      strokeWidth: 2.5,
+      strokeDasharray: "3,4"
+    }) : null,
+
+    // Y-on-X regression line (solid, accent)
+    Plot.line(rtm_lineYX, {
+      x: "x", y: "y",
+      stroke: rtm_ber640.accent,
+      strokeWidth: 2.5
+    }),
+
+    // Annotation: vertical dashed at x = 15
+    Plot.ruleX([rtm_xref], {
+      stroke: rtm_ber640.warning,
+      strokeWidth: 1.2,
+      strokeDasharray: "4,3",
+      strokeOpacity: 0.6
+    }),
+
+    // Dot on identity line at x = 15
+    Plot.dot([{x: rtm_xref, y: rtm_xref}], {
+      x: "x", y: "y", r: 6,
+      fill: rtm_themeColors().muted,
+      stroke: rtm_themeColors().muted,
+      fillOpacity: 0.3, strokeOpacity: 0.8
+    }),
+
+    // Dot on regression line at x = 15
+    Plot.dot([{x: rtm_xref, y: rtm_yhat_yx}], {
+      x: "x", y: "y", r: 6,
+      fill: rtm_ber640.accent,
+      stroke: rtm_ber640.accent,
+      fillOpacity: 0.4, strokeOpacity: 0.9
+    }),
+
+    // Arrow connecting identity to regression at x = 15
+    rtm_rho < 0.99 ? Plot.link([{
+      x1: rtm_xref, y1: rtm_xref,
+      x2: rtm_xref, y2: rtm_yhat_yx
+    }], {
+      x1: "x1", y1: "y1", x2: "x2", y2: "y2",
+      stroke: rtm_ber640.warning,
+      strokeWidth: 2,
+      strokeOpacity: 0.7
+    }) : null,
+
+    // Data points
+    Plot.dot(rtm_data, {
+      x: "x", y: "y", r: 3.5,
+      fill: rtm_ber640.primary,
+      fillOpacity: 0.45,
+      stroke: rtm_ber640.primary,
+      strokeOpacity: 0.2
+    }),
+
+    // Legend text
+    Plot.text(["Y on X (slope = ρ)"], {
+      x: [28], y: [rtm_slope_yx * 28 + 2],
+      fill: rtm_ber640.accent, fontSize: 11, fontWeight: 600, textAnchor: "end"
+    }),
+    rtm_showXonY && rtm_rho > 0.01 ? Plot.text(["X on Y"], {
+      x: [28], y: [28 / rtm_rho - 2],
+      fill: rtm_ber640.secondary, fontSize: 11, fontWeight: 600, textAnchor: "end"
+    }) : null,
+    Plot.text(["y = x (no RTM)"], {
+      x: [28], y: [30],
+      fill: rtm_themeColors().muted, fontSize: 11, fontStyle: "italic", textAnchor: "end"
+    })
+  ].filter(d => d !== null)
+}))
+```
+
+```{ojs}
+//| echo: false
+
+// Readout cards
+html`<div style="
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+">
+  <div style="
+    padding: 0.6rem; border-radius: 8px;
+    background: ${rtm_withAlpha(rtm_ber640.accent, 0.08)};
+    border: 1px solid ${rtm_withAlpha(rtm_ber640.accent, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${rtm_ber640.accent};">Correlation (ρ)</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${rtm_themeColors().text};">
+      ${rtm_formatCoef(rtm_rho, 2)}
+    </div>
+    <div style="font-size: 0.75rem; color: ${rtm_themeColors().muted};">
+      Slope (Y on X) = ${rtm_formatCoef(rtm_slope_yx, 2)}
+    </div>
+  </div>
+  <div style="
+    padding: 0.6rem; border-radius: 8px;
+    background: ${rtm_withAlpha(rtm_ber640.warning, 0.08)};
+    border: 1px solid ${rtm_withAlpha(rtm_ber640.warning, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${rtm_ber640.warning};">Predicted Y at X = ${rtm_xref}</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${rtm_themeColors().text};">
+      ${rtm_formatCoef(rtm_yhat_yx, 1)}
+    </div>
+    <div style="font-size: 0.75rem; color: ${rtm_themeColors().muted};">
+      vs ${rtm_xref} on identity line
+    </div>
+  </div>
+  <div style="
+    padding: 0.6rem; border-radius: 8px;
+    background: ${rtm_withAlpha(rtm_ber640.secondary, 0.08)};
+    border: 1px solid ${rtm_withAlpha(rtm_ber640.secondary, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${rtm_ber640.secondary};">Regression to Mean</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${rtm_themeColors().text};">
+      ${rtm_formatCoef(rtm_regress_pct, 0)}%
+    </div>
+    <div style="font-size: 0.75rem; color: ${rtm_themeColors().muted};">
+      ${rtm_rho >= 0.99 ? 'No regression to the mean.' :
+        rtm_rho >= 0.7 ? 'Moderate regression to the mean.' :
+        rtm_rho >= 0.3 ? 'Substantial regression to the mean.' :
+        'Near-complete regression to the mean.'}
+    </div>
+  </div>
+</div>`
+```
+
+```{ojs}
+//| echo: false
+
+// Contextual narrative
+html`<div style="
+  font-size: 0.85rem; text-align: center;
+  margin-top: 0.25rem;
+  color: ${rtm_themeColors().muted};
+  font-style: italic;
+">
+  A student scoring <strong>${rtm_xref}</strong> above average on X is predicted to score only
+  <strong>${rtm_formatCoef(rtm_yhat_yx, 1)}</strong> above average on Y — a
+  <strong>${rtm_formatCoef(rtm_regress_pct, 0)}%</strong> regression to the mean.
+  ${rtm_rho >= 0.99 ? 'With ρ ≈ 1, the regression line matches the identity line.' :
+    rtm_rho < 0.05 ? 'With ρ ≈ 0, everyone is predicted at the mean regardless of X.' :
+    'Lower ρ means stronger regression to the mean.'}
+</div>`
+```
+
+
+::: {.callout-tip}
+## Worked Example: How Much Regression to the Mean?
+Both LRT and GCSE are standardized to approximately the same scale. If $b = 0.55$ in our model, a student who scored 20 points above average on LRT is predicted to score only $0.55 \times 20 = 11$ points above average on GCSE --- a 45% reduction toward the mean.
+
+The weaker the correlation, the stronger the regression to the mean. If $r = 1$, there is no regression to the mean; if $r = 0$, everyone is predicted at the mean regardless of their LRT.
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-regmean-simulation
+#| fig-cap: "Simulated pre-post study with no treatment. The bottom 20% on the pretest appear to 'improve' due to regression to the mean alone."
+#| fig-alt: "Multi-panel figure from a simulated pre-post study where no actual treatment was applied. The panels show that students selected for low pretest scores appear to improve on the posttest, but this apparent gain is entirely an artifact of regression to the mean. The selected low-scoring group's posttest mean shifts toward the population average, illustrating how selecting extreme scorers and retesting them produces spurious improvement without any intervention."
+#| fig-width: 11
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+set.seed(640)
+n_sim <- 200
+pretest <- rnorm(n_sim, 50, 10)
+posttest <- 0.6 * pretest + 0.4 * 50 + rnorm(n_sim, 0, 6)
+sim_df <- tibble(pretest, posttest,
+                 selected = pretest <= quantile(pretest, 0.20))
+sim_selected <- filter(sim_df, selected)
+
+p1 <- ggplot(sim_df, aes(x = pretest, y = posttest, color = selected)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(data = sim_df, aes(color = NULL), method = "lm", formula = y ~ x,
+              se = FALSE, color = ber640_colors["accent"]) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey50") +
+  scale_color_manual(values = c("TRUE" = ber640_colors["secondary"],
+                                "FALSE" = "grey70"), guide = "none") +
+  labs(title = "Selected bottom 20% (red)",
+       x = "Pretest", y = "Posttest")
+
+p2 <- ggplot() +
+  geom_density(data = sim_selected, aes(x = pretest, fill = "Pretest"), alpha = 0.4) +
+  geom_density(data = sim_selected, aes(x = posttest, fill = "Posttest"), alpha = 0.4) +
+  geom_vline(xintercept = mean(sim_selected$pretest), linetype = "dashed",
+             color = ber640_colors["secondary"]) +
+  geom_vline(xintercept = mean(sim_selected$posttest), linetype = "dashed",
+             color = ber640_colors["success"]) +
+  scale_fill_manual(values = c("Pretest" = ber640_colors["secondary"],
+                               "Posttest" = ber640_colors["success"]), name = NULL) +
+  labs(title = "Apparent 'improvement' with no treatment",
+       subtitle = "Bottom 20% selected on pretest",
+       x = "Score", y = "Density")
+
+p1 + p2
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-regmean-simulation"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The left panel shows that the regression line (blue) has a slope less than 1, meaning extreme pretest scores regress toward the mean on the posttest
+- The right panel reveals the key insight: the selected group's posttest distribution (green) is shifted right compared to their pretest distribution (red), even though *no treatment was applied*
+- This apparent "improvement" is entirely due to regression to the mean --- the lowest-scoring students on the pretest were likely having a bad day or were measured with error, and their posttest scores naturally move closer to the population mean
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-regmean-simulation"
+#| eval: false
+```
+- `rnorm(n_sim, 50, 10)`: Simulates 200 pretest scores with mean 50 and SD 10
+- `0.6 * pretest + 0.4 * 50 + rnorm(...)`: Creates posttest scores correlated with pretest (r ≈ 0.6) but with no treatment effect --- the expected posttest mean equals the expected pretest mean
+- `quantile(pretest, 0.20)`: Identifies the bottom 20% on the pretest
+- Left panel: scatter plot showing all students, with the bottom 20% highlighted in red. The dashed line is $y = x$ (no change)
+- Right panel: density plots comparing pretest and posttest distributions for the selected students only
+
+
+:::
+
+
+## Dummy Variables and the $t$-test {#sec-ch1-dummy}
+
+### Regression with a Dummy Variable
+
+So far, we have used a continuous predictor (LRT) to predict a continuous outcome (GCSE). But one of the most powerful insights in this course is that regression can also handle *categorical* predictors. This means familiar methods like the $t$-test and ANOVA are not separate procedures --- they are special cases of regression. To see this, we introduce **dummy variables**.
+
+A dummy variable takes two values:
+
+$$
+d_i = \begin{cases} 1 & \text{if condition is true} \\ 0 & \text{otherwise} \end{cases}
+$$
+
+For example, to compare GCSE scores between schools in Battersea and Chelsea:
+
+$$
+\text{E}(y_i \mid d_{Ci}) = \alpha + \beta d_{Ci}
+$$
+
+- $\alpha$ is the expected GCSE score for Battersea ($d_{Ci} = 0$, the **reference group**)
+- $\alpha + \beta$ is the expected GCSE score for Chelsea ($d_{Ci} = 1$)
+- $\beta$ is the **difference** in expected GCSE scores (Chelsea $-$ Battersea)
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-dummy
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Create a subset with two schools: Battersea (1) and Chelsea (2)
+two_schools <- gcse |>
+  filter(school %in% c(1, 2)) |>
+  mutate(school_name = factor(ifelse(school == 1, "Battersea", "Chelsea")))
+
+# Regression with dummy variable
+model_dummy <- lm(gcse ~ school_name, data = two_schools)
+model_parameters(model_dummy) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch1-dummy"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Intercept**: The mean GCSE score for Battersea students (the reference group, coded as $d_{Ci} = 0$)
+- **school_nameChelsea**: The difference in mean GCSE between Chelsea and Battersea. A positive value means Chelsea students score higher on average; a negative value means they score lower
+- **$p$-value**: Tests $H_0: \beta = 0$, which is equivalent to testing whether the two school means are equal --- the same hypothesis tested by the independent-samples $t$-test (see below)
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-dummy"
+#| eval: false
+```
+- `filter(school %in% c(1, 2))`: Selects students from schools 1 (Battersea) and 2 (Chelsea)
+- R automatically creates a dummy variable when a factor is used as a predictor
+- The reference group is alphabetically first (Battersea), so the coefficient for `school_nameChelsea` represents the Chelsea − Battersea difference
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch1-dummy
+#| fig-cap: "Regression with a dummy variable: the regression line passes through the group means. The slope equals the difference in means between Chelsea and Battersea."
+#| fig-alt: "Scatter plot with a binary dummy variable for school on the horizontal axis, coded as 0 for Battersea and 1 for Chelsea, and GCSE score on the vertical axis. Individual data points are jittered at each school value. A regression line connects the two group means, and its slope represents the difference in mean GCSE scores between Chelsea and Battersea, demonstrating how a dummy variable codes group differences as a linear regression."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+group_means <- two_schools |>
+  group_by(school_name) |>
+  summarise(mean_gcse = mean(gcse, na.rm = TRUE))
+
+ggplot(two_schools, aes(x = school_name, y = gcse, color = school_name)) +
+  geom_point(alpha = 0.3, position = position_jitter(width = 0.15, seed = 640)) +
+  geom_point(data = group_means, aes(y = mean_gcse),
+             size = 5, shape = 18) +
+  scale_color_manual(values = c(ber640_colors["primary"], ber640_colors["accent"])) +
+  labs(
+    title = "GCSE Scores: Battersea vs Chelsea",
+    x = "School",
+    y = "GCSE Score",
+    color = "School"
+  ) +
+  guides(color = "none")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch1-dummy"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The **diamond-shaped points** mark each school's mean GCSE score. The vertical distance between the two diamonds is the regression slope $b$ --- the estimated mean difference
+- The individual data points (jittered horizontally) show the spread within each school. Notice substantial overlap between the two groups, indicating that individual variability within schools is large relative to the between-school difference
+- If one school's diamond is clearly higher, the dummy variable coefficient will be positive (or negative) accordingly. Whether this difference is statistically significant depends on the group sizes and within-group variability
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch1-dummy"
+#| eval: false
+```
+- `geom_jitter()`: Adds random horizontal scatter to avoid overplotting
+- The diamond-shaped points show the group means
+- The difference between the two group means equals the regression slope $b$
+
+
+:::
+
+### Equivalence with the Independent Samples $t$-test
+
+The independent-samples $t$-test and simple regression with a dummy variable test the same hypothesis:
+
+- $t$-test: $H_0: \mu_1 = \mu_2$ (group means are equal)
+- Regression: $H_0: \beta = 0$ (dummy variable coefficient is zero)
+
+The assumptions are identical:
+
+- Constant variance $\sigma^2$ across groups
+- Normally distributed errors
+- Independent observations
+
+And the relationship between the test statistics is:
+
+$$
+F = t^2
+$$
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch1-ttest-equiv
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Independent samples t-test (assuming equal variances)
+t_result <- t.test(gcse ~ school_name, data = two_schools, var.equal = TRUE)
+t_result
+
+# Compare with regression F-test
+cat("\nt-test t-statistic:", round(t_result$statistic, 4), "\n")
+cat("Regression F-statistic:", round(anova(model_dummy)$`F value`[1], 4), "\n")
+cat("t^2:", round(t_result$statistic^2, 4), "\n")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch1-ttest-equiv"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The $t$-test output shows the mean difference between groups, the $t$-statistic, and the $p$-value. Compare these directly with the regression output from the dummy variable model
+- **$F = t^2$**: The printed values should match exactly (up to rounding). This is not a coincidence --- it is a mathematical identity that holds whenever a regression model has exactly one predictor
+- The $p$-values from both tests are identical, confirming that the $t$-test and regression with a dummy variable are testing the same null hypothesis ($H_0$: the two group means are equal)
+
+### Code Explanation
+```{r}
+#| ref.label: "ch1-ttest-equiv"
+#| eval: false
+```
+- `t.test(..., var.equal = TRUE)`: Performs the pooled $t$-test (equal variances assumed), which matches the regression $F$-test
+- The $t^2$ from the $t$-test equals the $F$-statistic from the regression, confirming the equivalence
+
+
+:::
+
+::: {.callout-important}
+## The Big Unifying Insight
+The $t$-test is simply regression with a dummy variable. This means:
+
+- ANOVA is regression with multiple dummy variables (@sec-ch3)
+- ANCOVA is regression with dummies plus continuous covariates (@sec-ch2)
+- All the models in this course are extensions of the basic regression framework
+
+This "specific to general" perspective is the organizing principle of the entire course.
+:::
+
+
+## Summary and Key Takeaways {#sec-ch1-summary}
+
+::: {.callout-important}
+## Key Takeaways
+
+1. **Simple linear regression** models the conditional mean of $y$ given $x$ as a linear function: $\text{E}(y_i \mid x_i) = \alpha + \beta x_i$
+2. **OLS** minimizes the sum of squared residuals to estimate the intercept and slope
+3. **$R^2$** is the proportion of variance in $y$ explained by $x$; in simple regression, $R^2 = r^2$
+4. **Model diagnostics** check linearity, constant variance, and normality --- use `check_model()` as a one-stop tool
+5. **Confidence intervals** for $\beta$ are more informative than $p$-values alone
+6. **Prediction intervals** are wider than confidence intervals because they account for individual-level variability
+7. **Regression to the mean** is a statistical artifact that can masquerade as a treatment effect --- always use a control group
+8. **The $t$-test is a special case of regression** with a dummy variable --- this unifying insight extends to ANOVA, ANCOVA, and beyond
+:::
+
+
+## Exercises {#sec-ch1-exercises}
+
+::: {.callout-caution collapse="true"}
+## Exercise 1.1: Exploring the Full GCSE Data
+Using the full `gcse` dataset (all schools combined), fit a simple linear regression of `gcse` on `lrt`. How does $R^2$ compare to the Battersea-only model? What might explain the difference?
+
+**Hint**: Use `lm(gcse ~ lrt, data = gcse)` and compare `r2()` values.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 1.2: Checking Assumptions
+For the full-data model from Exercise 1.1, create a residual-vs-fitted plot and a Q-Q plot. Do any assumptions appear to be violated?
+
+**Hint**: Use `broom::augment()` to get residuals and fitted values.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 1.3: Confidence vs Prediction Intervals
+At LRT = 15 (well above average), compute both the confidence interval for the mean GCSE score and the prediction interval for an individual student's GCSE score. How much wider is the prediction interval?
+
+**Hint**: Use `predict(model, newdata = data.frame(lrt = 15), interval = "confidence")` and `interval = "prediction"`.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 1.4: The t-test Connection
+Using the `classdata_07` dataset, compare mean heights between male and female students using both a $t$-test and regression with a dummy variable. Verify that $F = t^2$.
+
+**Hint**: `data(classdata_07)` then `t.test(height ~ gender, data = classdata_07, var.equal = TRUE)` and `lm(height ~ gender, data = classdata_07)`.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 1.5: Regression to the Mean in Practice
+A school district selects the 50 lowest-performing students on a fall reading test and enrolls them in tutoring. In spring, their average score improves by 8 points. The district claims the tutoring worked.
+
+(a) Explain why this evidence alone is insufficient to conclude the program was effective.
+(b) What research design would you recommend to properly evaluate the program?
+(c) If the correlation between fall and spring scores is $r = 0.70$, approximately how much improvement would you expect from regression to the mean alone?
+
+**Hint**: Review @sec-ch1-regression-mean. Think about what happens to extreme scores on a retest.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 1.6: Interpreting a Non-Significant Slope
+A colleague fits a simple linear regression predicting student test scores from hours of sleep the night before the exam. They obtain $\hat{\beta}_1 = 1.2$ with $SE = 1.8$ and $p = 0.51$. They conclude that sleep has "no effect" on test performance. Is this conclusion justified? What are two alternative explanations for the non-significant result that do not require sleep to be truly unrelated to performance?
+
+**Hint**: Consider the difference between "no evidence of an effect" and "evidence of no effect." Think about sample size and statistical power, as well as potential issues with how "hours of sleep" was measured.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 1.7: Residual Plot Diagnosis
+You fit a simple linear regression of exam score on study hours. The residual plot (residuals vs. fitted values) shows a clear U-shape: residuals are positive at low and high fitted values but negative in the middle. What does this pattern indicate about your model? How would you modify the model to address this issue, and what would you check in the revised residual plot?
+
+**Hint**: A U-shaped residual pattern suggests the true relationship is not linear. Consider adding a quadratic term (e.g., `study_hours + I(study_hours^2)`) and then re-examine the residual plot for any remaining patterns.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 1.8: Why Does $R^2$ Not Tell the Whole Story?
+Two researchers each fit a simple linear regression. Researcher A reports $R^2 = 0.85$ predicting height from age in children aged 2--10. Researcher B reports $R^2 = 0.07$ predicting adult income from years of education. Researcher A claims their model is "better" because of the higher $R^2$. Explain why this comparison is misleading. Under what circumstances could the model with lower $R^2$ actually be more useful or scientifically important?
+
+**Hint**: Think about what $R^2$ measures (proportion of variance explained) versus what makes a model scientifically or practically useful. Consider the complexity of the phenomena, the policy relevance of each predictor, and whether $R^2$ reflects model quality or simply how noisy the outcome is.
+:::

@@ -1,0 +1,56 @@
+---
+title: "Course Content"
+---
+
+## Overview
+
+This page provides weekly readings, labs, and assignments for **BER 640: {{< var course.title >}}**. The course follows a "specific to general" approach, beginning with simple linear regression and progressively extending to the Generalized Linear Model (GLM) framework.
+
+## Weekly Content
+
+### Part I: Foundations of Linear Regression (Weeks 1--4)
+
+| Week | Topic |
+|:----:|-------|
+| 1 | [Welcome & R Setup](/content/01-content.qmd) |
+| 2 | [Simple Linear Regression I](/content/02-content.qmd) |
+| 3 | [Simple Linear Regression II](/content/03-content.qmd) |
+| 4 | [ANCOVA](/content/04-content.qmd) |
+
+### Part II: Extensions of Linear Regression (Weeks 5--9)
+
+| Week | Topic |
+|:----:|-------|
+| 5 | [One-Way ANOVA](/content/05-content.qmd) |
+| 6 | [Multiple Regression](/content/06-content.qmd) |
+| 7 | [Interactions](/content/07-content.qmd) |
+| 8 | [Nonlinear Relationships](/content/08-content.qmd) |
+| 9 | [Model Building & Diagnostics](/content/09-content.qmd) |
+
+### Part III: Categorical Outcomes (Weeks 10--14)
+
+| Week | Topic |
+|:----:|-------|
+| 10 | [Simple Logistic Regression](/content/10-content.qmd) |
+| 11 | [Multiple Logistic Regression](/content/11-content.qmd) |
+| 12 | [Logistic Diagnostics](/content/12-content.qmd) |
+| 13 | [Latent Response & GLM](/content/13-content.qmd) |
+| 14 | [Ordinal Models](/content/14-content.qmd) |
+
+### Part IV: Synthesis (Week 15)
+
+| Week | Topic |
+|:----:|-------|
+| 15 | [Course Synthesis](/content/15-content.qmd) |
+
+## How to Use This Content
+
+Each week's content page includes:
+
+- {{< fa book-open >}} **Readings** --- Links to lecture notes chapters
+- {{< fa laptop-code >}} **R Lab** --- Hands-on coding exercises
+- {{< fa bullseye >}} **Learning Objectives** --- Measurable skills for the week
+- {{< fa pencil >}} **Assignments** --- Homework, quizzes, or project deliverables (when due)
+- {{< fa list >}} **Key Concepts** --- Essential terms and ideas
+
+**Suggested workflow**: Read the lecture notes chapter, work through the R Lab, then complete assignments.

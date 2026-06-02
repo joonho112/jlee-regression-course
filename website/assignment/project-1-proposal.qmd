@@ -1,0 +1,64 @@
+---
+title: "Project 1 Proposal"
+---
+
+| | |
+|---|---|
+| **Project** | Project 1: Linear Regression |
+| **Due** | Week 7 |
+| **Weight** | 30% of Project 1 (which is 20% of final grade) |
+| **Related Guide** | [Project Guide]({{< var books.project_guide >}}){target="_blank"} |
+
+::: {.callout-tip}
+## {{< fa book >}} Project Guide
+Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed instructions, examples of strong proposals, and tips for choosing a dataset.
+:::
+
+## Purpose
+
+The proposal establishes the foundation for your linear regression project. You will identify a research question, select a dataset, and define your variables. The instructor will provide feedback to help you refine your plan before you begin the full analysis.
+
+## Requirements
+
+Your proposal should include the following sections:
+
+### 1. Research Question
+
+State a clear, focused research question that can be addressed with linear regression. Your question should specify the relationship you plan to investigate and why it is interesting or important.
+
+### 2. Dataset Description
+
+- Name and source of the dataset
+- How to access the dataset (URL, R package, etc.)
+- Number of observations and a brief description of the sample
+- Unit of analysis (e.g., individuals, schools, countries)
+
+### 3. Variable Definitions
+
+Identify and describe the following:
+
+- **Outcome variable** ($y$): A continuous variable suitable for linear regression
+- **Primary predictor** ($x_1$): The main explanatory variable of interest
+- **Additional predictors**: At least one additional predictor or control variable you plan to include
+
+For each variable, report:
+
+- Variable name in the dataset
+- Measurement scale (continuous, categorical, binary)
+- Brief description of what it measures
+
+### 4. Preliminary Descriptive Statistics
+
+Provide basic descriptive statistics for your key variables:
+
+- Summary statistics (mean, SD, min, max) for continuous variables
+- Frequency tables for categorical variables
+- At least one visualization (histogram, scatterplot, or boxplot)
+
+## Submission
+
+Submit the following to Blackboard:
+
+- A rendered PDF or HTML document
+- Your `.qmd` source file
+- The dataset (or a link to it)

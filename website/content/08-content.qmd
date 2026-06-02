@@ -1,0 +1,36 @@
+---
+title: "Week 8: Nonlinear Relationships"
+---
+
+## Overview
+
+This week moves beyond the straight-line assumption to model curvilinear relationships between predictors and outcomes. You will learn how polynomial terms, logarithmic transformations, and splines allow a regression model to capture nonlinear patterns in data. You will also learn how to compare competing models using information criteria such as AIC and BIC, giving you a principled way to balance fit and parsimony.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Specify and interpret polynomial regression models with quadratic and higher-order terms
+- Apply and interpret log transformations to linearize skewed relationships
+- Explain how splines provide flexible, piecewise approximations to nonlinear patterns
+- Compare nested models using likelihood-ratio tests and evaluate competing models using AIC and BIC
+- Determine when a nonlinear specification meaningfully improves model fit over a linear baseline
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 6: Nonlinear Relationships]({{< var books.lecture_notes >}}/chapters/06-nonlinear-relationships.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 07: Model Building]({{< var books.r_lab_book >}}/labs/lab07-model-building.html){target="_blank"}
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Polynomial regression** | A regression model that includes squared or higher-power terms of a predictor to capture curvature |
+| **Quadratic term** | A squared predictor added to a model to allow the relationship to bend once (U-shape or inverted U) |
+| **Log transformation** | Applying the natural logarithm to a variable to reduce skewness or model proportional change |
+| **Curvilinear** | A pattern in which the relationship between a predictor and the outcome follows a curve rather than a straight line |
+| **Model comparison** | The process of evaluating two or more models to determine which best balances fit and complexity |
+| **AIC/BIC** | Information criteria that penalize model complexity; lower values indicate a better trade-off between fit and parsimony |

@@ -1,0 +1,1893 @@
+# One-way ANOVA {#sec-ch3}
+
+{{< include ../_common.qmd >}}
+
+## Introduction {#sec-ch3-intro}
+
+In @sec-ch1, we saw that comparing two groups with a $t$-test is equivalent to simple regression with a dummy variable. What happens when we have **three or more groups**? We cannot use a single numeric variable to represent group membership (e.g., coding Basal = 1, DRTA = 2, Strat = 3) because that would impose a linear ordering and equal spacing that may not exist.
+
+The solution is to use **multiple dummy variables** --- one for each group minus one (the reference group). This is the one-way Analysis of Variance (ANOVA) model, which is simply a multiple regression model where all predictors are dummy variables representing group membership.
+
+This chapter makes a key insight explicit: **ANOVA is regression**. The $F$-test in ANOVA, the pairwise comparisons, the effect sizes --- all of these are special cases of the regression framework we have been building.
+
+::: {.callout-note}
+## From $t$-test to ANOVA
+| Scenario | Groups | Dummies | Test |
+|:---------|:-------|:--------|:-----|
+| @sec-ch1 | 2 | 1 | $t$-test ($F$ with $df_1 = 1$) |
+| This chapter | $k+1$ | $k$ | $F$-test with $df_1 = k$ |
+
+When $k = 1$ (two groups), the ANOVA $F$-statistic equals $t^2$, and the $p$-values are identical. One-way ANOVA is the natural generalization of the two-sample $t$-test.
+:::
+
+::: {.callout-note}
+## Learning Objectives
+After completing this chapter, you will be able to:
+
+1. Specify a one-way ANOVA model using dummy variables
+2. Interpret dummy variable coefficients as group mean differences from a reference group
+3. Construct and interpret the ANOVA table (MSS, SSE, $F$-test)
+4. Conduct pairwise comparisons with appropriate corrections for multiple testing
+5. Compute and interpret effect size measures (eta-squared, Cohen's $d$)
+6. Explain the connection between ANOVA, regression, and the $t$-test
+:::
+
+
+## Motivating Example: Instruction Methods and Math Achievement {#sec-ch3-example}
+
+We use the `instruction` dataset, which contains data on students' math achievement across different classroom settings. To illustrate one-way ANOVA, we will categorize teacher preparation level (`mathprep`) into three groups and examine whether math gains differ across preparation levels.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch3-data-setup
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Load the instruction dataset
+data(instruction)
+
+# Create a 3-level factor for teacher math preparation
+instruction <- instruction |>
+  mutate(
+    prep_level = case_when(
+      mathprep <= 3  ~ "Low",
+      mathprep <= 4  ~ "Medium",
+      mathprep > 4   ~ "High"
+    ),
+    prep_level = factor(prep_level, levels = c("Low", "Medium", "High"))
+  ) |>
+  filter(!is.na(mathgain), !is.na(prep_level))
+
+# Summary by group
+instruction |>
+  group_by(prep_level) |>
+  summarise(
+    n = n(),
+    mean_gain = mean(mathgain),
+    sd_gain   = sd(mathgain),
+    .groups = "drop"
+  ) |>
+  kable(digits = 2, col.names = c("Preparation Level", "n", "Mean Math Gain", "SD"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch3-data-setup"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Sample sizes ($n$)**: Check whether groups are roughly balanced. Unequal group sizes are common in observational data but can affect the precision of group mean estimates
+- **Mean differences**: Compare the mean math gain across groups. The pattern of means (increasing? decreasing?) previews the story that the ANOVA model will formalize
+- **Standard deviations**: Compare SDs across groups. ANOVA assumes equal variances (homogeneity); SDs that differ by more than a factor of 2 may warrant concern. Similar SDs across groups support this assumption
+
+### Code Explanation
+```{r}
+#| ref.label: "ch3-data-setup"
+#| eval: false
+```
+- `case_when()` creates three groups from the continuous `mathprep` variable: Low ($\leq 3$), Medium (3--4), and High ($> 4$)
+- `factor(..., levels = ...)` ensures the groups are ordered logically
+- The summary table shows the sample size, mean, and standard deviation for each group
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-boxplot
+#| fig-cap: "Distribution of math gains by teacher preparation level. Boxplots with individual data points (jittered) show the variation within and between groups."
+#| fig-alt: "Box plot with jittered individual data points showing the distribution of math gain scores on the y-axis across three teacher preparation levels (Low, Medium, High) on the x-axis. Each group is displayed as a colored box with median line and interquartile range, overlaid with semi-transparent jittered points representing individual observations. The plot reveals differences in central tendency and spread across groups, with visible overlap in distributions between preparation levels."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+ggplot(instruction, aes(x = prep_level, y = mathgain, fill = prep_level)) +
+  geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+  geom_jitter(width = 0.15, alpha = 0.15, size = 0.8) +
+  scale_fill_manual(values = unname(ber640_colors[c("primary", "accent", "success")])) +
+  labs(
+    title = "Math Gains by Teacher Preparation Level",
+    x = "Teacher Preparation Level",
+    y = "Math Achievement Gain"
+  ) +
+  guides(fill = "none")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-boxplot"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Center comparison**: Compare the median lines (thick horizontal bars) across groups. Differences in medians suggest group mean differences that the ANOVA will formally test
+- **Spread (within-group variation)**: The height of each box (IQR) reflects variability within each group. Similar box heights support the equal-variance assumption
+- **Outliers**: Individual points far from the boxes may indicate unusual observations. Consider whether they reflect data entry errors or genuine extreme cases
+- **Overlap**: The degree to which boxes overlap hints at effect size --- substantial overlap suggests small effects, while separated boxes suggest large group differences
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-boxplot"
+#| eval: false
+```
+- `geom_boxplot()` shows the median, quartiles, and whiskers for each group
+- `geom_jitter()` overlays individual data points with slight horizontal scatter
+- Visual inspection suggests differences between groups that we can test formally
+
+
+:::
+
+
+## ANOVA as Regression with Dummy Variables {#sec-ch3-model}
+
+### Dummy Variable Coding
+
+With three groups (Low, Medium, High) and Low as the reference group, we need **two** dummy variables:
+
+$$
+d_{Mi} = \begin{cases} 1 & \text{if student } i \text{ has Medium prep} \\ 0 & \text{otherwise} \end{cases}
+\qquad
+d_{Hi} = \begin{cases} 1 & \text{if student } i \text{ has High prep} \\ 0 & \text{otherwise} \end{cases}
+$$
+
+| Group | $d_{Mi}$ | $d_{Hi}$ |
+|:------|:---------|:---------|
+| Low (reference) | 0 | 0 |
+| Medium | 1 | 0 |
+| High | 0 | 1 |
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-design-matrix
+#| fig-cap: "The design matrix R creates for a factor predictor. Each row is an observation; columns show the intercept and dummy variables. The reference group (Low) has all dummies set to 0."
+#| fig-alt: "Heatmap displaying the design matrix used in the ANOVA model, with sampled observations as rows and model terms (intercept, dummy variables for Medium and High preparation levels) as columns. Cells are color-coded to show values of zero and one. The reference group (Low) rows have zeros for both dummy columns, Medium rows have a one only in the Medium column, and High rows have a one only in the High column. All rows show a one in the intercept column."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+set.seed(640)
+sample_idx <- instruction |>
+  group_by(prep_level) |>
+  slice_sample(n = 4) |>
+  ungroup()
+
+mm <- model.matrix(~ prep_level, data = sample_idx) |>
+  as.data.frame() |>
+  mutate(obs = row_number(), Group = sample_idx$prep_level) |>
+  pivot_longer(cols = -c(obs, Group), names_to = "Variable", values_to = "Value") |>
+  mutate(Variable = factor(Variable,
+    levels = c("(Intercept)", "prep_levelMedium", "prep_levelHigh"),
+    labels = c("Intercept", "d_Medium", "d_High")))
+
+ggplot(mm, aes(x = Variable, y = reorder(factor(obs), -obs), fill = factor(Value))) +
+  geom_tile(color = "white", linewidth = 1) +
+  geom_text(aes(label = Value), fontface = "bold", size = 5) +
+  scale_fill_manual(values = c("0" = "grey90", "1" = ber640_colors["accent"]), guide = "none") +
+  facet_grid(Group ~ ., scales = "free_y", space = "free_y", switch = "y") +
+  labs(title = "Design Matrix: What R Creates Under the Hood",
+       subtitle = "model.matrix(~ prep_level)", x = "Model Term", y = NULL) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+        strip.placement = "outside", strip.text.y.left = element_text(angle = 0, face = "bold"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-design-matrix"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Intercept column**: Every observation has a 1 in this column, meaning every student gets the baseline (reference group) mean as a starting point
+- **Low group rows**: All dummies are 0 --- these students' predicted value is just the intercept ($\alpha$)
+- **Medium group rows**: Only `d_Medium` = 1 --- their predicted value is $\alpha + \beta_1$
+- **High group rows**: Only `d_High` = 1 --- their predicted value is $\alpha + \beta_2$
+- This visualization demystifies what R does "under the hood" when you pass a factor to `lm()`
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-design-matrix"
+#| eval: false
+```
+- `model.matrix(~ prep_level)` extracts the actual design matrix R uses internally when fitting the model
+- Each row represents one observation; the columns are the intercept (always 1) and the dummy variables
+- The reference group (Low) has all dummy columns set to 0 --- only the intercept column is 1
+- `facet_grid()` groups rows by preparation level so you can see the pattern clearly
+
+
+:::
+
+The one-way ANOVA model is:
+
+$$
+y_i = \alpha + \beta_1 d_{Mi} + \beta_2 d_{Hi} + \epsilon_i
+$$ {#eq-ch3-anova}
+
+### Interpreting the Coefficients
+
+| Group | $\text{E}(y_i)$ | In terms of group means |
+|:------|:-----------------|:-----------------------|
+| Low | $\alpha$ | $\mu_{\text{Low}}$ |
+| Medium | $\alpha + \beta_1$ | $\mu_{\text{Medium}}$ |
+| High | $\alpha + \beta_2$ | $\mu_{\text{High}}$ |
+
+Therefore:
+
+- $\alpha = \mu_{\text{Low}}$ (mean for the reference group)
+- $\beta_1 = \mu_{\text{Medium}} - \mu_{\text{Low}}$ (Medium vs Low difference)
+- $\beta_2 = \mu_{\text{High}} - \mu_{\text{Low}}$ (High vs Low difference)
+
+::: {.callout-tip}
+## General Rule for Dummy Variables
+A factor with $k + 1$ levels requires $k$ dummy variables. The intercept always represents the mean of the **reference group** (the group without its own dummy). Each dummy coefficient represents the difference between that group's mean and the reference group mean.
+:::
+
+::: {.callout-caution collapse="true"}
+## Concept Check
+Suppose the regression output gives: Intercept = 50.3, $\hat{\beta}_{\text{Medium}}$ = 8.7, $\hat{\beta}_{\text{High}}$ = 15.2.
+
+1. What is the predicted mean math gain for the Low group?
+2. What is the predicted mean for the Medium group?
+3. Which group has the highest predicted mean?
+
+*Answers: (1) 50.3; (2) 50.3 + 8.7 = 59.0; (3) High, with 50.3 + 15.2 = 65.5*
+:::
+
+### Fitting the Model
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch3-anova-fit
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Fit ANOVA model (R creates dummies automatically from factor)
+model_anova <- lm(mathgain ~ prep_level, data = instruction)
+
+# Parameters
+model_parameters(model_anova) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch3-anova-fit"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Intercept**: The estimated mean math gain for the Low preparation group (reference category). This equals the sample mean of the Low group exactly
+- **prep_levelMedium**: The estimated difference in mean math gain between Medium and Low preparation teachers' students. A positive value means Medium-prep teachers' students gained more on average
+- **prep_levelHigh**: The estimated difference in mean math gain between High and Low preparation teachers' students
+- **SE**: Standard errors reflect uncertainty in each estimate. Larger groups yield smaller SEs
+- **$p$-values**: Test whether each group differs significantly from the reference (Low). Note: these are *not* corrected for multiple comparisons --- see @sec-ch3-pairwise for proper pairwise tests
+- To obtain the estimated mean for Medium, add the Medium coefficient to the intercept; similarly for High
+
+### Code Explanation
+```{r}
+#| ref.label: "ch3-anova-fit"
+#| eval: false
+```
+- `lm(mathgain ~ prep_level)`: R automatically creates dummy variables for the factor `prep_level`, using the first level (Low) as the reference
+- The intercept estimates the mean math gain for the Low preparation group
+- `prep_levelMedium` estimates the Medium − Low difference
+- `prep_levelHigh` estimates the High − Low difference
+- `print_md()` formats the output as a clean markdown table
+
+
+:::
+
+### Verifying: Regression Line Through Group Means
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch3-verify-means
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Verify that regression estimates equal group means
+group_means <- instruction |>
+  group_by(prep_level) |>
+  summarise(mean_gain = mean(mathgain), .groups = "drop")
+
+# Compare side by side
+bind_cols(
+  group_means,
+  tibble(regression_mean = c(
+    coef(model_anova)[1],
+    coef(model_anova)[1] + coef(model_anova)[2],
+    coef(model_anova)[1] + coef(model_anova)[3]
+  ))
+) |>
+  kable(digits = 2, col.names = c("Group", "Data Mean", "Regression Mean"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch3-verify-means"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Data Mean vs Regression Mean**: The two columns should match exactly (to rounding). This is not a coincidence --- in one-way ANOVA, the OLS estimates *are* the group means
+- **Why this matters**: It proves that the dummy variable regression is doing nothing more than estimating group means. The intercept $\alpha$ captures the reference group mean, and each $\beta_k$ captures the deviation of group $k$ from the reference
+- This equivalence breaks down once you add covariates (ANCOVA, @sec-ch2), because the regression then estimates *adjusted* means that control for the covariates
+
+### Code Explanation
+```{r}
+#| ref.label: "ch3-verify-means"
+#| eval: false
+```
+- The regression intercept exactly equals the Low group mean
+- Adding the Medium dummy coefficient to the intercept gives the Medium group mean
+- The side-by-side table makes the exact correspondence immediately visible
+- This confirms: **ANOVA regression estimates are simply group means and group mean differences**
+
+
+:::
+
+
+## Coding Schemes {#sec-ch3-coding}
+
+The dummy (treatment) coding described above is the default in R. However, other coding schemes exist:
+
+| Scheme | Reference | Coefficients Represent |
+|:-------|:----------|:----------------------|
+| **Dummy** (treatment) | First/last group | Difference from reference |
+| **Effects** (deviation) | Grand mean | Deviation from grand mean |
+| **Helmert** | Previous groups | Difference from mean of previous groups |
+
+::: {.callout-note}
+## All Coding Schemes Give the Same ANOVA Table
+The choice of coding scheme changes the interpretation of individual coefficients, but the overall $F$-test, $R^2$, and model predictions are identical. Choose the scheme that matches your research question.
+:::
+
+::: {.callout-warning}
+## When to Categorize a Continuous Variable
+In this chapter, we converted continuous `mathprep` into three groups for pedagogical purposes. In practice:
+
+- **Categorize** when groups are naturally defined (treatment conditions, school types) or when the relationship is genuinely non-linear with plateau regions
+- **Keep continuous** when the variable has a smooth relationship with the outcome --- categorizing discards information and reduces statistical power
+
+See @sec-ch4 for modeling continuous predictors directly, and @sec-ch6 for handling non-linear relationships without categorizing.
+:::
+
+
+## The ANOVA Table {#sec-ch3-anova-table}
+
+### Decomposing Variability
+
+Just as in @sec-ch1-r2, we decompose the total variability into between-group and within-group components:
+
+| Source | SS | df | MS = SS/df |
+|:-------|:---|:---|:-----------|
+| Model (between groups) | MSS | $k$ | MMS |
+| Error (within groups) | SSE | $n - k - 1$ | MSE |
+| Total | TSS | $n - 1$ | |
+
+In one-way ANOVA:
+
+- **MSS** (Between-Group SS): $\sum_i (\hat{y}_i - \bar{y})^2 = \sum_{j=1}^{k+1} n_j (\bar{y}_j - \bar{y})^2$
+- **SSE** (Within-Group SS): $\sum_i (y_i - \hat{y}_i)^2 = \sum_{j=1}^{k+1} \sum_{i \in j} (y_i - \bar{y}_j)^2$
+- **MSE** is the **pooled within-group variance**
+
+### The $F$-test
+
+The null hypothesis is that all group means are equal:
+
+$$
+H_0: \beta_1 = \beta_2 = \cdots = \beta_k = 0 \quad (\mu_1 = \mu_2 = \cdots = \mu_{k+1})
+$$
+
+$$
+F = \frac{\text{MMS}}{\text{MSE}} \sim F(k, \; n - k - 1) \text{ under } H_0
+$$ {#eq-ch3-ftest}
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-between-within
+#| fig-cap: "Between-group vs. within-group variation. Thick bars show group mean deviations from the grand mean (between); scatter shows individual deviations from group means (within)."
+#| fig-alt: "Scatter plot of math gain scores on the y-axis against teacher preparation level on the x-axis, illustrating the decomposition of total variance into between-group and within-group components. Thick horizontal bars at each group mean show deviations from the grand mean (between-group variation), while individual data points scattered around the group means represent within-group variation. A horizontal reference line marks the grand mean across all groups."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+grand_mean <- mean(instruction$mathgain)
+group_means_df <- instruction |>
+  group_by(prep_level) |>
+  summarise(group_mean = mean(mathgain), .groups = "drop")
+
+ggplot(instruction, aes(x = prep_level, y = mathgain, color = prep_level)) +
+  geom_jitter(width = 0.2, alpha = 0.15, size = 1) +
+  geom_hline(yintercept = grand_mean, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+  geom_segment(data = group_means_df,
+               aes(x = prep_level, xend = prep_level,
+                   y = grand_mean, yend = group_mean),
+               linewidth = 3, alpha = 0.5) +
+  geom_point(data = group_means_df, aes(y = group_mean),
+             shape = 95, size = 15) +
+  annotate("text", x = 0.6, y = grand_mean,
+           label = paste0("Grand Mean = ", round(grand_mean, 1)),
+           hjust = 0, vjust = -0.5, color = "grey30", fontface = "italic") +
+  scale_color_manual(values = unname(ber640_colors[c("primary", "accent", "success")])) +
+  labs(title = "Between-Group vs. Within-Group Variation",
+       subtitle = "Thick bars = between; scatter = within",
+       x = "Preparation Level", y = "Math Gain") +
+  guides(color = "none")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-between-within"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Between-group variation (thick bars)**: Longer bars mean the group means are spread further from the grand mean. This contributes to a larger MSS and a larger $F$-statistic
+- **Within-group variation (scatter)**: Wider scatter within each group increases SSE and makes it harder to detect group differences
+- **Visual $F$-test intuition**: If the bars are tall relative to the scatter, the $F$-statistic will be large and the $p$-value small. If the bars are short and the scatter is wide, the groups may not differ significantly
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-between-within"
+#| eval: false
+```
+- The dashed horizontal line marks the **grand mean** of all observations
+- **Thick vertical bars** show how far each group mean deviates from the grand mean --- this is the **between-group** variation (MSS)
+- **Scattered points** show individual deviations from their group mean --- this is the **within-group** variation (SSE)
+- The $F$-statistic asks: are the thick bars large relative to the scatter?
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch3-anova-table
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# ANOVA table
+anova(model_anova)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch3-anova-table"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Sum Sq (prep_level)**: The between-group sum of squares (MSS) --- variability in math gains attributable to differences among preparation levels
+- **Sum Sq (Residuals)**: The within-group sum of squares (SSE) --- variability among students within the same preparation level
+- **Mean Sq**: SS divided by degrees of freedom. The ratio of Mean Sq (model) to Mean Sq (residuals) gives the $F$-statistic
+- **$F$ value**: A large $F$ means the between-group variability is large relative to within-group variability, providing evidence that group means differ
+- **Pr(>F)**: If this $p$-value is below the significance level (e.g., 0.05), we reject $H_0$ that all group means are equal. Follow up with pairwise comparisons (@sec-ch3-pairwise) to identify which specific groups differ
+
+### Code Explanation
+```{r}
+#| ref.label: "ch3-anova-table"
+#| eval: false
+```
+- `anova()` produces the standard ANOVA table with SS, df, MS, $F$-statistic, and $p$-value
+- A significant $F$-test tells us that **at least one** group mean differs from the others, but it does not tell us *which* groups differ
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-variance-decomposition
+#| fig-cap: "Decomposition of total variability into between-group (MSS) and within-group (SSE) components."
+#| fig-alt: "Stacked bar chart showing the decomposition of total sum of squares into between-group (MSS) and within-group (SSE) components. The single horizontal bar is divided into two colored segments representing each source of variation, with percentage labels indicating the proportion of total variance attributable to differences between preparation-level group means versus residual variation within groups. The between-group portion corresponds to the eta-squared effect size."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+anova_tbl <- anova(model_anova)
+ss_data <- tibble(
+  Source = factor(c("Between Groups (MSS)", "Within Groups (SSE)"),
+                  levels = c("Between Groups (MSS)", "Within Groups (SSE)")),
+  SS = c(anova_tbl$`Sum Sq`[1], anova_tbl$`Sum Sq`[2])
+) |>
+  mutate(Proportion = SS / sum(SS),
+         label = paste0(round(Proportion * 100, 1), "%"))
+
+# Reorder so SSE (large) stacks first (left), MSS (small) at right end
+ss_data <- ss_data |>
+  mutate(Source = factor(Source, levels = c("Within Groups (SSE)", "Between Groups (MSS)")))
+
+ggplot(ss_data, aes(x = "Total Variance", y = SS, fill = Source)) +
+  geom_col(width = 0.5, color = "white", linewidth = 0.5) +
+  geom_text(data = filter(ss_data, Proportion > 0.05),
+            aes(label = paste0(Source, "\n", label)),
+            position = position_stack(vjust = 0.5),
+            color = "white", fontface = "bold", size = 4.5) +
+  annotate("text", x = 1.32, y = sum(ss_data$SS) * 0.99,
+           label = paste0("Between Groups (MSS)\n", ss_data$label[ss_data$Source == "Between Groups (MSS)"]),
+           color = "grey20", fontface = "bold", size = 3.5, hjust = 1) +
+  scale_fill_manual(values = c("Within Groups (SSE)" = ber640_colors["secondary"],
+                                "Between Groups (MSS)" = ber640_colors["accent"])) +
+  coord_flip() +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
+  labs(title = "ANOVA Variance Decomposition", x = NULL, y = "Sum of Squares") +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+        legend.position = "none")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-variance-decomposition"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Between Groups (MSS)**: The portion of total variance attributable to differences among preparation levels. A larger share means group membership explains more of the outcome
+- **Within Groups (SSE)**: The portion due to individual differences within groups (unexplained by the model)
+- **Percentage split**: The between-group percentage equals $\eta^2$ (eta-squared), the effect size measure. Compare to Cohen's benchmarks: 1% (small), 6% (medium), 14% (large)
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-variance-decomposition"
+#| eval: false
+```
+- `anova()` extracts the sum of squares for each source of variation
+- The stacked bar shows how the total variability is split between groups (MSS) and within groups (SSE)
+- Percentage labels show each component's share of the total --- this proportion equals $\eta^2$ for the between-group component
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-f-distribution
+#| fig-cap: "The F-distribution under the null hypothesis. Shaded region = rejection area at alpha = 0.05. Dashed line = observed F-statistic."
+#| fig-alt: "Density curve of the F-distribution under the null hypothesis, with F-values on the x-axis and probability density on the y-axis. The right tail beyond the critical value at alpha equals 0.05 is shaded to indicate the rejection region. A vertical dashed line marks the observed F-statistic from the ANOVA model. The position of the observed statistic relative to the critical value visually demonstrates whether the null hypothesis of equal group means is rejected."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+anova_tbl <- anova(model_anova)
+f_obs <- anova_tbl$`F value`[1]
+df1 <- anova_tbl$Df[1]
+df2 <- anova_tbl$Df[2]
+f_crit <- qf(0.95, df1, df2)
+
+f_df <- tibble(x = seq(0, max(f_obs * 1.3, f_crit * 1.5), length.out = 500),
+               density = df(x, df1, df2))
+
+ggplot(f_df, aes(x = x, y = density)) +
+  geom_area(data = filter(f_df, x >= f_crit),
+            fill = ber640_colors["secondary"], alpha = 0.4) +
+  geom_line(linewidth = 1, color = ber640_colors["primary"]) +
+  geom_vline(xintercept = f_obs, linetype = "dashed",
+             color = ber640_colors["accent"], linewidth = 1) +
+  annotate("text", x = f_obs, y = max(f_df$density) * 0.7,
+           label = paste0("F_obs = ", round(f_obs, 2)),
+           hjust = -0.1, color = ber640_colors["accent"], fontface = "bold") +
+  labs(title = bquote(F(.(df1)*","~.(df2))~"Distribution Under"~H[0]),
+       subtitle = expression("Shaded = rejection region at "*alpha*" = 0.05"),
+       x = "F-statistic", y = "Density")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-f-distribution"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Curve shape**: The $F$-distribution is right-skewed. Under $H_0$, most $F$-values cluster near 1 (between-group and within-group variation are similar)
+- **Shaded rejection region**: If our observed $F$ falls in the shaded area, we reject $H_0$ at the 5% significance level
+- **Observed $F$ (dashed line)**: Compare its position to the rejection region. If it falls well into the shaded area, there is strong evidence that at least one group mean differs from the others
+- The $p$-value is the area under the curve to the right of the observed $F$
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-f-distribution"
+#| eval: false
+```
+- The curve shows the $F$-distribution with the appropriate degrees of freedom under the null hypothesis (all group means equal)
+- The shaded region marks values more extreme than the critical value at $\alpha = 0.05$
+- The dashed vertical line marks the observed $F$-statistic from our ANOVA
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch3-r2
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# R-squared and model performance
+r2(model_anova)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch3-r2"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **$R^2$**: The proportion of variance in math gains explained by teacher preparation level. This equals $\eta^2$ (eta-squared) in one-way ANOVA. Use Cohen's guidelines for context: $.01$ (small), $.06$ (medium), $.14$ (large)
+- **Adjusted $R^2$**: Adjusts for the number of groups. Useful when comparing models with different numbers of predictors (see @sec-ch4)
+
+### Code Explanation
+```{r}
+#| ref.label: "ch3-r2"
+#| eval: false
+```
+- `r2()` from the `performance` package computes $R^2$ and adjusted $R^2$
+- $R^2$ in one-way ANOVA equals $\eta^2$ (eta-squared), the proportion of total variance explained by group membership
+
+
+:::
+
+
+### Interactive Exploration: Between vs. Within Variation {.unnumbered}
+
+::: {.callout-tip collapse="false"}
+## Try It: What Makes F Large?
+
+Drag the group mean sliders to separate (or collapse) the three group means, and adjust the within-group SD to see how noise affects the $F$-statistic. The $F$-ratio grows when group means spread apart (large SSB) and shrinks when within-group scatter increases (large SSW).
+:::
+
+```{ojs}
+//| echo: false
+
+import { ber640 as anova_ber640, withAlpha as anova_withAlpha,
+         themeColors as anova_themeColors, plotDefaults as anova_plotDefaults,
+         normalRandom as anova_normalRandom, seq as anova_seq,
+         formatCoef as anova_formatCoef, categorical as anova_categorical } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+
+viewof anova_mu1 = Inputs.range([-3, 3], {
+  value: 0, step: 0.1,
+  label: html`<strong>μ₁ (Group 1)</strong>`,
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+viewof anova_mu2 = Inputs.range([-3, 3], {
+  value: 0, step: 0.1,
+  label: html`<strong>μ₂ (Group 2)</strong>`,
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+viewof anova_mu3 = Inputs.range([-3, 3], {
+  value: 0, step: 0.1,
+  label: html`<strong>μ₃ (Group 3)</strong>`,
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+viewof anova_sigma_w = Inputs.range([0.5, 3], {
+  value: 1.0, step: 0.1,
+  label: html`<strong>σ<sub>w</sub> (Within-group SD)</strong>`,
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+// --- Data generation: 3 groups, n=30 each ---
+anova_n_per_group = 30
+
+anova_data = {
+  const g1 = anova_normalRandom(anova_n_per_group, anova_mu1, anova_sigma_w, 42)
+    .map((y, i) => ({ y, group: "Group 1", id: i }));
+  const g2 = anova_normalRandom(anova_n_per_group, anova_mu2, anova_sigma_w, 43)
+    .map((y, i) => ({ y, group: "Group 2", id: i }));
+  const g3 = anova_normalRandom(anova_n_per_group, anova_mu3, anova_sigma_w, 44)
+    .map((y, i) => ({ y, group: "Group 3", id: i }));
+  return g1.concat(g2).concat(g3);
+}
+```
+
+```{ojs}
+//| echo: false
+
+// --- ANOVA computations ---
+anova_stats = {
+  const groups = ["Group 1", "Group 2", "Group 3"];
+  const N = anova_data.length;
+  const k = groups.length;
+
+  // Grand mean
+  const grandMean = anova_data.reduce((s, d) => s + d.y, 0) / N;
+
+  // Group means
+  const groupMeans = {};
+  const groupData = {};
+  for (const g of groups) {
+    const vals = anova_data.filter(d => d.group === g).map(d => d.y);
+    groupMeans[g] = vals.reduce((s, v) => s + v, 0) / vals.length;
+    groupData[g] = vals;
+  }
+
+  // SSB = sum n_k * (ybar_k - ybar)^2
+  let SSB = 0;
+  for (const g of groups) {
+    const diff = groupMeans[g] - grandMean;
+    SSB += groupData[g].length * diff * diff;
+  }
+
+  // SSW = sum sum (y_ij - ybar_j)^2
+  let SSW = 0;
+  for (const g of groups) {
+    for (const v of groupData[g]) {
+      const diff = v - groupMeans[g];
+      SSW += diff * diff;
+    }
+  }
+
+  const SST = SSB + SSW;
+  const dfB = k - 1;
+  const dfW = N - k;
+  const MSB = SSB / dfB;
+  const MSW = SSW / dfW;
+  const F = MSB / MSW;
+  const etaSq = SSB / SST;
+
+  // p-value approximation using regularized incomplete beta function
+  // F ~ F(dfB, dfW)  =>  p = 1 - I_x(dfB/2, dfW/2) where x = dfB*F/(dfB*F + dfW)
+  const x = (dfB * F) / (dfB * F + dfW);
+  const pValue = 1 - regBetaI(x, dfB / 2, dfW / 2);
+
+  return {
+    grandMean, groupMeans, SSB, SSW, SST,
+    dfB, dfW, MSB, MSW, F, etaSq, pValue,
+    groups
+  };
+}
+
+// Regularized incomplete beta function (continued fraction approx)
+function regBetaI(x, a, b) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+
+  // Use the log-beta for normalization
+  const lbeta = lgamma(a) + lgamma(b) - lgamma(a + b);
+  const front = Math.exp(Math.log(x) * a + Math.log(1 - x) * b - lbeta) / a;
+
+  // Lentz's continued fraction
+  const maxIter = 200;
+  const eps = 1e-14;
+  let f = 1, c = 1, d = 0;
+
+  for (let m = 0; m <= maxIter; m++) {
+    let numerator;
+    if (m === 0) {
+      numerator = 1;
+    } else {
+      const k = m;
+      const isOdd = k % 2 === 1;
+      const m2 = Math.floor((k - 1) / 2) + (isOdd ? 0 : 0);
+      if (isOdd) {
+        const mi = Math.floor(k / 2);
+        numerator = -(a + mi) * (a + b + mi) * x /
+                     ((a + 2 * mi) * (a + 2 * mi + 1));
+      } else {
+        const mi = k / 2;
+        numerator = mi * (b - mi) * x /
+                     ((a + 2 * mi - 1) * (a + 2 * mi));
+      }
+    }
+
+    d = 1 + numerator * d;
+    if (Math.abs(d) < eps) d = eps;
+    d = 1 / d;
+    c = 1 + numerator / c;
+    if (Math.abs(c) < eps) c = eps;
+    f *= c * d;
+    if (Math.abs(c * d - 1) < eps && m > 0) break;
+  }
+
+  return front * (f - 1);
+}
+
+function lgamma(x) {
+  // Lanczos approximation
+  const g = 7;
+  const coef = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+  ];
+  if (x < 0.5) {
+    return Math.log(Math.PI / Math.sin(Math.PI * x)) - lgamma(1 - x);
+  }
+  x -= 1;
+  let a = coef[0];
+  const t = x + g + 0.5;
+  for (let i = 1; i < coef.length; i++) {
+    a += coef[i] / (x + i);
+  }
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+```
+
+```{ojs}
+//| echo: false
+
+// --- Left panel: Strip/dot plot ---
+{
+  const tc = anova_themeColors();
+  const groups = anova_stats.groups;
+  const groupColors = [anova_categorical[0], anova_categorical[1], anova_categorical[2]];
+
+  // Jitter data for strip plot
+  const jittered = anova_data.map(d => {
+    // Deterministic jitter from id
+    const jit = ((d.id * 2654435761 >>> 0) / 4294967296 - 0.5) * 0.35;
+    return { ...d, jitter: jit };
+  });
+
+  // Group mean lines
+  const meanLines = groups.flatMap((g, gi) => {
+    const m = anova_stats.groupMeans[g];
+    return [
+      { group: g, x: gi - 0.4, y: m },
+      { group: g, x: gi + 0.4, y: m }
+    ];
+  });
+
+  // Map group to numeric x for jitter
+  const groupIdx = { "Group 1": 0, "Group 2": 1, "Group 3": 2 };
+
+  return Plot.plot(anova_plotDefaults({
+    width: 380,
+    height: 400,
+    marginLeft: 50,
+    marginBottom: 50,
+    x: {
+      label: null,
+      domain: [-0.6, 2.6],
+      ticks: [0, 1, 2],
+      tickFormat: (d) => groups[d] || "",
+      grid: false
+    },
+    y: {
+      label: "Y",
+      grid: true
+    },
+    marks: [
+      // Grand mean dashed line
+      Plot.ruleY([anova_stats.grandMean], {
+        stroke: tc.muted,
+        strokeWidth: 1.5,
+        strokeDasharray: "6,4"
+      }),
+
+      // Grand mean label
+      Plot.text([{ y: anova_stats.grandMean }], {
+        x: 2.55,
+        y: "y",
+        text: d => `Grand Mean = ${anova_formatCoef(d.y, 2)}`,
+        fill: tc.muted,
+        fontSize: 10,
+        textAnchor: "end",
+        dy: -8
+      }),
+
+      // Data points (jittered)
+      Plot.dot(jittered, {
+        x: d => groupIdx[d.group] + d.jitter,
+        y: "y",
+        fill: d => groupColors[groupIdx[d.group]],
+        opacity: 0.45,
+        r: 3
+      }),
+
+      // Group mean horizontal lines
+      Plot.line(meanLines, {
+        x: "x",
+        y: "y",
+        z: "group",
+        stroke: d => groupColors[groupIdx[d.group]],
+        strokeWidth: 3
+      }),
+
+      // Group mean labels
+      Plot.text(groups.map((g, i) => ({
+        x: i, y: anova_stats.groupMeans[g], label: `${anova_formatCoef(anova_stats.groupMeans[g], 2)}`
+      })), {
+        x: "x",
+        y: "y",
+        text: "label",
+        fill: tc.text,
+        fontSize: 11,
+        fontWeight: 700,
+        dy: -14
+      })
+    ]
+  }));
+}
+```
+
+```{ojs}
+//| echo: false
+
+// --- Right panel: Stacked bar (SSB / SSW) + F annotation ---
+{
+  const tc = anova_themeColors();
+  const { SSB, SSW, SST, F, etaSq, pValue } = anova_stats;
+
+  const barData = [
+    { source: "SSB (Between)", value: SSB, order: 1 },
+    { source: "SSW (Within)",  value: SSW, order: 0 }
+  ];
+
+  const fColor = F < 3 ? anova_ber640.success
+               : F < 6 ? anova_ber640.warning
+               : anova_ber640.secondary;
+
+  const pStr = pValue < 0.001 ? "< .001" : pValue.toFixed(3);
+
+  return Plot.plot(anova_plotDefaults({
+    width: 320,
+    height: 400,
+    marginLeft: 50,
+    marginBottom: 50,
+    marginRight: 20,
+    x: {
+      label: null,
+      domain: ["Variance"],
+      grid: false,
+      ticks: []
+    },
+    y: {
+      label: "Sum of Squares",
+      grid: true,
+      domain: [0, SST * 1.15]
+    },
+    color: {
+      domain: ["SSB (Between)", "SSW (Within)"],
+      range: [anova_ber640.accent, anova_ber640.secondary],
+      legend: true
+    },
+    marks: [
+      // Stacked bar
+      Plot.barY(barData, {
+        x: () => "Variance",
+        y: "value",
+        fill: "source",
+        order: "order",
+        stroke: "white",
+        strokeWidth: 1
+      }),
+
+      // SSW label
+      Plot.text([{ y: SSW / 2 }], {
+        x: () => "Variance",
+        y: "y",
+        text: () => `SSW = ${anova_formatCoef(SSW, 1)}\n(${anova_formatCoef(SSW / SST * 100, 1)}%)`,
+        fill: "white",
+        fontSize: 12,
+        fontWeight: 700
+      }),
+
+      // SSB label
+      Plot.text([{ y: SSW + SSB / 2 }], {
+        x: () => "Variance",
+        y: "y",
+        text: () => `SSB = ${anova_formatCoef(SSB, 1)}\n(${anova_formatCoef(SSB / SST * 100, 1)}%)`,
+        fill: "white",
+        fontSize: 12,
+        fontWeight: 700
+      }),
+
+      // F-statistic annotation at top
+      Plot.text([{ y: SST * 1.08 }], {
+        x: () => "Variance",
+        y: "y",
+        text: () => `F = ${anova_formatCoef(F, 2)}  (p ${pStr})`,
+        fill: fColor,
+        fontSize: 13,
+        fontWeight: 700
+      })
+    ]
+  }));
+}
+```
+
+```{ojs}
+//| echo: false
+
+// --- Readout cards ---
+{
+  const tc = anova_themeColors();
+  const { SSB, SSW, SST, F, etaSq, MSB, MSW, pValue,
+          groupMeans, dfB, dfW } = anova_stats;
+
+  const fColor = F < 3 ? anova_ber640.success
+               : F < 6 ? anova_ber640.warning
+               : anova_ber640.secondary;
+
+  const fClass = F < 3 ? "ojs-readout-good"
+               : F < 6 ? "ojs-readout-warning"
+               : "ojs-readout-bad";
+
+  const pStr = pValue < 0.001 ? "< .001" : pValue.toFixed(3);
+
+  const etaLabel = etaSq < 0.01 ? "negligible"
+                 : etaSq < 0.06 ? "small"
+                 : etaSq < 0.14 ? "medium"
+                 : "large";
+
+  return html`<div style="
+    display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;
+    margin-top: 0.5rem;
+  ">
+    <span class="ojs-readout">
+      <span class="ojs-readout-label">SSB</span>
+      <span class="ojs-readout-value" style="color:${anova_ber640.accent}">${anova_formatCoef(SSB, 2)}</span>
+    </span>
+    <span class="ojs-readout">
+      <span class="ojs-readout-label">SSW</span>
+      <span class="ojs-readout-value" style="color:${anova_ber640.secondary}">${anova_formatCoef(SSW, 2)}</span>
+    </span>
+    <span class="ojs-readout">
+      <span class="ojs-readout-label">SST</span>
+      <span class="ojs-readout-value">${anova_formatCoef(SST, 2)}</span>
+    </span>
+    <span class="ojs-readout ${fClass}">
+      <span class="ojs-readout-label">F(${dfB}, ${dfW})</span>
+      <span class="ojs-readout-value">${anova_formatCoef(F, 2)}</span>
+    </span>
+    <span class="ojs-readout">
+      <span class="ojs-readout-label">p-value</span>
+      <span class="ojs-readout-value" style="color:${fColor}">${pStr}</span>
+    </span>
+    <span class="ojs-readout ojs-readout-info">
+      <span class="ojs-readout-label">η²</span>
+      <span class="ojs-readout-value">${anova_formatCoef(etaSq, 3)} (${etaLabel})</span>
+    </span>
+  </div>
+  <div style="
+    display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;
+    margin-top: 0.4rem;
+  ">
+    <span class="ojs-readout">
+      <span class="ojs-readout-label">ȳ₁</span>
+      <span class="ojs-readout-value" style="color:${anova_categorical[0]}">${anova_formatCoef(groupMeans["Group 1"], 2)}</span>
+    </span>
+    <span class="ojs-readout">
+      <span class="ojs-readout-label">ȳ₂</span>
+      <span class="ojs-readout-value" style="color:${anova_categorical[1]}">${anova_formatCoef(groupMeans["Group 2"], 2)}</span>
+    </span>
+    <span class="ojs-readout">
+      <span class="ojs-readout-label">ȳ₃</span>
+      <span class="ojs-readout-value" style="color:${anova_categorical[2]}">${anova_formatCoef(groupMeans["Group 3"], 2)}</span>
+    </span>
+    <span class="ojs-readout">
+      <span class="ojs-readout-label">MSB</span>
+      <span class="ojs-readout-value">${anova_formatCoef(MSB, 2)}</span>
+    </span>
+    <span class="ojs-readout">
+      <span class="ojs-readout-label">MSW</span>
+      <span class="ojs-readout-value">${anova_formatCoef(MSW, 2)}</span>
+    </span>
+  </div>`;
+}
+```
+
+
+## Checking ANOVA Assumptions {#sec-ch3-assumptions}
+
+Three key assumptions underlie the ANOVA $F$-test:
+
+1. **Independence**: Observations are independent (addressed by study design)
+2. **Normality**: Residuals within each group are approximately normal
+3. **Homogeneity of variance**: All groups have equal population variances ($\sigma^2_1 = \sigma^2_2 = \cdots$)
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-assumptions
+#| fig-cap: "Diagnostic plots for the ANOVA model: normality of residuals (Q-Q plot) and homogeneity of variance."
+#| fig-alt: "Multi-panel diagnostic figure produced by the performance package for the ANOVA model. The top panel is a quantile-quantile (Q-Q) plot comparing standardized residuals on the y-axis to theoretical normal quantiles on the x-axis, assessing the normality assumption. The bottom panel displays residual spread across fitted values or groups to assess homogeneity of variance. Deviations from the reference line in the Q-Q plot or unequal spread across groups indicate potential assumption violations."
+#| fig-height: 8
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+check_model(model_anova, check = c("normality", "homogeneity"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-assumptions"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Q-Q plot (normality)**: If the points closely follow the reference line, the normality assumption is reasonable. Systematic deviations at the tails indicate skewness or heavy tails
+- **Homogeneity plot**: Look for roughly equal vertical spread across the fitted values (group means). A funnel shape (wider spread for some groups) suggests unequal variances
+- These are informal visual checks --- use Levene's test below for a formal test of equal variances
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-assumptions"
+#| eval: false
+```
+- `check_model()` from the `performance` package produces visual diagnostics for regression/ANOVA models
+- `check = c("normality", "homogeneity")` selects two key diagnostic plots:
+  - **Normality**: A Q-Q plot of residuals; points should fall along the diagonal line
+  - **Homogeneity**: A plot of residuals vs. fitted values; spread should be roughly equal across groups
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch3-levene
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Formal test for equal variances (Levene's test)
+car::leveneTest(mathgain ~ prep_level, data = instruction)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch3-levene"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **$F$ value**: The test statistic for the equality of variances across groups
+- **Pr(>F)**: If this $p$-value is below 0.05, we reject the null of equal variances
+- A non-significant result means we do **not** have evidence of unequal variances (the assumption is reasonable)
+- A significant result suggests the ANOVA $F$-test may be unreliable, especially if group sizes differ substantially
+
+### Code Explanation
+```{r}
+#| ref.label: "ch3-levene"
+#| eval: false
+```
+- `car::leveneTest()` performs Levene's test for homogeneity of variance
+- The null hypothesis is that all groups have equal population variances
+- Levene's test is robust to non-normality because it uses deviations from the group medians (by default)
+
+
+:::
+
+::: {.callout-tip}
+## Robustness of the F-test
+The $F$-test is fairly robust to mild violations of normality, especially with large samples (Central Limit Theorem). However, it is **sensitive to unequal variances** when group sizes differ substantially. If Levene's test is significant, consider Welch's ANOVA:
+
+`oneway.test(mathgain ~ prep_level, data = instruction, var.equal = FALSE)`
+:::
+
+
+## Pairwise Comparisons and Multiple Testing {#sec-ch3-pairwise}
+
+### The Multiple Testing Problem
+
+If the overall $F$-test is significant, we want to know *which* groups differ. With 3 groups, there are $\binom{3}{2} = 3$ pairwise comparisons. With more groups, the number of tests grows quickly, and the probability of at least one false positive (Type I error) inflates:
+
+| Groups | Pairwise tests | $P(\text{at least 1 false positive})$ |
+|:-------|:---------------|:--------------------------------------|
+| 3 | 3 | 0.14 |
+| 6 | 15 | 0.54 |
+| 11 | 55 | 0.94 |
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-multiple-testing
+#| fig-cap: "Family-wise Type I error rate as the number of groups increases. Without correction (red), the probability of at least one false positive approaches 1."
+#| fig-alt: "Line plot with the number of groups on the x-axis and the family-wise error rate (FWER) on the y-axis. Two lines are shown: one for the uncorrected rate, which rises steeply toward 1.0 as the number of pairwise comparisons grows, and one for the Bonferroni-corrected rate, which remains close to the nominal alpha level of 0.05. The plot demonstrates that without multiple-testing correction, the probability of at least one false positive becomes nearly certain with many groups."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+k_groups <- 2:15
+n_tests <- choose(k_groups, 2)
+fwer_none <- 1 - (1 - 0.05)^n_tests
+fwer_bonf <- pmin(1, 1 - (1 - 0.05 / n_tests)^n_tests)
+
+mt_df <- tibble(
+  Groups = rep(k_groups, 2),
+  FWER = c(fwer_none, fwer_bonf),
+  Method = rep(c("No Correction", "Bonferroni"), each = length(k_groups))
+)
+
+ggplot(mt_df, aes(x = Groups, y = FWER, color = Method)) +
+  geom_line(linewidth = 1) + geom_point(size = 2) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "grey50") +
+  annotate("text", x = 14, y = 0.08, label = "α = 0.05", color = "grey50") +
+  scale_color_manual(values = c("No Correction" = unname(ber640_colors["secondary"]),
+                                "Bonferroni" = unname(ber640_colors["accent"]))) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  labs(title = "The Multiple Testing Problem",
+       subtitle = "Family-wise error rate by number of groups",
+       x = "Number of Groups", y = "P(At Least One False Positive)")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-multiple-testing"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Red line (No Correction)**: The family-wise error rate rises sharply as the number of groups increases. With just 6 groups (15 pairwise tests), the chance of at least one false positive exceeds 50%
+- **Blue line (Bonferroni)**: The Bonferroni correction keeps the family-wise error rate near or below 0.05, regardless of how many groups are compared
+- **Takeaway**: Without correction, conducting many pairwise tests is virtually guaranteed to produce false positives. This is why post-hoc correction methods are essential in exploratory analyses
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-multiple-testing"
+#| eval: false
+```
+- `choose(k_groups, 2)` computes the number of pairwise comparisons for each group count
+- `fwer_none`: the probability of at least one false positive without any correction, using $1 - (1 - \alpha)^m$ where $m$ is the number of tests
+- `fwer_bonf`: the family-wise error rate when Bonferroni correction is applied ($\alpha / m$ per test)
+- The dashed line at 0.05 marks the nominal significance level
+
+
+:::
+
+### Correcting for Multiple Comparisons
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch3-pairwise
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# All pairwise comparisons using marginaleffects
+avg_comparisons(model_anova,
+  variables = list(prep_level = "pairwise")
+)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch3-pairwise"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Contrast**: Identifies which two groups are being compared (e.g., Medium − Low, High − Low, High − Medium)
+- **Estimate**: The estimated difference in mean math gain between the two groups. Positive values mean the first-listed group has a higher mean
+- **Std. Error**: The precision of the estimated difference. Larger groups yield more precise estimates
+- **$p$-value**: Tests whether the difference is statistically significant. With three pairwise comparisons, consider applying a Bonferroni correction (multiply $p$ by 3) or using Tukey's method for proper family-wise error control
+- **95% CI**: If the interval excludes zero, the difference is significant at the 5% level
+
+### Code Explanation
+```{r}
+#| ref.label: "ch3-pairwise"
+#| eval: false
+```
+- `avg_comparisons()` with `variables = list(prep_level = "pairwise")` computes all pairwise group differences
+- Each row shows: which groups are compared, the estimated difference, its standard error, and the $p$-value
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch3-group-predictions
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Predicted means by group with CIs
+avg_predictions(model_anova, by = "prep_level")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch3-group-predictions"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Estimate**: The predicted mean math gain for each preparation level. In one-way ANOVA (no covariates), these exactly equal the sample group means
+- **Std. Error**: Reflects the precision of the mean estimate for each group. Groups with more students have smaller standard errors
+- **95% CI**: The interval estimate for each group's true population mean. Non-overlapping CIs between groups suggest significant differences, though the formal test is the pairwise comparison above
+- If covariates were added (making this an ANCOVA, as in @sec-ch2), these would become "adjusted" means
+
+### Code Explanation
+```{r}
+#| ref.label: "ch3-group-predictions"
+#| eval: false
+```
+- `avg_predictions()` computes the model-predicted mean for each group with 95% confidence intervals
+- These means are identical to the raw group means (in one-way ANOVA without covariates)
+
+
+:::
+
+### Visualizing Group Differences
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-means
+#| fig-cap: "Estimated group means with 95% confidence intervals. Non-overlapping intervals suggest significant differences between groups."
+#| fig-alt: "Point-and-range plot showing predicted math gain scores on the y-axis for each teacher preparation level on the x-axis. Each group is represented by a point estimate of the mean with vertical error bars spanning the 95 percent confidence interval. The plot allows visual comparison of group means, where non-overlapping confidence intervals suggest statistically significant differences between preparation levels."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+plot_predictions(model_anova, condition = "prep_level") +
+  scale_color_manual(values = unname(ber640_colors[c("primary", "accent", "success")])) +
+  labs(
+    title = "Predicted Math Gains by Preparation Level",
+    x = "Teacher Preparation Level",
+    y = "Predicted Math Gain"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-means"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Point estimates**: The predicted mean math gain for each preparation level, shown as colored dots
+- **Error bars**: 95% confidence intervals for each group mean. Wider intervals indicate less precision (smaller groups)
+- **Overlap**: While overlapping CIs do **not** necessarily mean groups are not significantly different (see the pairwise comparison panel below), non-overlapping CIs strongly suggest significant differences
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-means"
+#| eval: false
+```
+- `plot_predictions()` visualizes the group means with confidence intervals
+- Groups whose confidence intervals do not overlap are likely significantly different
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-ci-significance
+#| fig-cap: "Left: Group means with 95% CIs. Right: Pairwise differences with 95% CIs — a difference CI excluding zero indicates significance, even if group CIs overlap."
+#| fig-alt: "Two-panel figure comparing group means and pairwise differences. The left panel displays point estimates with 95 percent confidence intervals for each preparation-level group mean on the y-axis. The right panel shows pairwise mean differences with 95 percent confidence intervals, where intervals that do not cross zero indicate statistically significant differences. Together the panels illustrate that overlapping group-level confidence intervals do not necessarily imply non-significant pairwise comparisons."
+#| fig-width: 10
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+p_means <- plot_predictions(model_anova, condition = "prep_level", draw = FALSE) |>
+  ggplot(aes(x = prep_level, y = estimate, color = prep_level)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high), size = 1, linewidth = 1) +
+  scale_color_manual(values = unname(ber640_colors[c("primary", "accent", "success")])) +
+  labs(title = "A: Group Means ± 95% CI", x = "Preparation Level", y = "Math Gain") +
+  guides(color = "none")
+
+comp_data <- avg_comparisons(model_anova,
+  variables = list(prep_level = "pairwise")) |>
+  as.data.frame()
+
+p_diffs <- ggplot(comp_data, aes(x = estimate, y = contrast)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high),
+                  color = ber640_colors["accent"], size = 1, linewidth = 1) +
+  labs(title = "B: Pairwise Differences ± 95% CI", x = "Difference in Math Gain", y = NULL)
+
+p_means + p_diffs + plot_layout(widths = c(1, 1.2))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-ci-significance"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Panel A (Group Means)**: Each point is a group mean; error bars show 95% CIs. Overlapping CIs do **not** guarantee non-significance --- two groups can have overlapping CIs yet still differ significantly
+- **Panel B (Pairwise Differences)**: Each point is the estimated difference between two groups. If the CI excludes the dashed zero line, that pairwise difference is statistically significant at the 5% level
+- **Key insight**: Always rely on Panel B (pairwise difference CIs) rather than Panel A (overlapping group CIs) when assessing significance. CIs for means and CIs for differences are not interchangeable
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-ci-significance"
+#| eval: false
+```
+- **Panel A**: `plot_predictions(..., draw = FALSE)` extracts predictions as a data frame, then plots group means with 95% CIs using `geom_pointrange()`
+- **Panel B**: `avg_comparisons()` computes all pairwise differences, and `geom_pointrange()` displays them horizontally with a vertical dashed line at zero
+- `patchwork` (`+` operator) combines the two panels side by side
+
+
+:::
+
+### Interactive Exploration: Multiple Comparisons {.unnumbered}
+
+::: {.callout-tip collapse="false"}
+## Try It: The Multiple Testing Problem
+
+When comparing multiple groups, each pairwise test carries a 5% false positive risk. As the number of comparisons grows, the probability that *at least one* test falsely rejects H₀ increases dramatically. Run simulations to see how correction methods like Bonferroni and Holm control this family-wise error rate.
+:::
+
+```{ojs}
+//| echo: false
+import { ber640 as mc_ber640, withAlpha as mc_withAlpha,
+         themeColors as mc_themeColors, plotDefaults as mc_plotDefaults,
+         normalRandom as mc_normalRandom, formatCoef as mc_formatCoef } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+viewof mc_nGroups = Inputs.select([3, 4, 5, 6, 8, 10], {value: 5, label: "Number of groups (k)"})
+
+viewof mc_method = Inputs.radio(["None", "Bonferroni", "Holm"], {value: "None", label: "Correction method"})
+
+viewof mc_run = Inputs.button("Run 100 Simulations")
+```
+
+```{ojs}
+//| echo: false
+mc_nPerGroup = 20
+mc_alpha = 0.05
+mc_nSims = 100
+mc_nComparisons = mc_nGroups * (mc_nGroups - 1) / 2
+mc_expectedRate = 1 - Math.pow(1 - mc_alpha, mc_nComparisons)
+
+// Simple seeded PRNG (mulberry32)
+function mc_mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
+function mc_normalSample(rng) {
+  const u1 = rng();
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+function mc_generateGroup(n, rng) {
+  const data = [];
+  for (let i = 0; i < n; i++) data.push(mc_normalSample(rng));
+  return data;
+}
+
+function mc_mean(arr) {
+  let s = 0;
+  for (let i = 0; i < arr.length; i++) s += arr[i];
+  return s / arr.length;
+}
+
+function mc_variance(arr, m) {
+  let s = 0;
+  for (let i = 0; i < arr.length; i++) s += (arr[i] - m) * (arr[i] - m);
+  return s / (arr.length - 1);
+}
+
+function mc_tTestPValue(g1, g2) {
+  const m1 = mc_mean(g1), m2 = mc_mean(g2);
+  const v1 = mc_variance(g1, m1), v2 = mc_variance(g2, m2);
+  const n1 = g1.length, n2 = g2.length;
+  const sp2 = ((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2);
+  const se = Math.sqrt(sp2 * (1 / n1 + 1 / n2));
+  if (se < 1e-12) return 1;
+  const t = Math.abs(m1 - m2) / se;
+  return 2 * mc_normalSurvival(t);
+}
+
+function mc_normalSurvival(x) {
+  if (x < 0) return 1 - mc_normalSurvival(-x);
+  const b0 = 0.2316419;
+  const b1 = 0.319381530, b2 = -0.356563782, b3 = 1.781477937;
+  const b4 = -1.821255978, b5 = 1.330274429;
+  const t = 1 / (1 + b0 * x);
+  const phi = Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI);
+  return phi * t * (b1 + t * (b2 + t * (b3 + t * (b4 + t * b5))));
+}
+
+function mc_bonferroniAdjust(pvals, nComp) {
+  return pvals.map(p => Math.min(p * nComp, 1));
+}
+
+function mc_holmAdjust(pvals) {
+  const n = pvals.length;
+  const indexed = pvals.map((p, i) => ({p, i}));
+  indexed.sort((a, b) => a.p - b.p);
+  const adjusted = new Array(n);
+  let cumMax = 0;
+  for (let j = 0; j < n; j++) {
+    const adj = indexed[j].p * (n - j);
+    cumMax = Math.max(cumMax, adj);
+    adjusted[indexed[j].i] = Math.min(cumMax, 1);
+  }
+  return adjusted;
+}
+```
+
+```{ojs}
+//| echo: false
+mc_simResults = {
+  mc_run;  // depend on button clicks for reactivity
+
+  const k = mc_nGroups;
+  const n = mc_nPerGroup;
+  const method = mc_method;
+  const baseSeed = Date.now();
+
+  let falsePositiveCount = 0;
+  const simDetails = [];
+
+  for (let sim = 0; sim < mc_nSims; sim++) {
+    const rng = mc_mulberry32(baseSeed + sim * 1000);
+    const groups = [];
+    for (let g = 0; g < k; g++) groups.push(mc_generateGroup(n, rng));
+
+    const pvals = [];
+    for (let i = 0; i < k - 1; i++) {
+      for (let j = i + 1; j < k; j++) {
+        pvals.push(mc_tTestPValue(groups[i], groups[j]));
+      }
+    }
+
+    let adjustedP;
+    if (method === "Bonferroni") adjustedP = mc_bonferroniAdjust(pvals, pvals.length);
+    else if (method === "Holm") adjustedP = mc_holmAdjust(pvals);
+    else adjustedP = pvals.slice();
+
+    const anySignificant = adjustedP.some(p => p < mc_alpha);
+    if (anySignificant) falsePositiveCount++;
+    simDetails.push({ sim: sim + 1, anyFalse: anySignificant });
+  }
+
+  return { falsePositiveCount, observedRate: falsePositiveCount / mc_nSims, simDetails };
+}
+
+mc_correctedAlpha = {
+  if (mc_method === "Bonferroni") return mc_alpha / mc_nComparisons;
+  if (mc_method === "Holm") return mc_alpha / mc_nComparisons;
+  return mc_alpha;
+}
+```
+
+```{ojs}
+//| echo: false
+mc_colors = mc_themeColors()
+
+mc_cards = {
+  const rate = mc_simResults.observedRate;
+  const expected = mc_expectedRate;
+
+  const cardStyle = `
+    display: inline-flex; flex-direction: column; align-items: center;
+    padding: 14px 20px; border-radius: 8px; min-width: 150px;
+    background: ${mc_colors.bg}; border: 1px solid ${mc_colors.muted};
+  `;
+  const labelStyle = `font-size: 0.78rem; color: ${mc_colors.muted}; margin-bottom: 4px; text-align: center;`;
+  const valueStyle = `font-size: 1.35rem; font-weight: 700;`;
+
+  return html`<div style="display: flex; flex-wrap: wrap; gap: 14px; margin: 16px 0; color: ${mc_colors.text};">
+    <div style="${cardStyle}">
+      <div style="${labelStyle}">Pairwise Comparisons (C)</div>
+      <div style="${valueStyle} color: ${mc_ber640.info};">${mc_nComparisons}</div>
+    </div>
+    <div style="${cardStyle}">
+      <div style="${labelStyle}">Observed FWER</div>
+      <div style="${valueStyle} color: ${rate > 0.05 ? mc_ber640.warning : mc_ber640.success};">
+        ${(rate * 100).toFixed(0)}%</div>
+    </div>
+    <div style="${cardStyle}">
+      <div style="${labelStyle}">Expected (uncorrected)</div>
+      <div style="${valueStyle} color: ${mc_ber640.warning};">
+        ${(expected * 100).toFixed(1)}%</div>
+    </div>
+    <div style="${cardStyle}">
+      <div style="${labelStyle}">Effective α (${mc_method})</div>
+      <div style="${valueStyle} color: ${mc_ber640.primary};">
+        ${mc_method === "None" ? "0.050" : mc_formatCoef(mc_correctedAlpha, 4)}</div>
+    </div>
+  </div>`;
+}
+```
+
+```{ojs}
+//| echo: false
+mc_barData = {
+  const items = [
+    { category: "Observed FWER", rate: mc_simResults.observedRate, type: "observed" },
+    { category: "Nominal α", rate: mc_alpha, type: "nominal" }
+  ];
+  if (mc_method === "None") {
+    items.push({ category: "Expected (uncorrected)", rate: mc_expectedRate, type: "expected" });
+  }
+  return items;
+}
+
+Plot.plot(mc_plotDefaults({
+  title: `Family-Wise Error Rate: k = ${mc_nGroups} groups, ${mc_nComparisons} comparisons (${mc_method})`,
+  width: 640,
+  height: 300,
+  marginLeft: 170,
+  marginRight: 30,
+  marginTop: 40,
+  marginBottom: 40,
+  x: { domain: [0, 1], label: "Error Rate", tickFormat: ".0%" },
+  y: { domain: mc_barData.map(d => d.category), label: null, padding: 0.35 },
+  color: {
+    domain: ["observed", "nominal", "expected"],
+    range: [mc_ber640.primary, mc_ber640.accent, mc_withAlpha(mc_ber640.warning, 0.7)]
+  },
+  marks: [
+    Plot.barX(mc_barData, { x: "rate", y: "category", fill: "type", rx: 4 }),
+    Plot.textX(mc_barData, {
+      x: "rate", y: "category",
+      text: d => (d.rate * 100).toFixed(1) + "%",
+      dx: 6, fill: mc_colors.text, fontSize: 13, fontWeight: 600, textAnchor: "start"
+    }),
+    Plot.ruleX([mc_alpha], { stroke: mc_ber640.accent, strokeWidth: 2, strokeDasharray: "6,4" })
+  ]
+}))
+```
+
+```{ojs}
+//| echo: false
+mc_simPlotData = mc_simResults.simDetails.map(d => ({
+  sim: d.sim,
+  result: d.anyFalse ? "False Positive" : "Correct"
+}))
+
+Plot.plot(mc_plotDefaults({
+  title: "Each Column = One Simulation under H₀",
+  width: 640,
+  height: 160,
+  marginLeft: 110,
+  marginBottom: 35,
+  marginTop: 35,
+  x: { label: null, domain: Array.from({length: mc_nSims}, (_, i) => i + 1), axis: null },
+  y: { label: null, domain: ["Correct", "False Positive"], padding: 0.3 },
+  marks: [
+    Plot.cell(mc_simPlotData, {
+      x: "sim", y: "result",
+      fill: d => d.result === "False Positive" ? mc_ber640.warning : mc_withAlpha(mc_ber640.success, 0.3),
+      rx: 1, inset: 0.5
+    })
+  ]
+}))
+```
+
+```{ojs}
+//| echo: false
+mc_formulaNote = {
+  return html`<div style="
+    margin-top: 8px; padding: 12px 16px; border-radius: 6px;
+    background: ${mc_withAlpha(mc_ber640.info, 0.08)};
+    border-left: 3px solid ${mc_ber640.info};
+    font-size: 0.85rem; color: ${mc_colors.text}; line-height: 1.5;
+  ">
+    <strong>How it works:</strong> With <em>k</em> = ${mc_nGroups} groups there are
+    <em>C</em> = ${mc_nGroups}(${mc_nGroups}−1)/2 = <strong>${mc_nComparisons}</strong> pairwise comparisons.
+    Under H₀ with no correction, the probability of at least one false positive is
+    1 − (1 − 0.05)<sup>${mc_nComparisons}</sup> = <strong>${(mc_expectedRate * 100).toFixed(1)}%</strong>.
+    ${mc_method !== "None"
+      ? `<strong>${mc_method}</strong> correction reduces the effective per-comparison α to ${mc_formatCoef(mc_correctedAlpha, 4)}, controlling the family-wise rate near 5%.`
+      : `Try <strong>Bonferroni</strong> or <strong>Holm</strong> correction to see how the family-wise error rate is controlled.`}
+  </div>`;
+}
+```
+
+::: {.callout-note}
+## Exploratory vs Confirmatory Approaches
+| Approach | When to use | Multiple testing? |
+|:---------|:-----------|:-----------------|
+| **Exploratory** | No specific hypotheses about groups | Yes --- use Bonferroni, Tukey, or Scheffé |
+| **Confirmatory** | Planned comparisons based on theory | No correction needed for a small number of planned tests |
+
+When you have specific hypotheses before looking at the data (e.g., "new methods will outperform the standard"), use planned comparisons. When the comparisons are suggested by the data, use post-hoc corrections.
+:::
+
+
+## Effect Size Measures {#sec-ch3-effect-size}
+
+Statistical significance depends on sample size --- with a large enough sample, even trivial differences become "significant." Effect size measures provide a standardized way to assess practical importance.
+
+### Eta-squared ($\eta^2$)
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch3-effect-size
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Eta-squared and partial eta-squared
+effectsize::eta_squared(model_anova)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch3-effect-size"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **$\eta^2$**: The proportion of total variance in math gains explained by teacher preparation level. Use Cohen's benchmarks to gauge practical significance: small (.01), medium (.06), large (.14)
+- **90% CI**: The confidence interval for $\eta^2$. Effect sizes are inherently positive, so a 90% CI is conventional (corresponding to a one-sided test). If the lower bound is near zero, the effect may not be practically meaningful despite statistical significance
+- Unlike $p$-values, effect sizes do not depend on sample size, making them essential for judging practical importance in education research
+
+### Code Explanation
+```{r}
+#| ref.label: "ch3-effect-size"
+#| eval: false
+```
+- `effectsize::eta_squared()` computes eta-squared and its confidence interval from the ANOVA model
+- $\eta^2 = \text{MSS} / \text{TSS}$ is the proportion of variance explained by group membership (equals $R^2$ in one-way ANOVA)
+- **Cohen's guidelines**: $\eta^2 = .01$ (small), $.06$ (medium), $.14$ (large)
+
+
+:::
+
+::: {.callout-tip}
+## $\eta^2$ vs $R^2$
+In one-way ANOVA, $\eta^2 = R^2$ exactly. In factorial ANOVA or ANCOVA, **partial** $\eta^2$ is more commonly reported, which measures the proportion of variance explained by a factor *after removing* the variance explained by other factors.
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch3-effect-guide
+#| fig-cap: "Effect size benchmarks for eta-squared (Cohen, 1988). The diamond marks the observed effect from the ANOVA model."
+#| fig-alt: "Horizontal bar chart displaying Cohen's conventional benchmarks for eta-squared effect sizes, with regions labeled Negligible (0 to 0.01), Small (0.01 to 0.06), Medium (0.06 to 0.14), and Large (0.14 and above) along the x-axis. A diamond marker indicates the observed eta-squared value from the ANOVA model, allowing readers to judge the practical significance of the group differences relative to established benchmarks."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+eta_val <- effectsize::eta_squared(model_anova)$Eta2[1]
+
+bench_df <- tibble(
+  xmin = c(0, 0.01, 0.06, 0.14),
+  xmax = c(0.01, 0.06, 0.14, 0.25),
+  label = c("Negligible", "Small", "Medium", "Large"),
+  fill = c("grey85", ber640_colors["warning"], ber640_colors["accent"], ber640_colors["success"])
+)
+
+ggplot(bench_df) +
+  geom_rect(aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = 1, fill = fill),
+            color = "white", linewidth = 0.5) +
+  geom_text(aes(x = (xmin + xmax) / 2, y = 0.5, label = label),
+            fontface = "bold", size = 4.5) +
+  geom_point(data = tibble(x = eta_val, y = 0.5), aes(x = x, y = y),
+             shape = 18, size = 6, color = ber640_colors["secondary"]) +
+  annotate("text", x = eta_val, y = 0.15,
+           label = paste0("η² = ", round(eta_val, 3)),
+           fontface = "bold", color = ber640_colors["secondary"]) +
+  scale_fill_identity() +
+  scale_x_continuous(breaks = c(0, 0.01, 0.06, 0.14, 0.25)) +
+  coord_cartesian(xlim = c(0, 0.25)) +
+  labs(title = "Effect Size Benchmarks: Eta-Squared", x = expression(η^2), y = NULL) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), panel.grid = element_blank())
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch3-effect-guide"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Benchmark bands**: The colored regions represent Cohen's (1988) conventional thresholds for $\eta^2$: Negligible (< .01), Small (.01--.06), Medium (.06--.14), Large (> .14)
+- **Diamond marker**: Shows where the observed $\eta^2$ from the ANOVA model falls. This provides immediate visual context for whether the effect is practically meaningful
+- **Interpretation**: A small $\eta^2$ means preparation level explains only a small fraction of the variance in math gains; most variation is within groups. A large $\eta^2$ means group membership is a strong predictor
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch3-effect-guide"
+#| eval: false
+```
+- `effectsize::eta_squared()` extracts the observed $\eta^2$ from the model to place the diamond marker
+- `geom_rect()` draws colored bands for each benchmark category (Negligible, Small, Medium, Large) based on Cohen's (1988) guidelines
+- `geom_point(shape = 18)` plots a diamond at the observed effect size so you can see where your result falls relative to the benchmarks
+- `scale_fill_identity()` uses the `ber640_colors` palette directly for each band
+
+
+:::
+
+::: {.callout-note}
+## Interpreting Effect Sizes in Education Research
+Cohen's benchmarks are generic guidelines. In education contexts:
+
+- **Small effects** ($d \approx 0.2$, $\eta^2 \approx .01$) are common for instructional interventions and can be meaningful if the intervention is low-cost or scalable
+- **Medium effects** ($d \approx 0.5$, $\eta^2 \approx .06$) are typical for well-designed, targeted programs
+- **Large effects** ($d \approx 0.8$, $\eta^2 \approx .14$) are rare for classroom-level interventions
+
+To convert a pairwise ANOVA comparison to Cohen's $d$:
+$$d = \frac{\bar{y}_j - \bar{y}_k}{\sqrt{MSE}}$$
+where $\sqrt{MSE}$ is the pooled within-group SD from the ANOVA table.
+:::
+
+
+## Summary and Key Takeaways {#sec-ch3-summary}
+
+::: {.callout-important}
+## Key Takeaways
+
+1. **ANOVA is regression** with dummy variables. A factor with $k + 1$ levels requires $k$ dummies.
+2. The **intercept** is the reference group mean; each **dummy coefficient** is the difference between that group and the reference group
+3. The **$F$-test** tests whether *any* group means differ ($H_0$: all means are equal)
+4. **Post-hoc pairwise comparisons** require correction for multiple testing (e.g., Tukey, Bonferroni) when the comparisons are exploratory
+5. **Planned comparisons** based on theory do not require correction and should not be preceded by the overall $F$-test
+6. **Effect sizes** ($\eta^2$, Cohen's $d$) complement $p$-values by quantifying practical importance
+7. The progression: $t$-test (2 groups) $\rightarrow$ one-way ANOVA (3+ groups) $\rightarrow$ ANCOVA (groups + covariates) --- all are special cases of the general linear model
+:::
+
+
+## Exercises {#sec-ch3-exercises}
+
+::: {.callout-caution collapse="true"}
+## Exercise 3.1: Reference Group Selection
+Refit the ANOVA model using "High" as the reference group. How do the coefficients change? Does $R^2$ change?
+
+**Hint**: Use `relevel(prep_level, ref = "High")` to change the reference group.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 3.2: Post-hoc Comparisons
+Which specific pairwise comparisons are statistically significant at the 5% level? Which correction method did you use, and why?
+
+**Hint**: Use `avg_comparisons(model_anova, variables = list(prep_level = "pairwise"))` for unadjusted pairwise comparisons. For Bonferroni correction, multiply each $p$-value by the number of comparisons (3). Consider when Bonferroni vs. Tukey is more appropriate.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 3.3: Adding a Covariate
+Extend the one-way ANOVA model by adding `ses` as a covariate (making it an ANCOVA model). How does controlling for SES change the group differences? Compare $R^2$ to the ANOVA-only model.
+
+**Hint**: `lm(mathgain ~ prep_level + ses, data = instruction)`. Compare both `r2(model_anova)` and `r2(model_ancova)`. Think about what changes in the coefficients mean substantively: does the preparation-level effect shrink, grow, or stay the same after adjusting for SES?
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 3.4: Why Not Use Multiple t-tests?
+A colleague proposes testing all pairwise group differences using separate $t$-tests (Low vs Medium, Low vs High, Medium vs High) instead of ANOVA.
+
+(a) What is the family-wise Type I error rate if each test uses $\alpha = 0.05$?
+(b) How does the ANOVA $F$-test address this problem?
+(c) When would planned comparisons (without correction) be appropriate?
+
+**Hint**: Review the multiple testing table and @fig-ch3-multiple-testing. For part (c), think about pre-specified hypotheses vs. data-driven exploration.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 3.5: What Does a Significant F-test Actually Tell You?
+A one-way ANOVA comparing math gains across three preparation levels yields $F(2, 897) = 4.53$, $p = 0.011$. A colleague concludes that "all three groups differ significantly from each other." Is this interpretation correct? What exactly does a significant $F$-test tell you, and what does it not tell you? What additional analysis is needed to determine which specific groups differ?
+
+**Hint**: The omnibus $F$-test only tells you that at least one group mean differs from at least one other. It does not identify which pairs differ. You need post-hoc pairwise comparisons (e.g., Tukey's HSD or Bonferroni-corrected $t$-tests) to determine specific group differences.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 3.6: Choosing a Reference Category
+You are modeling salary differences across four departments (Engineering, Marketing, HR, Finance) using dummy coding. Your colleague coded Engineering as the reference group and found that Marketing has a significant positive coefficient while HR and Finance do not. If you re-ran the model with Marketing as the reference group instead, which results would change and which would stay the same? Specifically, would the overall $F$-test, $R^2$, or the predicted group means change?
+
+**Hint**: Changing the reference category changes the individual dummy coefficients and their $p$-values, but the overall $F$-test, $R^2$, and the predicted (fitted) means for each group remain identical. The model fit is the same; only the parameterization differs.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 3.7: Assumption Violation in ANOVA
+You run a one-way ANOVA and examine the residuals. The residual spread for Group A (n = 15) is roughly three times wider than for Group B (n = 150). The Levene's test for equality of variances is significant at $p = 0.002$. What assumption is violated? How does this violation affect the reliability of your $F$-test, especially given the unequal sample sizes? What alternative approach could you use?
+
+**Hint**: This violates the homogeneity of variance (homoscedasticity) assumption. With unequal variances and unequal group sizes, the standard $F$-test can become either liberal or conservative depending on whether the larger variance is in the smaller or larger group. Consider using Welch's ANOVA (`oneway.test()` in R), which does not assume equal variances.
+:::

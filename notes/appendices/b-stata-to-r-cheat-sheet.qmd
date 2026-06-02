@@ -1,0 +1,303 @@
+# Stata to R Cheat Sheet {#sec-app-stata .unnumbered}
+
+This appendix provides a side-by-side translation of common Stata commands to their R equivalents. It is designed for students with prior Stata experience who are transitioning to R for this course.
+
+::: {.callout-note}
+## Conventions
+- All R examples assume tidyverse and relevant packages are loaded via `pacman::p_load()`
+- `df` refers to a generic data frame; replace it with your actual object name
+- `model` or `m` refers to a fitted model object (e.g., from `lm()` or `glm()`)
+:::
+
+
+## Data Management {#sec-app-stata-data}
+
+| Stata | R | Description |
+|:------|:--|:------------|
+| `use "file.dta"` | `haven::read_dta("file.dta")` | Load Stata file |
+| `import delimited "file.csv"` | `read_csv("file.csv")` | Load CSV file |
+| `describe` | `glimpse(df)` | Data structure |
+| `list in 1/10` | `head(df, 10)` | First 10 rows |
+| `summarize` | `summary(df)` | Summary statistics |
+| `tab var` | `count(df, var)` | Frequency table |
+| `gen newvar = ...` | `mutate(df, newvar = ...)` | Create variable |
+| `replace var = ... if ...` | `mutate(df, var = if_else(..., ..., var))` | Conditional replace |
+| `rename old new` | `rename(df, new = old)` | Rename variable |
+| `keep if ...` | `filter(df, ...)` | Subset rows |
+| `keep var1 var2` | `select(df, var1, var2)` | Subset columns |
+| `drop var` | `select(df, -var)` | Drop column |
+| `sort var` | `arrange(df, var)` | Sort ascending |
+| `gsort -var` | `arrange(df, desc(var))` | Sort descending |
+| `collapse (mean) y, by(g)` | `summarise(df, y = mean(y), .by = g)` | Group summary |
+| `merge 1:1 id using "f2.dta"` | `left_join(df1, df2, by = "id")` | Merge datasets |
+| `save "out.dta"` | `haven::write_dta(df, "out.dta")` | Save as Stata file |
+
+::: {.panel-tabset}
+### R Code
+```r
+# Typical data management workflow
+library(haven)
+
+# Load a Stata file
+df <- read_dta("mydata.dta")
+
+# Inspect, filter, and create new variables
+df_clean <- df |>
+  glimpse() |>                           # describe
+  filter(age >= 18) |>                   # keep if age >= 18
+  mutate(
+    age_group = case_when(               # gen age_group = ...
+      age < 30 ~ "young",
+      age < 50 ~ "middle",
+      TRUE     ~ "older"
+    ),
+    score_centered = score - mean(score)  # gen score_centered = score - r(mean)
+  ) |>
+  select(id, age, age_group, score_centered)  # keep id age age_group score_centered
+```
+
+### Code Explanation
+- `read_dta()`: Direct equivalent of Stata's `use`
+- The pipe `|>` chains operations sequentially, similar to Stata's command-by-command flow
+- `case_when()` replaces nested `replace ... if` statements
+- `select()` at the end keeps only the desired variables
+
+### Output Interpretation
+- `glimpse()` output mirrors Stata's `describe`: it shows variable names, types, and first few values
+- Unlike Stata, `filter()` and `mutate()` return a *new* data frame --- the original is unchanged unless you reassign it
+- Verify your pipeline worked by checking the dimensions with `dim(df_clean)` or viewing the first rows with `head(df_clean)`
+:::
+
+
+## Regression {#sec-app-stata-reg}
+
+| Stata | R | Description |
+|:------|:--|:------------|
+| `regress y x1 x2` | `lm(y ~ x1 + x2, data = df)` | Linear regression |
+| `regress y i.group` | `lm(y ~ factor(group), data = df)` | Factor variable |
+| `regress y c.x##i.group` | `lm(y ~ x * factor(group), data = df)` | Interaction (continuous x factor) |
+| `regress y c.x1##c.x2` | `lm(y ~ x1 * x2, data = df)` | Interaction (continuous x continuous) |
+| `regress y c.x c.x#c.x` | `lm(y ~ x + I(x^2), data = df)` | Polynomial term |
+| `xi: regress y i.g1*i.g2` | `lm(y ~ g1 * g2, data = df)` | Two-way factorial |
+| `estimates store m1` | `m1 <- lm(y ~ x, data = df)` | Store model |
+| `estimates table m1 m2` | `modelsummary::msummary(list(m1, m2))` | Compare models |
+
+::: {.panel-tabset}
+### R Code
+```r
+# Fit a regression model (equivalent to: regress gcse lrt)
+m1 <- lm(gcse ~ lrt, data = gcse)
+summary(m1)
+
+# Factor variable (equivalent to: regress gcse i.school)
+m2 <- lm(gcse ~ factor(school), data = gcse)
+
+# Interaction (equivalent to: regress gcse c.lrt##i.girl)
+m3 <- lm(gcse ~ lrt * factor(girl), data = gcse)
+
+# Tidy output with confidence intervals
+parameters::model_parameters(m3)
+```
+
+### Code Explanation
+- `lm()` is the core function for linear models, analogous to `regress`
+- `~` separates the outcome (left) from predictors (right)
+- `*` between predictors includes both main effects and the interaction (like `##` in Stata)
+- `+` includes only main effects (like adding terms without `#`)
+- `I(x^2)` is needed for polynomial terms because `^` has special meaning in formulas
+
+### Output Interpretation
+- `summary(m1)` shows the coefficient table (Estimate, Std. Error, t value, p-value), R-squared, and F-statistic --- analogous to Stata's regression output
+- `parameters::model_parameters()` returns a tidy tibble with confidence intervals, making it easier to export or further process
+- Unlike Stata, R does not automatically display results --- you must explicitly call `summary()` or `parameters::model_parameters()` on the saved model object
+:::
+
+
+## Post-estimation {#sec-app-stata-post}
+
+| Stata | R | Description |
+|:------|:--|:------------|
+| `predict yhat` | `predict(model)` | Predicted values |
+| `predict resid, residuals` | `residuals(model)` | Residuals |
+| `predict yhat, xb` | `fitted(model)` | Fitted values |
+| `margins` | `marginaleffects::avg_predictions(model)` | Adjusted means |
+| `margins, at(x = (1 2 3))` | `marginaleffects::predictions(model, newdata = datagrid(x = 1:3))` | Predictions at values |
+| `margins, dydx(x)` | `marginaleffects::avg_slopes(model)` | Average marginal effects |
+| `margins group` | `marginaleffects::avg_predictions(model, by = "group")` | Margins by group |
+| `marginsplot` | `marginaleffects::plot_predictions(model, condition = "x")` | Margins plot |
+| `contrast group` | `marginaleffects::avg_comparisons(model, variables = "group")` | Pairwise contrasts |
+| `lincom x1 - x2` | `car::linearHypothesis(model, "x1 - x2 = 0")` | Linear combination test |
+| `test x1 x2` | `car::linearHypothesis(model, c("x1 = 0", "x2 = 0"))` | Joint test |
+| `estat ic` | `performance::compare_performance(m1, m2)` | AIC / BIC |
+
+::: {.panel-tabset}
+### R Code
+```r
+# Fit model
+m <- lm(gcse ~ lrt * factor(girl), data = gcse)
+
+# Predicted values and residuals (equivalent to: predict yhat; predict r, resid)
+gcse$yhat  <- predict(m)
+gcse$resid <- residuals(m)
+
+# Average marginal effects (equivalent to: margins, dydx(*))
+marginaleffects::avg_slopes(m)
+
+# Adjusted predictions by group (equivalent to: margins girl)
+marginaleffects::avg_predictions(m, by = "girl")
+
+# Plot predictions (equivalent to: marginsplot)
+marginaleffects::plot_predictions(m, condition = c("lrt", "girl"))
+```
+
+### Code Explanation
+- `predict()` and `residuals()` extract values from a fitted model, just like Stata's `predict` post-estimation command
+- The `marginaleffects` package (@sec-ch5) provides a unified interface that closely mirrors Stata's `margins` command
+- `avg_slopes()` = `margins, dydx()`; `avg_predictions()` = `margins`; `plot_predictions()` = `marginsplot`
+
+### Output Interpretation
+- `avg_slopes()` returns a data frame with one row per predictor, showing the average marginal effect, standard error, z-statistic, p-value, and confidence interval
+- `avg_predictions(m, by = "girl")` returns adjusted predicted means for each level of `girl`, equivalent to Stata's `margins girl`
+- `plot_predictions()` produces a ggplot object that can be further customized with standard ggplot2 functions
+:::
+
+
+## Diagnostics {#sec-app-stata-diag}
+
+| Stata | R | Description |
+|:------|:--|:------------|
+| `estat vif` | `car::vif(model)` | Variance inflation factor |
+| `rvfplot` | `plot(model, 1)` | Residuals vs. fitted |
+| `lvr2plot` | `plot(model, 5)` | Leverage vs. residuals |
+| `qnorm resid` | `plot(model, 2)` | Normal Q-Q plot |
+| `kdensity resid` | `plot(density(residuals(model)))` | Density of residuals |
+| `estat hettest` | `car::ncvTest(model)` | Breusch-Pagan test |
+| `estat ovtest` | `car::resetTest(model)` | Ramsey RESET test |
+| `dfits` | `dffits(model)` | DFFITS |
+| `cooksd` | `cooks.distance(model)` | Cook's distance |
+| `vce(robust)` | `sandwich::vcovHC(model, type = "HC1")` | Robust standard errors |
+| `vce(cluster id)` | `sandwich::vcovCL(model, cluster = ~id)` | Clustered SEs |
+| `nestreg: reg y (x1) (x2 x3)` | `anova(m_reduced, m_full)` | Nested model comparison |
+
+::: {.panel-tabset}
+### R Code
+```r
+m <- lm(gcse ~ lrt, data = gcse)
+
+# VIF (equivalent to: estat vif)
+car::vif(m)
+
+# Diagnostic plots (equivalent to: rvfplot, qnorm)
+par(mfrow = c(2, 2))
+plot(m)
+
+# Comprehensive diagnostics (see @sec-ch8)
+performance::check_model(m)
+
+# Robust standard errors (equivalent to: regress y x, vce(robust))
+lmtest::coeftest(m, vcov = sandwich::vcovHC(m, type = "HC1"))
+
+# Or use the parameters package for tidy output
+parameters::model_parameters(m, vcov = "HC1")
+```
+
+### Code Explanation
+- `plot(model)` produces four diagnostic plots; Stata requires separate commands for each
+- `performance::check_model()` generates a comprehensive set of visual diagnostics in one call
+- For robust SEs, R requires specifying the variance-covariance matrix explicitly; `HC1` matches Stata's default `vce(robust)`
+
+### Output Interpretation
+- The four base R diagnostic plots are: (1) Residuals vs. Fitted, (2) Normal Q-Q, (3) Scale-Location, and (4) Residuals vs. Leverage
+- `car::vif()` values above 5--10 suggest multicollinearity concerns, same threshold as Stata's `estat vif`
+- Robust SE output from `parameters::model_parameters(m, vcov = "HC1")` matches Stata's `vce(robust)` default; coefficients stay the same but standard errors and p-values change
+:::
+
+
+## Logistic Regression {#sec-app-stata-logistic}
+
+| Stata | R | Description |
+|:------|:--|:------------|
+| `logit y x1 x2` | `glm(y ~ x1 + x2, family = binomial, data = df)` | Logistic (log-odds) |
+| `logistic y x1 x2` | `parameters::model_parameters(m, exponentiate = TRUE)` | Odds ratios |
+| `estat gof` | `performance::performance_hosmer(m)` | Hosmer-Lemeshow test |
+| `estat classification` | `performance::performance_accuracy(m)` | Classification table |
+| `lroc` | `performance::performance_roc(m)` | ROC curve |
+| `predict phat, pr` | `predict(m, type = "response")` | Predicted probabilities |
+| `margins, dydx(x)` | `marginaleffects::avg_slopes(m)` | Avg. marginal effects |
+| `fitstat` | `performance::model_performance(m)` | Model fit statistics |
+| `ologit y x1 x2` | `MASS::polr(y ~ x1 + x2, data = df)` | Ordinal logit |
+| `mlogit y x1 x2` | `nnet::multinom(y ~ x1 + x2, data = df)` | Multinomial logit |
+
+::: {.panel-tabset}
+### R Code
+```r
+# Logistic regression (equivalent to: logit survived i.pclass age)
+m_logit <- glm(survived ~ factor(pclass) + age,
+               family = binomial,
+               data = titanic)
+
+# Log-odds coefficients (equivalent to: logit output)
+summary(m_logit)
+
+# Odds ratios (equivalent to: logistic)
+parameters::model_parameters(m_logit, exponentiate = TRUE)
+
+# Predicted probabilities (equivalent to: predict phat, pr)
+titanic$phat <- predict(m_logit, type = "response")
+
+# Average marginal effects (equivalent to: margins, dydx(*))
+marginaleffects::avg_slopes(m_logit)
+
+# Model diagnostics (see @sec-ch11)
+performance::check_model(m_logit)
+```
+
+### Code Explanation
+- `glm(..., family = binomial)` is R's equivalent of Stata's `logit`
+- Stata's `logistic` (which shows odds ratios by default) is replicated by adding `exponentiate = TRUE` to `model_parameters()`
+- `predict(..., type = "response")` returns predicted probabilities; without `type = "response"`, it returns log-odds
+- For ordinal models (@sec-ch13), use `MASS::polr()` instead of `glm()`
+
+### Output Interpretation
+- `summary()` on a `glm` object shows log-odds coefficients, analogous to Stata's `logit` output; the "Deviance" statistics replace Stata's log-likelihood display
+- With `exponentiate = TRUE`, coefficients become odds ratios --- an OR > 1 indicates higher odds of the outcome; OR < 1 indicates lower odds
+- Predicted probabilities (`type = "response"`) range from 0 to 1 and correspond to Stata's `predict phat, pr`
+:::
+
+
+## Reshaping Data {#sec-app-stata-reshape}
+
+| Stata | R | Description |
+|:------|:--|:------------|
+| `reshape long y, i(id) j(time)` | `pivot_longer(df, cols = ..., names_to = "time", values_to = "y")` | Wide to long |
+| `reshape wide y, i(id) j(time)` | `pivot_wider(df, names_from = time, values_from = y)` | Long to wide |
+| `encode var, gen(var_num)` | `as.numeric(factor(var))` | String to numeric codes |
+| `label define` / `label values` | `factor(var, labels = c(...))` | Value labels |
+| `recode var (1=0) (2=1)` | `recode(var, `1` = 0, `2` = 1)` | Recode values |
+
+::: {.callout-tip}
+## Stata Users: Key Mindset Shift
+In Stata, commands modify the single dataset in memory. In R, functions return *new* objects --- the original data is unchanged unless you reassign. This is actually an advantage: you can keep both raw and cleaned versions simultaneously.
+
+```r
+# Original is preserved
+df_raw <- read_csv("mydata.csv")
+df_clean <- df_raw |> filter(age >= 18) |> mutate(age_c = age - mean(age))
+```
+:::
+
+
+## Quick Reference: Key Differences {#sec-app-stata-differences}
+
+::: {.callout-important}
+## Critical Differences to Remember
+
+1. **Assignment**: Stata uses `gen y = x`; R uses `y <- x` or `y = x`
+2. **Data frames**: Stata has one dataset in memory; R can hold many objects simultaneously
+3. **Formulas**: Stata lists variables after the command; R uses the formula syntax `y ~ x1 + x2`
+4. **Factor notation**: Stata uses `i.var`; R uses `factor(var)` in the formula or pre-converts the column
+5. **Interaction notation**: Stata uses `c.x1##c.x2`; R uses `x1 * x2` (includes main effects) or `x1:x2` (interaction only)
+6. **Post-estimation**: Stata has built-in post-estimation commands; R requires explicit function calls on saved model objects
+7. **Robust SEs**: Stata uses `vce(robust)` as an option; R requires the `sandwich` package
+8. **Output**: Stata prints results automatically; R stores results in objects that you print or extract from
+:::

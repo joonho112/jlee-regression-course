@@ -1,0 +1,46 @@
+---
+title: "Week 5: One-Way ANOVA"
+---
+
+## Overview
+
+This week bridges the gap between regression with dummy variables and the classical analysis of variance (ANOVA) framework. You will learn how the F-test partitions total variance into between-group and within-group components, how to test omnibus hypotheses about group mean differences, and how planned contrasts and post-hoc corrections let you ask targeted follow-up questions. Understanding ANOVA as a special case of regression deepens your ability to analyze categorical predictors.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Decompose total variance into between-group and within-group sums of squares
+- Construct and interpret the F-statistic for testing omnibus group differences
+- Apply planned contrasts and effect coding to test specific hypotheses about group means
+- Implement Bonferroni and other multiple-comparison corrections to control familywise error
+- Explain the equivalence between one-way ANOVA and regression with categorical predictors
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 3: One-Way ANOVA]({{< var books.lecture_notes >}}/chapters/03-one-way-anova.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 04: Categorical Predictors and Contrasts]({{< var books.r_lab_book >}}/labs/lab04-categorical-contrasts.html){target="_blank"}
+
+## Homework
+
+- {{< fa pen-ruler >}} [Homework 03](/assignment/hw03.qmd) — Due this week
+- {{< fa pen-ruler >}} [Homework 04](/assignment/hw04.qmd) — Due this week
+
+## Quiz
+
+- {{< fa circle-question >}} **Quiz 2** — Covers Weeks 3--5 material
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **One-way ANOVA** | A method for testing whether the means of three or more groups differ significantly |
+| **F-statistic** | The ratio of between-group variance to within-group variance used to test the omnibus null hypothesis |
+| **Between-group variance** | Variability in the outcome attributable to differences among group means |
+| **Within-group variance** | Variability in the outcome attributable to individual differences within groups |
+| **Planned contrasts** | Focused comparisons among group means specified before examining the data |
+| **Bonferroni correction** | An adjustment that divides the significance level by the number of comparisons to control familywise error |
+| **Effect coding** | A coding scheme where group membership is coded so that the intercept represents the grand mean |

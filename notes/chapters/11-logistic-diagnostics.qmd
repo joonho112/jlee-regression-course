@@ -1,0 +1,1603 @@
+# Logistic Regression Diagnostics {#sec-ch11}
+
+{{< include ../_common.qmd >}}
+
+## Introduction {#sec-ch11-intro}
+
+In @sec-ch8, we developed a comprehensive diagnostic toolkit for linear regression: residuals-vs-fitted plots, Q-Q plots, leverage and Cook's distance, and formal tests for heteroscedasticity and normality. Those tools all rest on the assumption that the response is continuous and the errors are normally distributed --- assumptions that do not hold for logistic regression.
+
+Logistic regression has its own set of diagnostic challenges. Because the outcome is binary (0 or 1), the raw residuals take only two possible values for each fitted probability, making standard residual plots nearly useless. There is no direct analogue of $R^2$ that everyone agrees on. And the very meaning of "goodness of fit" depends on whether the predictors are categorical (producing a small number of covariate patterns) or continuous (producing many unique patterns, often one per observation).
+
+This chapter develops the diagnostic toolkit for logistic regression models. We cover four key areas:
+
+1. **Goodness-of-fit tests** (Pearson $X^2$ and Deviance $G^2$) that assess whether the model adequately reproduces the observed data
+2. **Pseudo $R^2$ measures** that quantify how much the model improves over a null model
+3. **Classification accuracy** using predicted classes and the kappa statistic
+4. **Residual diagnostics** including binned residual plots and calibration plots
+5. **Influence diagnostics** using Cook's distance, DFBETAS, and influence bubble plots
+
+::: {.callout-note}
+## Learning Objectives
+After completing this chapter, you will be able to:
+
+1. Explain why standard goodness-of-fit tests require grouped (non-sparse) data and identify when sparseness invalidates $p$-values
+2. Compute and interpret the Pearson $X^2$ and Deviance $G^2$ statistics for logistic regression models
+3. Define and compute at least six pseudo $R^2$ measures and explain why no single measure dominates
+4. Construct a classification table, compute sensitivity, specificity, and Cohen's kappa
+5. Calculate and interpret Pearson and deviance residuals for logistic regression
+6. Construct and interpret binned residual plots and calibration plots for models with continuous predictors
+7. Use DFBETAS, Cook's distance, and influence bubble plots to detect influential observations
+8. Recognize the Wald-vs-LR test discrepancy as an indicator of sparse data
+9. Map each OLS diagnostic from @sec-ch8 to its logistic regression analogue
+:::
+
+::: {.callout-important}
+## Connection to OLS Diagnostics (@sec-ch8)
+The diagnostic logic from @sec-ch8 carries forward: check model specification, identify influential observations, and assess robustness of conclusions. The key differences for logistic regression are:
+
+| OLS Diagnostic (@sec-ch8) | Logistic Analogue (this chapter) |
+|:---|:---|
+| Raw residuals $e_i = y_i - \hat{y}_i$ | Pearson / deviance residuals |
+| $R^2$ (proportion of variance explained) | Pseudo $R^2$ (multiple definitions) |
+| $F$-test for overall model | Likelihood ratio test, $X^2$/$G^2$ |
+| Q-Q plot for normality | Not applicable (binary outcome) |
+| Residual vs. fitted plot | Binned residual plot (continuous predictors) |
+| Cook's distance, leverage, DFBETAS | Same tools, adapted for GLM hat matrix |
+
+: Mapping between OLS and logistic regression diagnostics. {#tbl-ch11-ols-comparison}
+
+The fundamental mindset is the same: no single diagnostic is definitive. Use multiple tools and triangulate.
+:::
+
+
+## Motivating Example: Death Penalty Data {#sec-ch11-example}
+
+We use the `penalty` dataset from `regdatasets`, which contains 674 murder cases from a classic study of racial bias in death penalty sentencing. The variables are:
+
+- `death_pe`: Whether the death penalty was imposed (1 = yes, 0 = no)
+- `def_bl`: Defendant's race (1 = Black, 0 = White)
+- `vic_bl`: Victim's race (1 = Black, 0 = White)
+
+Because both predictors are binary, the data collapse into a $2 \times 2 \times 2$ contingency table with only four covariate patterns. This makes the data ideal for demonstrating goodness-of-fit tests, which require non-sparse tables. Later, we return to the `titanic` data from @sec-ch9 to illustrate diagnostics when continuous predictors create sparse tables.
+
+### Loading and Summarizing the Data
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch11-data-load
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Load the death penalty data
+data(penalty)
+
+# Cross-tabulation: observed counts
+penalty_table <- penalty |>
+  count(def_bl, vic_bl, death_pe) |>
+  pivot_wider(names_from = death_pe, values_from = n, values_fill = 0) |>
+  rename(no_death = `0`, death = `1`) |>
+  mutate(total = no_death + death,
+         prop_death = death / total)
+
+penalty_table |>
+  kable(digits = 3,
+        col.names = c("Defendant Black", "Victim Black",
+                       "No Death", "Death", "Total", "P(Death)"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch11-data-load"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The table reveals that the death penalty rate varies across the four groups. Cases with White victims have higher death penalty rates, regardless of the defendant's race. This is the pattern a logistic regression model should capture.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch11-data-load"
+#| eval: false
+```
+- `count()` tallies the number of cases for each combination of defendant race, victim race, and sentencing outcome
+- `pivot_wider()` reshapes so that each row is a unique covariate pattern
+- `prop_death` is the observed proportion receiving the death penalty within each group
+- With only 4 covariate patterns and 674 cases, every cell has a substantial count
+
+
+:::
+
+
+### Fitting the Model
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch11-fit-model
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Fit logistic regression: death penalty ~ defendant race + victim race
+penalty_model <- glm(death_pe ~ def_bl + vic_bl,
+                     family = binomial, data = penalty)
+
+model_parameters(penalty_model, exponentiate = TRUE) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch11-fit-model"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Examine the odds ratios. The effect of victim race on death penalty sentencing is the key substantive finding. We now turn to assessing whether this model fits the data adequately.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch11-fit-model"
+#| eval: false
+```
+- `glm()` with `family = binomial` fits the logistic regression model
+- `exponentiate = TRUE` shows odds ratios instead of log-odds
+- The model includes main effects of defendant and victim race (no interaction)
+
+
+:::
+
+
+## Goodness of Fit Tests {#sec-ch11-gof}
+
+In linear regression, the $F$-test tells us whether the model as a whole explains significant variance. In logistic regression, goodness-of-fit tests ask a different question: **does the model adequately reproduce the observed frequencies?** Two classic tests compare observed and expected counts across covariate patterns.
+
+### Covariate Patterns and Grouped Data
+
+A **covariate pattern** is a unique combination of predictor values. For the `penalty` model with two binary predictors, there are $2 \times 2 = 4$ covariate patterns. If we let $J$ denote the number of covariate patterns, $n_j$ the number of observations with pattern $j$, and $y_j$ the number of "successes" (death penalties) in that group, then the observed proportion is $\hat{p}_j = y_j / n_j$ and the model-predicted proportion is $\hat{\pi}_j$.
+
+### Pearson Chi-Square ($X^2$) {#sec-ch11-pearson-x2}
+
+The Pearson goodness-of-fit statistic compares observed and expected counts:
+
+$$
+X^2 = \sum_{j=1}^{J} \frac{(y_j - n_j \hat{\pi}_j)^2}{n_j \hat{\pi}_j (1 - \hat{\pi}_j)}
+$$ {#eq-ch11-pearson-x2}
+
+Under the null hypothesis that the model is correctly specified, $X^2 \sim \chi^2_{J - p}$ where $p$ is the number of estimated parameters (including the intercept). A large $X^2$ (small $p$-value) indicates that the model does **not** fit the data well.
+
+### Deviance ($G^2$) {#sec-ch11-deviance-g2}
+
+The deviance (or likelihood ratio) goodness-of-fit statistic compares the fitted model to the **saturated model** --- the model that perfectly reproduces all observed proportions:
+
+$$
+G^2 = 2 \sum_{j=1}^{J} \left[ y_j \ln\!\left(\frac{y_j}{n_j \hat{\pi}_j}\right) + (n_j - y_j) \ln\!\left(\frac{n_j - y_j}{n_j(1 - \hat{\pi}_j)}\right) \right]
+$$ {#eq-ch11-deviance-g2}
+
+Under the null hypothesis, $G^2 \sim \chi^2_{J - p}$, with the same degrees of freedom as $X^2$.
+
+### Computing $X^2$ and $G^2$
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch11-gof-tests
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Get fitted probabilities for each covariate pattern
+penalty_gof <- penalty |>
+  mutate(pi_hat = fitted(penalty_model)) |>
+  group_by(def_bl, vic_bl) |>
+  summarise(
+    n_j     = n(),
+    y_j     = sum(death_pe),
+    pi_hat  = first(pi_hat),
+    .groups = "drop"
+  ) |>
+  mutate(
+    expected = n_j * pi_hat,
+    # Pearson components
+    pearson_comp = (y_j - expected)^2 / (expected * (1 - pi_hat)),
+    # Deviance components (handling zero cells carefully)
+    dev_comp = 2 * (
+      ifelse(y_j > 0, y_j * log(y_j / expected), 0) +
+      ifelse(n_j - y_j > 0,
+             (n_j - y_j) * log((n_j - y_j) / (n_j * (1 - pi_hat))), 0)
+    )
+  )
+
+# Display the grouped table
+penalty_gof |>
+  select(def_bl, vic_bl, n_j, y_j, expected, pearson_comp, dev_comp) |>
+  kable(digits = 3,
+        col.names = c("Def Black", "Vic Black", "n", "Observed",
+                       "Expected", "Pearson Comp", "Deviance Comp"))
+
+# Compute test statistics
+X2 <- sum(penalty_gof$pearson_comp)
+G2 <- sum(penalty_gof$dev_comp)
+J <- nrow(penalty_gof)
+p_params <- length(coef(penalty_model))
+df_gof <- J - p_params
+
+tibble(
+  Statistic = c("Pearson X²", "Deviance G²"),
+  Value     = round(c(X2, G2), 4),
+  df        = df_gof,
+  p_value   = round(1 - pchisq(c(X2, G2), df_gof), 4)
+) |>
+  kable(col.names = c("Statistic", "Value", "df", "p-value"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch11-gof-tests"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+With only 1 degree of freedom, the test has limited power. A non-significant result means the model with main effects is consistent with the data --- the interaction between defendant and victim race may not be needed. If the $p$-value were small, we would conclude the model fails to capture the observed pattern and should consider adding the interaction term.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch11-gof-tests"
+#| eval: false
+```
+- We group observations by covariate pattern and compute observed ($y_j$) and expected ($n_j \hat{\pi}_j$) counts
+- The Pearson and deviance components are summed across all $J = 4$ patterns
+- Degrees of freedom = $J - p = 4 - 3 = 1$ (4 patterns minus 3 parameters)
+- The `ifelse` guards handle the case where $y_j = 0$ to avoid $\log(0)$
+
+
+:::
+
+::: {.callout-warning}
+## The Sparseness Problem
+The $\chi^2$ approximation for both $X^2$ and $G^2$ requires adequate cell sizes in the grouped table --- typically $n_j \hat{\pi}_j \geq 5$ and $n_j(1 - \hat{\pi}_j) \geq 5$ for all covariate patterns. When predictors are continuous (e.g., age, fare), the number of covariate patterns $J$ approaches $n$, most cells have $n_j = 1$, and the $\chi^2$ approximation completely fails. In that situation:
+
+- The $X^2$ and $G^2$ statistics do **not** follow a $\chi^2$ distribution
+- Their $p$-values are meaningless
+- The Hosmer-Lemeshow test (which groups observations into deciles of predicted risk) was designed as a workaround, though it has its own limitations
+
+**Rule of thumb**: Use $X^2$ and $G^2$ only when the number of covariate patterns $J$ is small relative to $n$ and all expected counts exceed 5. With continuous predictors, skip these tests entirely.
+:::
+
+
+## Pseudo R-squared Measures {#sec-ch11-pseudo-r2}
+
+In linear regression, $R^2$ has a clear interpretation: the proportion of variance explained. Logistic regression has no exact analogue, but several **pseudo $R^2$** measures have been proposed. Each captures a different aspect of model performance, and none has the elegant properties of the linear $R^2$.
+
+### Why Multiple Definitions?
+
+The linear $R^2$ simultaneously satisfies many desirable properties: it equals the squared correlation between $y$ and $\hat{y}$, the proportion of variance explained, the proportional reduction in the residual sum of squares, and a function of the $F$-statistic. In logistic regression, no single measure satisfies all of these at once. Different pseudo $R^2$ measures emphasize different aspects.
+
+### Six Common Pseudo $R^2$ Measures
+
+Let $L_0$ be the likelihood of the **null model** (intercept only) and $L_1$ the likelihood of the **fitted model**. Equivalently, let $D_0 = -2\ln L_0$ and $D_1 = -2\ln L_1$ be the null and residual deviances.
+
+1. **McFadden's $R^2$** (likelihood ratio index):
+
+$$
+R^2_{\text{McF}} = 1 - \frac{\ln L_1}{\ln L_0} = \frac{D_0 - D_1}{D_0}
+$$ {#eq-ch11-mcfadden}
+
+Interpretation: the proportional reduction in the deviance (analogous to the proportional reduction in RSS for linear regression). Values between 0.2 and 0.4 are considered excellent.
+
+2. **Cox-Snell $R^2$**:
+
+$$
+R^2_{\text{CS}} = 1 - \left(\frac{L_0}{L_1}\right)^{2/n}
+$$ {#eq-ch11-cox-snell}
+
+Based on the likelihood ratio, but its maximum is less than 1, which is a conceptual nuisance.
+
+3. **Nagelkerke $R^2$** (adjusted Cox-Snell):
+
+$$
+R^2_{\text{N}} = \frac{R^2_{\text{CS}}}{1 - L_0^{2/n}}
+$$ {#eq-ch11-nagelkerke}
+
+Rescales Cox-Snell so the theoretical maximum is 1. The most commonly reported pseudo $R^2$ in social science software.
+
+4. **Tjur's $R^2$** (coefficient of discrimination):
+
+$$
+R^2_{\text{Tjur}} = \bar{\hat{\pi}}_1 - \bar{\hat{\pi}}_0
+$$ {#eq-ch11-tjur}
+
+Simply the difference in mean predicted probabilities between the $y = 1$ and $y = 0$ groups. Ranges from 0 to 1 with an intuitive interpretation: how well does the model separate the two groups?
+
+5. **Count $R^2$**: The proportion of correctly classified cases (see @sec-ch11-classification).
+
+6. **Adjusted Count $R^2$**: Improvement in classification over always predicting the modal category.
+
+::: {.callout-tip}
+## Which Pseudo $R^2$ Should I Report?
+Report **McFadden's $R^2$** and **Tjur's $R^2$** as a default pair. McFadden's is directly tied to the likelihood ratio test and has a clear "proportional reduction in deviance" interpretation. Tjur's is intuitive and does not depend on the likelihood. Always report the measure's name --- a bare "$R^2 = 0.15$" is ambiguous for logistic regression.
+:::
+
+### Computing Pseudo $R^2$ in R
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch11-pseudo-r2
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Method 1: performance package (easystats)
+r2_values <- r2(penalty_model)
+r2_values
+
+# Method 2: Manual computation of McFadden's R²
+null_model <- glm(death_pe ~ 1, family = binomial, data = penalty)
+D0 <- deviance(null_model)  # null deviance = -2 log L0
+D1 <- deviance(penalty_model)  # residual deviance = -2 log L1
+
+mcfadden_manual <- (D0 - D1) / D0
+
+tibble(
+  Measure              = c("Null deviance (D0)", "Residual deviance (D1)",
+                           "Reduction in deviance", "McFadden R²"),
+  Value                = round(c(D0, D1, D0 - D1, mcfadden_manual), 4)
+) |>
+  kable()
+
+# Method 3: Tjur's R²
+penalty <- penalty |>
+  mutate(pi_hat = fitted(penalty_model))
+
+tjur <- penalty |>
+  group_by(death_pe) |>
+  summarise(mean_pi = mean(pi_hat), .groups = "drop")
+
+tjur |>
+  bind_rows(tibble(death_pe = NA_real_,
+                   mean_pi = diff(tjur$mean_pi))) |>
+  mutate(Label = c("Mean P(death) | y=0", "Mean P(death) | y=1", "Tjur's R²")) |>
+  select(Label, Value = mean_pi) |>
+  kable(digits = 4)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch11-pseudo-r2"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Pseudo $R^2$ values for logistic regression are typically much lower than linear $R^2$ values. A McFadden $R^2$ of 0.05 does not mean the model is useless --- it means defendant and victim race explain a modest proportion of the variation in death penalty sentencing. The primary goal in this study is inference (testing for racial bias), not prediction.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch11-pseudo-r2"
+#| eval: false
+```
+- `r2()` from the `performance` package automatically computes Tjur's $R^2$ for logistic models
+- For McFadden's $R^2$, we compare the null and residual deviances
+- Tjur's $R^2$ requires only the mean predicted probability within each outcome group
+- The `deviance()` function extracts $-2\ln L$ from a fitted `glm` object
+
+
+:::
+
+
+## Classification Accuracy {#sec-ch11-classification}
+
+A natural way to assess a logistic regression model is to see how well it **predicts** the outcome. The basic idea: if $\hat{\pi}_i > 0.5$, predict $\hat{y}_i = 1$; otherwise predict $\hat{y}_i = 0$. Then cross-tabulate predictions against observed outcomes.
+
+### The Classification Table
+
+The **classification table** (also called the confusion matrix) is a $2 \times 2$ cross-tabulation:
+
+|  | Observed $y = 1$ | Observed $y = 0$ |
+|:---|:---:|:---:|
+| Predicted $\hat{y} = 1$ | True Positive (TP) | False Positive (FP) |
+| Predicted $\hat{y} = 0$ | False Negative (FN) | True Negative (TN) |
+
+: Classification table for binary outcomes. The rows are model predictions (based on a cutoff, typically 0.5); columns are actual outcomes. {#tbl-ch11-classification}
+
+Key metrics derived from this table:
+
+- **Sensitivity** (true positive rate): $\text{TP} / (\text{TP} + \text{FN})$ --- proportion of actual positives correctly identified
+- **Specificity** (true negative rate): $\text{TN} / (\text{TN} + \text{FP})$ --- proportion of actual negatives correctly identified
+- **Overall accuracy**: $(\text{TP} + \text{TN}) / n$
+
+### Computing the Classification Table
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch11-classification
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Classify using the 0.5 cutoff
+penalty <- penalty |>
+  mutate(
+    y_pred = ifelse(pi_hat > 0.5, 1, 0)
+  )
+
+# Classification table — ensure both levels appear
+penalty$y_pred <- factor(penalty$y_pred, levels = c(0, 1))
+penalty$death_pe_f <- factor(penalty$death_pe, levels = c(0, 1))
+
+conf_matrix <- table(
+  Predicted = penalty$y_pred,
+  Observed  = penalty$death_pe_f
+)
+conf_matrix |> addmargins()
+
+# Accuracy metrics using factor-safe indexing
+TP <- conf_matrix["1", "1"]
+TN <- conf_matrix["0", "0"]
+FP <- conf_matrix["1", "0"]
+FN <- conf_matrix["0", "1"]
+
+if (sum(conf_matrix["1", ]) == 0) {
+  message("Note: Model never predicts y = 1 (all predicted probabilities < 0.5)")
+}
+
+accuracy <- (TP + TN) / sum(conf_matrix)
+base_rate <- max(table(penalty$death_pe)) / nrow(penalty)
+sensitivity <- sum(penalty$death_pe == 1 & penalty$y_pred == 1) /
+               sum(penalty$death_pe == 1)
+specificity <- sum(penalty$death_pe == 0 & penalty$y_pred == 0) /
+               sum(penalty$death_pe == 0)
+
+tibble(
+  Metric      = c("Overall accuracy", "Base rate (modal class)",
+                   "Sensitivity", "Specificity"),
+  Value       = round(c(accuracy, base_rate, sensitivity, specificity), 4)
+) |>
+  kable()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch11-classification"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+When the event is rare, the 0.5 cutoff produces a model that predicts "no death penalty" for everyone --- achieving high accuracy simply by mimicking the base rate. This illustrates a fundamental limitation: **overall accuracy is misleading when classes are imbalanced**. The model may capture real effects (significant odds ratios) while producing poor classification, because classification accuracy and inferential power address different questions.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch11-classification"
+#| eval: false
+```
+- `ifelse(pi_hat > 0.5, 1, 0)` assigns predicted classes based on the 0.5 cutoff
+- When the overall event rate is very low (as in death penalty cases), the model may never predict $\hat{y} = 1$ because all $\hat{\pi}_i < 0.5$
+- The base rate is the accuracy you would get by always predicting the most common category
+- Sensitivity and specificity decompose accuracy into performance on each class
+
+
+:::
+
+### Interactive Exploration: Classification Threshold Explorer {.unnumbered}
+
+::: {.callout-tip collapse="true"}
+## Try It: Adjust the Classification Threshold
+
+Move the threshold slider to see how changing the cutoff from the default 0.5 affects the confusion matrix, sensitivity, specificity, and the ROC curve.
+:::
+
+```{ojs}
+//| echo: false
+import { ber640 as thresh_ber640, plotDefaults as thresh_plotDefaults, themeColors as thresh_themeColors, sigmoid as thresh_sigmoid, seq as thresh_seq, formatCoef as thresh_formatCoef, withAlpha as thresh_withAlpha } from "../ojs/shared.js"
+
+thresh_tc = thresh_themeColors()
+```
+
+```{ojs}
+//| echo: false
+viewof thresh_threshold = Inputs.range([0.01, 0.99], {
+  value: 0.50,
+  step: 0.01,
+  label: "Classification Threshold (c)"
+})
+```
+
+```{ojs}
+//| echo: false
+thresh_mulberry32 = function(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
+thresh_n = 200
+
+thresh_data = {
+  const rng = thresh_mulberry32(12345);
+  const data = [];
+  for (let i = 0; i < thresh_n; i++) {
+    const u1a = rng(), u2a = rng();
+    const x1 = Math.sqrt(-2 * Math.log(u1a)) * Math.cos(2 * Math.PI * u2a);
+    const u1b = rng(), u2b = rng();
+    const x2 = Math.sqrt(-2 * Math.log(u1b)) * Math.cos(2 * Math.PI * u2b);
+    const logit = -1.5 + 1.2 * x1 + 0.8 * x2;
+    const p = thresh_sigmoid(logit);
+    const y = rng() < p ? 1 : 0;
+    data.push({ x1, x2, logit, p, y });
+  }
+  return data;
+}
+
+thresh_confusion = {
+  const c = thresh_threshold;
+  let tp = 0, tn = 0, fp = 0, fn = 0;
+  for (const d of thresh_data) {
+    const pred = d.p >= c ? 1 : 0;
+    if (d.y === 1 && pred === 1) tp++;
+    else if (d.y === 0 && pred === 0) tn++;
+    else if (d.y === 0 && pred === 1) fp++;
+    else fn++;
+  }
+  return { tp, tn, fp, fn };
+}
+
+thresh_metrics = {
+  const { tp, tn, fp, fn } = thresh_confusion;
+  const sensitivity = (tp + fn) > 0 ? tp / (tp + fn) : 0;
+  const specificity = (tn + fp) > 0 ? tn / (tn + fp) : 0;
+  const precision = (tp + fp) > 0 ? tp / (tp + fp) : 0;
+  const accuracy = (tp + tn) / thresh_n;
+  const f1 = (precision + sensitivity) > 0 ? 2 * precision * sensitivity / (precision + sensitivity) : 0;
+  return { sensitivity, specificity, precision, accuracy, f1 };
+}
+
+thresh_rocData = {
+  const thresholds = [];
+  for (let i = 0; i <= 100; i++) thresholds.push(i / 100);
+  const points = thresholds.map(c => {
+    let tp = 0, fn = 0, fp = 0, tn = 0;
+    for (const d of thresh_data) {
+      const pred = d.p >= c ? 1 : 0;
+      if (d.y === 1 && pred === 1) tp++;
+      else if (d.y === 1 && pred === 0) fn++;
+      else if (d.y === 0 && pred === 1) fp++;
+      else tn++;
+    }
+    const tpr = (tp + fn) > 0 ? tp / (tp + fn) : 0;
+    const fpr = (fp + tn) > 0 ? fp / (fp + tn) : 0;
+    return { threshold: c, tpr, fpr };
+  });
+  return points;
+}
+
+thresh_auc = {
+  const sorted = [...thresh_rocData].sort((a, b) => a.fpr - b.fpr);
+  let auc = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const dx = sorted[i].fpr - sorted[i - 1].fpr;
+    const avgY = (sorted[i].tpr + sorted[i - 1].tpr) / 2;
+    auc += dx * avgY;
+  }
+  return auc;
+}
+
+thresh_currentRocPoint = {
+  const { tp, tn, fp, fn } = thresh_confusion;
+  const tpr = (tp + fn) > 0 ? tp / (tp + fn) : 0;
+  const fpr = (fp + tn) > 0 ? fp / (fp + tn) : 0;
+  return { fpr, tpr };
+}
+```
+
+```{ojs}
+//| echo: false
+html`<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:start;">
+  <div>${thresh_rocPlot}</div>
+  <div>${thresh_confusionMatrix}</div>
+</div>
+<div style="margin-top:1.2rem;">${thresh_metricCards}</div>`
+```
+
+```{ojs}
+//| echo: false
+thresh_rocPlot = Plot.plot(thresh_plotDefaults({
+  width: 420,
+  height: 380,
+  marginLeft: 50,
+  marginBottom: 45,
+  x: { label: "False Positive Rate (FPR)", domain: [0, 1] },
+  y: { label: "True Positive Rate (TPR)", domain: [0, 1] },
+  marks: [
+    Plot.line([[0, 0], [1, 1]], { stroke: thresh_tc.muted, strokeDasharray: "6,4", strokeWidth: 1.5 }),
+    Plot.line(thresh_rocData, {
+      x: "fpr",
+      y: "tpr",
+      stroke: thresh_ber640.accent,
+      strokeWidth: 2.5,
+      sort: { channel: "x" }
+    }),
+    Plot.dot([thresh_currentRocPoint], {
+      x: "fpr",
+      y: "tpr",
+      fill: thresh_ber640.secondary,
+      stroke: thresh_tc.bg,
+      strokeWidth: 2,
+      r: 7
+    }),
+    Plot.text([`AUC = ${thresh_auc.toFixed(3)}`], {
+      x: [0.97],
+      y: [0.05],
+      textAnchor: "end",
+      fill: thresh_tc.text,
+      fontSize: 13,
+      fontWeight: 600
+    }),
+    Plot.text([`c = ${thresh_threshold.toFixed(2)}`], {
+      x: [thresh_currentRocPoint.fpr + 0.05],
+      y: [thresh_currentRocPoint.tpr - 0.06],
+      textAnchor: "start",
+      fill: thresh_ber640.secondary,
+      fontSize: 12,
+      fontWeight: 600
+    })
+  ]
+}))
+```
+
+```{ojs}
+//| echo: false
+thresh_confusionMatrix = {
+  const { tp, tn, fp, fn } = thresh_confusion;
+  const successBg = thresh_withAlpha(thresh_ber640.success, 0.18);
+  const secondaryBg = thresh_withAlpha(thresh_ber640.secondary, 0.18);
+  const warningBg = thresh_withAlpha(thresh_ber640.warning, 0.18);
+
+  const cellStyle = (bg, color) =>
+    `background:${bg}; color:${color}; font-size:1.35rem; font-weight:700; text-align:center; vertical-align:middle; padding:1.1rem 0.5rem; border-radius:6px; width:120px; height:80px;`;
+  const subStyle = `font-size:0.75rem; font-weight:400; color:${thresh_tc.muted}; display:block; margin-top:2px;`;
+  const labelStyle = `font-weight:600; font-size:0.92rem; color:${thresh_tc.text}; text-align:center; padding:0.4rem;`;
+
+  return html`<div style="display:flex; flex-direction:column; align-items:center;">
+    <div style="font-weight:700; font-size:1rem; color:${thresh_tc.text}; margin-bottom:0.6rem;">Confusion Matrix</div>
+    <table style="border-collapse:separate; border-spacing:6px;">
+      <tr>
+        <td></td>
+        <td style="${labelStyle}">Predicted 1</td>
+        <td style="${labelStyle}">Predicted 0</td>
+      </tr>
+      <tr>
+        <td style="${labelStyle}">Actual 1</td>
+        <td style="${cellStyle(successBg, thresh_ber640.success)}">${tp}<span style="${subStyle}">TP</span></td>
+        <td style="${cellStyle(warningBg, thresh_ber640.warning)}">${fn}<span style="${subStyle}">FN</span></td>
+      </tr>
+      <tr>
+        <td style="${labelStyle}">Actual 0</td>
+        <td style="${cellStyle(secondaryBg, thresh_ber640.secondary)}">${fp}<span style="${subStyle}">FP</span></td>
+        <td style="${cellStyle(successBg, thresh_ber640.success)}">${tn}<span style="${subStyle}">TN</span></td>
+      </tr>
+    </table>
+  </div>`;
+}
+```
+
+```{ojs}
+//| echo: false
+thresh_metricCards = {
+  const m = thresh_metrics;
+  const items = [
+    { label: "Sensitivity", sublabel: "TPR", value: m.sensitivity, color: thresh_ber640.accent },
+    { label: "Specificity", sublabel: "TNR", value: m.specificity, color: thresh_ber640.info },
+    { label: "Precision", sublabel: "PPV", value: m.precision, color: thresh_ber640.primary },
+    { label: "Accuracy", sublabel: "", value: m.accuracy, color: thresh_ber640.success },
+    { label: "F1 Score", sublabel: "", value: m.f1, color: thresh_ber640.warning }
+  ];
+
+  const cards = items.map(d => {
+    const barBg = thresh_withAlpha(d.color, 0.15);
+    return html`<div style="flex:1; min-width:110px; background:${thresh_tc.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)'}; border:1px solid ${thresh_withAlpha(thresh_tc.text, 0.1)}; border-radius:8px; padding:0.75rem 0.6rem; text-align:center;">
+      <div style="font-size:0.78rem; font-weight:600; color:${thresh_tc.muted}; text-transform:uppercase; letter-spacing:0.03em;">${d.label}</div>
+      ${d.sublabel ? html`<div style="font-size:0.65rem; color:${thresh_tc.muted};">${d.sublabel}</div>` : ''}
+      <div style="font-size:1.5rem; font-weight:700; color:${d.color}; margin:0.3rem 0;">${d.value.toFixed(3)}</div>
+      <div style="background:${barBg}; border-radius:4px; height:6px; margin-top:0.3rem; overflow:hidden;">
+        <div style="background:${d.color}; height:100%; width:${(d.value * 100).toFixed(1)}%; border-radius:4px; transition:width 0.3s ease;"></div>
+      </div>
+    </div>`;
+  });
+
+  return html`<div style="display:flex; gap:0.75rem; flex-wrap:wrap;">${cards}</div>`;
+}
+```
+
+### Cohen's Kappa {#sec-ch11-kappa}
+
+**Cohen's kappa** ($\kappa$) measures classification accuracy **adjusted for chance agreement**:
+
+$$
+\kappa = \frac{P_o - P_e}{1 - P_e}
+$$ {#eq-ch11-kappa}
+
+where $P_o$ is the observed agreement (overall accuracy) and $P_e$ is the expected agreement under independence. A $\kappa$ of 0 means classification is no better than chance; $\kappa = 1$ means perfect classification.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch11-kappa
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Compute Cohen's kappa manually
+n_total <- nrow(penalty)
+P_o <- accuracy
+
+# Expected agreement under independence
+row_marginals <- rowSums(conf_matrix) / n_total
+col_marginals <- colSums(conf_matrix) / n_total
+P_e <- sum(row_marginals * col_marginals)
+
+kappa <- (P_o - P_e) / (1 - P_e)
+tibble(
+  Measure = c("Observed agreement (P_o)", "Expected agreement (P_e)",
+              "Cohen's kappa"),
+  Value   = round(c(P_o, P_e, kappa), 4)
+) |>
+  kable()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch11-kappa"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+A kappa near 0 confirms that the classification (at the 0.5 threshold) is no better than chance. This does **not** mean the model is useless --- it means the model's strength lies in estimating the effect of race on sentencing, not in predicting individual case outcomes. Models can be inferentially valuable even when their predictive classification is poor.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch11-kappa"
+#| eval: false
+```
+- $P_o$ is simply the overall accuracy (proportion of correct predictions)
+- $P_e$ is computed from the marginal distributions: the probability that the model and reality agree by chance
+- When the model always predicts the same class, $\kappa = 0$ because the model adds no information beyond the marginal distribution
+
+
+:::
+
+::: {.callout-tip}
+## Classification vs. Inference
+The classification table is most useful when the research goal is prediction (e.g., identifying high-risk patients). When the goal is inference (e.g., testing whether racial bias exists in sentencing), odds ratios and likelihood ratio tests are more relevant than classification accuracy. Do not dismiss a model solely because its classification accuracy is low.
+:::
+
+
+## Residual Analysis {#sec-ch11-residuals}
+
+In linear regression, raw residuals $e_i = y_i - \hat{y}_i$ are the starting point for diagnostics. In logistic regression, raw residuals ($y_i - \hat{\pi}_i$) are problematic because $y_i$ is 0 or 1 while $\hat{\pi}_i$ is continuous --- the residual is heteroscedastic by construction. Two standardized alternatives are commonly used.
+
+### Pearson Residuals {#sec-ch11-pearson-resid}
+
+The **Pearson residual** standardizes the raw residual by its expected standard deviation under the binomial model:
+
+$$
+r_i^{(P)} = \frac{y_i - \hat{\pi}_i}{\sqrt{\hat{\pi}_i(1 - \hat{\pi}_i)}}
+$$ {#eq-ch11-pearson-resid}
+
+The denominator is the standard deviation of a Bernoulli variable with success probability $\hat{\pi}_i$. For grouped data with $n_j$ observations at covariate pattern $j$:
+
+$$
+r_j^{(P)} = \frac{y_j - n_j\hat{\pi}_j}{\sqrt{n_j\hat{\pi}_j(1 - \hat{\pi}_j)}}
+$$
+
+The sum of squared Pearson residuals equals the Pearson $X^2$ statistic from @eq-ch11-pearson-x2.
+
+### Deviance Residuals
+
+The **deviance residual** is derived from the contribution of each observation to the overall deviance $G^2$:
+
+$$
+r_i^{(D)} = \text{sign}(y_i - \hat{\pi}_i) \sqrt{2 \left[ y_i \ln\!\left(\frac{y_i}{\hat{\pi}_i}\right) + (1 - y_i)\ln\!\left(\frac{1 - y_i}{1 - \hat{\pi}_i}\right) \right]}
+$$ {#eq-ch11-deviance-resid}
+
+The sum of squared deviance residuals equals the residual deviance. Deviance residuals tend to be more symmetrically distributed than Pearson residuals, making them slightly better for diagnostic plots.
+
+### Computing Residuals
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch11-residuals-compute
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Extract residuals from the glm object
+penalty <- penalty |>
+  mutate(
+    resid_pearson  = residuals(penalty_model, type = "pearson"),
+    resid_deviance = residuals(penalty_model, type = "deviance"),
+    resid_response = residuals(penalty_model, type = "response"),  # y - pi_hat
+    linear_pred    = predict(penalty_model, type = "link")  # log-odds
+  )
+
+# Summary statistics
+penalty |>
+  select(resid_pearson, resid_deviance, resid_response) |>
+  pivot_longer(everything(), names_to = "type", values_to = "value") |>
+  group_by(type) |>
+  summarise(
+    Mean = round(mean(value), 4),
+    SD   = round(sd(value), 4),
+    Min  = round(min(value), 2),
+    Max  = round(max(value), 2),
+    .groups = "drop"
+  ) |>
+  kable()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch11-residuals-compute"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+With binary data, both Pearson and deviance residuals form discrete clusters rather than the smooth cloud you see in linear regression diagnostics. Each covariate pattern produces two residual values (one for $y = 1$ cases and one for $y = 0$ cases), so plots look very different from the continuous case.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch11-residuals-compute"
+#| eval: false
+```
+- `residuals(model, type = "pearson")` computes @eq-ch11-pearson-resid
+- `residuals(model, type = "deviance")` computes @eq-ch11-deviance-resid (the default for `glm`)
+- `type = "response"` gives the raw residual $y_i - \hat{\pi}_i$
+- `predict(model, type = "link")` gives the linear predictor (log-odds), which is the appropriate x-axis for residual plots
+
+
+:::
+
+### Residual Plots
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch11-residual-plot
+#| fig-cap: "Pearson residuals vs. linear predictor (log-odds) for the death penalty model. With only categorical predictors, residuals cluster at four vertical positions corresponding to the four covariate patterns."
+#| fig-alt: "Scatter plot of Pearson residuals on the y-axis versus the linear predictor (log-odds) on the x-axis for the death penalty logistic regression model. Because the model contains only categorical predictors, the points cluster into four distinct vertical strips corresponding to the four unique covariate patterns. A horizontal dashed line at zero marks the expected residual value, and dotted reference lines at plus and minus 2 indicate approximate significance boundaries. Most residuals fall within these bounds."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+ggplot(penalty, aes(x = linear_pred, y = resid_pearson)) +
+  geom_jitter(width = 0.02, height = 0, alpha = 0.3,
+              color = ber640_colors["primary"]) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_hline(yintercept = c(-2, 2), linetype = "dotted",
+             color = ber640_colors["secondary"]) +
+  labs(
+    title = "Pearson Residuals vs. Linear Predictor",
+    x = "Linear Predictor (log-odds)",
+    y = "Pearson Residual"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch11-residual-plot"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The banded structure is normal for categorical predictors. No individual residuals should appear extreme relative to the $\pm 2$ bands. In models with continuous predictors, look for systematic curvature (suggesting a missing nonlinear term) or increasing spread (suggesting overdispersion).
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch11-residual-plot"
+#| eval: false
+```
+- The x-axis uses the linear predictor (log-odds scale), not fitted probabilities, to spread observations more evenly
+- Horizontal reference lines at $\pm 2$ highlight potentially problematic observations
+- `geom_jitter()` adds horizontal noise to reveal overlapping points
+- With purely categorical predictors, the vertical bands correspond to covariate patterns
+
+
+:::
+
+
+### Binned Residual Plot {#sec-ch11-binned-resid}
+
+Standard residual plots are hard to read for binary outcomes because residuals cluster in two bands. A **binned residual plot** solves this by averaging residuals within bins of the fitted values (or a predictor). If the model is well-calibrated, the binned averages should fall within the $\pm 2\text{SE}$ bounds.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch11-binned-resid
+#| fig-cap: "Binned residual plot for the Titanic logistic regression model. Residuals are averaged within bins of the fitted linear predictor. Points outside the grey $\\pm 2\\text{SE}$ bands suggest local misfit."
+#| fig-alt: "Binned residual plot for the Titanic logistic regression model with the average residual on the y-axis and the bin midpoint of the fitted linear predictor on the x-axis. Each point represents the mean residual within a bin of observations. Grey shaded bands at plus and minus two standard errors provide reference boundaries. Points falling inside the bands indicate acceptable fit for that region of the predictor space, while any points outside the bands suggest localized areas where the model does not fit the data well."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Fit the Titanic model (needed for this section)
+data(titanic)
+titanic_model <- glm(survived ~ sex + age + pclass,
+                     family = binomial, data = titanic)
+
+titanic_binned <- titanic |>
+  filter(!is.na(age)) |>
+  mutate(
+    pi_hat     = fitted(titanic_model),
+    resid_raw  = survived - pi_hat,
+    linear_pred = predict(titanic_model, type = "link")
+  )
+
+# Create bins of the linear predictor
+n_bins <- 40
+titanic_binned <- titanic_binned |>
+  mutate(bin = ntile(linear_pred, n_bins)) |>
+  group_by(bin) |>
+  summarise(
+    mean_pred  = mean(linear_pred),
+    mean_resid = mean(resid_raw),
+    n_bin      = n(),
+    se_resid   = sqrt(mean(pi_hat) * (1 - mean(pi_hat)) / n()),
+    .groups    = "drop"
+  )
+
+ggplot(titanic_binned, aes(x = mean_pred, y = mean_resid)) +
+  geom_ribbon(aes(ymin = -2 * se_resid, ymax = 2 * se_resid),
+              fill = "grey85", alpha = 0.5) +
+  geom_point(color = ber640_colors["primary"], size = 2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  labs(
+    title = "Binned Residual Plot (Titanic Model)",
+    x = "Mean Linear Predictor within Bin",
+    y = "Mean Residual within Bin"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch11-binned-resid"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+If most binned residual points (roughly 95%) fall within the grey $\pm 2\text{SE}$ bands, the model fits adequately. Systematic patterns (e.g., a U-shape) suggest a missing nonlinear term. Bins at the extremes of the linear predictor are worth inspecting closely, since the model is extrapolating in those regions. This plot is the logistic regression analogue of the residual-vs-fitted plot from @sec-ch8, but aggregated to overcome the discrete nature of binary residuals.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch11-binned-resid"
+#| eval: false
+```
+- Observations are sorted by the linear predictor and grouped into `n_bins = 40` bins using `ntile()`
+- Within each bin, the average raw residual ($\bar{e}_{\text{bin}} = \overline{y - \hat{\pi}}$) is computed
+- The $\pm 2\text{SE}$ envelope uses the binomial standard error: $\sqrt{\bar{\pi}(1-\bar{\pi})/n_{\text{bin}}}$
+- Points outside the grey band indicate regions where the model systematically over- or under-predicts
+
+
+:::
+
+
+### Influence Diagnostics: DFBETAS and Cook's Distance {#sec-ch11-influence}
+
+Just as in linear regression (see @sec-ch8), individual observations can exert disproportionate influence on logistic regression parameter estimates. The key diagnostic measures carry over with minor modifications.
+
+**Cook's distance** for logistic regression measures how much all parameter estimates change when observation $i$ is deleted:
+
+$$
+D_i = \frac{r_i^{(P)2} \cdot h_{ii}}{p \cdot (1 - h_{ii})^2}
+$$
+
+where $h_{ii}$ is the diagonal of the hat matrix and $p$ is the number of parameters.
+
+**DFBETAS** measures the influence of observation $i$ on each individual coefficient $\hat{\beta}_k$.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch11-influence
+#| fig-cap: "Cook's distance for the death penalty model. With grouped categorical data, influence is distributed across observations within each covariate pattern rather than concentrated on single cases."
+#| fig-alt: "Index plot of Cook's distance on the y-axis versus observation number on the x-axis for the death penalty logistic regression model. Because the data consist of grouped categorical predictors, Cook's distance values cluster at a few distinct levels corresponding to the covariate patterns rather than showing a unique value for each observation. Most values are small, indicating that influence is distributed across observations within each group rather than being concentrated on any single case."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Extract influence diagnostics
+penalty <- penalty |>
+  mutate(
+    cooks_d  = cooks.distance(penalty_model),
+    leverage = hatvalues(penalty_model),
+    obs_id   = row_number()
+  )
+
+# Cook's distance plot
+ggplot(penalty, aes(x = obs_id, y = cooks_d)) +
+  geom_point(alpha = 0.4, color = ber640_colors["primary"]) +
+  geom_hline(yintercept = 4 / nrow(penalty),
+             linetype = "dashed", color = ber640_colors["secondary"]) +
+  labs(
+    title = "Cook's Distance for Death Penalty Model",
+    x = "Observation Index",
+    y = "Cook's Distance"
+  ) +
+  annotate("text", x = nrow(penalty) * 0.8,
+           y = 4 / nrow(penalty) * 1.3,
+           label = paste0("Threshold = ", round(4 / nrow(penalty), 4)),
+           color = ber640_colors["secondary"], size = 4)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch11-influence"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Observations that exceed the $4/n$ threshold deserve closer inspection. With purely categorical predictors, extreme Cook's distance values arise from observations in small cells with unusual outcomes. Check whether removing these observations meaningfully changes the odds ratios.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch11-influence"
+#| eval: false
+```
+- `cooks.distance()` and `hatvalues()` work on `glm` objects just as they do on `lm` objects
+- The common threshold $4/n$ flags observations with disproportionate influence
+- For logistic regression with binary data, Cook's distance values tend to be smaller than in the continuous case
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch11-dfbetas
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# DFBETAS for each coefficient
+dfb <- dfbetas(penalty_model)
+dfb_df <- as.data.frame(dfb) |>
+  mutate(obs_id = row_number()) |>
+  pivot_longer(-obs_id, names_to = "coefficient", values_to = "dfbeta")
+
+# Threshold: 2/sqrt(n)
+dfbeta_threshold <- 2 / sqrt(nrow(penalty))
+
+# Count observations exceeding threshold
+dfb_df |>
+  group_by(coefficient) |>
+  summarise(
+    n_influential = sum(abs(dfbeta) > dfbeta_threshold),
+    max_dfbeta = round(max(abs(dfbeta)), 4),
+    .groups = "drop"
+  ) |>
+  kable(col.names = c("Coefficient", "N Influential", "Max |DFBETA|"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch11-dfbetas"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+If the count of influential observations is small, the model estimates are stable. If many observations exceed the threshold for a particular coefficient, consider whether those cases share a common characteristic (e.g., unusual combinations of predictor values).
+
+### Code Explanation
+```{r}
+#| ref.label: "ch11-dfbetas"
+#| eval: false
+```
+- `dfbetas()` returns a matrix with one column per coefficient and one row per observation
+- The standard threshold $2/\sqrt{n}$ identifies observations with outsized influence on specific coefficients
+- Observations with large DFBETAS for the `def_bl` or `vic_bl` coefficient are disproportionately shaping the estimated effect of race
+
+
+:::
+
+
+### Titanic Example: Diagnostics with Continuous Predictors {#sec-ch11-titanic}
+
+When models include continuous predictors, the number of covariate patterns approaches $n$ and the grouped diagnostics from the previous sections become invalid. We illustrate this with the `titanic` data from @sec-ch9.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch11-titanic-diagnostics
+#| fig-cap: "Diagnostic plots for a logistic regression with continuous predictors (Titanic data). Left: deviance residuals show the characteristic two-band pattern of binary data. Right: Cook's distance reveals a handful of influential passengers."
+#| fig-alt: "Two-panel diagnostic plot for the Titanic logistic regression model. Left panel shows deviance residuals on the y-axis versus the linear predictor on the x-axis, displaying the characteristic two-band pattern typical of binary outcome data, with one band of positive residuals for survivors and one band of negative residuals for non-survivors. Right panel shows Cook's distance on the y-axis versus observation index on the x-axis, where most values are near zero but a handful of points have notably larger Cook's distance, identifying influential passengers whose removal would meaningfully change the fitted model."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Fit a model with continuous and categorical predictors
+data(titanic)
+titanic_model <- glm(survived ~ sex + age + pclass,
+                     family = binomial, data = titanic)
+
+# Augment with diagnostics
+titanic_diag <- titanic |>
+  filter(!is.na(age)) |>
+  mutate(
+    resid_dev = residuals(titanic_model, type = "deviance"),
+    cooks_d   = cooks.distance(titanic_model),
+    linear_pred = predict(titanic_model, type = "link"),
+    obs_id    = row_number()
+  )
+
+# Two-panel diagnostic plot
+p1 <- ggplot(titanic_diag, aes(x = linear_pred, y = resid_dev)) +
+  geom_point(alpha = 0.25, color = ber640_colors["primary"]) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE,
+              color = ber640_colors["secondary"], linewidth = 0.8) +
+  labs(title = "Deviance Residuals",
+       x = "Linear Predictor", y = "Deviance Residual")
+
+p2 <- ggplot(titanic_diag, aes(x = obs_id, y = cooks_d)) +
+  geom_point(alpha = 0.3, color = ber640_colors["primary"]) +
+  geom_hline(yintercept = 4 / nrow(titanic_diag),
+             linetype = "dashed", color = ber640_colors["secondary"]) +
+  labs(title = "Cook's Distance",
+       x = "Observation Index", y = "Cook's Distance")
+
+p1 + p2
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch11-titanic-diagnostics"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+If the LOESS smoother departs substantially from zero, this suggests the linear predictor is misspecified --- perhaps a nonlinear term for age is needed. The Cook's distance plot identifies specific passengers whose inclusion substantially affects the estimated coefficients.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch11-titanic-diagnostics"
+#| eval: false
+```
+- The model includes `sex` (binary), `age` (continuous), and `pclass` (treated as numeric)
+- The LOESS smoother on the residual plot should be approximately flat and centered on zero if the model is well-specified
+- With continuous predictors, the residual plot has more spread, but the two-band structure remains because $y$ is binary
+- Influential observations in the Titanic data often correspond to unusual survival patterns (e.g., older passengers in third class who survived)
+
+
+:::
+
+### Calibration Plot {#sec-ch11-calibration}
+
+A **calibration plot** checks whether the predicted probabilities match the observed event rates. If a model predicts 30% risk for a group of observations, roughly 30% of those observations should have the event. Perfect calibration falls on the 45-degree line.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch11-calibration
+#| fig-cap: "Calibration plot for the Titanic logistic regression model. Observations are grouped into deciles of predicted probability. A perfectly calibrated model would place all points on the dashed diagonal."
+#| fig-alt: "Calibration plot with mean predicted probability on the x-axis and observed proportion of survivors on the y-axis, both ranging from 0 to 1. Ten points represent decile groups of observations sorted by predicted probability. A dashed diagonal line from the origin to the upper-right corner represents perfect calibration. Points falling close to this diagonal indicate that the model's predicted probabilities match the observed event rates well. Deviations from the diagonal reveal where the model over- or under-predicts survival."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Calibration data: group by deciles of predicted probability
+titanic_cal <- titanic |>
+  filter(!is.na(age)) |>
+  mutate(pi_hat = fitted(titanic_model)) |>
+  mutate(decile = ntile(pi_hat, 10)) |>
+  group_by(decile) |>
+  summarise(
+    mean_predicted = mean(pi_hat),
+    mean_observed  = mean(survived),
+    n_group        = n(),
+    se_obs         = sqrt(mean_observed * (1 - mean_observed) / n()),
+    .groups        = "drop"
+  )
+
+ggplot(titanic_cal, aes(x = mean_predicted, y = mean_observed)) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey50") +
+  geom_point(aes(size = n_group), color = ber640_colors["accent"], alpha = 0.8) +
+  geom_errorbar(aes(ymin = mean_observed - 1.96 * se_obs,
+                    ymax = mean_observed + 1.96 * se_obs),
+                width = 0.02, color = ber640_colors["primary"]) +
+  geom_smooth(formula = y ~ x, method = "loess", se = FALSE,
+              color = ber640_colors["secondary"], linewidth = 0.8) +
+  scale_size_continuous(name = "Group Size", range = c(2, 6)) +
+  coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(
+    title = "Calibration Plot (Titanic Model)",
+    x = "Mean Predicted Probability",
+    y = "Observed Proportion"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch11-calibration"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Points close to the 45-degree line indicate good calibration. Deviations reveal where the model is miscalibrated: points above the line mean the model under-predicts (observed rate > predicted), and points below mean it over-predicts. A model can have good discrimination (separating events from non-events) but poor calibration (predicted probabilities are systematically off). Calibration plots complement pseudo $R^2$ and classification metrics.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch11-calibration"
+#| eval: false
+```
+- Observations are grouped into deciles based on predicted probability $\hat{\pi}_i$
+- Within each decile, the mean predicted probability is plotted against the observed event rate
+- Point size is proportional to the number of observations in each decile
+- Error bars show $\pm 1.96 \text{SE}$ for the observed proportion (binomial standard error)
+- The LOESS smoother highlights systematic calibration patterns
+
+
+:::
+
+
+### Influence Bubble Plot {#sec-ch11-influence-bubble}
+
+An **influence bubble plot** simultaneously displays three diagnostics: the linear predictor (x-axis), residual magnitude (y-axis), and Cook's distance (bubble size). This provides a compact summary that reveals whether influential observations are also poorly fitted.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch11-influence-bubble
+#| fig-cap: "Influence bubble plot for the Titanic model. Each point represents a passenger; bubble size is proportional to Cook's distance. Larger bubbles at the periphery indicate observations that are both unusual and influential."
+#| fig-alt: "Bubble plot for the Titanic logistic regression model with the linear predictor (log-odds) on the x-axis and Pearson residuals on the y-axis. Each bubble represents one passenger, and bubble size is proportional to Cook's distance. Most bubbles are small and clustered in two horizontal bands corresponding to survivors and non-survivors. A few larger bubbles appear at the periphery of the plot, identifying passengers who are simultaneously unusual in their predictor values and influential on the model fit, combining high leverage with large residuals."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+titanic_bubble <- titanic |>
+  filter(!is.na(age)) |>
+  mutate(
+    resid_pearson = residuals(titanic_model, type = "pearson"),
+    cooks_d       = cooks.distance(titanic_model),
+    leverage      = hatvalues(titanic_model),
+    linear_pred   = predict(titanic_model, type = "link"),
+    survived_f    = factor(survived, labels = c("Died", "Survived"))
+  )
+
+# Threshold for Cook's D
+cooks_threshold <- 4 / nrow(titanic_bubble)
+
+ggplot(titanic_bubble, aes(x = leverage, y = resid_pearson)) +
+  geom_point(aes(size = cooks_d, color = survived_f), alpha = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_hline(yintercept = c(-2, 2), linetype = "dotted",
+             color = ber640_colors["secondary"]) +
+  scale_size_continuous(name = "Cook's D", range = c(0.5, 5)) +
+  scale_color_manual(name = "Outcome",
+                     values = c("Died" = ber640_colors[["primary"]],
+                                "Survived" = ber640_colors[["accent"]])) +
+  labs(
+    title = "Influence Bubble Plot (Titanic Model)",
+    x = "Leverage (Hat Value)",
+    y = "Pearson Residual"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch11-influence-bubble"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Look for large bubbles far from the center --- these are the observations that most affect the model. In the Titanic data, influential passengers are typically those with atypical survival outcomes given their demographics (e.g., a first-class male who survived, or a young third-class female who died). If removing such observations changes the substantive conclusions, the model's robustness should be questioned.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch11-influence-bubble"
+#| eval: false
+```
+- The x-axis shows leverage ($h_{ii}$), which measures how unusual the predictor combination is
+- The y-axis shows Pearson residuals, which measure how poorly the observation is fitted
+- Bubble size is proportional to Cook's distance --- the combined effect of leverage and residual magnitude
+- Color distinguishes actual outcomes to reveal whether misfit is concentrated among survivors or non-survivors
+- Observations in the upper-right with large bubbles are both unusual and influential
+
+
+:::
+
+
+::: {.callout-tip}
+## When to Worry About Which Diagnostic
+
+| Diagnostic Tool | When to Worry | Action |
+|:---|:---|:---|
+| $X^2$ / $G^2$ goodness-of-fit | $p < 0.05$ with non-sparse data | Add interactions or nonlinear terms |
+| Pseudo $R^2$ | Very low (McFadden < 0.02) | Check if predictors are relevant |
+| Classification accuracy | Below base rate | Consider different threshold or predictors |
+| Binned residual plot | Systematic pattern in bands | Add nonlinear terms or missing predictors |
+| Calibration plot | Deviation from 45-degree line | Recalibrate or respecify the model |
+| Cook's distance | Values > $4/n$ | Inspect observation; refit without it |
+| DFBETAS | Values > $2/\sqrt{n}$ | Check if conclusions change |
+
+: Summary guide for logistic regression diagnostics. {#tbl-ch11-when-to-worry}
+
+Remember: for inference-focused studies (e.g., testing racial bias), low pseudo $R^2$ and poor classification are not necessarily problems. The model can still provide valid estimates of covariate effects. For prediction-focused studies (e.g., clinical risk scores), calibration and classification matter more.
+:::
+
+
+::: {.callout-warning}
+## Wald vs. LR Test Discrepancy as a Sparseness Indicator
+When data are sparse, the **Wald test** and the **likelihood ratio (LR) test** can give very different results for the same coefficient. The Wald test relies on the estimated standard error (which may be inflated or deflated in sparse data), while the LR test compares model deviances (which is more robust). A large discrepancy between the two is a red flag that the data are too sparse for reliable inference. When in doubt, trust the LR test (see @sec-ch10 for the comparison).
+:::
+
+
+## Summary and Key Takeaways {#sec-ch11-summary}
+
+::: {.callout-note}
+## Chapter 11 Summary
+
+1. **Goodness-of-fit tests** ($X^2$ and $G^2$) assess whether a logistic regression model adequately reproduces observed frequencies. They require **non-sparse grouped data** --- with continuous predictors, these tests are invalid.
+
+2. **Pseudo $R^2$ measures** quantify model improvement over the null model. At least six definitions exist; report the name alongside the value. McFadden $R^2$ values of 0.2--0.4 indicate strong models.
+
+3. **Classification tables** provide an intuitive assessment of predictive accuracy but are misleading with imbalanced outcomes. Cohen's $\kappa$ adjusts for chance agreement. Classification accuracy and inferential utility are different questions.
+
+4. **Pearson and deviance residuals** standardize the raw residuals from binary data. Plot them against the linear predictor (not fitted probabilities) and look for systematic patterns.
+
+5. **Influence diagnostics** (Cook's distance, DFBETAS, influence bubble plots) extend naturally from linear to logistic regression. The same interpretation applies: large values indicate observations that disproportionately affect parameter estimates.
+
+6. **Binned residual plots** aggregate binary residuals into bins, making patterns visible that are hidden in raw residual plots. This is the logistic analogue of the residual-vs-fitted plot from @sec-ch8.
+
+7. **Calibration plots** check whether predicted probabilities match observed event rates. Good discrimination (separating groups) does not guarantee good calibration (accurate probabilities).
+
+8. **Sparseness** is the central challenge. When expected cell counts are small, $\chi^2$ tests are invalid, Wald tests become unreliable, and the Wald-LR discrepancy serves as a diagnostic signal.
+
+9. **Connection to linear diagnostics**: The logic of @sec-ch8 carries forward --- check model specification, identify influential observations, assess whether conclusions are robust --- but the tools change because the outcome is binary rather than continuous (see @tbl-ch11-ols-comparison).
+:::
+
+
+## Exercises {#sec-ch11-exercises}
+
+::: {.callout-caution collapse="true"}
+## Exercise 11.1: Goodness of Fit for Death Penalty with Interaction
+Add the interaction term `def_bl:vic_bl` to the death penalty model. Compute the Pearson $X^2$ and Deviance $G^2$ statistics for this saturated model. What are the degrees of freedom? What happens to the test statistics? Explain why a saturated model always has $X^2 = G^2 = 0$.
+
+*Hint*: With 4 covariate patterns and 4 parameters (intercept + 2 main effects + 1 interaction), think about what happens to the degrees of freedom $J - p$. A saturated model has as many parameters as covariate patterns.
+
+```{r}
+#| label: ch11-ex1
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+# Saturated model (all interactions)
+sat_model <- glm(death_pe ~ def_bl * vic_bl,
+                 family = binomial, data = penalty)
+
+# Deviance of saturated model
+tibble(
+  Measure = c("Residual deviance", "Degrees of freedom"),
+  Value   = c(round(deviance(sat_model), 4), sat_model$df.residual)
+) |>
+  kable()
+# With J = 4 patterns and p = 4 parameters, df = 0.
+# The saturated model perfectly reproduces all observed proportions,
+# so X² = G² = 0 by definition.
+
+# Compare coefficients
+bind_rows(
+  tidy_model(penalty_model) |> mutate(model = "Main effects"),
+  tidy_model(sat_model) |> mutate(model = "With interaction")
+) |>
+  select(model, term, estimate, p.value) |>
+  kable(digits = 4)
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 11.2: Pseudo $R^2$ Comparison for Titanic Models
+Fit three logistic regression models predicting Titanic survival: (a) `sex` only, (b) `sex + pclass`, (c) `sex + pclass + age`. For each model, compute McFadden's $R^2$ and Tjur's $R^2$. Which predictor contributes most to model fit? Do the two measures agree on the ranking?
+
+*Hint*: For McFadden's $R^2$, use the formula $(D_0 - D_1)/D_0$ where `D0 <- m$null.deviance` and `D1 <- m$deviance`. For Tjur's $R^2$, compare `mean(fitted(m)[y == 1])` vs `mean(fitted(m)[y == 0])`. The biggest jump in $R^2$ between consecutive models reveals which predictor matters most.
+
+```{r}
+#| label: ch11-ex2
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+data(titanic)
+
+m1 <- glm(survived ~ sex, family = binomial, data = titanic)
+m2 <- glm(survived ~ sex + pclass, family = binomial, data = titanic)
+m3 <- glm(survived ~ sex + pclass + age, family = binomial,
+           data = titanic |> filter(!is.na(age)))
+
+# Collect pseudo R² values
+models <- list("sex only" = m1, "sex + pclass" = m2, "sex + pclass + age" = m3)
+
+r2_table <- map_dfr(models, \(m) {
+  D0 <- m$null.deviance
+  D1 <- m$deviance
+  mcf <- (D0 - D1) / D0
+  pi_hat <- fitted(m)
+  y <- m$y
+  tjur <- mean(pi_hat[y == 1]) - mean(pi_hat[y == 0])
+  tibble(McFadden = mcf, Tjur = tjur)
+}, .id = "Model")
+
+r2_table |> kable(digits = 4)
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 11.3: Influence Diagnostics for Titanic
+Using the model `survived ~ sex + pclass + age`, identify the 5 most influential observations by Cook's distance. Examine their characteristics. Remove them and refit --- how much do the odds ratios change? Are the substantive conclusions affected?
+
+*Hint*: Use `cooks.distance(model)` to extract Cook's D, then `slice_max(cooks_d, n = 5)` to find the top 5. Compare odds ratios by fitting the model with and without these observations. A change of less than 10% in the odds ratios generally suggests robust conclusions.
+
+```{r}
+#| label: ch11-ex3
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+data(titanic)
+titanic_complete <- titanic |> filter(!is.na(age))
+
+m_full <- glm(survived ~ sex + pclass + age,
+              family = binomial, data = titanic_complete)
+
+# Find top 5 influential observations
+titanic_complete <- titanic_complete |>
+  mutate(cooks_d = cooks.distance(m_full),
+         obs_id  = row_number())
+
+top5 <- titanic_complete |>
+  slice_max(cooks_d, n = 5)
+
+top5 |>
+  select(obs_id, survived, sex, pclass, age, cooks_d) |>
+  kable(digits = 4, caption = "Top 5 most influential observations")
+
+# Refit without top 5
+m_reduced <- glm(survived ~ sex + pclass + age,
+                 family = binomial,
+                 data = titanic_complete |> filter(!obs_id %in% top5$obs_id))
+
+bind_rows(
+  tidy_model(m_full, exponentiate = TRUE) |> mutate(model = "Full data"),
+  tidy_model(m_reduced, exponentiate = TRUE) |> mutate(model = "Without top 5")
+) |>
+  select(model, term, estimate, p.value) |>
+  pivot_wider(names_from = model, values_from = c(estimate, p.value)) |>
+  kable(digits = 4, caption = "Coefficient comparison (odds ratios)")
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 11.4: Calibration Assessment
+Using the Titanic model (`survived ~ sex + pclass + age`), create a calibration plot with 10 groups. Then add `I(age^2)` to the model and create a second calibration plot. Does the quadratic term improve calibration? Compare the two models using both McFadden's $R^2$ and visual calibration.
+
+*Hint*: Group observations into deciles of predicted probability using `ntile(pi_hat, 10)`. Within each decile, compare `mean(pi_hat)` to `mean(survived)`. Plot both models side-by-side using `patchwork`.
+
+```{r}
+#| label: ch11-ex4
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+data(titanic)
+titanic_ex4 <- titanic |> filter(!is.na(age))
+
+# Model without quadratic term
+m_linear <- glm(survived ~ sex + pclass + age,
+                family = binomial, data = titanic_ex4)
+
+# Model with quadratic term
+m_quad <- glm(survived ~ sex + pclass + age + I(age^2),
+              family = binomial, data = titanic_ex4)
+
+# Calibration function
+make_calibration <- function(model, data, model_name) {
+  data |>
+    mutate(pi_hat = fitted(model)) |>
+    mutate(decile = ntile(pi_hat, 10)) |>
+    group_by(decile) |>
+    summarise(
+      mean_pred = mean(pi_hat),
+      mean_obs  = mean(survived),
+      .groups   = "drop"
+    ) |>
+    mutate(model = model_name)
+}
+
+cal_data <- bind_rows(
+  make_calibration(m_linear, titanic_ex4, "Linear age"),
+  make_calibration(m_quad, titanic_ex4, "Quadratic age")
+)
+
+ggplot(cal_data, aes(x = mean_pred, y = mean_obs, color = model)) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey50") +
+  geom_point(size = 3) +
+  geom_line() +
+  scale_color_manual(values = c("Linear age" = ber640_colors[["primary"]],
+                                "Quadratic age" = ber640_colors[["accent"]])) +
+  coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(
+    title = "Calibration Comparison: Linear vs. Quadratic Age",
+    x = "Mean Predicted Probability",
+    y = "Observed Proportion",
+    color = "Model"
+  )
+
+# Compare McFadden R²
+tibble(
+  Model    = c("Linear age", "Quadratic age"),
+  McFadden = round(c(
+    (m_linear$null.deviance - m_linear$deviance) / m_linear$null.deviance,
+    (m_quad$null.deviance - m_quad$deviance) / m_quad$null.deviance
+  ), 4)
+) |>
+  kable()
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 11.5: Binned Residuals and Model Specification
+Fit two logistic regression models for Titanic survival: (a) `survived ~ age` and (b) `survived ~ age + I(age^2)`. For each model, create a binned residual plot with the x-axis showing `age` (not the linear predictor). Does the linear model show a systematic pattern in the binned residuals that the quadratic model corrects? Connect this to the model specification checks from @sec-ch8.
+
+*Hint*: Instead of binning by the linear predictor, bin by `age` directly. Use `ntile(age, 30)` to create age-based bins. A U-shaped or curved pattern in the binned residuals of the linear model suggests that age has a nonlinear relationship with the log-odds of survival.
+
+```{r}
+#| label: ch11-ex5
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+data(titanic)
+titanic_ex5 <- titanic |> filter(!is.na(age))
+
+# Two models
+m_age <- glm(survived ~ age, family = binomial, data = titanic_ex5)
+m_age2 <- glm(survived ~ age + I(age^2), family = binomial, data = titanic_ex5)
+
+# Binned residual function
+binned_resid_by_age <- function(model, data, model_name) {
+  data |>
+    mutate(resid_raw = survived - fitted(model)) |>
+    mutate(bin = ntile(age, 30)) |>
+    group_by(bin) |>
+    summarise(
+      mean_age   = mean(age),
+      mean_resid = mean(resid_raw),
+      se_resid   = sqrt(mean(fitted(model)) * (1 - mean(fitted(model))) / n()),
+      .groups    = "drop"
+    ) |>
+    mutate(model = model_name)
+}
+
+binned_data <- bind_rows(
+  binned_resid_by_age(m_age, titanic_ex5, "Linear: age only"),
+  binned_resid_by_age(m_age2, titanic_ex5, "Quadratic: age + age²")
+)
+
+ggplot(binned_data, aes(x = mean_age, y = mean_resid)) +
+  geom_ribbon(aes(ymin = -2 * se_resid, ymax = 2 * se_resid),
+              fill = "grey85", alpha = 0.4) +
+  geom_point(color = ber640_colors["primary"], size = 2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_smooth(formula = y ~ x, method = "loess", se = FALSE,
+              color = ber640_colors["secondary"], linewidth = 0.8) +
+  facet_wrap(~ model, ncol = 1) +
+  labs(
+    title = "Binned Residuals by Age",
+    x = "Mean Age within Bin",
+    y = "Mean Residual within Bin"
+  )
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 11.6: Why Can't We Use Standard Residual Plots for Logistic Regression?
+In linear regression, we routinely plot raw residuals ($y_i - \hat{y}_i$) against fitted values to check model assumptions.
+
+a. Explain why raw residuals from a logistic regression model take on only two possible values for any given fitted probability $\hat{\pi}_i$. What are those two values?
+b. Given this discrete structure, why does a standard residual-vs-fitted plot look like two curved bands rather than a random scatter? Why is this uninformative for diagnosing model problems?
+c. How does binning residuals (as in a binned residual plot) overcome this limitation? What does a systematic pattern in a binned residual plot tell you that individual residuals cannot?
+
+*Hint*: For part (a), since $y_i \in \{0, 1\}$, the residual is either $1 - \hat{\pi}_i$ or $0 - \hat{\pi}_i$. For part (b), every observation with the same fitted value produces the same two possible residuals, so no new diagnostic information emerges. Binning averages over many observations, allowing systematic departures from zero to emerge.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 11.7: Interpreting Pseudo $R^2$ Values
+A researcher fits a logistic regression model predicting customer churn and reports McFadden's $R^2 = 0.18$. A colleague responds: "That's terrible---in my linear regression models, I always get $R^2$ above 0.50."
+
+a. Why is it misleading to compare McFadden's pseudo $R^2$ directly to the $R^2$ from ordinary linear regression? What does McFadden's $R^2$ actually measure?
+b. Explain why pseudo $R^2$ values in logistic regression are typically much lower than $R^2$ values in linear regression, even for models that predict well. What would McFadden's $R^2 = 1$ require?
+c. If you had to communicate model performance to a non-technical audience, would you use pseudo $R^2$, classification accuracy, AUC, or something else? Justify your choice.
+
+*Hint*: McFadden's $R^2$ measures the proportional reduction in deviance, not variance. Achieving $R^2 = 1$ would require a model with deviance of zero, meaning perfect deterministic separation of outcomes. For part (c), consider which metric is most intuitive and least likely to be misinterpreted.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 11.8: Influential Observations in Logistic Regression
+Suppose you fit a logistic regression predicting loan default from income, and one observation has a very high Cook's distance.
+
+a. In linear regression, an influential point can substantially shift the regression line. What does "influential" mean in the context of logistic regression---what specifically does the high-influence observation shift?
+b. If you remove this observation and the coefficient for income changes from $-0.03$ to $-0.05$, what does that tell you? Should you automatically remove influential points? Why or why not?
+c. Why are observations with predictor values far from the center of the data (high leverage) especially influential in logistic regression when their outcome goes against the model's prediction? Connect this to the concept of leverage in linear regression.
+
+*Hint*: For part (a), influence affects the estimated coefficients, which in turn shift the entire predicted probability curve. For part (b), removing an observation is an exploratory diagnostic, not a routine data-cleaning step---you need a substantive reason (e.g., data error). For part (c), high-leverage points exert more "pull" on the fit, and when their outcome is surprising, that pull is amplified.
+:::

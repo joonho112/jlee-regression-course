@@ -1,0 +1,44 @@
+---
+title: "HW 07: Logistic Interpretation"
+---
+
+| | |
+|---|---|
+| **Type** | Conceptual |
+| **Due** | Week 11 |
+| **Weight** | Part of Homework (50% of final grade) |
+| **Grading** | Completion-based |
+| **Related Reading** | [Ch 09: Simple Logistic Regression]({{< var books.lecture_notes >}}/chapters/09-simple-logistic-regression.html){target="_blank"}, [Ch 10: Multiple Logistic Regression]({{< var books.lecture_notes >}}/chapters/10-multiple-logistic-regression.html){target="_blank"} |
+| **Related Lab** | [Lab 09: Logistic Intro]({{< var books.r_lab_book >}}/labs/lab09-logistic-intro.html){target="_blank"} |
+
+::: {.callout-note}
+## Grading Policy
+Homework is graded on **completion**. Submit a good-faith effort for full credit. A good-faith effort means: (1) all problems are attempted, (2) for computational assignments, R code runs without errors, and (3) written interpretations are included where requested.
+:::
+
+## Context
+
+The problems below refer to results from Kalmijn (1994), who studied married women's labor force participation using logistic regression. The outcome variable is whether a married woman is in the labor force (1 = yes, 0 = no). Predictors include mother's education, whether the mother was employed, and other demographic variables.
+
+## Problems
+
+### Problem 1
+
+Using the logistic regression results table from Kalmijn (1994), calculate and interpret the **odds ratio** for the mother's education variable. What does this odds ratio tell you about the relationship between a mother's education and her daughter's labor force participation?
+
+### Problem 2
+
+a. Calculate the **odds ratio** for the variable "Mother employed" (i.e., whether the respondent's mother was employed).
+b. Construct a **95% confidence interval** for this odds ratio.
+c. Interpret the odds ratio and its confidence interval in context.
+
+### Problem 3
+
+a. One of the coefficients in the model implies a **24% increase** in the odds of labor force participation for a one-unit increase in the predictor. Explain how this interpretation is derived from the logistic regression coefficient.
+b. Construct a **95% confidence interval** for this percentage increase in odds. Show your work.
+
+
+## Submission
+
+1. Complete all problems, showing your work clearly.
+2. Submit your completed assignment as a **PDF** to Blackboard by the due date.

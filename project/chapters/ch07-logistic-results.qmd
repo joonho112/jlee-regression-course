@@ -1,0 +1,963 @@
+# Logistic Regression Example: Results & Discussion {#sec-logistic-results}
+
+{{< include ../_common.qmd >}}
+
+::: {.callout-note}
+## About This Chapter
+This chapter demonstrates **Parts 4--6** of the logistic regression project
+(Descriptive Statistics, Results, and Discussion). This is the main analysis
+chapter for Project 2. Every code block runs on the PIAAC Korea dataset and
+produces real output, so you can follow along step by step. The focus is on
+**odds ratios**, **predicted probabilities**, and proper interpretation of
+logistic regression output.
+:::
+
+
+## Part 4: Descriptive Analysis {#sec-logistic-ex-part4}
+
+::: {.callout-important}
+## Guideline Reminder --- Part 4
+Before running any regressions, describe your data. For logistic regression
+with a binary outcome, cross-tabulations and grouped comparisons are
+especially informative. Report the outcome distribution, present
+cross-tabulations with row/column percentages, and include visualizations
+that preview the relationships you will model.
+:::
+
+### Sample Overview {#sec-logistic-ex-sample-overview}
+
+We begin by loading the analysis dataset and confirming the sample size and
+the distribution of the outcome variable.
+
+```{r}
+#| label: logistic-load-data-results
+#| message: false
+
+# Load the PIAAC Korea analysis dataset
+piaac <- readRDS(here::here("data", "piaac_kor.rds"))
+
+# Confirm sample size
+cat("Sample size:", nrow(piaac), "\n")
+cat("Variables:  ", ncol(piaac), "\n")
+
+# Outcome distribution
+cat("\nSupervisory status:\n")
+table(piaac$manager) |> addmargins()
+cat("\nProportions:\n")
+prop.table(table(piaac$manager)) |> round(3)
+```
+
+The analytic sample contains **N = 1,357** Korean full-time workers aged
+35--54. Among them, **580 (42.7%)** hold supervisory positions and **777
+(57.3%)** do not. This reasonably balanced split is well-suited for standard
+logistic regression --- no rare-event corrections are needed.
+
+
+### Cross-Tabulation: Manager Status by Gender {#sec-logistic-ex-xtab-gender}
+
+A natural first step is to examine whether supervisory status varies by
+gender. @tbl-xtab-gender presents the cross-tabulation of `manager` by
+`female`, with both row and column percentages.
+
+```{r}
+#| label: tbl-xtab-gender
+#| tbl-cap: "Cross-Tabulation of Supervisory Status by Gender"
+
+# Cross-tabulation with counts
+xtab_gender <- piaac |>
+  mutate(
+    Gender = factor(female, levels = c(0, 1),
+                    labels = c("Male", "Female")),
+    Status = factor(manager, levels = c(0, 1),
+                    labels = c("Non-manager", "Manager"))
+  ) |>
+  count(Gender, Status) |>
+  tidyr::pivot_wider(names_from = Status, values_from = n)
+
+# Add row totals
+xtab_gender <- xtab_gender |>
+  mutate(Total = `Non-manager` + Manager)
+
+# Display
+kable(xtab_gender, align = "lrrr")
+```
+
+```{r}
+#| label: tbl-xtab-gender-pct
+#| tbl-cap: "Row Percentages: Supervisory Status by Gender"
+
+# Row percentages
+piaac |>
+  mutate(
+    Gender = factor(female, levels = c(0, 1),
+                    labels = c("Male", "Female")),
+    Status = factor(manager, levels = c(0, 1),
+                    labels = c("Non-manager", "Manager"))
+  ) |>
+  count(Gender, Status) |>
+  group_by(Gender) |>
+  mutate(pct = round(n / sum(n) * 100, 1)) |>
+  ungroup() |>
+  select(Gender, Status, pct) |>
+  tidyr::pivot_wider(names_from = Status, values_from = pct) |>
+  kable(align = "lrr",
+        col.names = c("Gender", "Non-manager (%)", "Manager (%)"))
+```
+
+The cross-tabulation reveals a clear gender difference: approximately half of
+male workers are managers, compared with roughly one-third of female workers.
+This raw difference foreshadows the gender gap we will examine in the
+regression analysis.
+
+```{r}
+#| label: chisq-gender
+
+# Chi-square test: manager x female
+chisq.test(table(piaac$manager, piaac$female))
+```
+
+The chi-square test confirms that the association between supervisory status
+and gender is statistically significant ($p < .001$).
+
+
+### Cross-Tabulation: Manager Status by Occupation {#sec-logistic-ex-xtab-occ}
+
+@tbl-xtab-occ presents the cross-tabulation of supervisory status by
+occupational classification.
+
+```{r}
+#| label: tbl-xtab-occ
+#| tbl-cap: "Supervisory Status by Occupational Classification"
+
+piaac |>
+  mutate(
+    Status = factor(manager, levels = c(0, 1),
+                    labels = c("Non-manager", "Manager"))
+  ) |>
+  count(occupation, Status) |>
+  group_by(occupation) |>
+  mutate(pct = round(n / sum(n) * 100, 1)) |>
+  ungroup() |>
+  mutate(label = paste0(n, " (", pct, "%)")) |>
+  select(occupation, Status, label) |>
+  tidyr::pivot_wider(names_from = Status, values_from = label) |>
+  kable(align = "lrr",
+        col.names = c("Occupation", "Non-manager", "Manager"))
+```
+
+```{r}
+#| label: chisq-occupation
+
+# Chi-square test: manager x occupation
+chisq.test(table(piaac$manager, piaac$occupation))
+```
+
+There is a strong association between occupation and supervisory status
+($p < .001$). Skilled and semi-white-collar workers have the highest rates of
+holding managerial positions, while elementary occupation workers have the
+lowest rate. This makes intuitive sense: managerial responsibilities tend to
+be concentrated in higher-status occupational categories.
+
+
+### Continuous Predictors by Manager Status {#sec-logistic-ex-continuous}
+
+@tbl-logistic-desc-continuous presents the means of key continuous variables
+(years of education, work experience, and numeracy) separately for managers
+and non-managers.
+
+```{r}
+#| label: tbl-logistic-desc-continuous
+#| tbl-cap: "Continuous Variables by Supervisory Status"
+
+piaac |>
+  mutate(
+    Status = factor(manager, levels = c(0, 1),
+                    labels = c("Non-manager", "Manager"))
+  ) |>
+  select(Status, schyrs, exper, numeracy) |>
+  tbl_summary(
+    by = Status,
+    type = everything() ~ "continuous",
+    statistic = all_continuous() ~ "{mean} ({sd})",
+    label = list(
+      schyrs   ~ "Years of education",
+      exper    ~ "Work experience (years)",
+      numeracy ~ "Numeracy (z-score)"
+    ),
+    digits = everything() ~ 2
+  ) |>
+  add_overall() |>
+  add_p() |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+Managers have slightly more education, more work experience, and somewhat
+higher numeracy scores than non-managers. However, the differences in
+education and numeracy are relatively modest. The descriptive statistics
+suggest that occupation and gender may be more important differentiators
+than continuous human capital variables --- a hypothesis we will test in the
+regression analysis.
+
+
+### Visualizations {#sec-logistic-ex-visualizations}
+
+#### Bar Chart: Manager Status by Gender
+
+@fig-logistic-bar-gender shows the proportion of managers and non-managers
+within each gender group.
+
+```{r}
+#| label: fig-logistic-bar-gender
+#| fig-cap: "Supervisory Status by Gender"
+#| fig-alt: "Grouped bar chart showing the proportion of managers and non-managers by gender. About half of male workers are managers compared with roughly one-third of female workers, revealing a substantial gender gap in supervisory status."
+#| fig-height: 4
+
+piaac |>
+  mutate(
+    Gender = factor(female, levels = c(0, 1),
+                    labels = c("Male", "Female")),
+    Status = factor(manager, levels = c(0, 1),
+                    labels = c("Non-manager", "Manager"))
+  ) |>
+  count(Gender, Status) |>
+  group_by(Gender) |>
+  mutate(prop = n / sum(n)) |>
+  ggplot(aes(x = Gender, y = prop, fill = Status)) +
+  geom_col(position = "dodge", alpha = 0.85) +
+  scale_fill_manual(values = c(ber640_colors["primary"],
+                               ber640_colors["accent"])) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Gender",
+    y = "Proportion",
+    fill = "Status",
+    title = "Supervisory Status by Gender",
+    subtitle = "PIAAC Korea sample (N = 1,357)"
+  )
+```
+
+The bar chart clearly shows the gender gap in supervisory status: male
+workers are more likely to be managers than female workers.
+
+#### Boxplots: Continuous Predictors by Manager Status
+
+@fig-logistic-boxplots presents the distributions of years of education,
+work experience, and numeracy by supervisory status.
+
+```{r}
+#| label: fig-logistic-boxplots
+#| fig-cap: "Distribution of Continuous Predictors by Supervisory Status"
+#| fig-alt: "Three-panel boxplot comparing managers and non-managers on education, experience, and numeracy. Managers have slightly higher median education and noticeably more work experience than non-managers. Numeracy distributions are similar for both groups with only a modest advantage for managers."
+#| fig-height: 4.5
+
+p_edu <- piaac |>
+  mutate(Status = factor(manager, levels = c(0, 1),
+                         labels = c("Non-manager", "Manager"))) |>
+  ggplot(aes(x = Status, y = schyrs, fill = Status)) +
+  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
+  scale_fill_manual(values = c(ber640_colors["primary"],
+                               ber640_colors["accent"])) +
+  labs(x = NULL, y = "Years of education", title = "Education")
+
+p_exp <- piaac |>
+  mutate(Status = factor(manager, levels = c(0, 1),
+                         labels = c("Non-manager", "Manager"))) |>
+  ggplot(aes(x = Status, y = exper, fill = Status)) +
+  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
+  scale_fill_manual(values = c(ber640_colors["primary"],
+                               ber640_colors["accent"])) +
+  labs(x = NULL, y = "Experience (years)", title = "Experience")
+
+p_num <- piaac |>
+  mutate(Status = factor(manager, levels = c(0, 1),
+                         labels = c("Non-manager", "Manager"))) |>
+  ggplot(aes(x = Status, y = numeracy, fill = Status)) +
+  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
+  scale_fill_manual(values = c(ber640_colors["primary"],
+                               ber640_colors["accent"])) +
+  labs(x = NULL, y = "Numeracy (z-score)", title = "Numeracy")
+
+p_edu + p_exp + p_num
+```
+
+Key observations from the boxplots:
+
+- **Education:** Managers have slightly more years of education on average,
+  but the distributions overlap substantially.
+- **Experience:** Managers tend to have more work experience, which is
+  consistent with the expectation that supervisory roles require seniority.
+- **Numeracy:** The distributions are similar for managers and non-managers,
+  with only a modest advantage for managers.
+
+::: {.callout-tip}
+## Writing Tip
+For a binary outcome, bar charts (for categorical predictors) and boxplots
+(for continuous predictors) are the most informative exploratory
+visualizations. They help you preview which predictors are likely to be
+important before fitting the logistic regression.
+:::
+
+
+## Part 5: Regression Analysis {#sec-logistic-ex-part5}
+
+::: {.callout-important}
+## Guideline Reminder --- Part 5
+Fit your planned logistic regression models, present the results as **odds
+ratios** in a publication-style table, interpret every coefficient
+substantively, and compare nested models using **likelihood ratio tests**.
+Link each model back to the research question it addresses. For logistic
+regression, the key deliverable is a **predicted probability graph**.
+:::
+
+### Model 1: Baseline Human Capital Model (RQ1) {#sec-logistic-ex-results-m1}
+
+We begin by fitting Model 1, which regresses supervisory status on gender,
+years of education (mean-centered), work experience (mean-centered, in
+decades), and the squared experience term.
+
+```{r}
+#| label: fit-logit1
+
+# --- Model 1: Baseline human capital model ---
+logit1 <- glm(manager ~ female + schyrs_c + exper_c + exper2_c,
+              data = piaac, family = binomial)
+
+summary(logit1)
+```
+
+#### Odds Ratios for Model 1
+
+To interpret logistic regression coefficients substantively, we exponentiate
+them to obtain **odds ratios** (ORs).
+
+```{r}
+#| label: logit1-or
+
+# Odds ratios with 95% CI
+exp(cbind(OR = coef(logit1), confint(logit1))) |>
+  round(3)
+```
+
+**Interpretation of Model 1:**
+
+- **Intercept (OR):** The baseline odds of being a manager for a *male*
+  worker with *average* education and *average* experience. Because the
+  intercept is on the log-odds scale, the exponentiated value gives the
+  odds (not probability) at the reference point.
+- **Female (OR $\approx$ 0.32, $p < .001$):** Women have approximately 68%
+  lower odds of holding a supervisory position compared with men who have the
+  same education and experience. This is a substantial gender gap:
+  $100 \times (1 - 0.32) = 68\%$ reduction in odds.
+- **Education (OR $\approx$ 1.26, $p < .001$):** Each additional year of
+  education is associated with a 26% increase in the odds of being a
+  manager, holding gender and experience constant.
+- **Experience (OR $> 1$):** Work experience in decades is associated with
+  higher odds of being a manager, consistent with seniority-based promotion
+  patterns.
+- **Experience squared:** The negative coefficient (OR $< 1$) on the squared
+  term indicates diminishing returns --- the promotion advantage of
+  experience levels off at higher tenure.
+
+
+### Model 2: Adding Occupation and Numeracy (RQ2) {#sec-logistic-ex-results-m2}
+
+Model 2 extends Model 1 by adding three occupation dummy variables (with
+skilled occupations as the reference category) and numeracy proficiency.
+
+::: {.callout-tip}
+## Two Ways to Include Categorical Predictors
+In the proposal (@sec-logistic-proposal), we used `occupation` (a factor) and let R create the dummy variables automatically. Here we include the pre-computed dummies (`semiwhite`, `semiblue`, `elementary`) explicitly. Both approaches produce the same fitted values and overall model fit, but the coefficient table depends on which category is chosen as the reference. The explicit dummy version makes it easier to see exactly which coefficients appear in the output and ensures the reference category is unambiguous.
+:::
+
+```{r}
+#| label: fit-logit2
+
+# --- Model 2: + Occupation and numeracy ---
+logit2 <- glm(manager ~ female + schyrs_c + exper_c + exper2_c +
+                semiwhite + semiblue + elementary + numeracy,
+              data = piaac, family = binomial)
+
+summary(logit2)
+```
+
+#### Odds Ratios for Model 2
+
+```{r}
+#| label: logit2-or
+
+exp(cbind(OR = coef(logit2), confint(logit2))) |>
+  round(3)
+```
+
+**Interpretation of Model 2:**
+
+- **Occupation effects** (all relative to **Skilled** occupations, the
+  reference category):
+  - Semi-white-collar workers have about 14% lower odds of being managers
+    compared with skilled workers (OR $\approx$ 0.86).
+  - Semi-blue-collar workers have about 76% lower odds compared with
+    skilled workers (OR $\approx$ 0.24).
+  - Elementary workers have about 89% lower odds compared with skilled
+    workers (OR $\approx$ 0.12). Equivalently, skilled workers have about
+    8.7 times the odds of elementary workers.
+  - This clear occupational gradient confirms that the type of work one does
+    is a major determinant of whether one supervises others.
+- **Numeracy (OR $\approx$ 1, not significant):** Numeracy proficiency is
+  **not** a significant predictor of supervisory status after controlling for
+  education, experience, and occupation. This is an important contrast with
+  the linear regression results, where numeracy was highly significant for
+  predicting earnings.
+- **Female:** The gender odds ratio remains substantial (women still have
+  much lower odds of being managers) even after controlling for occupation
+  and cognitive skills.
+- **Education:** The education OR decreases somewhat after controlling for
+  occupation, suggesting that part of the education effect in Model 1
+  operated through occupational sorting.
+
+::: {.callout-tip}
+## Key Contrast with Linear Regression
+In the earnings analysis (Project 1), numeracy was a significant predictor:
+what workers *know* mattered for how much they *earn*. Here, numeracy is
+**not** significant for managerial status. This suggests that cognitive
+skills contribute to earnings but do not independently drive promotion to
+supervisory roles --- occupational classification is far more important.
+:::
+
+
+### Model 3: Gender Interactions (RQ3) {#sec-logistic-ex-results-m3}
+
+Model 3 extends Model 2 by adding interaction terms between gender and two
+key predictors: education and numeracy. These interactions test whether the
+pathways to managerial status differ between men and women.
+
+```{r}
+#| label: fit-logit3
+
+# --- Model 3: + Gender interactions ---
+logit3 <- glm(manager ~ female + schyrs_c + exper_c + exper2_c +
+                semiwhite + semiblue + elementary + numeracy +
+                fem_schyrs_c + fem_numeracy,
+              data = piaac, family = binomial)
+
+summary(logit3)
+```
+
+#### Odds Ratios for Model 3
+
+```{r}
+#| label: logit3-or
+
+exp(cbind(OR = coef(logit3), confint(logit3))) |>
+  round(3)
+```
+
+**Interpretation of the interaction terms:**
+
+- **Female $\times$ Education:** The interaction is not statistically
+  significant. There is no evidence that the association between education and the
+  odds of being a manager differs between men and women.
+- **Female $\times$ Numeracy:** This interaction is also not significant.
+  The (already weak) association between numeracy and supervisory status does not vary
+  by gender.
+
+These null interaction results indicate that the gender gap in managerial
+status operates primarily as a **level difference** (the main effect of
+`female`) rather than through differential returns to education or cognitive
+skills.
+
+
+### Publication-Style Odds Ratio Table {#sec-logistic-ex-or-table}
+
+@tbl-logistic-models presents all three models side by side in a
+publication-ready format with exponentiated coefficients (odds ratios).
+
+```{r}
+#| label: tbl-logistic-models
+#| tbl-cap: "Nested Logistic Regression Models Predicting Supervisory Status (Odds Ratios)"
+
+# Create individual tbl_regression objects with odds ratios
+t1 <- tbl_regression(
+  logit1,
+  exponentiate = TRUE,
+  label = list(
+    female   ~ "Female",
+    schyrs_c ~ "Education (years, centered)",
+    exper_c  ~ "Experience (decades, centered)",
+    exper2_c ~ "Experience squared"
+  )
+) |> bold_p(t = 0.05)
+
+t2 <- tbl_regression(
+  logit2,
+  exponentiate = TRUE,
+  label = list(
+    female     ~ "Female",
+    schyrs_c   ~ "Education (years, centered)",
+    exper_c    ~ "Experience (decades, centered)",
+    exper2_c   ~ "Experience squared",
+    semiwhite  ~ "Semi-white-collar",
+    semiblue   ~ "Semi-blue-collar",
+    elementary ~ "Elementary",
+    numeracy   ~ "Numeracy (z-score)"
+  )
+) |> bold_p(t = 0.05)
+
+t3 <- tbl_regression(
+  logit3,
+  exponentiate = TRUE,
+  label = list(
+    female       ~ "Female",
+    schyrs_c     ~ "Education (years, centered)",
+    exper_c      ~ "Experience (decades, centered)",
+    exper2_c     ~ "Experience squared",
+    semiwhite    ~ "Semi-white-collar",
+    semiblue     ~ "Semi-blue-collar",
+    elementary   ~ "Elementary",
+    numeracy     ~ "Numeracy (z-score)",
+    fem_schyrs_c ~ "Female x Education",
+    fem_numeracy ~ "Female x Numeracy"
+  )
+) |> bold_p(t = 0.05)
+
+# Merge into one table
+tbl_merge(
+  tbls = list(t1, t2, t3),
+  tab_spanner = c("**Model 1**", "**Model 2**", "**Model 3**")
+)
+```
+
+::: {.callout-tip}
+## Writing Tip
+For logistic regression, always present **odds ratios** (not raw log-odds
+coefficients) in the publication table. Set `exponentiate = TRUE` in
+`tbl_regression()`. The confidence intervals are also exponentiated, so they
+are on the OR scale. An OR whose 95% CI includes 1.00 is not significant at
+$\alpha = .05$.
+:::
+
+
+### Likelihood Ratio Tests {#sec-logistic-ex-lr-tests}
+
+We compare nested models using **likelihood ratio (LR) tests**, the logistic
+regression analogue of the incremental $F$-test used in linear regression.
+
+#### LR Test: Model 1 vs. Model 2
+
+```{r}
+#| label: lr-test-m1-m2
+
+# LR test: Does adding occupation + numeracy improve fit?
+anova(logit1, logit2, test = "Chisq")
+```
+
+The likelihood ratio test is highly significant ($p < .001$), confirming
+that occupation and numeracy jointly add significant predictive power beyond
+the baseline human capital variables. This answers **RQ2** in the
+affirmative: occupational classification is a strong predictor of
+supervisory status.
+
+#### LR Test: Model 2 vs. Model 3
+
+```{r}
+#| label: lr-test-m2-m3
+
+# LR test: Do gender interactions improve fit?
+anova(logit2, logit3, test = "Chisq")
+```
+
+The likelihood ratio test for the two interaction terms is **not
+significant** ($p > .05$), indicating that the gender interaction block does
+not meaningfully improve model fit. This answers **RQ3**: the associations of
+education and numeracy with supervisory status do **not** differ significantly
+by gender.
+
+
+### Collinearity Diagnostics {#sec-logistic-ex-vif}
+
+We check for multicollinearity by computing variance inflation factors
+(VIFs) for the full model.
+
+```{r}
+#| label: tbl-logistic-vif
+#| tbl-cap: "Variance Inflation Factors for Logistic Model 3"
+
+car::vif(logit3) |>
+  as.data.frame() |>
+  setNames("VIF") |>
+  knitr::kable(digits = 2)
+```
+
+All VIF values are well below 5, indicating that multicollinearity is not a
+concern. The interaction terms (`fem_schyrs_c`, `fem_numeracy`) have modest
+VIFs because we used mean-centered predictors to construct them.
+
+::: {.callout-note}
+## VIF Guidelines
+- VIF < 5: No concern
+- VIF 5--10: Moderate concern; consider centering or combining predictors
+- VIF > 10: Serious multicollinearity; affected coefficients may be unstable
+:::
+
+
+### Predicted Probabilities {#sec-logistic-ex-predicted}
+
+The **predicted probability graph** is the key deliverable for the logistic
+regression project. Unlike odds ratios, predicted probabilities are on an
+intuitive 0--1 scale that communicates practical significance directly.
+
+#### Predicted Probability Graph: Education by Gender
+
+@fig-logistic-predicted shows the predicted probability of holding a
+supervisory position as a function of years of education (centered),
+separately for men and women.
+
+```{r}
+#| label: fig-logistic-predicted
+#| fig-cap: "Predicted Probability of Being a Manager by Education and Gender"
+#| fig-alt: "Predicted probability curves showing the probability of being a manager increases with years of education for both genders, following an S-shaped logistic curve. Males have a consistently higher predicted probability than females at every education level, with a gap of approximately 25 to 30 percentage points."
+#| fig-height: 5
+
+plot_predictions(logit2,
+                 condition = list("schyrs_c", "female"),
+                 type = "response") +
+  labs(
+    x = "Years of Education (centered)",
+    y = "Predicted P(Manager)",
+    color = "Gender",
+    fill = "Gender",
+    title = "Predicted Probability of Supervisory Status",
+    subtitle = "By education level and gender (Model 2)"
+  ) +
+  scale_color_manual(
+    values = c(ber640_colors["primary"], ber640_colors["secondary"]),
+    labels = c("Male", "Female")
+  ) +
+  scale_fill_manual(
+    values = c(ber640_colors["primary"], ber640_colors["secondary"]),
+    labels = c("Male", "Female")
+  )
+```
+
+The predicted probability graph reveals two important patterns:
+
+1. **Gender gap:** At every level of education, men have a substantially
+   higher predicted probability of being a manager than women. The gap is
+   consistent across the education range.
+2. **Education gradient:** Higher education is associated with a higher
+   probability of being a manager for both genders. The S-shaped logistic
+   curve means that the marginal effect of education varies depending on
+   where a worker starts on the probability scale.
+
+#### Predicted Probability Graph: Education by Occupation
+
+@fig-logistic-predicted-occ shows predicted probabilities across education
+levels for each occupational category.
+
+```{r}
+#| label: fig-logistic-predicted-occ
+#| fig-cap: "Predicted Probability of Being a Manager by Education and Occupation"
+#| fig-alt: "Predicted probability curves for four occupational categories showing the probability of being a manager as a function of education. Skilled workers have the highest predicted probability at every education level, followed by semi-white-collar, semi-blue-collar, and elementary workers. The occupational gap is much larger than the education gradient."
+#| fig-height: 5.5
+
+# Create an occupation factor for plotting
+piaac <- piaac |>
+  mutate(
+    occ_label = case_when(
+      semiwhite == 0 & semiblue == 0 & elementary == 0 ~ "Skilled",
+      semiwhite == 1 ~ "Semi-white",
+      semiblue == 1  ~ "Semi-blue",
+      elementary == 1 ~ "Elementary"
+    ),
+    occ_label = factor(occ_label,
+                       levels = c("Skilled", "Semi-white",
+                                  "Semi-blue", "Elementary"))
+  )
+
+# Refit Model 2 with occ_label for cleaner plotting
+logit2_plot <- glm(manager ~ female + schyrs_c + exper_c + exper2_c +
+                     occ_label + numeracy,
+                   data = piaac, family = binomial)
+
+plot_predictions(logit2_plot,
+                 condition = list("schyrs_c", "occ_label"),
+                 type = "response") +
+  labs(
+    x = "Years of Education (centered)",
+    y = "Predicted P(Manager)",
+    color = "Occupation",
+    fill = "Occupation",
+    title = "Predicted Probability of Supervisory Status",
+    subtitle = "By education level and occupation (Model 2)"
+  ) +
+  scale_color_manual(values = unname(ber640_colors[1:4])) +
+  scale_fill_manual(values = unname(ber640_colors[1:4]))
+```
+
+The occupational gradient in predicted probabilities is striking: skilled
+workers have the highest predicted probability of being managers at every
+education level, while elementary workers have the lowest. The gap between
+occupational categories is much larger than the gap between education levels,
+highlighting the dominant role of occupation.
+
+#### Table of Predicted Probabilities at Key Values
+
+@tbl-logistic-pred-table presents predicted probabilities at specific
+combinations of predictor values to facilitate interpretation.
+
+```{r}
+#| label: tbl-logistic-pred-table
+#| tbl-cap: "Predicted Probabilities of Supervisory Status at Selected Values"
+
+# Create a prediction grid
+pred_grid <- predictions(
+  logit2,
+  newdata = datagrid(
+    female   = c(0, 1),
+    schyrs_c = c(-4, 0, 4),
+    exper_c  = 0,
+    exper2_c = 0,
+    semiwhite = 0,
+    semiblue  = 0,
+    elementary = 0,
+    numeracy  = 0
+  ),
+  type = "response"
+)
+
+pred_grid |>
+  as.data.frame() |>
+  mutate(
+    Gender = ifelse(female == 0, "Male", "Female"),
+    Education = case_when(
+      schyrs_c == -4 ~ "Mean - 4 yrs",
+      schyrs_c ==  0 ~ "Mean",
+      schyrs_c ==  4 ~ "Mean + 4 yrs"
+    ),
+    `P(Manager)` = round(estimate, 3),
+    `95% CI` = paste0("[", round(conf.low, 3), ", ",
+                      round(conf.high, 3), "]")
+  ) |>
+  select(Gender, Education, `P(Manager)`, `95% CI`) |>
+  kable(align = "llrr")
+```
+
+The predicted probability table makes the gender gap concrete. For example,
+a male skilled worker with average education, average experience, and
+average numeracy has a predicted probability of about 0.55--0.60 of being a
+manager, while a comparable female worker has a predicted probability of
+only about 0.25--0.30. This is a 25--30 percentage-point gap in the
+probability of holding a supervisory position.
+
+::: {.callout-tip}
+## Writing Tip
+Predicted probability tables are extremely useful for communicating logistic
+regression results to non-technical audiences. By plugging in specific,
+meaningful values for the predictors, you translate abstract odds ratios
+into concrete probabilities that readers can immediately grasp.
+:::
+
+
+### Model Fit Summary {#sec-logistic-ex-fit}
+
+We summarize the overall fit of each model using AIC, BIC, and McFadden's
+pseudo-$R^2$.
+
+```{r}
+#| label: tbl-logistic-fit
+#| tbl-cap: "Model Fit Statistics for the Three Logistic Regression Models"
+
+# Null model for pseudo-R2 calculation
+logit_null <- glm(manager ~ 1, data = piaac, family = binomial)
+ll_null <- logLik(logit_null)
+
+fit_table <- tibble::tibble(
+  Model = c("Model 1", "Model 2", "Model 3"),
+  AIC = c(AIC(logit1), AIC(logit2), AIC(logit3)),
+  BIC = c(BIC(logit1), BIC(logit2), BIC(logit3)),
+  `Log-Lik` = c(as.numeric(logLik(logit1)),
+                as.numeric(logLik(logit2)),
+                as.numeric(logLik(logit3))),
+  `McFadden R2` = c(
+    1 - as.numeric(logLik(logit1)) / as.numeric(ll_null),
+    1 - as.numeric(logLik(logit2)) / as.numeric(ll_null),
+    1 - as.numeric(logLik(logit3)) / as.numeric(ll_null)
+  )
+) |>
+  mutate(across(AIC:BIC, ~ round(.x, 1)),
+         `Log-Lik` = round(`Log-Lik`, 1),
+         `McFadden R2` = round(`McFadden R2`, 3))
+
+kable(fit_table, align = "lrrrr")
+```
+
+Model 2 shows a substantial improvement over Model 1 (lower AIC and BIC,
+higher pseudo-$R^2$), confirming the importance of occupational
+classification. Model 3 adds only a negligible improvement over Model 2,
+consistent with the nonsignificant interaction terms.
+
+
+## Part 6: Discussion {#sec-logistic-ex-part6}
+
+::: {.callout-important}
+## Guideline Reminder --- Part 6
+Summarize your key findings, answer each research question directly, discuss
+at least 2--3 limitations, and note implications. This is where you show
+that you understand what the numbers mean.
+:::
+
+### Summary of Key Findings {#sec-logistic-ex-findings}
+
+This study examined the determinants of supervisory status among Korean
+full-time workers using a series of nested logistic regression models
+applied to PIAAC Korea data ($N = 1{,}357$). The results yield three main
+findings.
+
+**RQ1: Education and experience predict supervisory status.** Both years of
+education and work experience are significant predictors of the likelihood
+of holding a managerial position. Each additional year of education is
+associated with approximately a 26% increase in the odds of being a manager
+in the baseline model (Model 1). Work experience shows the expected
+concave pattern: the odds of being a manager increase with experience but
+at a diminishing rate. These results are consistent with human capital
+theory --- more educated and experienced workers are more likely to be
+promoted to supervisory roles.
+
+**RQ2: Occupation is a dominant predictor; numeracy is not.** Occupational
+classification and numeracy were added as a block in Model 2. The
+likelihood ratio test confirmed that this block significantly improves model
+fit ($p < .001$). However, the improvement is driven almost entirely by
+**occupation**, not numeracy. Relative to **Skilled** workers (the reference
+category), semi-blue-collar workers have about 76% lower odds and elementary
+workers have about 89% lower odds of being managers. In contrast, numeracy
+proficiency is **not** a significant predictor of supervisory status after
+controlling for education, experience, and occupation. This is an important
+finding: cognitive skills predict *earnings* (as shown in Project 1) but
+do not independently predict *career advancement* to managerial positions.
+
+**RQ3: Gender interactions are not significant.** The interaction terms
+between gender and education ($p > .05$) and gender and numeracy ($p > .05$)
+are both nonsignificant. The likelihood ratio test comparing Model 2 and
+Model 3 also fails to reject the null hypothesis. The returns to education
+and numeracy do not differ between men and women in predicting supervisory
+status.
+
+### The Persistent Gender Gap {#sec-logistic-ex-gender-gap}
+
+One of the most striking findings is the large and persistent gender gap in
+supervisory status. Across all three models, women have approximately **68%
+lower odds** of being managers compared with men who have the same
+education, experience, occupation, and cognitive skills. Translated into
+predicted probabilities, this means that a woman with identical
+qualifications to a male counterpart has a 25--30 percentage-point lower
+probability of holding a supervisory position.
+
+This finding parallels the large gender earnings gap documented in Project 1
+and is consistent with the well-documented underrepresentation of women in
+leadership positions in South Korea. The fact that the gap persists after
+controlling for human capital, occupation, and cognitive skills suggests
+that it reflects structural factors --- such as organizational culture,
+promotion practices, and work-family constraints --- that our model cannot
+capture.
+
+### Key Contrast: Linear vs. Logistic Regression Findings {#sec-logistic-ex-contrast}
+
+Comparing the results across the two projects yields an important
+substantive insight:
+
+| Finding | Project 1 (Earnings) | Project 2 (Manager Status) |
+|---------|---------------------|---------------------------|
+| Education | Significant | Significant |
+| Experience | Significant (concave) | Significant (concave) |
+| Occupation | Strong earnings gradient | Strong managerial gradient |
+| **Numeracy** | **Significant** ($p < .001$) | **Not significant** |
+| Gender gap | ~33% lower earnings | ~68% lower odds |
+| Gender interactions | Marginally nonsignificant | Not significant |
+
+: Comparison of linear and logistic regression findings. {#tbl-project-comparison}
+
+The most notable contrast is that **cognitive skills (numeracy) matter for
+earnings but not for career advancement**. This suggests that the labor
+market rewards cognitive skills through higher wages but that the promotion
+process to supervisory roles depends more on occupational context and other
+factors (seniority, organizational fit, network ties) than on measured
+cognitive ability.
+
+### Limitations {#sec-logistic-ex-limitations}
+
+Several limitations should be noted when interpreting these results.
+
+1. **Cross-sectional design.** Because PIAAC is a cross-sectional survey,
+   we cannot determine whether education and experience *cause* promotion
+   to supervisory roles. The observed associations may reflect selection
+   effects (e.g., workers who seek managerial positions may also invest more
+   in education).
+
+2. **Single-country sample.** Our analysis focuses on South Korea, which
+   has distinctive labor market institutions, a strong seniority system, and
+   specific cultural norms about gender and leadership. The findings may not
+   generalize to other countries.
+
+3. **Binary simplification.** The `manager` variable is a simple binary
+   indicator of supervisory responsibility. It does not capture the *level*
+   of management (e.g., front-line supervisor vs. senior executive) or the
+   *number* of subordinates, which would provide a more nuanced picture.
+
+4. **Omitted variables.** Important predictors such as tenure at the
+   current firm, industry, firm size, and personality traits are not
+   available in the PIAAC data. These factors likely influence promotion
+   decisions and could confound our estimates.
+
+### Implications {#sec-logistic-ex-implications}
+
+Despite these limitations, the findings have practical implications:
+
+- The **nonsignificance of numeracy** for supervisory status suggests that
+  improving workers' cognitive skills alone will not increase their chances
+  of promotion. Organizational factors and social capital may be more
+  relevant for career advancement.
+- The **dominant role of occupation** highlights the importance of initial
+  occupational placement. Workers who enter skilled occupations have much
+  higher odds of eventually becoming managers, regardless of their education
+  or cognitive skills. Career counseling and vocational training may be
+  important levers.
+- The **persistent gender gap** in managerial status, even after extensive
+  controls, points to the need for structural interventions such as
+  mentoring programs, leadership development initiatives for women, and
+  organizational policies that address implicit bias in promotion decisions.
+
+
+## Submission Checklist {#sec-logistic-ex-checklist}
+
+::: {.callout-important}
+## Project 2 Submission Checklist
+Before submitting your Logistic Regression Results & Discussion, confirm
+that you have completed all of the following:
+
+- [ ] **Cross-tabulations** of the outcome with key categorical predictors,
+  with row/column percentages and chi-square tests
+- [ ] **Descriptive statistics** for continuous variables by outcome group,
+  with significance tests
+- [ ] **Exploratory visualizations** (bar charts, boxplots) with written
+  interpretations
+- [ ] **Logistic regression models** fitted and summarized with `summary()`
+  output
+- [ ] **Odds ratio table** using `tbl_regression(exponentiate = TRUE)` for
+  all models, merged into a single publication-style table
+- [ ] **Odds ratio interpretation** for every predictor --- direction,
+  magnitude, significance, and substantive meaning
+- [ ] **Likelihood ratio tests** comparing nested models to evaluate
+  incremental contributions
+- [ ] **Predicted probability graph** (the key deliverable) showing the
+  relationship between a key predictor and the probability of the outcome,
+  stratified by at least one grouping variable
+- [ ] **Predicted probability table** at selected predictor values for
+  concrete interpretation
+- [ ] **VIF check** for multicollinearity
+- [ ] **Model fit summary** (AIC, BIC, pseudo-$R^2$)
+- [ ] **Discussion** that answers each research question, compares findings
+  with the linear regression project, notes limitations, and discusses
+  implications
+- [ ] All code runs without errors (`eval: true` for all code chunks)
+- [ ] All figures and tables are labeled, captioned, and cross-referenced
+:::

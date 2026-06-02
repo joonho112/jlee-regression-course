@@ -1,0 +1,2316 @@
+# Multiple Logistic Regression {#sec-ch10}
+
+{{< include ../_common.qmd >}}
+
+
+## Introduction {#sec-ch10-intro}
+
+In @sec-ch9, we introduced logistic regression with a single predictor. We modeled Titanic survival as a function of sex alone, or age alone, and learned to interpret coefficients as odds ratios, compute predicted probabilities, and calculate average marginal effects. But just as simple linear regression (@sec-ch1) was only a starting point --- requiring the multiple regression tools of @sec-ch2 through @sec-ch8 to handle real research questions --- simple logistic regression is insufficient for most applied problems.
+
+The reason is familiar: **confounding**. When we estimate the effect of one predictor on a binary outcome without controlling for other relevant variables, we risk omitted variable bias. In @sec-ch2, we saw how the unadjusted school difference in GCSE scores shrank dramatically once we controlled for prior achievement (LRT). The same logic applies to logistic regression, and the consequences can be even more dramatic --- the direction of an association can actually reverse when a confounder is introduced. This phenomenon, known as **Simpson's paradox**, is the motivating example for this chapter.
+
+This chapter extends the logistic regression model to include multiple predictors. We will see that the core mechanics --- the logit link, maximum likelihood estimation, odds ratios, predicted probabilities --- all carry forward from @sec-ch9. What changes is our ability to estimate **adjusted** effects, controlling for confounders, and to build richer models that capture the joint influence of several variables on a binary outcome.
+
+::: {.callout-note}
+## Learning Objectives
+After completing this chapter, you will be able to:
+
+1. Explain Simpson's paradox as an instance of omitted variable bias in the logistic regression context
+2. Specify and fit a multiple logistic regression model with both categorical and continuous predictors
+3. Describe the conceptual logic of maximum likelihood estimation for logistic regression
+4. Distinguish between the Wald test and the likelihood ratio test, and explain when each is preferred
+5. Compute and interpret **adjusted odds ratios** that control for confounders
+6. Construct confidence intervals for odds ratios using the asymmetric formula $\exp(b \pm 1.96 \cdot \text{SE})$
+7. Compute and visualize **predicted probabilities** and **average marginal effects** from a multiple logistic regression model using the `marginaleffects` package
+:::
+
+::: {.callout-tip}
+## Connection to Chapter 9
+This chapter builds directly on @sec-ch9, where we introduced simple logistic regression with a single predictor. Everything you learned there --- the logit link, odds ratios, predicted probabilities, average marginal effects --- carries forward here. The new ingredient is **multiple predictors**, which allows us to:
+
+- **Control for confounders** (just as moving from @sec-ch1 to @sec-ch2 did for OLS)
+- **Estimate adjusted odds ratios** that isolate each predictor's unique contribution
+- **Build richer models** that capture the joint influence of several variables
+
+If you are comfortable interpreting a single odds ratio from @sec-ch9, you already have the conceptual foundation for this chapter. The mechanics of exponentiation, confidence intervals, and marginal effects all work the same way --- we simply add "controlling for other predictors" to every interpretation.
+:::
+
+
+## Motivating Example: Berkeley Admissions {#sec-ch10-example}
+
+In the 1970s, the University of California, Berkeley was accused of sex discrimination in graduate admissions. The aggregate numbers seemed damning: overall, men were admitted at a substantially higher rate than women. But when researchers examined the data department by department, the apparent discrimination largely disappeared --- and in some departments, women were actually admitted at *higher* rates than men.
+
+This is one of the most famous examples of **Simpson's paradox** in statistics: an association that appears in aggregated data reverses or vanishes when the data are stratified by a confounding variable. It is also a textbook case of the omitted variable bias we studied in @sec-ch2, now applied to a binary outcome.
+
+### Loading the Data
+
+We use the `berk_sub` dataset from the `regdatasets` package, which contains individual-level admissions records for two departments --- Engineering and Psychology --- at Berkeley. The three variables are:
+
+- `admitted`: 1 = admitted, 0 = rejected
+- `male`: 1 = male, 0 = female
+- `engineering`: 1 = Engineering department, 0 = Psychology department
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-data-load
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Load the Berkeley admissions subset
+data(berk_sub)
+
+# Inspect the structure
+glimpse(berk_sub)
+
+# Create labeled factor variables for cleaner output
+berk_sub <- berk_sub |>
+  mutate(
+    sex = factor(ifelse(male == 1, "Male", "Female")),
+    department = factor(ifelse(engineering == 1, "Engineering", "Psychology"))
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-data-load"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The `glimpse()` output shows 1,169 applicants with three key variables: `admitted` (binary outcome), `male` (binary predictor of interest), and `engineering` (the confounding variable). This dataset is a simplified version of the famous 1973 Berkeley admissions data, restricted to two departments to make Simpson's paradox easier to see. The dummy coding (0/1) for all three variables is exactly what logistic regression expects.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-data-load"
+#| eval: false
+```
+- `berk_sub` contains 1,169 applicants to two Berkeley departments
+- `male` and `engineering` are dummy-coded (0/1), which is the format logistic regression expects
+- We create labeled factors (`sex`, `department`) for readable tables and plots
+
+
+:::
+
+### The Aggregate Picture
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-aggregate-table
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Overall admission rates by sex (ignoring department)
+berk_sub |>
+  group_by(sex) |>
+  summarise(
+    applicants = n(),
+    admitted = sum(admitted),
+    rejected = applicants - admitted,
+    admit_rate = mean(admitted),
+    odds = admit_rate / (1 - admit_rate),
+    .groups = "drop"
+  ) |>
+  kable(digits = 3,
+        col.names = c("Sex", "Applicants", "Admitted", "Rejected",
+                       "Admit Rate", "Odds"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-aggregate-table"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The aggregate numbers show a striking disparity. Males have a much higher admission rate than females. The odds of admission for males are substantially higher than for females, producing an unadjusted odds ratio of approximately:
+
+$$
+\text{OR}_{\text{unadjusted}} = \frac{\text{odds}_{\text{male}}}{\text{odds}_{\text{female}}} = \frac{406/345}{111/307} = \frac{1.177}{0.362} \approx 3.25
+$$
+
+This means the odds of admission for males are about 3.25 times the odds for females --- strong apparent evidence of sex discrimination.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-aggregate-table"
+#| eval: false
+```
+- We compute the overall admission rate for males and females, ignoring which department they applied to
+- The odds column converts the admission rate to odds: $\text{odds} = p/(1-p)$
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch10-aggregate-bar
+#| fig-cap: "Aggregate admission rates at Berkeley by sex. Males appear to have a dramatically higher admission rate, suggesting possible sex discrimination."
+#| fig-alt: "Bar chart with two vertical bars showing aggregate Berkeley admission rates by sex. The x-axis displays sex (Female and Male) and the y-axis shows admission rate as a percentage. The Male bar is substantially taller than the Female bar, suggesting at first glance that males were admitted at a much higher rate, which could be interpreted as evidence of sex discrimination in admissions."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+berk_sub |>
+  group_by(sex) |>
+  summarise(admit_rate = mean(admitted)) |>
+  ggplot(aes(x = sex, y = admit_rate, fill = sex)) +
+  geom_col(width = 0.6, alpha = 0.85) +
+  geom_text(aes(label = scales::percent(admit_rate, accuracy = 0.1)),
+            vjust = -0.5, fontface = "bold", size = 5) +
+  scale_fill_manual(values = c(ber640_colors["accent"], ber640_colors["primary"])) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 0.65)) +
+  labs(
+    title = "Aggregate Admission Rates by Sex",
+    subtitle = "Ignoring department --- apparent sex discrimination",
+    x = "Applicant Sex",
+    y = "Admission Rate"
+  ) +
+  guides(fill = "none")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch10-aggregate-bar"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The bar chart shows a striking disparity: males appear to be admitted at roughly twice the rate of females. Without further analysis, one might conclude that the admissions process discriminates against women. However, this aggregate picture is misleading because it ignores a critical confounding variable --- the department to which applicants applied. The next section reveals how this confounder creates Simpson's paradox.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch10-aggregate-bar"
+#| eval: false
+```
+- The bar chart displays the raw admission rates for males and females across both departments combined
+- The dramatic visual difference mirrors the unadjusted odds ratio of 3.25
+
+
+:::
+
+
+## Simpson's Paradox and Confounding {#sec-ch10-simpson}
+
+Now let us look at the same data broken down by department.
+
+### Department-Specific Rates
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-department-table
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Admission rates by sex AND department
+dept_table <- berk_sub |>
+  group_by(department, sex) |>
+  summarise(
+    applicants = n(),
+    admit_rate = mean(admitted),
+    admitted = sum(admitted),
+    rejected = applicants - admitted,
+    odds = admit_rate / (1 - admit_rate),
+    .groups = "drop"
+  )
+
+dept_table |>
+  select(department, sex, applicants, admitted, rejected, admit_rate, odds) |>
+  kable(digits = 3,
+        col.names = c("Department", "Sex", "Applicants", "Admitted",
+                       "Rejected", "Admit Rate", "Odds"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-department-table"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The department-level data tell a completely different story:
+
+**Engineering**: Males have an admission rate of about 63%, while females have an even higher rate of about 68%. The within-department odds ratio is:
+
+$$
+\text{OR}_{\text{Engineering}} = \frac{353/207}{17/8} = \frac{1.705}{2.125} \approx 0.80
+$$
+
+The odds ratio is actually *below* 1 --- females have slightly *higher* odds of admission in Engineering.
+
+**Psychology**: Males have an admission rate of about 28%, while females have a rate of about 24%. The within-department odds ratio is:
+
+$$
+\text{OR}_{\text{Psychology}} = \frac{53/138}{94/299} = \frac{0.384}{0.314} \approx 1.22
+$$
+
+Males have somewhat higher odds in Psychology, but the difference is modest.
+
+In **neither** department do we see the dramatic 3.25 odds ratio from the aggregate data. The apparent sex discrimination has largely vanished!
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-department-table"
+#| eval: false
+```
+- Now we compute admission rates separately for each combination of sex and department
+- This produces a 4-row table: Male/Female crossed with Engineering/Psychology
+
+
+:::
+
+### Visualizing the Paradox
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch10-simpson-paradox
+#| fig-cap: "Simpson's paradox in Berkeley admissions. Within each department (colored bars), the sex difference in admission rates is small or favors women. But when departments are combined (the aggregate), males appear to have much higher admission rates."
+#| fig-alt: "Faceted bar chart showing Berkeley admission rates by sex, with separate panels for each department. The x-axis in each panel shows sex (Female and Male) and the y-axis shows admission rate as a percentage. Within most individual departments, the bars for females and males are similar in height or the female bar is slightly taller, revealing that women were not disadvantaged within departments. This contrasts with the aggregate pattern, illustrating Simpson's paradox where a confounding variable (department) reverses the apparent relationship."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+ggplot(dept_table, aes(x = sex, y = admit_rate, fill = sex)) +
+  geom_col(width = 0.6, alpha = 0.85) +
+  geom_text(aes(label = scales::percent(admit_rate, accuracy = 0.1)),
+            vjust = -0.5, fontface = "bold", size = 4) +
+  facet_wrap(~ department) +
+  scale_fill_manual(values = c(ber640_colors["accent"], ber640_colors["primary"])) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 0.85)) +
+  labs(
+    title = "Admission Rates by Sex Within Each Department",
+    subtitle = "The sex gap is small or reversed within departments",
+    x = "Applicant Sex",
+    y = "Admission Rate"
+  ) +
+  guides(fill = "none")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch10-simpson-paradox"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Within each department, the sex gap in admission rates is small --- and in Engineering it may even favor women. Compare this to the aggregate bar chart (@fig-ch10-aggregate-bar), where the gap was dramatic. This is Simpson's paradox in action: the direction of the association between sex and admission **reverses** when we control for department. The confounding mechanism becomes clear when we examine where males and females applied.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch10-simpson-paradox"
+#| eval: false
+```
+- `facet_wrap(~ department)` creates separate panels for each department
+- Within each department, the bars for males and females are similar in height
+- Compare this to @fig-ch10-aggregate-bar, where the gap was dramatic
+
+
+:::
+
+### Interactive Exploration: Simpson's Paradox {.unnumbered}
+
+::: {.callout-tip collapse="false"}
+## Try It: When Aggregation Misleads
+
+Toggle between aggregate and stratified views to see how overall admission rates can tell the opposite story from department-level rates. This classic example shows why controlling for confounding variables matters in logistic regression.
+:::
+
+```{ojs}
+//| echo: false
+import { ber640 as simpson_ber640, withAlpha as simpson_withAlpha,
+         themeColors as simpson_themeColors, plotDefaults as simpson_plotDefaults,
+         formatCoef as simpson_formatCoef } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+viewof simpson_view = Inputs.radio(["Aggregate", "Stratified"], {
+  label: "View",
+  value: "Aggregate"
+})
+```
+
+```{ojs}
+//| echo: false
+viewof simpson_dept = {
+  const sel = Inputs.radio(["All Departments", "Dept A", "Dept B", "Dept C"], {
+    label: "Department",
+    value: "All Departments",
+    disabled: simpson_view === "Aggregate"
+  });
+  if (simpson_view === "Aggregate") sel.value = "All Departments";
+  return sel;
+}
+```
+
+```{ojs}
+//| echo: false
+simpson_data = {
+  const depts = [
+    { dept: "Dept A", gender: "Male",   applied: 825, admitted: 512 },
+    { dept: "Dept A", gender: "Female", applied: 108, admitted: 89  },
+    { dept: "Dept B", gender: "Male",   applied: 560, admitted: 353 },
+    { dept: "Dept B", gender: "Female", applied: 25,  admitted: 17  },
+    { dept: "Dept C", gender: "Male",   applied: 325, admitted: 120 },
+    { dept: "Dept C", gender: "Female", applied: 593, admitted: 202 }
+  ];
+  return depts.map(d => ({
+    ...d,
+    rate: d.admitted / d.applied,
+    ratePct: (100 * d.admitted / d.applied).toFixed(1)
+  }));
+}
+
+simpson_aggregate = {
+  const byGender = (g) => {
+    const rows = simpson_data.filter(d => d.gender === g);
+    const applied = d3.sum(rows, d => d.applied);
+    const admitted = d3.sum(rows, d => d.admitted);
+    return { gender: g, applied, admitted, rate: admitted / applied,
+             ratePct: (100 * admitted / applied).toFixed(1) };
+  };
+  return [byGender("Male"), byGender("Female")];
+}
+
+simpson_plotData = {
+  if (simpson_view === "Aggregate") {
+    return simpson_aggregate.map(d => ({
+      group: "Overall", gender: d.gender,
+      rate: d.rate, ratePct: d.ratePct,
+      applied: d.applied, admitted: d.admitted
+    }));
+  } else {
+    const filtered = simpson_dept === "All Departments"
+      ? simpson_data
+      : simpson_data.filter(d => d.dept === simpson_dept);
+    return filtered.map(d => ({
+      group: d.dept, gender: d.gender,
+      rate: d.rate, ratePct: d.ratePct,
+      applied: d.applied, admitted: d.admitted
+    }));
+  }
+}
+```
+
+```{ojs}
+//| echo: false
+simpson_colors = simpson_themeColors()
+
+simpson_plot = {
+  const tc = simpson_colors;
+  const pal = simpson_ber640;
+  const maleColor = pal.accent;
+  const femaleColor = pal.secondary;
+  const width = simpson_view === "Stratified" && simpson_dept === "All Departments" ? 680 : 480;
+
+  return Plot.plot(simpson_plotDefaults({
+    width: width,
+    height: 380,
+    marginBottom: 50,
+    marginTop: 40,
+    marginLeft: 60,
+    x: {
+      label: null,
+      padding: 0.3
+    },
+    y: {
+      label: "Admission Rate (%)",
+      domain: [0, 100],
+      grid: true,
+      ticks: 5
+    },
+    fx: simpson_view === "Stratified" && simpson_dept === "All Departments"
+      ? { label: null, padding: 0.12 }
+      : undefined,
+    color: {
+      domain: ["Male", "Female"],
+      range: [maleColor, femaleColor],
+      legend: true
+    },
+    marks: [
+      Plot.barY(simpson_plotData, {
+        x: "gender",
+        y: d => d.rate * 100,
+        fx: simpson_view === "Stratified" && simpson_dept === "All Departments" ? "group" : undefined,
+        fill: "gender",
+        opacity: 0.85,
+        tip: true,
+        title: d => `${d.gender}\n${d.group}\nRate: ${d.ratePct}%\nAdmitted: ${d.admitted}/${d.applied}`
+      }),
+      Plot.text(simpson_plotData, {
+        x: "gender",
+        y: d => d.rate * 100 + 3,
+        fx: simpson_view === "Stratified" && simpson_dept === "All Departments" ? "group" : undefined,
+        text: d => `${d.ratePct}%`,
+        fontSize: 13,
+        fontWeight: 600,
+        fill: tc.text
+      }),
+      Plot.text(simpson_plotData, {
+        x: "gender",
+        y: -5,
+        fx: simpson_view === "Stratified" && simpson_dept === "All Departments" ? "group" : undefined,
+        text: d => `n=${d.applied}`,
+        fontSize: 10,
+        fill: tc.muted
+      }),
+      Plot.ruleY([0])
+    ]
+  }));
+}
+```
+
+```{ojs}
+//| echo: false
+simpson_readout = {
+  const tc = simpson_colors;
+  const pal = simpson_ber640;
+  const maleAgg = simpson_aggregate.find(d => d.gender === "Male");
+  const femaleAgg = simpson_aggregate.find(d => d.gender === "Female");
+
+  const deptRows = ["Dept A", "Dept B", "Dept C"].map(dept => {
+    const m = simpson_data.find(d => d.dept === dept && d.gender === "Male");
+    const f = simpson_data.find(d => d.dept === dept && d.gender === "Female");
+    return { dept, mRate: m.ratePct, fRate: f.ratePct,
+             mApplied: m.applied, fApplied: f.applied,
+             fHigher: f.rate >= m.rate };
+  });
+
+  const arrow = simpson_view === "Aggregate"
+    ? `<span style="color: ${pal.secondary}; font-size: 1.3em;">⚠</span>
+       <strong>Aggregate conclusion:</strong> Males (${maleAgg.ratePct}%) appear to be admitted at a higher rate than females (${femaleAgg.ratePct}%).`
+    : `<span style="color: ${pal.success}; font-size: 1.3em;">✓</span>
+       <strong>Stratified conclusion:</strong> Within <em>every</em> department, female admission rates equal or exceed male rates!`;
+
+  const tableHtml = `
+  <table style="width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.9em; color: ${tc.text};">
+    <thead>
+      <tr style="border-bottom: 2px solid ${tc.muted};">
+        <th style="text-align: left; padding: 6px;">Dept</th>
+        <th style="text-align: center; padding: 6px; color: ${pal.accent};">Male Rate</th>
+        <th style="text-align: center; padding: 6px; color: ${pal.accent};">Male n</th>
+        <th style="text-align: center; padding: 6px; color: ${pal.secondary};">Female Rate</th>
+        <th style="text-align: center; padding: 6px; color: ${pal.secondary};">Female n</th>
+        <th style="text-align: center; padding: 6px;">Female ≥ Male?</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${deptRows.map(r => `
+        <tr style="border-bottom: 1px solid ${simpson_withAlpha(tc.muted, 0.3)};">
+          <td style="padding: 6px; font-weight: 600;">${r.dept}</td>
+          <td style="text-align: center; padding: 6px;">${r.mRate}%</td>
+          <td style="text-align: center; padding: 6px; opacity: 0.6;">${r.mApplied}</td>
+          <td style="text-align: center; padding: 6px;">${r.fRate}%</td>
+          <td style="text-align: center; padding: 6px; opacity: 0.6;">${r.fApplied}</td>
+          <td style="text-align: center; padding: 6px;">${r.fHigher
+            ? `<span style="color: ${pal.success}; font-weight: bold;">Yes</span>`
+            : `<span style="opacity: 0.5;">No</span>`}</td>
+        </tr>
+      `).join('')}
+      <tr style="border-top: 2px solid ${tc.muted}; background: ${simpson_withAlpha(tc.muted, 0.08)};">
+        <td style="padding: 6px; font-weight: 600;">Aggregate</td>
+        <td style="text-align: center; padding: 6px; font-weight: 600;">${maleAgg.ratePct}%</td>
+        <td style="text-align: center; padding: 6px; opacity: 0.6;">${maleAgg.applied}</td>
+        <td style="text-align: center; padding: 6px; font-weight: 600;">${femaleAgg.ratePct}%</td>
+        <td style="text-align: center; padding: 6px; opacity: 0.6;">${femaleAgg.applied}</td>
+        <td style="text-align: center; padding: 6px;">
+          <span style="color: ${pal.secondary}; font-weight: bold;">No ⚠</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>`;
+
+  const composition = `
+  <div style="margin-top: 12px; padding: 12px 16px; background: ${simpson_withAlpha(pal.secondary, 0.08)}; border-left: 4px solid ${pal.secondary}; border-radius: 4px; color: ${tc.text};">
+    <strong>The Confound — Application Composition:</strong><br>
+    <span style="font-size: 0.9em; line-height: 1.6;">
+      Dept C (most competitive, 34–37% admit rate) received <strong>593 female</strong> vs <strong>325 male</strong> applicants.<br>
+      Depts A & B (less competitive, 62–82% admit rate) received <strong>133 female</strong> vs <strong>1,385 male</strong> applicants combined.<br>
+      Women disproportionately applied to the most competitive department, dragging down their aggregate rate.
+    </span>
+  </div>`;
+
+  const insight = `
+  <div style="margin-top: 12px; padding: 12px 16px; background: ${simpson_withAlpha(pal.success, 0.08)}; border-left: 4px solid ${pal.success}; border-radius: 4px; color: ${tc.text};">
+    <strong>Key Insight for Logistic Regression:</strong>
+    <span style="font-size: 0.9em; line-height: 1.6;">
+      A model predicting admission from gender alone would conclude male advantage.
+      Adding department as a covariate reverses the conclusion — this is exactly why
+      <em>multiple</em> logistic regression controls for confounders. The coefficient for
+      gender flips sign when department is included, mirroring what we see in the stratified view.
+    </span>
+  </div>`;
+
+  return html`
+    <div style="font-family: var(--bs-body-font-family, sans-serif); max-width: 680px; color: ${tc.text};">
+      <div style="margin-bottom: 10px;">${html`${arrow}`}</div>
+      ${html`${tableHtml}`}
+      ${html`${composition}`}
+      ${html`${insight}`}
+    </div>
+  `;
+}
+```
+
+### Why the Reversal?
+
+The key to understanding Simpson's paradox is recognizing that department is a **confounder** --- it is associated with both the predictor (sex) and the outcome (admission).
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-application-pattern
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Where did males and females apply?
+berk_sub |>
+  group_by(sex, department) |>
+  summarise(n = n(), .groups = "drop") |>
+  group_by(sex) |>
+  mutate(
+    total = sum(n),
+    pct = n / total
+  ) |>
+  select(sex, department, n, pct) |>
+  kable(digits = 3,
+        col.names = c("Sex", "Department", "N", "Proportion"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-application-pattern"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The table reveals the confounding mechanism:
+
+- **Males** overwhelmingly applied to Engineering (the high-admission department)
+- **Females** overwhelmingly applied to Psychology (the low-admission department)
+
+This creates a classic confounding structure, directly analogous to the OVB we studied in @sec-ch2:
+
+1. **Department affects admission** (Engineering admits at a much higher rate than Psychology)
+2. **Department is associated with sex** (males disproportionately apply to Engineering)
+
+When we ignore department, the male advantage in admission rates is driven by their tendency to apply to the easier-to-enter department, not by a preference for male applicants.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-application-pattern"
+#| eval: false
+```
+- We compute the proportion of male and female applicants in each department
+- This reveals the **application pattern**: males and females do not apply to departments at the same rate
+
+
+:::
+
+::: {.callout-important}
+## Simpson's Paradox = OVB for Logistic Regression
+Simpson's paradox is not a mysterious statistical anomaly --- it is simply **omitted variable bias** applied to a binary outcome. Recall from @sec-ch2 that OVB occurs when:
+
+1. The omitted variable ($x_2$) affects the outcome ($y$)
+2. The omitted variable ($x_2$) is correlated with the included predictor ($x_1$)
+
+In the Berkeley example:
+
+- $x_1$ = `male` (the predictor of interest)
+- $x_2$ = `engineering` (the omitted confounder)
+- $y$ = `admitted` (the binary outcome)
+
+Department satisfies both OVB conditions: it affects admission rates (condition 1) and it is correlated with sex because of differential application patterns (condition 2). The result is a grossly biased estimate of the sex effect when department is omitted.
+:::
+
+::: {.callout-note}
+## Confounding in Logistic Regression vs OLS
+The logic of confounding is identical in logistic regression and OLS: omitting a variable that affects both the outcome and a predictor leads to biased estimates. However, there are two important differences:
+
+1. **Non-collapsibility of the odds ratio.** In OLS, the adjusted and unadjusted coefficients differ only if there is confounding. In logistic regression, the odds ratio can change even when there is *no* confounding, simply because the odds ratio is a non-collapsible measure. This means that comparing crude vs adjusted odds ratios does not perfectly isolate confounding the way it does for OLS coefficients. The risk difference and risk ratio do not have this property.
+
+2. **Direction reversals are more common.** In OLS, OVB typically inflates or deflates a coefficient. In logistic regression with binary predictors, confounding can cause the entire **direction** of the association to reverse (Simpson's paradox), because the aggregation of conditional odds ratios behaves non-linearly. This makes confounding control even more critical in logistic regression than in OLS.
+:::
+
+
+## The Multiple Logistic Regression Model {#sec-ch10-model}
+
+### Model Specification
+
+The multiple logistic regression model extends the simple model from @sec-ch9 by including additional predictors. With $k$ predictors:
+
+$$
+\text{logit}(\pi_i) = \log\!\left(\frac{\pi_i}{1 - \pi_i}\right) = \alpha + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots + \beta_k x_{ki}
+$$ {#eq-ch10-multiple-logit}
+
+On the odds scale:
+
+$$
+\frac{\pi_i}{1 - \pi_i} = e^{\alpha + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots + \beta_k x_{ki}} = e^{\alpha} \cdot e^{\beta_1 x_{1i}} \cdot e^{\beta_2 x_{2i}} \cdots e^{\beta_k x_{ki}}
+$$ {#eq-ch10-multiple-odds}
+
+On the probability scale:
+
+$$
+\pi_i = \frac{e^{\alpha + \beta_1 x_{1i} + \cdots + \beta_k x_{ki}}}{1 + e^{\alpha + \beta_1 x_{1i} + \cdots + \beta_k x_{ki}}}
+$$ {#eq-ch10-multiple-prob}
+
+### The Berkeley Model
+
+For the Berkeley admissions example, we specify:
+
+$$
+\text{logit}[P(\text{admitted}_i = 1)] = \alpha + \beta_1 \cdot \text{male}_i + \beta_2 \cdot \text{engineering}_i
+$$ {#eq-ch10-berkeley}
+
+This model estimates the effect of sex ($\beta_1$) **controlling for department** ($\beta_2$). This is the logistic regression analogue of the ANCOVA model from @sec-ch2.
+
+::: {.callout-tip}
+## Interpreting Multiple Logistic Regression Coefficients
+Each coefficient has a "controlling for" interpretation, just as in multiple linear regression:
+
+- $\alpha$: Log-odds of admission for the reference group (female Psychology applicants, when `male` = 0 and `engineering` = 0)
+- $\beta_1$: Change in log-odds of admission associated with being male, **holding department constant**
+- $\beta_2$: Change in log-odds of admission associated with applying to Engineering, **holding sex constant**
+
+Exponentiating:
+
+- $e^{\beta_1}$: **Adjusted odds ratio** for males vs females, controlling for department
+- $e^{\beta_2}$: **Adjusted odds ratio** for Engineering vs Psychology, controlling for sex
+:::
+
+### Fitting the Model
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-berkeley-model
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Unadjusted model (sex only)
+model_unadj <- glm(admitted ~ male, family = binomial, data = berk_sub)
+
+# Adjusted model (sex + department)
+model_adj <- glm(admitted ~ male + engineering, family = binomial, data = berk_sub)
+
+# Compare coefficients on log-odds scale
+bind_rows(
+  tidy_model(model_unadj) |> mutate(model = "Unadjusted"),
+  tidy_model(model_adj)   |> mutate(model = "Adjusted")
+) |>
+  filter(term == "male") |>
+  mutate(odds_ratio = round(exp(estimate), 3)) |>
+  select(model, estimate, std.error, odds_ratio, p.value) |>
+  kable(digits = 3,
+        col.names = c("Model", "Log-odds (b)", "SE", "Odds Ratio", "p-value"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-berkeley-model"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The comparison is striking:
+
+- **Unadjusted**: The coefficient for `male` is large and positive, with an odds ratio of approximately 3.25. Males appear to have much higher odds of admission.
+- **Adjusted**: After controlling for department, the `male` coefficient is much smaller, with an odds ratio close to 1. The apparent sex effect has largely disappeared.
+
+This is exactly what we saw in the department-level cross-tabulations, but now captured in a single model that simultaneously estimates the effects of both predictors.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-berkeley-model"
+#| eval: false
+```
+- `model_unadj`: Logistic regression with `male` only --- the unadjusted association
+- `model_adj`: Logistic regression with both `male` and `engineering` --- the adjusted association
+- We extract the `male` coefficient from both models and compare
+- The `odds_ratio` column is $e^b$
+
+
+:::
+
+### Full Model Output
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-berkeley-full-output
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Full adjusted model output
+model_parameters(model_adj) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-berkeley-full-output"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Intercept**: The log-odds of admission for female Psychology applicants (the reference group)
+- **male**: The adjusted effect of sex, controlling for department. A small positive value suggests that, after accounting for department, males have only slightly higher log-odds of admission
+- **engineering**: The effect of applying to Engineering rather than Psychology, controlling for sex. This large positive coefficient reflects the much higher admission rate in Engineering
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-berkeley-full-output"
+#| eval: false
+```
+- `model_parameters()` displays all coefficients on the log-odds scale with standard errors, confidence intervals, and $p$-values
+- `|> print_md()` formats the output as a clean markdown table
+- The output includes the intercept ($\alpha$), the `male` coefficient ($\beta_1$), and the `engineering` coefficient ($\beta_2$)
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-berkeley-or
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Odds ratios with confidence intervals
+model_parameters(model_adj, exponentiate = TRUE) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-berkeley-or"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The adjusted odds ratio for `male` is approximately 1.1, meaning that after controlling for department, males have only about 10% higher odds of admission than females --- a far cry from the unadjusted ratio of 3.25
+- The adjusted odds ratio for `engineering` is large, reflecting the much higher admission rate in Engineering compared to Psychology
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-berkeley-or"
+#| eval: false
+```
+- `exponentiate = TRUE` converts all coefficients and confidence intervals to the odds ratio scale
+- These are the **adjusted odds ratios** --- each one controls for the other predictor in the model
+
+
+:::
+
+
+## Maximum Likelihood Estimation {#sec-ch10-mle}
+
+In @sec-ch9, we briefly introduced maximum likelihood estimation (MLE). With multiple predictors, the conceptual logic is the same, but the details are worth elaborating.
+
+### The Likelihood Function
+
+For a binary outcome $y_i \in \{0, 1\}$ with predicted probability $\pi_i$, the probability of observing the actual outcome is:
+
+$$
+P(y_i \mid \pi_i) = \pi_i^{y_i} (1 - \pi_i)^{1 - y_i}
+$$ {#eq-ch10-individual-likelihood}
+
+This formula works for both cases: when $y_i = 1$, it equals $\pi_i$ (we want high probability for events), and when $y_i = 0$, it equals $1 - \pi_i$ (we want low probability for non-events).
+
+Assuming observations are independent, the **likelihood** for the entire sample is the product of individual contributions:
+
+$$
+L(\alpha, \beta_1, \ldots, \beta_k) = \prod_{i=1}^{n} \pi_i^{y_i} (1 - \pi_i)^{1 - y_i}
+$$ {#eq-ch10-likelihood}
+
+where each $\pi_i$ depends on the predictors through the logistic function:
+
+$$
+\pi_i = \frac{e^{\alpha + \beta_1 x_{1i} + \cdots + \beta_k x_{ki}}}{1 + e^{\alpha + \beta_1 x_{1i} + \cdots + \beta_k x_{ki}}}
+$$
+
+### The Log-Likelihood
+
+In practice, we work with the **log-likelihood** (the natural log of the likelihood), which converts the product into a sum:
+
+$$
+\ell(\alpha, \beta_1, \ldots, \beta_k) = \sum_{i=1}^{n} \left[ y_i \log(\pi_i) + (1 - y_i) \log(1 - \pi_i) \right]
+$$ {#eq-ch10-loglik}
+
+MLE finds the parameter values $(\hat{\alpha}, \hat{\beta}_1, \ldots, \hat{\beta}_k)$ that maximize this log-likelihood. Unlike OLS, there is no closed-form solution --- the computer uses an iterative algorithm (typically Newton-Raphson or Fisher scoring) to find the maximum.
+
+::: {.callout-note}
+## Properties of Maximum Likelihood Estimators
+MLE has three key properties that make it the standard estimation method for logistic regression:
+
+1. **Consistency**: As the sample size $n \to \infty$, the MLEs converge to the true parameter values
+2. **Efficiency**: Among all consistent estimators, MLEs have the smallest variance asymptotically --- no other estimator can do better
+3. **Asymptotic normality**: The sampling distribution of the MLEs approaches a normal distribution as $n$ grows, which justifies the $z$-tests and confidence intervals we use for inference
+
+These properties are **asymptotic** --- they rely on large samples. In small samples, MLE may perform poorly (biased estimates, poor coverage of confidence intervals). As a rule of thumb, logistic regression requires at least 10--20 events per predictor for reliable estimation.
+:::
+
+### Visualizing the Likelihood
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch10-likelihood-surface
+#| fig-cap: "Log-likelihood as a function of the male coefficient, with the engineering coefficient fixed at its MLE value. The maximum of the curve corresponds to the MLE estimate. The curvature at the maximum determines the standard error."
+#| fig-alt: "Line plot showing the log-likelihood function on the y-axis versus the male coefficient value on the x-axis, with the engineering coefficient held fixed at its maximum likelihood estimate. The curve is a smooth concave parabola-like shape that rises to a single peak at the MLE of the male coefficient and falls off on either side. A vertical reference line or point marks the maximum, illustrating how the curvature at the peak relates to the precision of the estimate and the standard error."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Compute log-likelihood for a range of beta_male values
+# Fix beta_engineering at its MLE
+beta_eng_hat <- coef(model_adj)["engineering"]
+alpha_hat <- coef(model_adj)["(Intercept)"]
+
+beta_male_grid <- seq(-0.5, 1.5, length.out = 200)
+
+loglik_vals <- sapply(beta_male_grid, function(b) {
+  eta <- alpha_hat + b * berk_sub$male + beta_eng_hat * berk_sub$engineering
+  pi_i <- plogis(eta)
+  sum(berk_sub$admitted * log(pi_i) + (1 - berk_sub$admitted) * log(1 - pi_i))
+})
+
+# Plot the profile log-likelihood
+tibble(beta_male = beta_male_grid, loglik = loglik_vals) |>
+  ggplot(aes(x = beta_male, y = loglik)) +
+  geom_line(color = ber640_colors["accent"], linewidth = 1.2) +
+  geom_vline(xintercept = coef(model_adj)["male"],
+             linetype = "dashed", color = ber640_colors["secondary"]) +
+  annotate("text", x = coef(model_adj)["male"] + 0.15, y = min(loglik_vals) + 5,
+           label = paste0("MLE = ", round(coef(model_adj)["male"], 3)),
+           color = ber640_colors["secondary"], fontface = "bold", size = 4) +
+  labs(
+    title = "Profile Log-Likelihood for Male Coefficient",
+    subtitle = "Engineering coefficient held at its MLE",
+    x = expression(beta[male]),
+    y = "Log-likelihood"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch10-likelihood-surface"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The curve peaks at the MLE value. The curvature (how sharply the curve bends near the peak) determines the precision of the estimate:
+
+- **Sharp peak**: The estimate is precise (small standard error)
+- **Flat peak**: The estimate is imprecise (large standard error)
+
+This relationship between curvature and precision is formalized by the **observed Fisher information**, which is the negative of the second derivative of the log-likelihood at the MLE.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch10-likelihood-surface"
+#| eval: false
+```
+- We compute the log-likelihood at a grid of values for $\beta_{\text{male}}$, holding $\alpha$ and $\beta_{\text{engineering}}$ at their MLE values
+- `plogis(eta)` converts the linear predictor to predicted probabilities
+- The log-likelihood is the sum of $y_i \log(\pi_i) + (1-y_i)\log(1-\pi_i)$
+- The vertical dashed line marks the MLE --- the value that maximizes the log-likelihood
+
+
+:::
+
+
+## Inference: Wald and Likelihood Ratio Tests {#sec-ch10-inference}
+
+Logistic regression offers two main approaches to hypothesis testing: the **Wald test** and the **likelihood ratio (LR) test**. Both test whether a predictor is significantly associated with the outcome, but they use different strategies.
+
+### The Wald Test
+
+The Wald test is the default in most software output. It tests $H_0: \beta_j = 0$ using:
+
+$$
+z = \frac{b_j}{\text{SE}(b_j)}
+$$ {#eq-ch10-wald}
+
+Under $H_0$, this $z$-statistic follows a standard normal distribution (approximately). The $p$-value is $2 \times P(Z > |z|)$. This is the direct analogue of the $t$-test in linear regression, except that it uses the standard normal distribution rather than the $t$-distribution because MLE does not separately estimate a residual variance.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-wald-test
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Wald tests are shown in the standard model output
+model_parameters(model_adj) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-wald-test"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Examine the `z` and `p` columns for each predictor. The `engineering` coefficient has a very large $z$-statistic and a very small $p$-value, confirming that department is a strong predictor of admission. The `male` coefficient has a much smaller $z$-statistic, reflecting its reduced effect once department is controlled for. Recall that in the unadjusted model, sex appeared to be a powerful predictor --- here, its adjusted significance is far more modest, illustrating how confounding can inflate apparent effects.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-wald-test"
+#| eval: false
+```
+- The `z` column in the output is the Wald statistic: $z = b / \text{SE}$
+- The `p` column is the two-sided $p$-value from the standard normal distribution
+- Each row tests $H_0: \beta_j = 0$ for that specific coefficient
+
+
+:::
+
+### The Likelihood Ratio Test
+
+The likelihood ratio (LR) test compares two nested models --- a **full** model and a **reduced** model --- by examining how much the log-likelihood improves when the predictor is added:
+
+$$
+G^2 = 2(\ell_{\text{full}} - \ell_{\text{reduced}})
+$$ {#eq-ch10-lr-test}
+
+Under $H_0$ (the predictor has no effect), $G^2$ follows a chi-squared distribution with degrees of freedom equal to the number of additional parameters in the full model.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-lr-test
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Likelihood ratio test: does adding 'male' improve the model?
+model_dept_only <- glm(admitted ~ engineering, family = binomial, data = berk_sub)
+
+# LR test using lmtest package
+lmtest::lrtest(model_dept_only, model_adj)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-lr-test"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- The $G^2$ statistic (labeled `Chisq`) measures how much the log-likelihood improves when `male` is added
+- A small $p$-value indicates that the predictor significantly improves model fit
+- The degrees of freedom (Df) equal the number of parameters being tested (1 for a single coefficient)
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-lr-test"
+#| eval: false
+```
+- `model_dept_only`: The reduced model with only `engineering`
+- `model_adj`: The full model with both `engineering` and `male`
+- `lmtest::lrtest()` computes the likelihood ratio test statistic $G^2$ and its $p$-value
+- The test asks: does adding `male` to a model that already includes `engineering` significantly improve the fit?
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-lr-test-engineering
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# LR test: does adding 'engineering' improve the model?
+model_sex_only <- glm(admitted ~ male, family = binomial, data = berk_sub)
+
+lmtest::lrtest(model_sex_only, model_adj)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-lr-test-engineering"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The LR test for `engineering` should show a very large $G^2$ and a tiny $p$-value, confirming that department is a crucial predictor of admission even after accounting for sex. This makes sense: the two departments have very different admission rates.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-lr-test-engineering"
+#| eval: false
+```
+- Now we test whether `engineering` significantly improves a model that already includes `male`
+- This tests the unique contribution of department, controlling for sex
+
+
+:::
+
+### Wald vs Likelihood Ratio: When to Use Which?
+
+::: {.callout-note}
+## Comparing Wald and LR Tests
+
+| Feature | Wald Test | Likelihood Ratio Test |
+|:--------|:----------|:---------------------|
+| Formula | $z = b/\text{SE}$ | $G^2 = 2(\ell_{\text{full}} - \ell_{\text{reduced}})$ |
+| Distribution | Standard normal | Chi-squared |
+| Models needed | One (full model only) | Two (full and reduced) |
+| Small-sample behavior | Can be unreliable | Generally more reliable |
+| Computational cost | Low (one model) | Higher (two models) |
+| Default in output? | Yes | No (must request) |
+
+**Recommendation**: Use Wald tests for routine screening (they are in the standard output). Use the LR test when:
+
+- Sample size is small (fewer than 10--20 events per predictor)
+- The coefficient is large in magnitude (the Wald test can be conservative)
+- You are testing multiple parameters simultaneously (e.g., a factor with 3+ levels)
+:::
+
+
+## Adjusted Odds Ratios {#sec-ch10-adjusted-or}
+
+### The Berkeley Results
+
+The central result of the Berkeley analysis is the comparison between the unadjusted and adjusted odds ratios for sex:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: tbl-ch10-unadj-vs-adj
+#| tbl-cap: "Unadjusted vs adjusted logistic regression models for Berkeley admissions. The unadjusted odds ratio for sex is 3.25, suggesting strong discrimination. After controlling for department, the adjusted odds ratio drops to approximately 1.1."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+tbl_unadj <- tbl_regression(model_unadj, exponentiate = TRUE) |>
+  bold_labels() |> bold_p(t = 0.05)
+
+tbl_adj <- tbl_regression(model_adj, exponentiate = TRUE) |>
+  bold_labels() |> bold_p(t = 0.05)
+
+tbl_merge(
+  tbls = list(tbl_unadj, tbl_adj),
+  tab_spanner = c("**Unadjusted**", "**Adjusted for Department**")
+)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "tbl-ch10-unadj-vs-adj"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The side-by-side comparison reveals the confounding clearly:
+
+- **Unadjusted OR for male**: approximately 3.25 --- males have 3.25 times the odds of admission
+- **Adjusted OR for male**: approximately 1.1 --- after controlling for department, the sex difference is negligible
+
+The department variable (the confounder) absorbs most of the apparent sex effect. This is the key lesson: **unadjusted odds ratios can be misleading when confounders are present**.
+
+### Code Explanation
+```{r}
+#| ref.label: "tbl-ch10-unadj-vs-adj"
+#| eval: false
+```
+- `tbl_regression(exponentiate = TRUE)` creates a publication-quality table with odds ratios and 95% CIs
+- `tbl_merge()` places the unadjusted and adjusted models side by side
+- This is the logistic regression equivalent of comparing bivariate vs ANCOVA coefficients in @sec-ch2
+
+
+:::
+
+### Confidence Intervals for Odds Ratios
+
+Confidence intervals for odds ratios are computed on the log scale and then exponentiated:
+
+$$
+\text{CI for OR} = \exp\!\left(b \pm z^* \cdot \text{SE}(b)\right)
+$$ {#eq-ch10-or-ci}
+
+where $z^* = 1.96$ for a 95% CI. This produces an **asymmetric** confidence interval around the odds ratio, which is appropriate because odds ratios are bounded below by 0 and have no upper bound.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-or-ci-manual
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Manual CI computation for the male coefficient
+b_male <- coef(model_adj)["male"]
+se_male <- sqrt(vcov(model_adj)["male", "male"])
+
+ci_lower <- exp(b_male - 1.96 * se_male)
+ci_upper <- exp(b_male + 1.96 * se_male)
+
+# Manual computation
+manual_or <- tibble(
+  Method = "Manual computation",
+  OR = round(exp(b_male), 3),
+  `CI Lower` = round(ci_lower, 3),
+  `CI Upper` = round(ci_upper, 3)
+)
+
+# From model_parameters
+auto_or <- model_parameters(model_adj, exponentiate = TRUE) |>
+  filter(Parameter == "male") |>
+  transmute(
+    Method = "model_parameters()",
+    OR = round(Coefficient, 3),
+    `CI Lower` = round(CI_low, 3),
+    `CI Upper` = round(CI_high, 3)
+  )
+
+bind_rows(manual_or, auto_or) |>
+  kable(digits = 3)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-or-ci-manual"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The confidence interval for the odds ratio is **asymmetric** around the point estimate:
+
+- If the CI contains 1, we cannot reject $H_0: \text{OR} = 1$ (no association) at the 5% level
+- The asymmetry reflects the fact that the odds ratio lives on a ratio scale: an OR of 2 (doubling) and an OR of 0.5 (halving) represent equal-magnitude effects in opposite directions
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-or-ci-manual"
+#| eval: false
+```
+- We extract $b$ and SE from the model and compute the CI manually using @eq-ch10-or-ci
+- `vcov(model_adj)` returns the variance-covariance matrix of the coefficients; the diagonal gives the squared standard errors
+- The manual calculation should match the output from `model_parameters()`
+
+
+:::
+
+::: {.callout-tip}
+## Why Asymmetric Confidence Intervals?
+The confidence interval is constructed on the **symmetric** log-odds scale:
+
+$$
+b \pm 1.96 \cdot \text{SE}
+$$
+
+Then exponentiated to produce the odds ratio CI:
+
+$$
+\left[\exp(b - 1.96 \cdot \text{SE}), \quad \exp(b + 1.96 \cdot \text{SE})\right]
+$$
+
+Because the exponential function is convex, equal distances on the log scale become unequal distances on the odds ratio scale. This ensures the CI has proper coverage and cannot include negative values (which would be meaningless for an odds ratio).
+:::
+
+### Visualizing Crude vs Adjusted Odds Ratios
+
+A forest plot provides a powerful visual comparison of how odds ratios change after adjusting for confounders.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch10-forest-crude-adj
+#| fig-cap: "Forest plot comparing unadjusted (crude) and adjusted odds ratios for sex in the Berkeley admissions model. The unadjusted OR of approximately 3.25 shrinks dramatically to near 1 after controlling for department --- a vivid illustration of confounding."
+#| fig-alt: "Forest plot with two rows comparing the unadjusted and adjusted odds ratios for the male predictor in the Berkeley admissions model. The x-axis shows odds ratios on a log scale with a vertical dashed line at OR equals 1. The unadjusted (crude) estimate is positioned far to the right at approximately 3.25, while the adjusted estimate after controlling for department shifts dramatically leftward to near 1.0, vividly demonstrating how confounding by department inflated the apparent sex effect."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Build a tidy data frame of crude vs adjusted OR for male
+or_comparison <- bind_rows(
+  tidy_model(model_unadj, exponentiate = TRUE) |>
+    filter(term == "male") |>
+    mutate(model = "Unadjusted (crude)"),
+  tidy_model(model_adj, exponentiate = TRUE) |>
+    filter(term == "male") |>
+    mutate(model = "Adjusted for department")
+) |>
+  select(model, estimate, conf.low, conf.high)
+
+ggplot(or_comparison, aes(x = estimate, y = fct_rev(model), color = model)) +
+  geom_point(size = 4) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high),
+                 height = 0.15, linewidth = 1) +
+  geom_vline(xintercept = 1, linetype = "dashed", alpha = 0.5) +
+  scale_color_manual(values = c(ber640_colors["accent"], ber640_colors["secondary"])) +
+  scale_x_continuous(breaks = seq(0, 5, by = 0.5)) +
+  annotate("text", x = 1.05, y = 0.5, label = "OR = 1\n(no effect)",
+           hjust = 0, color = "grey50", size = 3.5) +
+  labs(
+    title = "Impact of Confounding on the Sex Odds Ratio",
+    subtitle = "Berkeley admissions: crude vs department-adjusted OR for male",
+    x = "Odds Ratio (log scale)",
+    y = NULL
+  ) +
+  guides(color = "none") +
+  coord_cartesian(xlim = c(0.5, 5))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch10-forest-crude-adj"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The forest plot makes the confounding story unmistakable. The unadjusted odds ratio for sex (top) is far to the right of 1, suggesting males have much higher odds of admission. After adjusting for department (bottom), the OR collapses toward 1, and the confidence interval crosses the null. This is exactly the visual signature of Simpson's paradox: the apparent sex effect was driven almost entirely by the confounding influence of department. This kind of crude vs adjusted comparison is standard practice in epidemiology and should be a routine part of any logistic regression analysis.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch10-forest-crude-adj"
+#| eval: false
+```
+- We extract the exponentiated coefficients (`estimate`, `conf.low`, `conf.high`) for the `male` term from both the unadjusted and adjusted models
+- `fct_rev()` reverses the factor order so that "Unadjusted" appears at the top
+- The vertical dashed line at OR = 1 marks the null hypothesis of no sex effect
+- The dramatic shift from the unadjusted to the adjusted OR visually communicates the magnitude of confounding
+
+
+:::
+
+
+## Running Example: Titanic Survival {#sec-ch10-titanic}
+
+The Berkeley example demonstrated confounding with two binary predictors. Now let us build a richer model using the Titanic dataset, which includes both categorical and continuous predictors.
+
+### Setting Up the Data
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-titanic-setup
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Load and prepare the Titanic data
+data(titanic)
+
+titanic <- titanic |>
+  mutate(
+    sex_label = factor(ifelse(sex == 1, "Female", "Male")),
+    class = factor(pclass, labels = c("1st", "2nd", "3rd"))
+  )
+
+# Quick overview
+titanic |>
+  group_by(class, sex_label) |>
+  summarise(
+    n = n(),
+    survived = sum(survived),
+    surv_rate = mean(survived),
+    .groups = "drop"
+  ) |>
+  kable(digits = 3,
+        col.names = c("Class", "Sex", "N", "Survived", "Survival Rate"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-titanic-setup"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The cross-tabulation reveals clear patterns: survival rates are highest for 1st-class females and lowest for 3rd-class males. Within every passenger class, females have substantially higher survival rates than males. Across classes, survival declines from 1st to 3rd for both sexes. These patterns suggest that sex and class are both independently associated with survival --- exactly the kind of question that multiple logistic regression is designed to address.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-titanic-setup"
+#| eval: false
+```
+- We create readable factor variables for class (1st, 2nd, 3rd) and sex (Female, Male)
+- The cross-tabulation shows survival rates for each combination of class and sex
+- Both class and sex appear to be strong predictors of survival
+
+
+:::
+
+### Fitting the Multiple Model
+
+Our model predicts survival from sex, passenger class, and age:
+
+$$
+\text{logit}[P(\text{survived}_i = 1)] = \alpha + \beta_1 \cdot \text{sex}_i + \beta_2 \cdot \text{class2}_i + \beta_3 \cdot \text{class3}_i + \beta_4 \cdot \text{age}_i
+$$ {#eq-ch10-titanic}
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-titanic-model
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Multiple logistic regression: survival ~ sex + class + age
+model_titanic <- glm(survived ~ sex + class + age,
+                     family = binomial, data = titanic)
+
+# Model parameters on log-odds scale
+model_parameters(model_titanic) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-titanic-model"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **sex**: The adjusted effect of being female (vs male) on log-odds of survival, controlling for class and age
+- **class2nd**: The adjusted effect of being in 2nd class (vs 1st class), controlling for sex and age
+- **class3rd**: The adjusted effect of being in 3rd class (vs 1st class), controlling for sex and age
+- **age**: The adjusted effect of each additional year of age, controlling for sex and class
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-titanic-model"
+#| eval: false
+```
+- `survived ~ sex + class + age`: Includes a binary predictor (`sex`), a multi-category factor (`class` with 3 levels, producing 2 dummy variables), and a continuous predictor (`age`)
+- `|> print_md()` formats the output as a clean markdown table
+- R automatically creates dummy variables for `class`, using "1st" as the reference category
+- The output shows coefficients on the log-odds scale
+
+
+:::
+
+### Odds Ratios
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-titanic-or
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Exponentiated coefficients (odds ratios)
+model_parameters(model_titanic, exponentiate = TRUE) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-titanic-or"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The adjusted odds ratios tell a coherent story about Titanic survival:
+
+- **Sex**: Being female dramatically increases the odds of survival, even after controlling for class and age. The odds ratio is large, reflecting the evacuation protocol.
+- **Class**: Compared to 1st class, 2nd and 3rd class passengers had substantially lower odds of survival. The 3rd class OR is especially small, indicating much lower odds.
+- **Age**: Each additional year of age is associated with a small decrease in odds of survival, reflecting the "children first" component of the evacuation.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-titanic-or"
+#| eval: false
+```
+- Each odds ratio represents the multiplicative effect on the odds of survival, **holding all other predictors constant**
+- For `sex`: the ratio of odds for females vs males, adjusted for class and age
+- For `class2nd` and `class3rd`: the ratio of odds relative to 1st class, adjusted for sex and age
+- For `age`: the multiplicative change in odds per one-year increase, adjusted for sex and class
+
+
+:::
+
+### Publication-Quality Table
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: tbl-ch10-titanic-regression
+#| tbl-cap: "Multiple logistic regression predicting Titanic survival. Odds ratios are adjusted for all other predictors in the model. Being female, traveling in higher class, and being younger are all independently associated with higher odds of survival."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+tbl_regression(model_titanic, exponentiate = TRUE,
+               label = list(sex ~ "Female (vs Male)",
+                            class ~ "Passenger Class",
+                            age ~ "Age (years)")) |>
+  bold_labels() |>
+  bold_p(t = 0.05) |>
+  add_global_p()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "tbl-ch10-titanic-regression"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The publication-quality table provides a comprehensive summary of the model. Each row shows the adjusted odds ratio, its 95% confidence interval, and the $p$-value. The global $p$-value for `class` tests whether passenger class as a whole (with 2 degrees of freedom) significantly predicts survival. This table format is standard in applied research and can be included directly in manuscripts or reports.
+
+### Code Explanation
+```{r}
+#| ref.label: "tbl-ch10-titanic-regression"
+#| eval: false
+```
+- `tbl_regression()` from `gtsummary` creates a clean regression table with odds ratios, CIs, and $p$-values
+- `label` provides readable labels for the variables
+- `add_global_p()` adds an overall (Type III) test for multi-level factors like `class`
+- `bold_p(t = 0.05)` bolds significant $p$-values
+
+
+:::
+
+### LR Tests for Each Predictor
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-titanic-lr-tests
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# LR tests for each predictor
+# Use complete cases to ensure all models are fitted on the same data
+titanic_cc <- titanic[complete.cases(titanic[, c("survived", "sex", "class", "age")]), ]
+
+# Reduced models (each drops one predictor)
+model_no_sex   <- glm(survived ~ class + age, family = binomial, data = titanic_cc)
+model_no_class <- glm(survived ~ sex + age,   family = binomial, data = titanic_cc)
+model_no_age   <- glm(survived ~ sex + class, family = binomial, data = titanic_cc)
+
+# Collect LR test results into a tidy table
+lr_tests <- bind_rows(
+  broom::tidy(lmtest::lrtest(model_no_sex,   model_titanic)) |>
+    slice(2) |> mutate(predictor = "sex"),
+  broom::tidy(lmtest::lrtest(model_no_class, model_titanic)) |>
+    slice(2) |> mutate(predictor = "class"),
+  broom::tidy(lmtest::lrtest(model_no_age,   model_titanic)) |>
+    slice(2) |> mutate(predictor = "age")
+) |>
+  select(Predictor = predictor, Df = df, `Chi-sq` = statistic, `p-value` = p.value)
+
+lr_tests |>
+  kable(digits = c(0, 0, 2, 4))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-titanic-lr-tests"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+All three predictors contribute significantly to the model. The LR test is especially informative for `class`, where testing the overall effect of a multi-level factor is cleaner than interpreting individual dummy variable coefficients.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-titanic-lr-tests"
+#| eval: false
+```
+- Each LR test removes one predictor and asks: does the log-likelihood significantly decrease?
+- For `class` (a 3-level factor), the LR test has 2 degrees of freedom because removing it removes 2 dummy variables
+- The LR test for `class` is the logistic analogue of the Type III $F$-test from @sec-ch2
+
+
+:::
+
+
+## Predicted Probabilities {#sec-ch10-predicted}
+
+### Predictions for Specific Profiles
+
+Odds ratios summarize effects on a relative scale, but predicted probabilities are often more intuitive for communicating results.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-titanic-predictions
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Predicted probabilities for specific passenger profiles
+profiles <- datagrid(model = model_titanic,
+                     sex = c(0, 1),
+                     class = c("1st", "2nd", "3rd"),
+                     age = c(10, 30, 50))
+
+pred_profiles <- predictions(model_titanic,
+                              newdata = profiles,
+                              type = "response") |>
+  as_tibble() |>
+  mutate(sex_label = ifelse(sex == 0, "Male", "Female")) |>
+  select(sex_label, class, age, estimate, conf.low, conf.high) |>
+  arrange(class, sex_label, age)
+
+pred_profiles |>
+  kable(digits = 3,
+        col.names = c("Sex", "Class", "Age",
+                       "P(Survived)", "95% CI Lower", "95% CI Upper"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-titanic-predictions"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The table shows how survival probability varies across passenger profiles. A few key comparisons:
+
+- **Sex effect**: Within any class and age, females have much higher predicted survival probability than males
+- **Class effect**: Within any sex and age, 1st class passengers have the highest survival probability, and 3rd class the lowest
+- **Age effect**: Within any sex and class, younger passengers have slightly higher survival probability
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-titanic-predictions"
+#| eval: false
+```
+- `datagrid()` creates a grid of all combinations of predictor values
+- `predictions()` computes the model-predicted probability for each profile
+- `type = "response"` gives predictions on the probability scale
+- We select and format the key columns for a readable table
+
+
+:::
+
+### Visualizing Predicted Probabilities
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch10-titanic-predictions
+#| fig-cap: "Predicted probability of Titanic survival by age, sex, and passenger class. The logistic curves show how survival probability varies across age for each combination of sex and class. Being female and traveling in higher class both substantially increase predicted survival."
+#| fig-alt: "Multi-panel line plot showing predicted survival probability on the y-axis versus age on the x-axis, faceted by passenger class (1st, 2nd, 3rd) with separate colored curves for males and females. Female curves are consistently higher than male curves within each class panel, and first-class passengers have higher predicted probabilities than lower classes. All curves decrease with age. Shaded confidence bands surround each curve, showing wider uncertainty at extreme ages."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+plot_predictions(model_titanic,
+                 condition = c("age", "sex", "class"),
+                 type = "response") +
+  scale_color_manual(values = c(ber640_colors["accent"], ber640_colors["primary"])) +
+  scale_fill_manual(values = c(ber640_colors["accent"], ber640_colors["primary"])) +
+  labs(
+    title = "Predicted Survival Probability on the Titanic",
+    subtitle = "By age, sex, and passenger class",
+    x = "Age (years)",
+    y = "P(Survived)",
+    color = "Sex",
+    fill = "Sex"
+  ) +
+  facet_wrap(~ class) +
+  scale_y_continuous(labels = scales::percent)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch10-titanic-predictions"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The plot shows six logistic curves --- one for each combination of sex (2 levels) and class (3 levels). Several patterns are immediately visible: (1) female curves are consistently above male curves, reflecting the strong sex effect; (2) within each sex, 1st-class curves are highest and 3rd-class curves are lowest; (3) all curves slope gently downward with age, reflecting the modest age effect. The wide confidence bands at extreme ages reflect sparse data. This visualization communicates the model's predictions more intuitively than a table of odds ratios.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch10-titanic-predictions"
+#| eval: false
+```
+- `plot_predictions()` from `marginaleffects` generates predicted probability curves
+- `condition = c("age", "sex_label", "class")` maps age to the x-axis, sex to color, and class to facets
+- The shaded bands represent 95% confidence intervals
+- Each curve is a logistic function showing how survival probability varies with age for that sex-class combination
+
+
+:::
+
+### Average Marginal Effects
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch10-titanic-ame
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Average marginal effects for all predictors
+avg_slopes(model_titanic, type = "response")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch10-titanic-ame"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The AMEs translate the model results into probability-scale effects:
+
+- **sex**: On average, being female (rather than male) is associated with approximately a 50+ percentage point increase in survival probability, controlling for class and age
+- **class**: Compared to 1st class, 2nd and 3rd class passengers have substantially lower survival probabilities
+- **age**: Each additional year of age is associated with a small decrease in survival probability
+
+These AMEs are often the most useful numbers for communicating results to non-statistical audiences, because they are directly interpretable as changes in probability.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch10-titanic-ame"
+#| eval: false
+```
+- `avg_slopes()` computes the average marginal effect (AME) for each predictor on the probability scale
+- For binary predictors (`sex`), the AME is the average difference in predicted probability
+- For continuous predictors (`age`), the AME is the average change in predicted probability per one-unit increase
+- For multi-level factors (`class`), the AME shows contrasts relative to the reference level
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch10-titanic-ame-plot
+#| fig-cap: "Average marginal effects from the multiple logistic regression model. Each point represents the average change in survival probability associated with a one-unit change (or category change) in the predictor, holding all other predictors at their observed values."
+#| fig-alt: "Dot plot with horizontal error bars displaying average marginal effects from the Titanic logistic regression model. The y-axis lists predictor names (sex, age, passenger class categories) and the x-axis shows the average marginal effect on survival probability. Each point represents the average change in predicted survival probability for a one-unit or category change, with horizontal 95 percent confidence intervals. A vertical dashed line at zero marks no effect. Sex has the largest positive effect, while third class has a notable negative effect relative to the reference category."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+ame_df <- avg_slopes(model_titanic, type = "response") |>
+  as.data.frame()
+
+ggplot(ame_df, aes(x = estimate, y = term)) +
+  geom_point(size = 3, color = ber640_colors["primary"]) +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high),
+                 height = 0.2, color = ber640_colors["primary"]) +
+  geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.5) +
+  labs(
+    title = "Average Marginal Effects on P(Survived)",
+    x = "Change in Probability",
+    y = "Predictor"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch10-titanic-ame-plot"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The forest plot provides an intuitive summary of each predictor's effect on the probability scale. Being female has the largest positive effect on survival probability, followed by the class contrasts. The age effect is small but negative. Confidence intervals that do not cross the dashed zero line indicate statistically significant effects at the 5% level. This visualization is especially useful for communicating results to audiences who find odds ratios unintuitive.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch10-titanic-ame-plot"
+#| eval: false
+```
+- `plot_slopes()` visualizes the AMEs with 95% confidence intervals
+- The vertical dashed line at 0 represents no effect
+- Effects to the right of 0 increase survival probability; effects to the left decrease it
+
+
+:::
+
+### Predicted Probability Heatmap
+
+When a model includes two continuous predictors, a heatmap (or contour plot) can reveal how their joint influence shapes the predicted outcome. Although the Titanic model has only one continuous predictor (age), we can create a heatmap of predicted survival probability across age and class for each sex, treating class as an ordered numeric variable for visualization purposes.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch10-titanic-heatmap
+#| fig-cap: "Predicted probability heatmap of Titanic survival by age and passenger class, shown separately for males and females. Darker shading indicates higher survival probability. The gradient highlights how sex, class, and age jointly determine survival."
+#| fig-alt: "Heatmap with age on the x-axis and passenger class on the y-axis, faceted into two panels for males and females. Color intensity represents predicted survival probability, with darker shading indicating higher probability. The female panel shows much darker shading overall, especially for first-class passengers at younger ages. The male panel is lighter throughout, reflecting lower survival probabilities. The gradient across age within each class-sex combination shows probabilities declining with increasing age."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Create a fine grid for predictions
+heat_grid <- datagrid(model = model_titanic,
+                      sex = c(0, 1),
+                      class = c("1st", "2nd", "3rd"),
+                      age = seq(1, 70, by = 1))
+
+heat_preds <- predictions(model_titanic,
+                           newdata = heat_grid,
+                           type = "response") |>
+  as_tibble() |>
+  mutate(sex_label = factor(ifelse(sex == 0, "Male", "Female"),
+                            levels = c("Female", "Male")))
+
+ggplot(heat_preds, aes(x = age, y = class, fill = estimate)) +
+  geom_tile() +
+  facet_wrap(~ sex_label) +
+  scale_fill_gradient2(
+    low = ber640_colors["secondary"],
+    mid = ber640_colors["warning"],
+    high = ber640_colors["success"],
+    midpoint = 0.5,
+    labels = scales::percent,
+    name = "P(Survived)"
+  ) +
+  labs(
+    title = "Predicted Survival Probability Heatmap",
+    subtitle = "Joint effects of age, class, and sex",
+    x = "Age (years)",
+    y = "Passenger Class"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch10-titanic-heatmap"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The heatmap reveals several key patterns simultaneously. For females (left panel), the upper-left region (young, 1st class) shows the highest survival probabilities, while the lower-right (older, 3rd class) shows the lowest. For males (right panel), survival probabilities are uniformly lower across all combinations. The color gradient from green (high survival) to red (low survival) makes it easy to see that class exerts a strong influence --- the transition from 1st to 3rd class is visually dramatic. The age gradient within each class-sex combination is more subtle, confirming that age has a smaller effect than sex or class.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch10-titanic-heatmap"
+#| eval: false
+```
+- `datagrid()` creates a fine grid of predictor combinations (all ages 1--70 by each class and sex)
+- `predictions()` computes the predicted probability for every combination
+- `geom_tile()` creates a heatmap where color intensity represents predicted survival probability
+- `scale_fill_gradient2()` uses a diverging color scale centered at 50% survival
+- Faceting by sex shows the dramatic difference in survival patterns between females and males
+
+
+:::
+
+### ROC Curve and Model Discrimination {#sec-ch10-roc}
+
+The **ROC (Receiver Operating Characteristic) curve** evaluates how well the model discriminates between survivors and non-survivors. It plots the true positive rate (sensitivity) against the false positive rate (1 - specificity) at every possible threshold.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch10-roc-curve
+#| fig-cap: "ROC curve for the multiple logistic regression model predicting Titanic survival. The area under the curve (AUC) quantifies the model's ability to discriminate between survivors and non-survivors. An AUC of 0.5 indicates no discrimination (diagonal line); an AUC of 1.0 indicates perfect discrimination."
+#| fig-alt: "ROC curve plot with false positive rate (1 minus specificity) on the x-axis and true positive rate (sensitivity) on the y-axis, both ranging from 0 to 1. The ROC curve bows substantially toward the upper-left corner, indicating good discriminative ability. A diagonal dashed reference line from the origin to the upper-right corner represents the performance of a random classifier with AUC of 0.5. The area under the ROC curve is annotated, showing the model achieves strong discrimination between Titanic survivors and non-survivors."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Compute predicted probabilities for observed data
+titanic_preds <- titanic |>
+  filter(complete.cases(survived, sex, class, age)) |>
+  mutate(pred_prob = predict(model_titanic, type = "response"))
+
+# Build ROC data manually
+thresholds <- seq(0, 1, by = 0.005)
+roc_data <- tibble(threshold = thresholds) |>
+  rowwise() |>
+  mutate(
+    predicted_pos = sum(titanic_preds$pred_prob >= threshold),
+    tp = sum(titanic_preds$pred_prob >= threshold & titanic_preds$survived == 1),
+    fp = sum(titanic_preds$pred_prob >= threshold & titanic_preds$survived == 0),
+    fn = sum(titanic_preds$pred_prob <  threshold & titanic_preds$survived == 1),
+    tn = sum(titanic_preds$pred_prob <  threshold & titanic_preds$survived == 0),
+    sensitivity = tp / (tp + fn),
+    specificity = tn / (tn + fp),
+    fpr = 1 - specificity
+  ) |>
+  ungroup()
+
+# Compute AUC using trapezoidal rule
+roc_ordered <- roc_data |> arrange(fpr)
+auc_val <- sum(diff(roc_ordered$fpr) *
+               (roc_ordered$sensitivity[-1] + roc_ordered$sensitivity[-nrow(roc_ordered)]) / 2)
+
+ggplot(roc_data, aes(x = fpr, y = sensitivity)) +
+  geom_line(color = ber640_colors["accent"], linewidth = 1.2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", alpha = 0.5) +
+  annotate("text", x = 0.6, y = 0.3,
+           label = paste0("AUC = ", round(abs(auc_val), 3)),
+           size = 6, fontface = "bold", color = ber640_colors["primary"]) +
+  labs(
+    title = "ROC Curve: Titanic Survival Model",
+    subtitle = "survived ~ sex + class + age",
+    x = "False Positive Rate (1 - Specificity)",
+    y = "True Positive Rate (Sensitivity)"
+  ) +
+  coord_equal()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch10-roc-curve"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The ROC curve bows substantially above the diagonal, indicating that the model discriminates well between survivors and non-survivors. The AUC summarizes this discrimination in a single number:
+
+- **AUC = 0.5**: No better than a coin flip
+- **AUC = 0.7--0.8**: Acceptable discrimination
+- **AUC = 0.8--0.9**: Excellent discrimination
+- **AUC > 0.9**: Outstanding discrimination
+
+The Titanic model's AUC reflects the combined discriminative power of sex, class, and age. Note that the ROC curve and AUC describe **discrimination** (how well the model separates the two groups) rather than **calibration** (how well predicted probabilities match observed rates). A model can have high AUC but be poorly calibrated.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch10-roc-curve"
+#| eval: false
+```
+- We compute predicted probabilities for all observed passengers using `predict(type = "response")`
+- At each threshold (0 to 1 in steps of 0.005), we classify passengers as predicted survivors or non-survivors and compute sensitivity and specificity
+- The ROC curve plots sensitivity (y-axis) against the false positive rate (x-axis)
+- The AUC is computed using the trapezoidal rule --- it represents the probability that the model ranks a randomly chosen survivor higher than a randomly chosen non-survivor
+- The diagonal dashed line represents a model with no discriminative ability (AUC = 0.5)
+
+
+:::
+
+### Marginal Effects Across Age {#sec-ch10-marginal-age}
+
+The average marginal effect (AME) of a continuous predictor can vary across its range because of the logistic function's non-linearity. Plotting the **conditional marginal effect** of age at different values shows this variation.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch10-marginal-effects-age
+#| fig-cap: "Marginal effect of age on survival probability, shown separately by sex. The effect of each additional year of age depends on the baseline probability, which varies by sex. The marginal effect is strongest where the predicted probability is near 0.5."
+#| fig-alt: "Line plot showing the marginal effect of age on survival probability on the y-axis versus age on the x-axis, with separate colored curves for males and females. Both curves are negative, indicating that older age reduces survival probability. The female curve reaches a more negative peak at a different age than the male curve because women have higher baseline survival probabilities. Shaded confidence bands surround each line, and the effect is strongest where predicted probabilities are near 0.5 and attenuates toward the extremes."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+plot_slopes(model_titanic,
+            variables = "age",
+            condition = c("age", "sex"),
+            type = "response") +
+  scale_color_manual(
+    values = c(ber640_colors["accent"], ber640_colors["primary"]),
+    labels = c("Male", "Female")
+  ) +
+  scale_fill_manual(
+    values = c(ber640_colors["accent"], ber640_colors["primary"]),
+    labels = c("Male", "Female")
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5) +
+  labs(
+    title = "Conditional Marginal Effect of Age on P(Survived)",
+    subtitle = "How the per-year age effect varies across the age range",
+    x = "Age (years)",
+    y = "Marginal Effect of Age\n(change in probability per year)",
+    color = "Sex",
+    fill = "Sex"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch10-marginal-effects-age"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The plot reveals an important property of logistic regression: the marginal effect of a continuous predictor is **not constant** --- it depends on where you are on the probability curve. For both sexes, the marginal effect of age is negative (each additional year slightly decreases survival probability), but the magnitude varies. The effect tends to be largest at ages where the predicted probability is near 0.5, because the logistic curve is steepest there. For males, whose baseline survival probability is already low, the age effect is relatively constant. For females, the age effect may be somewhat larger because their probabilities span a wider range. This is a fundamental difference from OLS, where the marginal effect of a predictor is constant across the entire range.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch10-marginal-effects-age"
+#| eval: false
+```
+- `plot_slopes()` from `marginaleffects` computes and plots the marginal effect of `age` at each value of age, separately by sex
+- Unlike the AME (a single average), this shows how the effect of age **varies** depending on the passenger's characteristics
+- The non-linearity of the logistic function means the marginal effect is largest where the predicted probability is near 0.5 and smallest near 0 or 1
+- Shaded bands represent 95% confidence intervals
+
+
+:::
+
+
+::: {.callout-warning}
+## Common Mistakes in Multiple Logistic Regression
+
+1. **Interpreting odds ratios as risk ratios.** An OR of 2.0 does *not* mean "twice as likely" --- it means "twice the odds." When the outcome is rare (<10%), the OR approximates the risk ratio, but for common outcomes the two diverge substantially. Always specify "odds" in your interpretation.
+
+2. **Ignoring non-collapsibility.** Even without confounding, adjusted and unadjusted ORs can differ because the OR is non-collapsible. A change in the OR after adding a covariate does not necessarily indicate confounding; it may partly reflect non-collapsibility.
+
+3. **Reporting only $p$-values, not effect sizes.** With large samples, trivially small odds ratios can be statistically significant. Always report the OR with its confidence interval, and consider whether the effect is practically meaningful.
+
+4. **Using the model for prediction without checking discrimination.** A model can have statistically significant predictors yet still discriminate poorly (low AUC). Always evaluate predictive performance with a ROC curve or similar metric if the model will be used for classification.
+
+5. **Extrapolating predicted probabilities.** The logistic curve constrains predictions to [0, 1], but the model's accuracy outside the observed data range is not guaranteed. Be cautious about predicting survival for ages or combinations far from those in the training data.
+
+6. **Forgetting that AMEs depend on the covariate distribution.** The average marginal effect averages over the observed distribution of all other predictors. If the sample composition changes, the AME changes too, even if the model coefficients stay the same.
+:::
+
+### Interactive Exploration: Predicted Probability Calculator {.unnumbered}
+
+::: {.callout-tip collapse="true"}
+## Try It: Compute Survival Probabilities
+
+Set passenger characteristics (class, sex, age) to see how each factor contributes to the predicted probability of survival on the Titanic. The bar chart decomposes the logit into individual contributions.
+:::
+
+```{ojs}
+//| echo: false
+import { ber640 as pred_ber640, plotDefaults as pred_plotDefaults, themeColors as pred_themeColors, sigmoid as pred_sigmoid, formatCoef as pred_formatCoef, withAlpha as pred_withAlpha } from "../ojs/shared.js"
+
+pred_tc = pred_themeColors()
+```
+
+```{ojs}
+//| echo: false
+viewof pred_pclass = Inputs.radio(
+  new Map([["1st", 1], ["2nd", 2], ["3rd", 3]]),
+  { label: "Passenger Class", value: 3 }
+)
+
+viewof pred_sex = Inputs.radio(
+  ["Female", "Male"],
+  { label: "Sex", value: "Male" }
+)
+
+viewof pred_age = Inputs.range([0, 80], {
+  label: "Age",
+  value: 25,
+  step: 1
+})
+```
+
+```{ojs}
+//| echo: false
+
+pred_coefs = ({
+  intercept: 3.78,
+  class2: -1.31,
+  class3: -2.58,
+  sexMale: -2.52,
+  age: -0.0370
+})
+
+pred_classCoef = pred_pclass === 2 ? pred_coefs.class2 : pred_pclass === 3 ? pred_coefs.class3 : 0
+pred_sexCoef = pred_sex === "Male" ? pred_coefs.sexMale : 0
+pred_ageContrib = pred_age * pred_coefs.age
+
+pred_logit = pred_coefs.intercept + pred_classCoef + pred_sexCoef + pred_ageContrib
+pred_prob = pred_sigmoid(pred_logit)
+
+pred_decomp = [
+  { term: "Intercept", value: pred_coefs.intercept, order: 0 },
+  { term: `Class (${pred_pclass === 1 ? "1st" : pred_pclass === 2 ? "2nd" : "3rd"})`, value: pred_classCoef, order: 1 },
+  { term: `Sex (${pred_sex})`, value: pred_sexCoef, order: 2 },
+  { term: `Age (${pred_age})`, value: pred_ageContrib, order: 3 }
+]
+
+pred_curveData = {
+  const data = [];
+  for (let a = 0; a <= 80; a++) {
+    const classC = pred_pclass === 2 ? pred_coefs.class2 : pred_pclass === 3 ? pred_coefs.class3 : 0;
+    const sexC = pred_sex === "Male" ? pred_coefs.sexMale : 0;
+    const lg = pred_coefs.intercept + classC + sexC + a * pred_coefs.age;
+    data.push({ age: a, probability: pred_sigmoid(lg) });
+  }
+  return data;
+}
+```
+
+```{ojs}
+//| echo: false
+
+pred_gaugeColor = {
+  const p = pred_prob;
+  if (p < 0.35) return pred_ber640.secondary;
+  if (p < 0.65) return pred_ber640.warning;
+  return pred_ber640.success;
+}
+
+pred_gauge = {
+  const width = 280;
+  const height = 180;
+  const cx = width / 2;
+  const cy = 155;
+  const r = 110;
+
+  const startAngle = Math.PI;
+  const endAngle = 0;
+  const sweepAngle = startAngle - (startAngle - endAngle) * pred_prob;
+
+  const bgX1 = cx + r * Math.cos(startAngle);
+  const bgY1 = cy - r * Math.sin(startAngle);
+  const bgX2 = cx + r * Math.cos(endAngle);
+  const bgY2 = cy - r * Math.sin(endAngle);
+
+  const fillX = cx + r * Math.cos(sweepAngle);
+  const fillY = cy - r * Math.sin(sweepAngle);
+
+  const largeArcFill = pred_prob > 0.5 ? 1 : 0;
+
+  return html`<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;margin:0 auto;" role="img" aria-label="${`Survival probability gauge showing ${(pred_prob * 100).toFixed(1)} percent`}">
+    <defs>
+      <linearGradient id="pred_gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="${pred_ber640.secondary}" />
+        <stop offset="50%" stop-color="${pred_ber640.warning}" />
+        <stop offset="100%" stop-color="${pred_ber640.success}" />
+      </linearGradient>
+    </defs>
+    <path d="M ${bgX1},${bgY1} A ${r},${r} 0 1,1 ${bgX2},${bgY2}"
+          fill="none" stroke="${pred_tc.muted}" stroke-width="20" stroke-linecap="round" opacity="0.25" />
+    ${pred_prob > 0.001 ? html`<path d="M ${bgX1},${bgY1} A ${r},${r} 0 ${largeArcFill},1 ${fillX},${fillY}"
+          fill="none" stroke="${pred_gaugeColor}" stroke-width="20" stroke-linecap="round" />` : ""}
+    <text x="${cx}" y="${cy - 30}" text-anchor="middle" font-size="42" font-weight="700" fill="${pred_tc.text}">
+      ${(pred_prob * 100).toFixed(1)}%
+    </text>
+    <text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="14" fill="${pred_tc.muted}">
+      Survival Probability
+    </text>
+    <text x="${cx}" y="${cy + 18}" text-anchor="middle" font-size="12" fill="${pred_tc.muted}">
+      logit = ${pred_logit.toFixed(3)}
+    </text>
+    <text x="${cx - r - 5}" y="${cy + 16}" text-anchor="middle" font-size="11" fill="${pred_tc.muted}">0%</text>
+    <text x="${cx + r + 5}" y="${cy + 16}" text-anchor="middle" font-size="11" fill="${pred_tc.muted}">100%</text>
+    <text x="${cx}" y="${height}" text-anchor="middle" font-size="11" fill="${pred_tc.muted}">50%</text>
+  </svg>`
+}
+```
+
+```{ojs}
+//| echo: false
+
+pred_barChart = Plot.plot(pred_plotDefaults({
+  title: "Logit Decomposition by Term",
+  width: 450,
+  height: 220,
+  marginLeft: 110,
+  marginRight: 60,
+  x: {
+    label: "Contribution to logit",
+    domain: [-5, 5]
+  },
+  y: {
+    label: null,
+    domain: pred_decomp.map(d => d.term)
+  },
+  marks: [
+    Plot.ruleX([0], { stroke: pred_tc.muted, strokeDasharray: "3,3" }),
+    Plot.barX(pred_decomp, {
+      x: "value",
+      y: "term",
+      fill: d => d.value >= 0 ? pred_ber640.accent : pred_ber640.secondary,
+      fillOpacity: 0.8,
+      rx: 3
+    }),
+    Plot.text(pred_decomp, {
+      x: d => d.value >= 0 ? d.value + 0.1 : d.value - 0.1,
+      y: "term",
+      text: d => d.value.toFixed(3),
+      textAnchor: d => d.value >= 0 ? "start" : "end",
+      fill: pred_tc.text,
+      fontSize: 11,
+      fontWeight: 600
+    }),
+    Plot.ruleX([pred_logit], {
+      stroke: pred_ber640.accent,
+      strokeWidth: 2,
+      strokeDasharray: "6,3"
+    }),
+    Plot.text([{ x: pred_logit }], {
+      x: "x",
+      y: pred_decomp[0].term,
+      text: [`Total: ${pred_logit.toFixed(3)}`],
+      dy: -18,
+      fill: pred_ber640.accent,
+      fontSize: 12,
+      fontWeight: 700,
+      textAnchor: "middle"
+    })
+  ]
+}))
+```
+
+```{ojs}
+//| echo: false
+
+html`<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center;margin-bottom:1.5rem;">
+  <div style="text-align:center;">${pred_gauge}</div>
+  <div>${pred_barChart}</div>
+</div>`
+```
+
+```{ojs}
+//| echo: false
+
+pred_lineChart = Plot.plot(pred_plotDefaults({
+  title: `Predicted Survival Probability vs. Age (${pred_pclass === 1 ? "1st" : pred_pclass === 2 ? "2nd" : "3rd"} Class, ${pred_sex})`,
+  width: 700,
+  height: 320,
+  marginBottom: 40,
+  x: {
+    label: "Age",
+    domain: [0, 80]
+  },
+  y: {
+    label: "Predicted Probability",
+    domain: [0, 1]
+  },
+  marks: [
+    Plot.ruleY([0.5], {
+      stroke: pred_tc.muted,
+      strokeDasharray: "6,4",
+      strokeWidth: 1
+    }),
+    Plot.text([{ y: 0.5 }], {
+      x: 78,
+      y: "y",
+      text: ["50%"],
+      fill: pred_tc.muted,
+      fontSize: 11,
+      textAnchor: "end",
+      dy: -8
+    }),
+    Plot.line(pred_curveData, {
+      x: "age",
+      y: "probability",
+      stroke: pred_ber640.accent,
+      strokeWidth: 2.5,
+      curve: "natural"
+    }),
+    Plot.areaY(pred_curveData, {
+      x: "age",
+      y: "probability",
+      fill: pred_ber640.accent,
+      fillOpacity: 0.08,
+      curve: "natural"
+    }),
+    Plot.ruleX([pred_age], {
+      stroke: pred_ber640.secondary,
+      strokeWidth: 1.5,
+      strokeDasharray: "4,3"
+    }),
+    Plot.dot([{ age: pred_age, probability: pred_prob }], {
+      x: "age",
+      y: "probability",
+      r: 7,
+      fill: pred_ber640.accent,
+      stroke: pred_tc.bg,
+      strokeWidth: 2
+    }),
+    Plot.text([{ age: pred_age, probability: pred_prob }], {
+      x: "age",
+      y: "probability",
+      text: [`${(pred_prob * 100).toFixed(1)}%`],
+      dy: -14,
+      fill: pred_ber640.accent,
+      fontSize: 13,
+      fontWeight: 700,
+      textAnchor: "middle"
+    })
+  ]
+}))
+
+pred_lineChart
+```
+
+
+## Summary and Key Takeaways {#sec-ch10-summary}
+
+This chapter extended logistic regression from one predictor to multiple predictors, addressing the fundamental challenge of confounding in binary outcome models. The Berkeley admissions example provided a vivid demonstration of Simpson's paradox, while the Titanic model illustrated how to build, interpret, and communicate a multiple logistic regression model.
+
+::: {.callout-important}
+## Key Takeaways
+
+1. **Simpson's paradox is OVB for binary outcomes.** An association between a predictor and a binary outcome can reverse when a confounding variable is introduced. This is the same omitted variable bias from @sec-ch2, applied to the logistic regression setting.
+
+2. **The multiple logistic regression model** has the form $\text{logit}(\pi_i) = \alpha + \beta_1 x_{1i} + \cdots + \beta_k x_{ki}$. Each $\beta_j$ represents the adjusted effect of $x_j$ on the log-odds, controlling for all other predictors.
+
+3. **Maximum likelihood estimation (MLE)** finds the parameters that maximize the probability of the observed data. MLEs are consistent, efficient, and asymptotically normal --- but these properties require adequate sample sizes (at least 10--20 events per predictor).
+
+4. **Two inferential approaches**: The **Wald test** ($z = b/\text{SE}$) is the default and requires only one model. The **likelihood ratio test** ($G^2 = 2[\ell_{\text{full}} - \ell_{\text{reduced}}]$) compares nested models and is more reliable in small samples or when coefficients are large.
+
+5. **Adjusted odds ratios** ($e^{\beta_j}$) represent the multiplicative change in odds for a one-unit increase in $x_j$, **holding all other predictors constant**. They are the primary effect size measure in logistic regression.
+
+6. **Confidence intervals for ORs** use the asymmetric formula $\exp(b \pm 1.96 \cdot \text{SE})$. The asymmetry is appropriate because odds ratios are on a ratio scale bounded below by zero.
+
+7. **Predicted probabilities and AMEs** translate model results to the probability scale. `predictions()` gives predicted probabilities for specific profiles; `avg_slopes()` gives the average change in probability per unit change in a predictor. These are typically the most communicable results.
+
+8. **Always consider confounders.** The Berkeley example shows that unadjusted odds ratios can be wildly misleading. Include relevant confounders in the model, and compare adjusted vs unadjusted results to assess the impact of confounding.
+:::
+
+
+## Exercises {#sec-ch10-exercises}
+
+::: {.callout-caution collapse="true"}
+## Exercise 10.1: Berkeley Full Analysis
+Using the full `berkeley` dataset (all 5 departments), fit two models predicting `admitted`:
+
+a. An unadjusted model with `female` only
+b. An adjusted model with `female` and `departme` (treating department as a factor)
+
+Compare the odds ratio for `female` across the two models. Does the confounding pattern hold with all departments, not just the two in `berk_sub`?
+
+**Hint**: Use `glm(admitted ~ female + factor(departme), family = binomial, data = berkeley)`. The `factor()` wrapper ensures department is treated as categorical with dummy variables. To compare ORs visually, try creating a forest plot similar to @fig-ch10-forest-crude-adj using `tidy_model(exponentiate = TRUE)`.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 10.2: Disciplinary Referrals with Confounders
+Using the `disc2` dataset, fit a logistic regression predicting `sentoff` (sent to office for disciplinary infraction) from `male`, `minority`, and `ses` (socioeconomic status).
+
+a. Report the adjusted odds ratios and their 95% confidence intervals
+b. Compute the average marginal effects on the probability scale
+c. Compare the adjusted OR for `male` to the unadjusted OR from a model with `male` only. Does controlling for SES and minority status change the estimated sex effect?
+d. Use `plot_predictions()` to visualize how the predicted probability of being sent to the office varies across SES for males vs females
+
+**Hint**: `data(disc2)` loads the dataset. Missing values may need to be handled; `glm()` handles them by default with listwise deletion. For part (b), use `avg_slopes(model, type = "response")`. For part (d), use `plot_predictions(model, condition = c("ses", "sex_variable"), type = "response")` where you replace `sex_variable` with the correct column name and coding.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 10.3: Titanic Interactions
+Building on the Titanic model from this chapter (survived ~ sex + class + age):
+
+a. Fit a model that adds an interaction between `sex` and `class`. Is the interaction statistically significant? (Use an LR test comparing the interaction model to the additive model.)
+b. If the interaction is significant, what does it mean substantively? Compute predicted probabilities for all sex-class combinations at age 30 and discuss.
+c. Plot the predicted probabilities as a function of age, with separate curves for each sex-class combination.
+
+**Hint**: `survived ~ sex * class + age` includes the interaction. Use `lmtest::lrtest()` for the LR test.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 10.4: Wald vs LR Tests
+Using the Titanic model (survived ~ sex + class + age):
+
+a. Compare the Wald test $p$-value for `age` (from `model_parameters()`) with the LR test $p$-value (from `lmtest::lrtest()`). Are they similar?
+b. Repeat for the `sex` coefficient. Are the Wald and LR $p$-values closer or further apart compared to age? Why might this be?
+c. What general principle explains when the two tests are likely to disagree?
+
+**Hint**: The Wald and LR tests are asymptotically equivalent. They tend to disagree most when the coefficient is far from zero (i.e., for strong effects) or when the sample size is small.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 10.5: ROC Curves and Model Comparison
+Compare the discriminative ability of three models predicting Titanic survival:
+
+a. Model 1: `survived ~ sex` (sex only)
+b. Model 2: `survived ~ sex + class` (sex + class)
+c. Model 3: `survived ~ sex + class + age` (full model)
+
+For each model:
+
+1. Compute predicted probabilities on the same set of complete cases
+2. Build the ROC curve
+3. Compute the AUC
+
+Plot all three ROC curves on the same figure and discuss: which predictor contributes the most to discrimination? Is the gain from adding `age` to Model 2 large or small?
+
+**Hint**: Use `predict(model, type = "response")` on a common dataset of complete cases. Compute sensitivity and specificity at a grid of thresholds (e.g., `seq(0, 1, by = 0.01)`). Use `geom_line()` with a `color` aesthetic mapped to model name. For AUC, use the trapezoidal rule as shown in @sec-ch10-roc, or install the `pROC` package and use `pROC::auc()`.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 10.6: Predicted Probability Profiles
+Using the `disc2` dataset with the model from Exercise 10.2 (`sentoff ~ male + minority + ses`):
+
+a. Compute predicted probabilities for the following four profiles at the mean SES:
+   - Male, non-minority
+   - Male, minority
+   - Female, non-minority
+   - Female, minority
+b. Create a plot showing how predicted probability varies across the full range of SES for all four demographic groups (2 sexes x 2 minority statuses)
+c. At what SES value does the predicted probability for minority males equal the predicted probability for non-minority males? Interpret this crossing point.
+
+**Hint**: Use `datagrid(model = model, male = c(0, 1), minority = c(0, 1), ses = seq(min, max, length.out = 100))` to create a prediction grid, then `predictions(model, newdata = grid, type = "response")` to get predicted probabilities. For part (c), you can find the crossing point visually or by filtering the prediction grid for the two groups and finding where their predicted probabilities are closest.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 10.7: Simpson's Paradox and Confounding in Logistic Regression
+In the Berkeley admissions example, the unadjusted model showed a negative effect of being female on admission, but the adjusted model (controlling for department) reversed the direction.
+
+a. Explain in your own words why controlling for department changed the sign of the sex coefficient. What feature of the data made this reversal possible?
+b. Is it always appropriate to adjust for a variable that is associated with both the predictor and the outcome? Describe a scenario where adjusting for a third variable would introduce bias rather than remove it (consider the concept of a collider).
+c. If a policymaker saw only the unadjusted odds ratio and concluded that Berkeley discriminated against women, what would you say? How does this example illustrate the danger of interpreting unadjusted associations causally?
+
+**Hint**: For part (a), think about which departments women applied to disproportionately, and how those departments differed in overall admission rates. For part (b), a collider is a variable that is caused by both the predictor and the outcome---conditioning on it opens a spurious path. For part (c), the key distinction is between marginal and conditional associations.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 10.8: Interaction Terms and Conditional Odds Ratios
+Consider a logistic model `survived ~ sex + class + sex:class` fit to the Titanic data.
+
+a. In a model without the interaction, the odds ratio for `sex` has a single value. With the interaction included, why can we no longer report a single odds ratio for the effect of sex? What does the odds ratio for sex now depend on?
+b. Suppose the coefficient for `sexmale` is $-1.2$ and the coefficient for `sexmale:class2nd` is $0.4$. Compute the odds ratio for being male (vs. female) separately for 1st class and 2nd class passengers. Interpret the difference.
+c. When should a researcher consider adding an interaction term to a logistic regression model? What substantive question does an interaction answer that main effects alone cannot?
+
+**Hint**: For part (a), recall that an interaction means the effect of one predictor depends on the level of another. For part (b), in 1st class the log-OR for male is $-1.2$; in 2nd class it is $-1.2 + 0.4 = -0.8$. Exponentiate to get ORs. For part (c), an interaction tests whether the "gap" between groups on one predictor is itself different across levels of another predictor.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 10.9: Why Adjusted and Unadjusted Odds Ratios Differ
+A researcher fits two models predicting hypertension (1 = yes): Model A with only `smoking` as a predictor, and Model B with `smoking + age + bmi`. The unadjusted OR for smoking is 2.1, but the adjusted OR is 1.3.
+
+a. What does the change from 2.1 to 1.3 tell you about the relationship between smoking, age/BMI, and hypertension? Which variables are likely confounders, and why?
+b. If the adjusted OR for smoking had instead *increased* after controlling for age and BMI (e.g., from 2.1 to 2.8), what would that suggest about the confounding structure?
+c. A colleague argues: "We should always report the model with the most controls because it is the least biased." Do you agree? Under what circumstances might adding more controls not improve (or even worsen) the estimate of the smoking effect?
+
+**Hint**: For part (a), confounders must be associated with both smoking and hypertension. Smokers tend to differ from non-smokers in age and BMI, and these variables independently affect hypertension. For part (b), this pattern occurs when confounders suppress the true effect. For part (c), consider colliders and mediators---controlling for a mediator (e.g., arterial plaque) would block part of the causal pathway you want to estimate.
+:::

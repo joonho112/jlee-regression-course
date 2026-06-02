@@ -1,0 +1,500 @@
+---
+title: "Homework 3: Multiple Regression and Confounding"
+---
+
+{{< include ../_common.qmd >}}
+
+## Overview
+
+::: {.callout-note}
+## Learning Objectives
+- Interpret coefficients in a multiple regression with continuous and dummy predictors
+- Understand the parallel lines model (equal slopes, different intercepts)
+- Recognize confounding and Simpson's Paradox
+- Distinguish between adjusted and unadjusted group differences
+- **Related:** Chapter 2: *ANCOVA* (in Lecture Notes)
+:::
+
+This homework is entirely **conceptual** --- no dataset analysis is required. All problems use given regression equations. You will practice interpreting coefficients, graphing parallel lines models, and reasoning about confounding.
+
+*Adapted from @agresti2018, Chapter 13.*
+
+## Problem 1
+
+### Problem Statement
+
+> Consider two regression models for years of education ($y$) with father's education ($x$) and a white/non-white dummy ($z$, where $z = 1$ for white, $z = 0$ for non-white):
+>
+> - Regression 1: $\hat{y} = 11 + 2z$
+> - Regression 2: $\hat{y} = 3 + 0.8x - 0.6z$
+>
+> (a) From the first regression, find the estimated mean education for whites and non-whites. What is the difference?
+> (b) Plot the relationship between $\hat{y}$ and $x$ for the first regression.
+> (c) From the second regression, find the estimated difference in mean education between whites and non-whites after controlling for father's education.
+> (d) Using the second regression, find the predicted means when father's education = 11 years.
+
+### Solution
+
+::: {.panel-tabset}
+
+#### Part (a)
+
+**From Regression 1:** $\hat{y} = 11 + 2z$
+
+Substitute the dummy variable values:
+
+- **Whites** ($z = 1$): $\hat{y} = 11 + 2(1) = 13$
+- **Non-whites** ($z = 0$): $\hat{y} = 11 + 2(0) = 11$
+
+$$
+\text{Difference (white} - \text{non-white)} = 13 - 11 = 2
+$$
+
+Without controlling for any other variables, whites are estimated to have **2 more years** of education than non-whites.
+
+#### Part (b)
+
+::: {.panel-tabset group="fig-hw03-regression1"}
+
+##### Simple
+
+```{r}
+#| label: fig-hw03-regression1-simple
+#| fig-cap: "Regression 1: Predicted education by race (no father's education in model). Two horizontal lines because the model does not include x."
+#| fig-alt: "Two horizontal lines. A dashed blue line at y equals 13 represents predicted education for whites. A solid red line at y equals 11 represents non-whites. The 2-year gap shows the unadjusted difference favoring whites."
+#| fig-width: 8
+#| fig-height: 5
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Simple: Two horizontal lines showing group means
+ggplot() +
+  geom_hline(yintercept = 13, linetype = "dashed", color = "blue") +
+  geom_hline(yintercept = 11, color = "red") +
+  coord_cartesian(xlim = c(4, 16), ylim = c(10, 14)) +
+  labs(x = "Father's Education", y = "Education",
+       title = "Regression 1: y-hat = 11 + 2z") +
+  annotate("text", x = 14, y = 13.2, label = "White (z = 1)", color = "blue") +
+  annotate("text", x = 14, y = 10.8, label = "Non-white (z = 0)", color = "red")
+```
+
+##### Detailed
+
+```{r}
+#| label: fig-hw03-regression1-detailed
+#| fig-cap: "Regression 1: Predicted education by race (no father's education in model). Two horizontal lines because the model does not include x."
+#| fig-alt: "Two horizontal lines. A dashed blue line at y equals 13 represents predicted education for whites. A solid red line at y equals 11 represents non-whites. The 2-year gap shows the unadjusted difference favoring whites."
+#| fig-width: 8
+#| fig-height: 5
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Regression 1 has no x predictor, so the lines are horizontal
+ggplot() +
+  # Non-white line (solid): y = 11
+  geom_hline(
+    aes(yintercept = 11, color = "Non-white (z = 0)", linetype = "Non-white (z = 0)"),
+    linewidth = 1.2
+  ) +
+  # White line (dashed): y = 13
+  geom_hline(
+    aes(yintercept = 13, color = "White (z = 1)", linetype = "White (z = 1)"),
+    linewidth = 1.2
+  ) +
+  # Annotate the difference
+  annotate(
+    "segment",
+    x = 10, xend = 10,
+    y = 11, yend = 13,
+    color = ber640_colors["secondary"],
+    linewidth = 0.8,
+    linetype = "dotted",
+    arrow = arrow(ends = "both", length = unit(0.15, "inches"))
+  ) +
+  annotate(
+    "text",
+    x = 10.3, y = 12,
+    label = "Difference = 2",
+    hjust = 0, size = 4.5,
+    color = ber640_colors["secondary"],
+    fontface = "bold"
+  ) +
+  # Annotate line values
+  annotate(
+    "text", x = 4.5, y = 13.3,
+    label = expression(hat(y) == 13 ~ "(White)"),
+    size = 4, color = ber640_colors["accent"], fontface = "bold"
+  ) +
+  annotate(
+    "text", x = 4.5, y = 10.7,
+    label = expression(hat(y) == 11 ~ "(Non-white)"),
+    size = 4, color = ber640_colors["primary"], fontface = "bold"
+  ) +
+  # Scales
+  scale_x_continuous(
+    limits = c(4, 16),
+    breaks = seq(4, 16, by = 2)
+  ) +
+  scale_y_continuous(
+    limits = c(9, 15),
+    breaks = seq(9, 15, by = 1)
+  ) +
+  scale_color_manual(
+    name = "Race",
+    values = c(
+      "Non-white (z = 0)" = unname(ber640_colors["primary"]),
+      "White (z = 1)" = unname(ber640_colors["accent"])
+    )
+  ) +
+  scale_linetype_manual(
+    name = "Race",
+    values = c(
+      "Non-white (z = 0)" = "solid",
+      "White (z = 1)" = "dashed"
+    )
+  ) +
+  labs(
+    title = "Regression 1: Education on Race Only",
+    subtitle = expression(hat(y) == 11 + 2 * z ~ "--- No father's education in model"),
+    x = "Father's Education (years)",
+    y = "Predicted Years of Education"
+  )
+```
+
+:::
+
+**Key observation:** Because Regression 1 does not include father's education ($x$), the predicted values do not depend on $x$. The two lines are **horizontal** --- the model predicts a constant value for each racial group regardless of father's education. The unadjusted gap is $+2$ years in favor of whites.
+
+#### Part (c)
+
+**From Regression 2:** $\hat{y} = 3 + 0.8x - 0.6z$
+
+The coefficient of $z$ is $-0.6$. This means:
+
+$$
+\hat{y}_{\text{white}} - \hat{y}_{\text{non-white}} = -0.6
+$$
+
+After **controlling for father's education**, whites are estimated to have **0.6 fewer years** of education than non-whites.
+
+::: {.callout-important}
+## Simpson's Paradox --- Direction Reverses!
+The unadjusted difference from Regression 1 was $+2$ (whites higher), but the adjusted difference from Regression 2 is $-0.6$ (whites **lower**). The **direction of the effect reverses** when we control for father's education!
+
+This is **Simpson's Paradox**: the relationship between race and education changes direction once we account for a confounding variable. Father's education is a confounder because:
+
+1. It is correlated with race ($z$) --- whites tend to have fathers with more education.
+2. It is correlated with the outcome ($y$) --- more educated fathers tend to have more educated children.
+
+The unadjusted $+2$ year advantage for whites was partly (and more than fully) explained by the fact that white respondents tend to have fathers with higher education levels.
+:::
+
+#### Part (d)
+
+::: {.panel-tabset group="fig-hw03-regression2"}
+
+##### Simple
+
+```{r}
+#| label: fig-hw03-regression2-simple
+#| fig-cap: "Regression 2: Parallel lines model with father's education. After controlling for father's education, non-whites have higher predicted education (Simpson's Paradox)."
+#| fig-alt: "Two parallel lines with slope 0.8. The red line for non-whites has intercept 3 and sits above the blue dashed line for whites with intercept 2.4. After controlling for father's education, non-whites have 0.6 years more predicted education than whites, reversing the unadjusted difference."
+#| fig-width: 8
+#| fig-height: 6
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Simple: Two parallel lines with slope 0.8
+ggplot() +
+  geom_abline(intercept = 2.4, slope = 0.8, linetype = "dashed", color = "blue") +
+  geom_abline(intercept = 3, slope = 0.8, color = "red") +
+  coord_cartesian(xlim = c(4, 16), ylim = c(5, 16)) +
+  labs(x = "Father's Education", y = "Education",
+       title = "Regression 2: y-hat = 3 + 0.8x - 0.6z") +
+  annotate("text", x = 14, y = 13.5, label = "Non-white (z = 0)", color = "red") +
+  annotate("text", x = 14, y = 12, label = "White (z = 1)", color = "blue")
+```
+
+##### Detailed
+
+```{r}
+#| label: fig-hw03-regression2-detailed
+#| fig-cap: "Regression 2: Parallel lines model with father's education. After controlling for father's education, non-whites have higher predicted education (Simpson's Paradox)."
+#| fig-alt: "Two parallel lines with slope 0.8. The red line for non-whites has intercept 3 and sits above the blue dashed line for whites with intercept 2.4. After controlling for father's education, non-whites have 0.6 years more predicted education than whites, reversing the unadjusted difference."
+#| fig-width: 8
+#| fig-height: 6
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Regression 2: y-hat = 3 + 0.8x - 0.6z
+# Non-white (z=0): y-hat = 3 + 0.8x        (intercept = 3,   slope = 0.8)
+# White     (z=1): y-hat = 3 + 0.8x - 0.6  (intercept = 2.4, slope = 0.8)
+
+# Predicted values at x = 11
+y_white    <- 3 + 0.8 * 11 - 0.6  # = 11.2
+y_nonwhite <- 3 + 0.8 * 11        # = 11.8
+
+ggplot() +
+  # Non-white line (solid): y = 3 + 0.8x
+  geom_abline(
+    aes(
+      intercept = 3, slope = 0.8,
+      color = "Non-white (z = 0)",
+      linetype = "Non-white (z = 0)"
+    ),
+    linewidth = 1.2
+  ) +
+  # White line (dashed): y = 2.4 + 0.8x
+  geom_abline(
+    aes(
+      intercept = 2.4, slope = 0.8,
+      color = "White (z = 1)",
+      linetype = "White (z = 1)"
+    ),
+    linewidth = 1.2
+  ) +
+  # Mark predicted points at x = 11
+  annotate(
+    "point",
+    x = c(11, 11),
+    y = c(y_nonwhite, y_white),
+    size = 4,
+    color = c(unname(ber640_colors["primary"]), unname(ber640_colors["accent"]))
+  ) +
+  # Vertical segment showing the gap at x = 11
+  annotate(
+    "segment",
+    x = 11, xend = 11,
+    y = y_white, yend = y_nonwhite,
+    color = ber640_colors["secondary"],
+    linewidth = 0.8,
+    linetype = "dotted",
+    arrow = arrow(ends = "both", length = unit(0.15, "inches"))
+  ) +
+  # Label the gap
+  annotate(
+    "text",
+    x = 11.3, y = (y_white + y_nonwhite) / 2,
+    label = "Gap = 0.6",
+    hjust = 0, size = 4,
+    color = ber640_colors["secondary"],
+    fontface = "bold"
+  ) +
+  # Label the predicted values
+  annotate(
+    "label",
+    x = 11, y = y_nonwhite,
+    label = paste0("Non-white: ", y_nonwhite),
+    vjust = -1, size = 3.8,
+    color = ber640_colors["primary"],
+    fontface = "bold",
+    fill = "white",
+    label.padding = unit(0.3, "lines")
+  ) +
+  annotate(
+    "label",
+    x = 11, y = y_white,
+    label = paste0("White: ", y_white),
+    vjust = 2, size = 3.8,
+    color = ber640_colors["accent"],
+    fontface = "bold",
+    fill = "white",
+    label.padding = unit(0.3, "lines")
+  ) +
+  # Annotate the line equations
+  annotate(
+    "text", x = 5, y = 3 + 0.8 * 5 + 0.4,
+    label = expression(hat(y) == 3 + 0.8 * x ~ "(Non-white)"),
+    size = 3.8, color = ber640_colors["primary"], fontface = "bold"
+  ) +
+  annotate(
+    "text", x = 5, y = 2.4 + 0.8 * 5 - 0.4,
+    label = expression(hat(y) == 2.4 + 0.8 * x ~ "(White)"),
+    size = 3.8, color = ber640_colors["accent"], fontface = "bold"
+  ) +
+  # Vertical reference line at x = 11
+  geom_vline(
+    xintercept = 11, color = "grey70", linetype = "dashed", linewidth = 0.5
+  ) +
+  # Scales
+  scale_x_continuous(
+    limits = c(4, 16),
+    breaks = seq(4, 16, by = 2)
+  ) +
+  scale_y_continuous(
+    limits = c(5, 16),
+    breaks = seq(5, 16, by = 1)
+  ) +
+  scale_color_manual(
+    name = "Race",
+    values = c(
+      "Non-white (z = 0)" = unname(ber640_colors["primary"]),
+      "White (z = 1)" = unname(ber640_colors["accent"])
+    )
+  ) +
+  scale_linetype_manual(
+    name = "Race",
+    values = c(
+      "Non-white (z = 0)" = "solid",
+      "White (z = 1)" = "dashed"
+    )
+  ) +
+  labs(
+    title = "Regression 2: Parallel Lines Model (Controlling for Father's Education)",
+    subtitle = expression(hat(y) == 3 + 0.8 * x - 0.6 * z ~ "--- Non-white line is ABOVE white line"),
+    x = "Father's Education (years)",
+    y = "Predicted Years of Education"
+  )
+```
+
+:::
+
+**Predicted values when father's education = 11:**
+
+- **Whites** ($z = 1$):
+
+$$
+\hat{y} = 3 + 0.8(11) - 0.6(1) = 3 + 8.8 - 0.6 = 11.2
+$$
+
+- **Non-whites** ($z = 0$):
+
+$$
+\hat{y} = 3 + 0.8(11) - 0.6(0) = 3 + 8.8 = 11.8
+$$
+
+At father's education $= 11$ years, the predicted education is **11.8 for non-whites** and **11.2 for whites**. Non-whites are predicted to have $0.6$ more years of education, consistent with the adjusted coefficient $\hat{\beta}_z = -0.6$.
+
+The two parallel lines (equal slope of $0.8$, different intercepts) show that the non-white regression line sits **above** the white regression line at every value of $x$. This vertical gap of $0.6$ years is constant across all levels of father's education --- the hallmark of the parallel lines (ANCOVA) model.
+
+:::
+
+::: {.callout-tip}
+## Key Takeaway: Parallel Lines Model
+In the model $\hat{y} = \hat{\beta}_0 + \hat{\beta}_1 x + \hat{\beta}_2 z$, the two groups share the **same slope** ($\hat{\beta}_1$) but have **different intercepts** separated by $\hat{\beta}_2$. The lines are parallel, and $\hat{\beta}_2$ represents the adjusted group difference --- the gap in predicted $y$ at **any** fixed value of $x$.
+:::
+
+
+## Problem 2
+
+### Problem Statement
+
+> True or False for the model $y = \beta_0 + \beta_1 x + \beta_2 z + \varepsilon$, where $x$ is a continuous predictor and $z$ is a qualitative (dummy) predictor:
+>
+> (a) The qualitative predictor has two categories.
+> (b) One line has slope $\beta_1$ and the other has slope $\beta_2$.
+> (c) $\beta_2$ is the difference between the mean of $y$ for the two categories.
+> (d) $\beta_2$ is the difference between the adjusted mean of $y$ (controlling for $x$) for the two categories.
+
+### Solution
+
+**(a) The qualitative predictor has two categories.**
+
+**TRUE.** A single dummy variable $z$ (coded 0 or 1) represents a qualitative variable with exactly **two categories**. The reference category is coded $z = 0$ and the comparison category is coded $z = 1$. A qualitative variable with $k$ categories would require $k - 1$ dummy variables.
+
+---
+
+**(b) One line has slope $\beta_1$ and the other has slope $\beta_2$.**
+
+**FALSE.** Both lines have the **same slope**, $\beta_1$:
+
+- When $z = 0$: $\hat{y} = \beta_0 + \beta_1 x$ (slope $= \beta_1$)
+- When $z = 1$: $\hat{y} = (\beta_0 + \beta_2) + \beta_1 x$ (slope $= \beta_1$)
+
+The coefficient $\beta_2$ is **not** a slope --- it is a **shift in the intercept**. Both groups share the same slope $\beta_1$; the lines are parallel. This is why the model is called the "parallel lines" or "equal slopes" model.
+
+---
+
+**(c) $\beta_2$ is the difference between the mean of $y$ for the two categories.**
+
+**FALSE.** The statement is missing a critical qualifier. $\beta_2$ is the difference between the means of $y$ for the two categories **controlling for $x$** (i.e., at a fixed value of $x$). Without the phrase "controlling for $x$," the statement describes the **unadjusted** (marginal) difference, which is not what $\beta_2$ represents in a multiple regression.
+
+::: {.callout-warning}
+## Common Mistake: Forgetting "Controlling for $x$"
+In simple regression with only a dummy predictor, the coefficient equals the unadjusted group difference. But in **multiple** regression, each coefficient is a **partial** effect --- holding the other predictors constant. Omitting "controlling for $x$" conflates the adjusted and unadjusted differences, which can be very different (as Problem 1 demonstrated with Simpson's Paradox).
+:::
+
+---
+
+**(d) $\beta_2$ is the difference between the adjusted mean of $y$ (controlling for $x$) for the two categories.**
+
+**TRUE.** At any fixed value of $x$:
+
+$$
+\hat{y}_{z=1} - \hat{y}_{z=0} = [(\beta_0 + \beta_2) + \beta_1 x] - [\beta_0 + \beta_1 x] = \beta_2
+$$
+
+The coefficient $\beta_2$ is the difference in the **adjusted means** --- the predicted values of $y$ for the two groups after accounting for $x$. This adjusted difference is constant across all values of $x$ in the parallel lines model.
+
+
+## Problem 3
+
+### Problem Statement
+
+> In the United States, mean annual income for Black people ($\mu_1$) is lower than for white people ($\mu_2$). Education level is lower on average for Black people, and income is positively related to education.
+>
+> The difference in mean income between white and Black people, controlling for education, is:
+>
+> (a) Less than $\mu_2 - \mu_1$
+> (b) Greater than $\mu_2 - \mu_1$
+> (c) Possibly equal to $\mu_2 - \mu_1$
+
+### Solution
+
+**(a) Less than $\mu_2 - \mu_1$.**
+
+**TRUE.** Controlling for education **reduces** the income gap between white and Black people.
+
+**(b) Greater than $\mu_2 - \mu_1$.**
+
+**FALSE.** Controlling for education does not increase the gap; it decreases it.
+
+**(c) Possibly equal to $\mu_2 - \mu_1$.**
+
+**FALSE.** If a variable is correlated with both the predictor (race) and the outcome (income), controlling for it **will** change the coefficient. Equality would only hold if education were uncorrelated with either race or income, contradicting the given information.
+
+::: {.callout-important}
+## Why Education is a Confounder
+
+A **confounding variable** is one that is associated with both the predictor and the outcome. Education meets both criteria:
+
+1. **Education is associated with race:** Black people have lower average education levels than white people.
+2. **Education is associated with income:** More education leads to higher income.
+
+This creates a chain of reasoning:
+
+- **Unadjusted comparison ($\mu_2 - \mu_1$):** Part of the white-Black income gap is due to differences in education levels, not race itself. The unadjusted gap **overstates** the race-specific effect because it includes the indirect path through education.
+
+- **Adjusted comparison (controlling for education):** Removes the portion of the gap attributable to education differences, leaving only the portion associated with race at the same education level. This must be **smaller** than $\mu_2 - \mu_1$.
+
+Mathematically, when the confounder (education) is:
+
+- Positively correlated with the outcome (income) --- **check**
+- Higher for the advantaged group (white) --- **check**
+
+...then the unadjusted gap is inflated, and adjusting for the confounder **reduces** the gap.
+
+This is the logic underlying ANCOVA: by statistically holding education constant, we remove its confounding influence and obtain a more accurate estimate of the race-income relationship.
+:::
+
+
+::: {.callout-caution}
+## Common Mistake: Assuming the Higher Raw Mean Implies the Higher Adjusted Mean
+Students often assume that if whites have a higher *unadjusted* mean education (13 vs. 11), they must also have a higher *adjusted* mean. This homework shows the opposite can occur: after controlling for father's education, whites actually have 0.6 *fewer* years of education. This reversal (Simpson's Paradox) happens because the confounder (father's education) is unevenly distributed across groups. Always check adjusted means — they can reverse the direction of raw comparisons.
+:::
+
+
+## Summary
+
+This homework introduced three foundational concepts for multiple regression with dummy variables:
+
+1. **Parallel lines model.** The model $\hat{y} = \hat{\beta}_0 + \hat{\beta}_1 x + \hat{\beta}_2 z$ produces two parallel regression lines with equal slopes ($\hat{\beta}_1$) and intercepts separated by $\hat{\beta}_2$. The dummy variable coefficient represents the adjusted group difference at any fixed value of $x$.
+
+2. **Simpson's Paradox.** The direction of the relationship between two variables can **reverse** when a confounding variable is controlled. In Problem 1, whites appeared to have 2 more years of education (unadjusted), but 0.6 fewer years after controlling for father's education.
+
+3. **Confounding.** A variable that is correlated with both the predictor and the outcome will distort the apparent relationship between them. Controlling for the confounder changes the estimated effect, and the direction of change depends on the sign structure of the correlations.
+
+::: {.callout-note}
+## Looking Ahead
+In **Homework 4** (ANOVA), we extend from two groups to multiple groups using multiple dummy variables. The parallel lines model generalizes to **multiple parallel lines**, and the $F$-test evaluates whether any group differences exist. We will also see how confounding reasoning extends to models with more than two categories.
+:::

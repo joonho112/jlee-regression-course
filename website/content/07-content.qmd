@@ -1,0 +1,49 @@
+---
+title: "Week 7: Interactions"
+---
+
+## Overview
+
+This week introduces interaction effects, which allow the relationship between a predictor and the outcome to depend on the value of another variable. You will learn how to specify and interpret product terms for both continuous-by-categorical and continuous-by-continuous interactions, how to probe significant interactions using simple slopes and the Johnson-Neyman technique, and why centering predictors is critical before forming product terms.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Construct and interpret product terms that represent interaction effects in a regression model
+- Compute and interpret simple slopes at meaningful values of the moderator
+- Apply the Johnson-Neyman technique to identify the region of significance for an interaction
+- Distinguish between continuous-by-categorical and continuous-by-continuous interactions
+- Create interaction plots that clearly communicate conditional relationships
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 5: Interactions]({{< var books.lecture_notes >}}/chapters/05-interactions.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 06: Interactions]({{< var books.r_lab_book >}}/labs/lab06-interactions.html){target="_blank"}
+
+## Homework
+
+- {{< fa pen-ruler >}} [Homework 05](/assignment/hw05.qmd) — Due this week
+- {{< fa pen-ruler >}} [Homework 06](/assignment/hw06.qmd) — Due this week
+
+## Project
+
+- {{< fa diagram-project >}} [Project 1 Proposal](/assignment/project-1-proposal.qmd) — Due this week
+
+## Quiz
+
+- {{< fa circle-question >}} **Quiz 3** — Covers Weeks 5--7 material
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Interaction** | An effect in which the relationship between a predictor and the outcome varies across levels of another variable |
+| **Product term** | The multiplicative combination of two predictors added to a model to estimate their interaction |
+| **Simple slope** | The estimated effect of a focal predictor at a specific value of the moderator |
+| **Johnson-Neyman technique** | A method that identifies the range of moderator values for which the focal predictor effect is statistically significant |
+| **Moderation** | The conceptual framework in which one variable changes the strength or direction of another variable's effect |
+| **Probing interactions** | Follow-up analyses, such as simple slopes or regions of significance, that clarify the nature of a detected interaction |

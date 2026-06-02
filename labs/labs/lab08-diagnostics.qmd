@@ -1,0 +1,502 @@
+---
+title: "Lab 8: Regression Diagnostics --- A Complete Analysis Workflow"
+---
+
+{{< include ../_common.qmd >}}
+
+## Goals
+
+::: {.callout-note}
+## What You'll Learn in This Lab
+- Conduct a **complete** regression analysis from data exploration through diagnostics
+- Create and interpret three types of residuals (regular, standardized, studentized deleted)
+- Check all four key assumptions: normality, constant variance, linearity, collinearity
+- Apply remedies when assumptions are violated (robust SE, polynomial terms)
+- Use `performance::check_model()` for a comprehensive diagnostic dashboard
+- **Lecture Notes Reference:** Chapter 8: *Regression Diagnostics*
+:::
+
+::: {.callout-tip}
+## Stata → R Translation
+| Stata | R | Notes |
+|:------|:--|:------|
+| `predict resid, rstudent` | `rstudent(model)` | Studentized deleted residuals |
+| `rvfplot` | `plot(model, which = 1)` | Residuals vs. fitted values |
+| `estat vif` | `car::vif(model)` | Variance inflation factors |
+| `regress ..., vce(robust)` | `lmtest::coeftest(vcov = sandwich::vcovHC)` | Robust standard errors |
+:::
+
+**Dataset:** `hsbs1` from the `regdatasets` package
+
+**Research Question:** *Is there a difference in science achievement between males and females, controlling for math, reading, and course track?*
+
+This lab pulls together everything we have learned so far. We will walk through the entire regression workflow: explore the data, fit the model, examine residuals, check assumptions, and apply fixes when needed. Think of it as a template for how to approach any regression analysis.
+
+
+## Setup
+
+```{r}
+#| label: lab08-setup
+
+library(regdatasets)
+data(hsbs1)
+
+hsbs1 <- hsbs1 |>
+  mutate(
+    male   = if_else(gender == 1, 1L, 0L),
+    prog_f = factor(prog,
+                    levels = 1:3,
+                    labels = c("General", "Academic", "Vocational"))
+  )
+
+glimpse(hsbs1)
+```
+
+We created two new variables: `male` (1 = male, 0 = female) and `prog_f`, a factor version of program type with informative labels.
+
+
+## Part 1: Setting Up the Analysis
+
+Before fitting any model, we need to understand the data. What does the outcome look like? How are the predictors distributed? Are there any obvious problems?
+
+### Descriptive Statistics --- Continuous Variables
+
+```{r}
+#| label: descriptives-continuous
+
+hsbs1 |>
+  select(sci, math, read) |>
+  summary()
+```
+
+### Descriptive Statistics --- Categorical Variables
+
+```{r}
+#| label: descriptives-categorical
+
+hsbs1 |> count(male)
+hsbs1 |> count(prog_f)
+```
+
+> Check the sample sizes. Are any groups very small? Unbalanced groups are not a problem per se, but extreme imbalance can make estimates unstable.
+
+### Distribution of the Outcome
+
+```{r}
+#| label: outcome-histogram
+#| fig-alt: "Histogram of science scores showing a roughly symmetric, bell-shaped distribution centered around 50"
+#| fig-cap: "Distribution of science scores."
+#| fig-width: 7
+#| fig-height: 4
+
+ggplot(hsbs1, aes(x = sci)) +
+  geom_histogram(bins = 20, fill = ber640_colors["primary"], color = "white") +
+  labs(x = "Science Score", y = "Count",
+       title = "Distribution of Science Achievement")
+```
+
+The outcome looks roughly symmetric. No extreme skew or ceiling/floor effects --- a good start.
+
+
+## Part 2: Exploratory Visualization
+
+Visualization before modeling is not optional. It is how we decide whether a linear model is even sensible.
+
+### Scatterplots with LOWESS: Continuous Predictors
+
+```{r}
+#| label: scatter-math
+#| fig-alt: "Scatterplot with linear and LOWESS curves showing science versus math scores, where both curves closely overlap indicating a linear relationship"
+#| fig-cap: "Science vs. math: is the relationship linear?"
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(hsbs1, aes(x = math, y = sci)) +
+  geom_point(alpha = 0.3, size = 2, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", se = FALSE, color = ber640_colors["secondary"],
+              linewidth = 1.2) +
+  geom_smooth(method = "loess", se = FALSE, color = ber640_colors["accent"],
+              linewidth = 1.2, linetype = "dashed") +
+  labs(x = "Math Score", y = "Science Score",
+       title = "Science vs. Math",
+       subtitle = "Solid red = linear fit | Dashed blue = LOWESS")
+```
+
+```{r}
+#| label: scatter-read
+#| fig-alt: "Scatterplot with linear and LOWESS curves showing science versus reading scores, where both curves closely track each other suggesting linearity"
+#| fig-cap: "Science vs. reading: is the relationship linear?"
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(hsbs1, aes(x = read, y = sci)) +
+  geom_point(alpha = 0.3, size = 2, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", se = FALSE, color = ber640_colors["secondary"],
+              linewidth = 1.2) +
+  geom_smooth(method = "loess", se = FALSE, color = ber640_colors["accent"],
+              linewidth = 1.2, linetype = "dashed") +
+  labs(x = "Reading Score", y = "Science Score",
+       title = "Science vs. Reading",
+       subtitle = "Solid red = linear fit | Dashed blue = LOWESS")
+```
+
+> If the LOWESS curve closely tracks the straight line, the linearity assumption looks reasonable. If the curves diverge --- especially at the tails --- we may need a nonlinear term.
+
+### Boxplots: Categorical Predictors
+
+```{r}
+#| label: boxplot-gender
+#| fig-alt: "Side-by-side boxplots of science scores for females and males showing similar medians and spreads with slight overlap"
+#| fig-cap: "Science scores by gender."
+#| fig-width: 7
+#| fig-height: 4
+
+ggplot(hsbs1, aes(x = factor(male, labels = c("Female", "Male")), y = sci)) +
+  geom_boxplot(fill = ber640_colors["accent"], alpha = 0.5) +
+  labs(x = "Gender", y = "Science Score",
+       title = "Science Achievement by Gender")
+```
+
+```{r}
+#| label: boxplot-prog
+#| fig-alt: "Side-by-side boxplots of science scores by program type showing Academic students with highest median, followed by General, then Vocational"
+#| fig-cap: "Science scores by program type."
+#| fig-width: 7
+#| fig-height: 4
+
+ggplot(hsbs1, aes(x = prog_f, y = sci)) +
+  geom_boxplot(fill = ber640_colors["success"], alpha = 0.5) +
+  labs(x = "Program Type", y = "Science Score",
+       title = "Science Achievement by Program")
+```
+
+::: {.callout-tip}
+## What to Look for at This Stage
+- **Scatterplots:** Is the cloud roughly elliptical? Does the LOWESS line suggest curvature? Are there isolated points far from the main cloud?
+- **Boxplots:** Are group medians different? Are spreads roughly equal across groups? Any extreme outliers?
+:::
+
+
+## Part 3: Fitting the Regression Model
+
+Now we fit the model that answers our research question. We regress science achievement on math, reading, gender (male dummy), and program type (factor):
+
+```{r}
+#| label: fit-model
+
+model <- lm(sci ~ math + read + male + prog_f, data = hsbs1)
+tidy_model(model)
+```
+
+```{r}
+#| label: model-summary
+
+summary(model)
+```
+
+### Interpreting the Key Coefficient
+
+The coefficient on `male` tells us: **controlling for math, reading, and program type**, how much higher (or lower) do males score on science compared to females, on average?
+
+### Testing Program as a Set
+
+Program type enters the model as two dummy variables (Academic vs. General, Vocational vs. General). To test whether program matters *at all*, we need a joint F-test:
+
+```{r}
+#| label: test-prog
+
+model_no_prog <- lm(sci ~ math + read + male, data = hsbs1)
+anova(model_no_prog, model)
+```
+
+> If the *p*-value is significant, program type contributes to predicting science achievement beyond math, reading, and gender.
+
+
+## Part 4: Residual Diagnostics
+
+The model gives us estimates, but we need to ask: **can we trust them?** Residual analysis is how we check. R makes it easy to extract three flavors of residuals, each with a different purpose.
+
+### Three Types of Residuals
+
+```{r}
+#| label: compute-residuals
+
+hsbs1 <- hsbs1 |>
+  mutate(
+    resid_raw    = residuals(model),
+    resid_std    = rstandard(model),
+    resid_rstud  = rstudent(model),
+    fitted_vals  = fitted(model)
+  )
+```
+
+- **`residuals(model)`** --- the raw residuals ($y_i - \hat{y}_i$). Units match the outcome.
+- **`rstandard(model)`** --- standardized residuals, divided by their estimated standard deviation. Should behave like a standard normal if assumptions hold.
+- **`rstudent(model)`** --- **studentized deleted residuals** (the preferred choice). Each residual is computed from a model that *excludes* that observation, then standardized. This makes them better at detecting outliers because the outlier cannot mask itself.
+
+### Identifying Potential Outliers
+
+Observations with $|\text{rstudent}| > 3$ deserve a closer look:
+
+```{r}
+#| label: flag-outliers
+
+hsbs1 |>
+  filter(abs(resid_rstud) > 3) |>
+  select(id, sci, math, read, male, prog_f, resid_rstud, fitted_vals)
+```
+
+> A large studentized deleted residual means the observation is poorly predicted even after the model has the benefit of *not* seeing that case. These are genuine surprises.
+
+::: {.callout-important}
+## Outliers Are Clues, Not Crimes
+A large residual does not mean "delete this observation." It means the model cannot explain this case well. Investigate *why* before taking action --- it might reveal a missing predictor, a data entry error, or a genuinely unusual case that belongs in the data.
+:::
+
+
+## Part 5: Checking Assumptions
+
+This is the core of the lab. We check four assumptions, one at a time, with clear visuals and decision rules.
+
+### Assumption 1: Normality of Residuals
+
+We check whether residuals are approximately normally distributed. Small departures are usually harmless (especially with larger samples), but severe non-normality can affect inference.
+
+::: {.panel-tabset}
+
+#### Simple Approach
+
+```{r}
+#| label: normality-hist
+#| fig-alt: "Histogram of studentized deleted residuals with normal density overlay, showing approximately bell-shaped distribution consistent with normality"
+#| fig-cap: "Histogram of studentized deleted residuals."
+#| fig-width: 7
+#| fig-height: 4
+
+ggplot(hsbs1, aes(x = resid_rstud)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 25, fill = ber640_colors["primary"], color = "white") +
+  stat_function(fun = dnorm, color = ber640_colors["secondary"],
+                linewidth = 1.2) +
+  labs(x = "Studentized Deleted Residual", y = "Density",
+       title = "Normality Check: Histogram of Residuals")
+```
+
+```{r}
+#| label: normality-qq
+#| fig-alt: "QQ plot of studentized deleted residuals with points falling close to the diagonal reference line, indicating approximate normality"
+#| fig-cap: "QQ plot of studentized deleted residuals."
+#| fig-width: 6
+#| fig-height: 5
+
+ggplot(hsbs1, aes(sample = resid_rstud)) +
+  stat_qq(alpha = 0.4, color = ber640_colors["primary"]) +
+  stat_qq_line(color = ber640_colors["secondary"], linewidth = 1.2) +
+  labs(x = "Theoretical Quantiles", y = "Sample Quantiles",
+       title = "Normality Check: QQ Plot")
+```
+
+> In the QQ plot, points should fall close to the diagonal line. Systematic departures --- S-shaped curves, heavy tails pulling away at the corners --- indicate non-normality. The histogram should look roughly bell-shaped.
+
+#### Advanced: `check_model()`
+
+```{r}
+#| label: check-normality-performance
+#| fig-width: 8
+#| fig-height: 6
+
+performance::check_normality(model) |> plot()
+```
+
+:::
+
+
+### Assumption 2: Constant Variance (Homoscedasticity)
+
+The spread of residuals should be roughly equal across all fitted values. If the spread fans out (or narrows), we have **heteroscedasticity**, which biases our standard errors.
+
+::: {.panel-tabset}
+
+#### Simple Approach
+
+```{r}
+#| label: rvf-plot
+#| fig-alt: "Residuals versus fitted values plot with LOWESS curve hovering near zero and no fan-shaped pattern, suggesting constant variance"
+#| fig-cap: "Residuals vs. fitted values: is the spread constant?"
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(hsbs1, aes(x = fitted_vals, y = resid_rstud)) +
+  geom_point(alpha = 0.3, size = 2, color = ber640_colors["primary"]) +
+  geom_hline(yintercept = 0, color = ber640_colors["secondary"],
+             linewidth = 1) +
+  geom_smooth(method = "loess", se = FALSE, color = ber640_colors["accent"],
+              linewidth = 1.2, linetype = "dashed") +
+  labs(x = "Fitted Values", y = "Studentized Deleted Residual",
+       title = "Constant Variance Check: Residuals vs. Fitted",
+       subtitle = "Look for a fan shape or funnel pattern")
+```
+
+> What to look for: the vertical spread of points should be roughly the same from left to right. A "megaphone" or funnel shape is the classic sign of heteroscedasticity. The LOWESS line (dashed) should hover near zero.
+
+#### Advanced: `check_model()`
+
+```{r}
+#| label: check-hetero-performance
+#| fig-width: 8
+#| fig-height: 6
+
+performance::check_heteroscedasticity(model) |> plot()
+```
+
+:::
+
+
+### Remedy: Robust Standard Errors
+
+If constant variance looks questionable, we do not need to abandon the model. Instead, we use **robust standard errors** (also called heteroscedasticity-consistent or HC standard errors), which adjust the standard errors without changing the coefficient estimates:
+
+```{r}
+#| label: robust-se
+
+# Original (OLS) standard errors
+tidy_model(model)
+
+# Robust (HC1) standard errors
+lmtest::coeftest(model, vcov = sandwich::vcovHC(model, type = "HC1"))
+```
+
+::: {.callout-important}
+## What Robust SE Changes (and What It Doesn't)
+- **Coefficients stay the same.** The point estimates do not change.
+- **Standard errors change.** They may get larger or smaller depending on the pattern of heteroscedasticity.
+- **p-values change.** Because the standard errors change, the *t*-statistics and *p*-values change too.
+- **When to use:** If you see evidence of heteroscedasticity in the residual vs. fitted plot, report robust SE as your primary results.
+:::
+
+
+### Assumption 3: Linearity
+
+We already checked linearity visually in Part 2, but after fitting the model, **added-variable plots** (also called partial regression plots) give a more precise picture. Each plot shows the relationship between the outcome and one predictor, *after controlling for all other predictors*.
+
+::: {.panel-tabset}
+
+#### Simple Approach
+
+```{r}
+#| label: avplots
+#| fig-alt: "Multi-panel added-variable plots for math, read, male, and program type showing roughly linear partial relationships between each predictor and science scores"
+#| fig-cap: "Added-variable plots for each predictor."
+#| fig-width: 10
+#| fig-height: 8
+
+car::avPlots(model)
+```
+
+> In each panel, look for a linear cloud. If the points bend or curve, the linearity assumption for that predictor may be violated.
+
+#### Advanced: `check_model()`
+
+```{r}
+#| label: check-linearity-performance
+#| fig-width: 8
+#| fig-height: 6
+
+performance::check_model(model, check = "linearity")
+```
+
+:::
+
+
+### Remedy: Polynomial Terms for Nonlinearity
+
+If an added-variable plot reveals curvature for a continuous predictor (say, `math`), we can add a polynomial term and test whether it improves the model:
+
+```{r}
+#| label: polynomial-test
+
+model_poly <- lm(sci ~ math + I(math^2) + read + male + prog_f, data = hsbs1)
+anova(model, model_poly)
+```
+
+> A significant *p*-value tells us the quadratic term adds explanatory power. If the test is not significant, the linear specification was adequate.
+
+
+### Assumption 4: No Severe Collinearity
+
+When predictors are highly correlated with each other, the model has trouble distinguishing their individual contributions. Standard errors inflate and coefficients become unstable.
+
+The **Variance Inflation Factor (VIF)** quantifies this problem:
+
+```{r}
+#| label: vif-check
+
+car::vif(model)
+```
+
+::: {.callout-note}
+## VIF Decision Rules
+| VIF Range | Interpretation |
+|-----------|----------------|
+| 1 | No collinearity |
+| 1--4 | Low to moderate; generally acceptable |
+| 4--10 | Moderate; worth monitoring |
+| > 10 | Severe; coefficients are unreliable |
+
+For factors with multiple levels, `vif()` reports a **Generalized VIF (GVIF)**. The column $\text{GVIF}^{1/(2 \cdot df)}$ puts it on a comparable scale --- apply the same thresholds to its square.
+:::
+
+> Math and reading scores are correlated (students who read well tend to do math well), so we expect their VIFs to be modestly elevated. As long as they stay well below 10, there is no problem.
+
+
+## Part 6: The Complete Diagnostic Dashboard
+
+The `performance` package lets you see all diagnostics at once. This is convenient for a quick check, though we recommend understanding each plot individually first (which is what we did above).
+
+```{r}
+#| label: check-model-full
+#| fig-alt: "Six-panel diagnostic dashboard from performance package showing normality, homoscedasticity, linearity, influential observations, and collinearity checks"
+#| fig-cap: "Complete diagnostic dashboard from performance::check_model()."
+#| fig-width: 10
+#| fig-height: 12
+
+performance::check_model(model)
+```
+
+This produces a panel of six diagnostic plots covering normality, homoscedasticity, linearity, influential observations, and collinearity. Use it as a summary after you have already examined each assumption individually.
+
+
+## Key Takeaways
+
+::: {.callout-note}
+## The Diagnostic Checklist
+
+Every regression analysis should include these checks:
+
+1. **Normality** --- Histogram and QQ plot of studentized deleted residuals. Mild departures are tolerable; severe skew or heavy tails warrant attention.
+
+2. **Constant variance** --- Residuals vs. fitted plot. If the spread fans out, use robust standard errors.
+
+3. **Linearity** --- Added-variable plots. If a predictor shows curvature, consider a polynomial term or transformation.
+
+4. **Outliers** --- Studentized deleted residuals with $|t| > 3$. Investigate, do not automatically delete.
+
+5. **Collinearity** --- VIF for each predictor. VIF > 10 is a serious problem; VIF > 4 deserves caution.
+:::
+
+::: {.callout-tip}
+## Remedies Summary
+
+| Problem | Diagnostic | Remedy |
+|---------|-----------|--------|
+| **Non-normality** | Histogram, QQ plot | Transform outcome; with large *n*, CLT helps |
+| **Heteroscedasticity** | Residual vs. fitted | Robust standard errors (`sandwich::vcovHC`) |
+| **Nonlinearity** | Added-variable plots | Polynomial terms, transformations |
+| **Outliers** | Studentized deleted residuals | Investigate; refit without to check sensitivity |
+| **Collinearity** | VIF | Remove or combine predictors; center variables |
+:::
+
+::: {.callout-important}
+## The Big Picture
+Diagnostics are not a box-checking exercise. They are part of an **iterative workflow**: fit a model, check assumptions, make adjustments, re-check. The goal is a model whose estimates you can trust --- not a model that passes every test perfectly. Real data are messy, and minor violations are the norm. Focus on whether violations are large enough to change your substantive conclusions.
+:::

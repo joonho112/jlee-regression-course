@@ -1,0 +1,29 @@
+---
+title: "Week 15: Course Synthesis"
+---
+
+## Overview
+
+This final week steps back to survey the full arc of the course, from simple linear regression through the Generalized Linear Model framework. Rather than introducing new techniques, the focus is on consolidation: connecting the models you have learned, reflecting on what statistical thinking means in practice, and considering how reproducible, evidence-based analysis can strengthen research in education and the social sciences. This is also the week to finalize and submit your course project.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Trace the progression from SLR to MLR to GLM and articulate how each extension addresses a limitation of the previous model
+- Explain how the GLM framework provides a unified view of regression for continuous, binary, count, and ordinal outcomes
+- Describe the role of reproducibility and transparent reporting in applied statistical work
+- Reflect on how your own understanding of regression and evidence-based reasoning has developed over the semester
+
+## Project
+
+- {{< fa file-lines >}} [Project 2 Final](/assignment/project-2-final.qmd) — Due this week
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Statistical unification** | The insight that many seemingly different models (OLS, logistic, Poisson, ordinal) share a common GLM structure |
+| **GLM framework** | The overarching Generalized Linear Model framework that encompasses all regression models studied in this course |
+| **Reproducibility** | The practice of documenting data, code, and analytic decisions so that results can be independently verified |
+| **Evidence-based practice** | Using rigorous statistical evidence to inform decisions in educational policy, program evaluation, and research |

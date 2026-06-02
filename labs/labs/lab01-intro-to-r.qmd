@@ -1,0 +1,528 @@
+---
+title: "Lab 1: Introduction to R"
+---
+
+{{< include ../_common.qmd >}}
+
+## Goals
+
+::: {.callout-note}
+## What You'll Learn in This Lab
+- Load a dataset and explore its structure
+- Understand what a data frame (tibble) is: rows, columns, variables
+- Work with variables: rename, create, select, and filter
+- Compute descriptive statistics for categorical and continuous variables
+- Create basic visualizations: boxplots, histograms, scatterplots, bar plots
+- Run your first hypothesis test (two-sample t-test)
+- **Lecture Notes Reference:** No specific lecture chapter — this lab covers R fundamentals
+:::
+
+**Dataset:** `instruction` from the `regdatasets` package
+
+
+## Part 1: Getting Started with R
+
+Welcome to your first R lab! If this is your very first time using R, that is perfectly fine. We will walk through everything step by step.
+
+::: {.callout-tip}
+## A Quick Note on R and RStudio
+R is the programming language. RStudio is the application you use to work with R --- think of R as the engine and RStudio as the car dashboard. If you have not yet installed R and RStudio, see the **Appendix** for instructions. For now, we assume you have both open and ready.
+:::
+
+### Step 1: Load Packages
+
+In R, **packages** are collections of tools that extend what R can do. Think of them like apps on your phone: R comes with basic features, and packages add specialized capabilities.
+
+We need two packages for this lab:
+
+- `regdatasets` --- contains the datasets we use in this course
+- `tidyverse` --- a collection of packages for data manipulation and visualization
+
+These packages are already loaded for you behind the scenes (via the book's setup file), but in your own work you would type:
+
+```r
+library(regdatasets)
+library(tidyverse)
+```
+
+### Step 2: Load the Data
+
+Our dataset is called `instruction`. It contains math achievement data for elementary school students. Let's load it:
+
+```{r}
+#| label: lab01-load-data
+
+data(instruction)
+```
+
+That's it! The dataset is now available in your R environment.
+
+### Step 3: Take a First Look
+
+The `glimpse()` function shows us the structure of a dataset --- how many rows, how many columns, and what each column looks like:
+
+```{r}
+#| label: lab01-glimpse
+
+glimpse(instruction)
+```
+
+> Each **row** is one student. Each **column** is one variable (a piece of information measured for each student). This is what we call a **data frame** --- R's version of a spreadsheet.
+
+Let's also check the dimensions directly:
+
+```{r}
+#| label: lab01-dimensions
+
+nrow(instruction)
+ncol(instruction)
+```
+
+> `nrow()` tells us the number of rows (students), and `ncol()` tells us the number of columns (variables).
+
+### Step 4: View the First Few Rows
+
+The `head()` function shows us the first few rows of the dataset, so we can see what the actual data values look like:
+
+```{r}
+#| label: lab01-head
+
+head(instruction)
+```
+
+> Here is what each variable means:
+>
+> - `childid` --- a unique ID for each student
+> - `classid` --- which classroom the student belongs to
+> - `schoolid` --- which school the student belongs to
+> - `girl` --- 1 if the student is a girl, 0 if a boy
+> - `minority` --- 1 if the student is a minority, 0 if not
+> - `ses` --- socioeconomic status (continuous)
+> - `mathkind` --- math score at kindergarten entry
+> - `mathgain` --- how much the student's math score increased
+> - `yearstea` --- years of teaching experience
+> - `mathknow` --- teacher's math knowledge score
+> - `housepov` --- proportion of households in poverty (school level)
+> - `mathprep` --- teacher's math preparation score
+
+::: {.callout-note}
+## What Is a Tibble?
+When you see the word "tibble" in R output, it just means a modern version of a data frame. It behaves exactly like a data frame but prints more neatly on screen. You can treat "tibble" and "data frame" as the same thing.
+:::
+
+
+## Part 2: Working with Variables
+
+Now that we can see our data, let's learn how to manipulate it. In R, we use **verbs** (functions) from the `dplyr` package to work with data. We will also use a special operator called the **pipe** (`|>`).
+
+::: {.callout-tip}
+## What Is the Pipe (`|>`)?
+The pipe takes the result from the left side and passes it as input to the right side. Read it as **"and then."**
+
+For example: `instruction |> head()` means "take the `instruction` dataset **and then** show the first few rows."
+
+This lets us chain steps together in a readable, left-to-right sequence.
+:::
+
+### Step 1: Rename a Variable
+
+The variable `girl` uses 1 for girls and 0 for boys. In research, it is more common to use the name `female` for this type of indicator. Let's rename it:
+
+```{r}
+#| label: lab01-rename
+
+instruction <- instruction |>
+  rename(female = girl)
+```
+
+> `rename(new_name = old_name)` changes the name of a column. We save the result back into `instruction` using `<-` (the assignment arrow). Now `female = 1` for girls and `female = 0` for boys.
+
+Let's verify the rename worked:
+
+```{r}
+#| label: lab01-check-rename
+
+names(instruction)
+```
+
+### Step 2: Create New Variables with `mutate()`
+
+`mutate()` lets us add new columns to our dataset. Let's create two new variables.
+
+**Example 1: A dummy variable for new teachers**
+
+We will create a variable called `newteach` that equals 1 if the teacher has fewer than 5 years of experience, and 0 otherwise:
+
+```{r}
+#| label: lab01-mutate-newteach
+
+instruction <- instruction |>
+  mutate(newteach = if_else(yearstea < 5, 1, 0))
+```
+
+> `if_else(condition, value_if_true, value_if_false)` is like an "if-then" statement. For each row, R checks: is `yearstea` less than 5? If yes, `newteach` gets 1. If no, it gets 0.
+
+Let's verify:
+
+```{r}
+#| label: lab01-check-newteach
+
+instruction |>
+  count(newteach)
+```
+
+**Example 2: A computed variable**
+
+Let's create a variable `mathfirst` that represents each student's estimated first-grade math score --- the sum of their kindergarten score and their gain:
+
+```{r}
+#| label: lab01-mutate-mathfirst
+
+instruction <- instruction |>
+  mutate(mathfirst = mathkind + mathgain)
+```
+
+```{r}
+#| label: lab01-check-mathfirst
+
+instruction |>
+  select(mathkind, mathgain, mathfirst) |>
+  head()
+```
+
+> `select()` lets us pick specific columns to display. Here we show just the three columns that are relevant to verify our calculation.
+
+### Step 3: Select Variables
+
+Sometimes we want to work with only a few columns. `select()` lets us pick the ones we need:
+
+```{r}
+#| label: lab01-select
+
+instruction |>
+  select(childid, female, minority, ses, mathkind, mathgain) |>
+  head()
+```
+
+> This does not change the original dataset. It just creates a temporary view with only the columns we listed.
+
+### Step 4: Filter Rows
+
+`filter()` lets us keep only the rows that meet a certain condition. For example, let's look at only the students in School 11:
+
+```{r}
+#| label: lab01-filter
+
+school11 <- instruction |>
+  filter(schoolid == 11)
+
+nrow(school11)
+```
+
+> **Important:** Notice the **double equals sign** (`==`). In R, `==` means "is equal to" (a comparison). A single `=` is used for other things (like naming arguments inside functions). This is a common source of early confusion, so keep an eye on it.
+
+> School 11 has `r nrow(school11)` students. We saved this subset as a new object called `school11`.
+
+
+## Part 3: Data Cleaning — Identifying Suspicious Values
+
+Before jumping into analysis, good practice is to check the data for suspicious values. Let's look at the `mathknow` variable (teacher's math knowledge score):
+
+```{r}
+#| label: lab01-check-mathknow
+
+summary(instruction$mathknow)
+```
+
+> Notice that the maximum value is very high. Let's look more closely:
+
+```{r}
+#| label: lab01-suspicious-values
+
+instruction |>
+  filter(mathknow > 3) |>
+  count(mathknow)
+```
+
+> There are observations coded as very large values that likely represent **missing data** in the original coding scheme. In many datasets, codes like `99`, `999`, or `-99` are used as placeholders for "not available." We need to recode these to `NA` (R's way of representing missing values).
+
+```{r}
+#| label: lab01-recode-na
+
+instruction <- instruction |>
+  mutate(mathknow = na_if(mathknow, max(mathknow, na.rm = TRUE)))
+
+summary(instruction$mathknow)
+```
+
+> After recoding, the summary now shows `NA's` instead of the suspicious maximum value. The `na_if()` function replaces a specific value with `NA`.
+
+::: {.callout-tip}
+## Always Check Your Data
+Before any analysis, look at `summary()` output for each variable. Watch for:
+
+- Unusually large or small values (potential missing value codes)
+- Values outside the expected range
+- An unexpected number of `NA`s
+
+A few minutes of data checking can save hours of confusion later.
+:::
+
+
+## Part 4: Descriptive Statistics
+
+Before running any statistical model, it is always a good idea to compute descriptive statistics. Let's see how to summarize both categorical and continuous variables.
+
+### Categorical Variables: `count()`
+
+For categorical variables (variables with a small number of distinct values), we want to see **frequency tables** --- how many observations fall into each category.
+
+```{r}
+#| label: lab01-count-female
+
+instruction |>
+  count(female)
+```
+
+> This tells us how many boys (`female = 0`) and girls (`female = 1`) are in the dataset.
+
+We can also cross-tabulate two categorical variables:
+
+```{r}
+#| label: lab01-count-cross
+
+instruction |>
+  count(female, minority)
+```
+
+> This shows us the breakdown by both gender and minority status. For example, we can see how many non-minority boys, minority boys, non-minority girls, and minority girls are in the data.
+
+### Continuous Variables: `summary()`
+
+For continuous variables, we want measures like the mean, median, minimum, and maximum. The simplest way is `summary()`:
+
+```{r}
+#| label: lab01-summary-ses
+
+summary(instruction$ses)
+```
+
+> The `$` symbol is how we pull out a single column from a data frame. So `instruction$ses` means "the `ses` column from `instruction`."
+
+### Custom Summaries with `summarise()`
+
+For more control, we can use `summarise()` (or `summarize()` --- both spellings work):
+
+```{r}
+#| label: lab01-summarise
+
+instruction |>
+  summarise(
+    mean_ses   = mean(ses, na.rm = TRUE),
+    sd_ses     = sd(ses, na.rm = TRUE),
+    mean_math  = mean(mathkind, na.rm = TRUE),
+    sd_math    = sd(mathkind, na.rm = TRUE)
+  )
+```
+
+> The `na.rm = TRUE` argument tells R to ignore missing values when computing the statistic. If you forget it and the data contains any `NA` (missing) values, R will return `NA` as the result --- which is R's cautious way of saying "I'm not sure because some data is missing."
+
+### Grouped Summaries: `group_by()`
+
+One of the most powerful features in `dplyr` is computing statistics **by group**. Let's compare mean SES and mean math scores between boys and girls:
+
+```{r}
+#| label: lab01-grouped-summary
+
+instruction |>
+  group_by(female) |>
+  summarise(
+    n          = n(),
+    mean_ses   = mean(ses, na.rm = TRUE),
+    mean_math  = mean(mathkind, na.rm = TRUE),
+    mean_gain  = mean(mathgain, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(across(where(is.numeric) & !n, \(x) round(x, 2)))
+```
+
+> `group_by(female)` tells R: "do the next calculation separately for each value of `female`." The `n()` function counts how many rows are in each group. The `.groups = "drop"` argument is just a technical detail that prevents a warning message.
+
+> Compare the means for boys (`female = 0`) and girls (`female = 1`). Do you see any differences in SES, kindergarten math, or math gain?
+
+
+## Part 5: Visualizing Data
+
+Tables of numbers are useful, but visualizations let us **see** patterns in the data. We use the `ggplot2` package, which follows a consistent grammar: start with `ggplot()`, then **add layers** with `+`.
+
+::: {.callout-tip}
+## The ggplot2 Pattern
+Every plot follows the same basic recipe:
+
+1. `ggplot(data, aes(x = ..., y = ...))` --- set up the canvas and map variables to axes
+2. `+ geom_*()` --- add a geometric layer (points, bars, boxes, etc.)
+3. `+ labs(...)` --- add labels (optional but recommended)
+
+Think of it like building a painting: first you set up the canvas, then you add shapes, then you add titles.
+:::
+
+### Boxplot: Comparing Groups
+
+Boxplots are great for comparing the distribution of a continuous variable across groups:
+
+```{r}
+#| label: lab01-boxplot
+#| fig-cap: "Distribution of kindergarten math scores by gender"
+#| fig-alt: "Boxplot comparing kindergarten math scores by gender, showing similar medians for males and females with comparable spread and a few low outliers in both groups"
+
+ggplot(instruction, aes(x = factor(female, labels = c("Male", "Female")),
+                        y = mathkind)) +
+  geom_boxplot(fill = c("#2C3E50", "#E74C3C"), alpha = 0.7) +
+  labs(x = "Gender", y = "Math Score at Kindergarten Entry")
+```
+
+> **Reading a boxplot:** The thick line in the middle is the **median**. The box spans the **interquartile range** (IQR) --- the middle 50% of the data. The "whiskers" extend to the most extreme points that are not outliers, and individual dots are **outliers** (unusually high or low values).
+
+### Histogram: Shape of a Distribution
+
+A histogram shows how values of a single continuous variable are distributed:
+
+```{r}
+#| label: lab01-histogram
+#| fig-cap: "Distribution of SES"
+#| fig-alt: "Histogram of socioeconomic status showing an approximately normal distribution centered near zero with slight right skew"
+
+ggplot(instruction, aes(x = ses)) +
+  geom_histogram(bins = 20, fill = "#3498DB", color = "white", alpha = 0.8) +
+  labs(x = "Socioeconomic Status (SES)", y = "Count")
+```
+
+> **What to look for:** Is the distribution roughly symmetric (bell-shaped), or is it skewed to one side? Are there any unusual gaps or clusters?
+
+### Scatterplot: Relationship Between Two Variables
+
+Scatterplots show the relationship between two continuous variables --- each dot is one student:
+
+```{r}
+#| label: lab01-scatter
+#| fig-cap: "SES vs. kindergarten math score"
+#| fig-alt: "Scatterplot of SES versus kindergarten math score showing a moderate positive relationship, with higher SES students tending to have higher math scores"
+
+ggplot(instruction, aes(x = ses, y = mathkind)) +
+  geom_point(alpha = 0.3, size = 1.5, color = "#2C3E50") +
+  labs(x = "Socioeconomic Status (SES)",
+       y = "Math Score at Kindergarten Entry")
+```
+
+> Each dot represents one student. When dots tend to go from lower-left to upper-right, we say there is a **positive relationship** --- as SES increases, math scores tend to increase too.
+
+### Scatterplot by Group
+
+We can color the points by a grouping variable to see if the pattern differs across groups:
+
+```{r}
+#| label: lab01-scatter-group
+#| fig-cap: "SES vs. kindergarten math score, by gender"
+#| fig-alt: "Scatterplot of SES versus kindergarten math score colored by gender, showing a similar positive trend for both males and females with largely overlapping point clouds"
+
+ggplot(instruction, aes(x = ses, y = mathkind,
+                        color = factor(female, labels = c("Male", "Female")))) +
+  geom_point(alpha = 0.3, size = 1.5) +
+  scale_color_manual(values = c("#2C3E50", "#E74C3C")) +
+  labs(x = "Socioeconomic Status (SES)",
+       y = "Math Score at Kindergarten Entry",
+       color = "Gender")
+```
+
+> Do boys and girls show a similar pattern in the relationship between SES and math scores, or does the pattern differ?
+
+### Bar Plot: Group Means
+
+Bar plots can display the average value of a variable for each group. Here we use `stat_summary()` to compute the mean automatically:
+
+```{r}
+#| label: lab01-barplot
+#| fig-cap: "Mean kindergarten math score by gender"
+#| fig-alt: "Bar plot of mean kindergarten math scores by gender with standard error bars, showing males with a slightly higher mean than females but overlapping error bars"
+
+ggplot(instruction, aes(x = factor(female, labels = c("Male", "Female")),
+                        y = mathkind)) +
+  stat_summary(fun = mean, geom = "bar",
+               fill = c("#2C3E50", "#E74C3C"), alpha = 0.7, width = 0.6) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
+  labs(x = "Gender", y = "Mean Math Score at Kindergarten Entry")
+```
+
+> The bars show the **mean** for each group, and the error bars show the **standard error of the mean**. Standard errors give us a sense of the precision of the group means.
+
+
+## Part 6: Your First Hypothesis Test
+
+You have explored the data with tables and graphs. Now let's do a formal statistical test. We will use a **two-sample t-test** to ask: Is there a statistically significant difference in kindergarten math scores between minority and non-minority students?
+
+### Run the t-test
+
+```{r}
+#| label: lab01-ttest
+
+t.test(mathkind ~ minority, data = instruction, var.equal = TRUE)
+```
+
+> The `~` symbol means "predicted by" or "as a function of." So `mathkind ~ minority` reads as "mathkind by minority group."
+
+> The `var.equal = TRUE` argument tells R to assume equal variances in both groups (which matches the pooled t-test you may have learned in your introductory statistics course).
+
+### Interpret the Output
+
+The output gives us several important pieces of information:
+
+> **Group means:** The mean kindergarten math score for non-minority students (group 0) and minority students (group 1). Compare these two numbers --- which group scored higher on average?
+
+> **t-statistic:** This measures how many standard errors apart the two group means are. Larger absolute values indicate stronger evidence of a difference.
+
+> **p-value:** This tells us the probability of seeing a difference this large (or larger) if the two groups actually had the same population mean. A small p-value (typically less than 0.05) suggests the difference is statistically significant.
+
+> **95% confidence interval:** This gives a range of plausible values for the true difference in population means. If this interval does not contain 0, we conclude the difference is statistically significant at the 0.05 level.
+
+### Connection to Regression
+
+Here is a preview of what we will learn in Lab 2: the two-sample t-test is actually a **special case** of linear regression. When we use a binary predictor (like `minority`) in a regression model, the slope equals the difference in group means --- exactly the same value the t-test compares.
+
+```{r}
+#| label: lab01-ttest-as-regression
+
+model_preview <- lm(mathkind ~ minority, data = instruction)
+summary(model_preview)
+```
+
+> Notice that the t-statistic for the `minority` coefficient matches the t-statistic from the t-test above (the sign may differ). The slope tells us the mean difference between groups. We will explore this connection fully in Lab 2.
+
+
+## Key Takeaways
+
+::: {.callout-tip}
+## What We Learned
+
+1. **R uses packages** like apps on a phone. We loaded `regdatasets` (for data) and use `tidyverse` (for data manipulation and visualization).
+
+2. **Data frames** are R's version of a spreadsheet. Rows are observations (students), columns are variables. Use `glimpse()`, `head()`, `nrow()`, and `ncol()` to explore.
+
+3. **The pipe (`|>`)** chains steps together. Read it as "and then."
+
+4. **Key dplyr verbs** for data manipulation:
+   - `rename()` --- change column names
+   - `mutate()` --- create or modify columns
+   - `select()` --- pick specific columns
+   - `filter()` --- keep specific rows
+   - `count()` --- frequency tables for categorical variables
+   - `summarise()` --- compute summary statistics
+   - `group_by()` --- do calculations separately by group
+
+5. **ggplot2** follows the pattern: `ggplot(data, aes(...)) + geom_*()`. We made boxplots, histograms, scatterplots, and bar plots.
+
+6. **`t.test()`** compares the means of two groups. Look at the t-statistic, p-value, and confidence interval to draw conclusions.
+
+7. A two-sample t-test is a special case of regression with a binary predictor --- we will see this connection in Lab 2.
+
+**Next:** In Lab 2, we will fit our first linear regression model using `lm()`, learn to interpret the output, and check model assumptions.
+:::

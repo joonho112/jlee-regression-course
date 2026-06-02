@@ -1,0 +1,346 @@
+# Publication-Style Table Templates {#sec-table-templates}
+
+{{< include ../_common.qmd >}}
+
+::: {.callout-note}
+## Ready-to-Use Templates
+This appendix provides `gtsummary` code templates for the most common tables
+in a regression project. Copy, paste, and adapt for your own data. Replace
+`your_data`, variable names, and labels with your own.
+:::
+
+All code below is set to `eval: false` --- these are templates, not executed
+code. Each template includes a brief description, the code, and a note about
+what the output should look like.
+
+
+## Template 1: Descriptive Statistics (Continuous + Categorical) {#sec-template-descriptives}
+
+Use this template when you need a single table that summarizes both
+continuous variables (mean, SD) and categorical variables (count, %).
+
+```{r}
+#| label: template-descriptives
+#| eval: false
+
+your_data |>
+  select(outcome_var, continuous_pred1, continuous_pred2,
+         categorical_pred1, categorical_pred2) |>
+  tbl_summary(
+    statistic = list(
+      all_continuous()  ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    digits = all_continuous() ~ 2,
+    label = list(
+      outcome_var       ~ "Outcome Variable Name",
+      continuous_pred1  ~ "Continuous Predictor 1",
+      continuous_pred2  ~ "Continuous Predictor 2",
+      categorical_pred1 ~ "Categorical Predictor 1",
+      categorical_pred2 ~ "Categorical Predictor 2"
+    ),
+    missing = "no"
+  ) |>
+  bold_labels() |>
+  modify_header(label = "**Variable**") |>
+  modify_caption("**Table 1.** Descriptive Statistics")
+```
+
+**Expected output:** A single table with one row per continuous variable
+(showing mean and SD) and one row per *level* of each categorical variable
+(showing count and percentage). Continuous and categorical variables are
+automatically grouped.
+
+::: {.callout-tip}
+## Tip
+To add min/max for continuous variables, change the statistic to
+`"{mean} ({sd}); [{min}, {max}]"`. To show median and IQR instead, use
+`"{median} ({p25}, {p75})"`.
+:::
+
+
+## Template 2: Descriptive Statistics by Group {#sec-template-by-group}
+
+Use this template when you want to compare descriptive statistics across
+groups (e.g., male vs. female, manager vs. non-manager). This is especially
+useful for the logistic regression project, where you compare continuous
+predictors across outcome groups.
+
+```{r}
+#| label: template-by-group
+#| eval: false
+
+your_data |>
+  select(group_var, predictor1, predictor2, predictor3) |>
+  tbl_summary(
+    by = group_var,
+    statistic = list(
+      all_continuous()  ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    digits = all_continuous() ~ 2,
+    label = list(
+      predictor1 ~ "Predictor 1 Name",
+      predictor2 ~ "Predictor 2 Name",
+      predictor3 ~ "Predictor 3 Name"
+    )
+  ) |>
+  add_overall() |>
+  add_p() |>
+  bold_labels() |>
+  bold_p(t = 0.05) |>
+  modify_caption("**Table 2.** Descriptive Statistics by Group")
+```
+
+**Expected output:** A table with one column per group, plus an "Overall"
+column and a *p*-value column. Continuous variables show *t*-test or
+Wilcoxon *p*-values; categorical variables show chi-square *p*-values.
+Significant *p*-values are bolded.
+
+
+## Template 3: Linear Regression Table (Single Model) {#sec-template-linear-single}
+
+Use this template for a single multiple linear regression model. Includes
+the intercept, all predictor coefficients with 95% CIs, and model fit
+statistics in a footnote.
+
+```{r}
+#| label: template-linear-single
+#| eval: false
+
+lm(outcome ~ predictor1 + predictor2 + predictor3 + factor(categorical_var),
+   data = your_data) |>
+  tbl_regression(
+    intercept = TRUE,
+    label = list(
+      predictor1             ~ "Predictor 1 Name",
+      predictor2             ~ "Predictor 2 Name",
+      predictor3             ~ "Predictor 3 Name",
+      `factor(categorical_var)` ~ "Categorical Variable"
+    )
+  ) |>
+  bold_labels() |>
+  bold_p(t = 0.05) |>
+  add_glance_source_note(
+    include = c(r.squared, adj.r.squared, statistic, p.value, nobs)
+  ) |>
+  modify_caption("**Table 3.** Multiple Linear Regression Results")
+```
+
+**Expected output:** A table with columns for Variable, Beta (coefficient),
+95% CI, and *p*-value. The intercept is included. Below the table, a
+footnote reports $R^2$, adjusted $R^2$, the overall $F$-statistic, its
+*p*-value, and $N$.
+
+::: {.callout-tip}
+## Tip
+If your categorical variable is already a factor in the data frame, you do
+not need `factor()` in the formula, and the label key should match the
+variable name directly (e.g., `occupation ~ "Occupation"`).
+:::
+
+> **Note:** If your categorical variable has a specific reference category, set it with `forcats::fct_relevel(var, "reference_level")` before fitting the model.
+
+
+## Template 4: Linear Regression Table (Multiple Models Side-by-Side) {#sec-template-linear-multi}
+
+Use this template to compare nested linear regression models. This is the
+standard format for presenting a model-building strategy.
+
+```{r}
+#| label: template-linear-multi
+#| eval: false
+
+# --- Fit models ---
+model1 <- lm(outcome ~ predictor1 + predictor2, data = your_data)
+model2 <- lm(outcome ~ predictor1 + predictor2 + predictor3,
+             data = your_data)
+model3 <- lm(outcome ~ predictor1 + predictor2 + predictor3 +
+               predictor1:moderator, data = your_data)
+
+# --- Create individual tables ---
+t1 <- tbl_regression(
+  model1, intercept = TRUE,
+  label = list(
+    predictor1 ~ "Predictor 1",
+    predictor2 ~ "Predictor 2"
+  )
+) |> bold_p(t = 0.05)
+
+t2 <- tbl_regression(
+  model2, intercept = TRUE,
+  label = list(
+    predictor1 ~ "Predictor 1",
+    predictor2 ~ "Predictor 2",
+    predictor3 ~ "Predictor 3"
+  )
+) |> bold_p(t = 0.05)
+
+t3 <- tbl_regression(
+  model3, intercept = TRUE,
+  label = list(
+    predictor1              ~ "Predictor 1",
+    predictor2              ~ "Predictor 2",
+    predictor3              ~ "Predictor 3",
+    `predictor1:moderator`  ~ "Predictor 1 x Moderator"
+  )
+) |> bold_p(t = 0.05)
+
+# --- Merge into one table ---
+tbl_merge(
+  tbls = list(t1, t2, t3),
+  tab_spanner = c("**Model 1**", "**Model 2**", "**Model 3**")
+) |>
+  modify_caption("**Table 4.** Nested Linear Regression Models")
+```
+
+**Expected output:** A wide table with three sets of columns (Beta, 95% CI,
+*p*), one set per model. Variables that appear in later models but not
+earlier ones have blank cells in the earlier model columns. This format
+makes it easy to see how coefficients change as predictors are added.
+
+::: {.callout-tip}
+## Tip
+To include $R^2$ and $N$ at the bottom of the merged table, add
+`add_glance_source_note()` to each individual `tbl_regression()` *before*
+merging. The footnotes will appear below each model column.
+:::
+
+
+## Template 5: Logistic Regression Table with Odds Ratios {#sec-template-logistic-single}
+
+Use this template for a single logistic regression model. The key difference
+from the linear regression template is `exponentiate = TRUE`, which
+converts log-odds coefficients to odds ratios.
+
+```{r}
+#| label: template-logistic-single
+#| eval: false
+
+glm(binary_outcome ~ predictor1 + predictor2 + predictor3 +
+      factor(categorical_var),
+    data = your_data, family = binomial) |>
+  tbl_regression(
+    exponentiate = TRUE,
+    label = list(
+      predictor1             ~ "Predictor 1 Name",
+      predictor2             ~ "Predictor 2 Name",
+      predictor3             ~ "Predictor 3 Name",
+      `factor(categorical_var)` ~ "Categorical Variable"
+    )
+  ) |>
+  bold_labels() |>
+  bold_p(t = 0.05) |>
+  add_glance_source_note(
+    include = c(AIC, BIC, logLik, nobs)
+  ) |>
+  modify_caption("**Table 5.** Logistic Regression Results (Odds Ratios)")
+```
+
+**Expected output:** A table with columns for Variable, OR (odds ratio),
+95% CI, and *p*-value. Odds ratios greater than 1 indicate increased odds;
+less than 1 indicate decreased odds. CIs that include 1.00 correspond to
+nonsignificant effects. The footnote reports AIC, BIC, log-likelihood,
+and $N$.
+
+::: {.callout-caution}
+## Common Mistake
+Forgetting `exponentiate = TRUE` will produce a table of log-odds
+coefficients, which are much harder to interpret. Always use
+`exponentiate = TRUE` for logistic regression tables in your final report.
+:::
+
+
+## Template 6: Logistic Regression Table (Multiple Models Side-by-Side) {#sec-template-logistic-multi}
+
+Use this template to compare nested logistic regression models, all
+reported as odds ratios.
+
+```{r}
+#| label: template-logistic-multi
+#| eval: false
+
+# --- Fit models ---
+logit1 <- glm(binary_outcome ~ predictor1 + predictor2,
+              data = your_data, family = binomial)
+logit2 <- glm(binary_outcome ~ predictor1 + predictor2 + predictor3,
+              data = your_data, family = binomial)
+logit3 <- glm(binary_outcome ~ predictor1 + predictor2 + predictor3 +
+                predictor1:moderator,
+              data = your_data, family = binomial)
+
+# --- Create individual tables ---
+t1 <- tbl_regression(
+  logit1, exponentiate = TRUE,
+  label = list(
+    predictor1 ~ "Predictor 1",
+    predictor2 ~ "Predictor 2"
+  )
+) |> bold_p(t = 0.05)
+
+t2 <- tbl_regression(
+  logit2, exponentiate = TRUE,
+  label = list(
+    predictor1 ~ "Predictor 1",
+    predictor2 ~ "Predictor 2",
+    predictor3 ~ "Predictor 3"
+  )
+) |> bold_p(t = 0.05)
+
+t3 <- tbl_regression(
+  logit3, exponentiate = TRUE,
+  label = list(
+    predictor1              ~ "Predictor 1",
+    predictor2              ~ "Predictor 2",
+    predictor3              ~ "Predictor 3",
+    `predictor1:moderator`  ~ "Predictor 1 x Moderator"
+  )
+) |> bold_p(t = 0.05)
+
+# --- Merge into one table ---
+tbl_merge(
+  tbls = list(t1, t2, t3),
+  tab_spanner = c("**Model 1**", "**Model 2**", "**Model 3**")
+) |>
+  modify_caption("**Table 6.** Nested Logistic Regression Models (Odds Ratios)")
+
+# --- Likelihood ratio tests (report in text) ---
+anova(logit1, logit2, test = "Chisq")
+anova(logit2, logit3, test = "Chisq")
+```
+
+**Expected output:** A wide table with three sets of columns (OR, 95% CI,
+*p*), one set per model. The format is identical to the linear regression
+multi-model table except that coefficients are odds ratios instead of
+unstandardized betas.
+
+
+## Tips for Better Tables {#sec-template-tips}
+
+::: {.callout-tip}
+## Table Formatting Best Practices
+
+1. **Always label variables.** Use the `label` argument to replace raw
+   variable names with readable labels. Your reader should never see
+   `schyrs_c` --- they should see "Education (years, centered)."
+2. **Round appropriately.** Two decimal places for most statistics; three
+   for correlations and *p*-values.
+3. **Bold key results.** Use `bold_p()` to highlight significant predictors
+   and `bold_labels()` to make variable names stand out.
+4. **Add model fit notes.** Use `add_glance_source_note()` to include $R^2$,
+   AIC, or sample size below the table.
+5. **Number your tables.** Use `modify_caption()` to add "Table 1.",
+   "Table 2.", etc. Consistent numbering helps the reader navigate your
+   report.
+6. **Be consistent.** Use the same formatting conventions across all tables
+   in your project --- same number of decimal places, same label style, same
+   significance threshold.
+:::
+
+::: {.callout-note}
+## Why `gtsummary`?
+The `gtsummary` package produces tables that render cleanly in HTML, PDF,
+and Word output from Quarto. It also standardizes the format across
+different model types (linear, logistic, ordinal, etc.), so once you learn
+the template for one type, you can easily adapt it for others.
+:::

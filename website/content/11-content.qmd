@@ -1,0 +1,44 @@
+---
+title: "Week 11: Multiple Logistic Regression"
+---
+
+## Overview
+
+This week extends logistic regression to include multiple predictors. You will learn how to interpret adjusted odds ratios that account for confounding variables, compute average marginal effects to express results on the probability scale, and recognize Simpson's Paradox --- a situation where the direction of an association reverses after adjusting for a confounding variable. These tools are essential for drawing valid conclusions from observational data with binary outcomes.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Fit and interpret a logistic regression model with multiple predictors
+- Distinguish between crude and adjusted odds ratios
+- Compute and interpret average marginal effects for logistic regression
+- Explain Simpson's Paradox and identify situations where confounding can reverse an observed association
+- Generate and interpret predicted probability plots for multiple logistic regression models
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 10: Multiple Logistic Regression]({{< var books.lecture_notes >}}/chapters/10-multiple-logistic-regression.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 10: Logistic Regression with Multiple Predictors]({{< var books.r_lab_book >}}/labs/lab10-logistic-extended.html){target="_blank"}
+
+## Homework
+
+- {{< fa pen-ruler >}} [Homework 07](/assignment/hw07.qmd) — Due this week
+- {{< fa pen-ruler >}} [Homework 08](/assignment/hw08.qmd) — Due this week
+
+## Quiz
+
+- {{< fa circle-question >}} **Quiz 5** — Covers Weeks 9--11 material
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Multiple logistic regression** | A logistic model with two or more predictors used to estimate the probability of a binary outcome |
+| **Adjusted odds ratio** | An odds ratio that accounts for the effects of other predictors in the model |
+| **Marginal effect** | The change in predicted probability associated with a one-unit change in a predictor, averaged across observations |
+| **Simpson's Paradox** | A phenomenon where an association observed in aggregated data reverses or disappears when the data are stratified by a confounding variable |
+| **Confounding in logistic regression** | A situation where a third variable distorts the estimated relationship between a predictor and a binary outcome |

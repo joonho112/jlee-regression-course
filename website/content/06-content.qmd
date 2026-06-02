@@ -1,0 +1,37 @@
+---
+title: "Week 6: Multiple Regression (Continuous Predictors)"
+---
+
+## Overview
+
+This week extends regression to models with two or more continuous predictors. You will learn how partial regression coefficients isolate the unique contribution of each predictor after controlling for the others, why centering predictors aids interpretation, and how to detect multicollinearity. These skills are essential for building and interpreting models that reflect the multivariate reality of most research questions.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Interpret partial regression coefficients as the effect of one predictor holding others constant
+- Explain how confounding variables can bias estimates and why statistical control matters
+- Apply centering and standardization to improve coefficient interpretability
+- Diagnose multicollinearity using tolerance and the variance inflation factor (VIF)
+- Compare unstandardized and standardized coefficients to assess relative predictor importance
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 4: Continuous Predictors]({{< var books.lecture_notes >}}/chapters/04-continuous-predictors.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 05: Multiple Regression]({{< var books.r_lab_book >}}/labs/lab05-multiple-regression.html){target="_blank"}
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Multiple regression** | A regression model with two or more predictors used to explain variation in an outcome |
+| **Partial regression coefficient** | The expected change in Y for a one-unit increase in a predictor, holding all other predictors constant |
+| **Confounding** | A situation where an omitted variable is related to both a predictor and the outcome, biasing the estimated effect |
+| **Centering** | Subtracting the mean from a predictor so that zero represents the sample average |
+| **Standardized coefficients** | Regression weights expressed in standard-deviation units, enabling comparison across predictors |
+| **Multicollinearity** | A condition where predictors are highly correlated, inflating the variance of coefficient estimates |
+| **VIF** | The variance inflation factor, a diagnostic that quantifies how much multicollinearity increases the standard error of a coefficient |

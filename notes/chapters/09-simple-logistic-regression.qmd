@@ -1,0 +1,2440 @@
+# Simple Logistic Regression {#sec-ch9}
+
+{{< include ../_common.qmd >}}
+
+
+## Introduction {#sec-ch9-intro}
+
+Throughout Chapters 1--8, every outcome variable we modeled was continuous: GCSE exam scores, mathematics achievement, faculty salaries, crime rates. The regression models we built --- simple linear regression, ANCOVA, ANOVA, multiple regression with interactions and nonlinear terms --- all shared a common structure: the conditional mean of $y$ given $x$ was modeled as a linear function of the predictors, and the residuals were assumed to be normally distributed with constant variance.
+
+But many of the most important questions in education and the social sciences involve **binary outcomes** --- variables that take only two values:
+
+- Did the student **graduate** or not?
+- Did the respondent **agree** with the statement or not?
+- Did the passenger **survive** or not?
+- Was the student **sent to the office** for a disciplinary infraction?
+
+These **dichotomous response variables** are coded as $y_i = 1$ (the event occurred) or $y_i = 0$ (it did not). Applying ordinary least squares regression to a binary outcome creates serious problems, as we will see shortly. This chapter introduces **logistic regression**, the standard method for modeling the relationship between predictors and a binary outcome.
+
+Logistic regression represents a genuine paradigm shift. The core ideas of regression --- specifying a model, estimating parameters, interpreting coefficients, making predictions --- all carry forward, but the mechanics change in important ways. We move from OLS to maximum likelihood estimation, from $R^2$ to odds ratios, and from additive effects on the mean to multiplicative effects on the odds. Understanding these differences is the central goal of this chapter.
+
+::: {.callout-note}
+## Learning Objectives
+After completing this chapter, you will be able to:
+
+1. Explain why linear regression is inappropriate for binary outcomes and describe the specific problems it creates
+2. Convert fluently among three scales --- probability, odds, and log-odds --- and explain why the log-odds scale is ideal for regression modeling
+3. Specify the simple logistic regression model and connect it to the linear regression framework through the concept of a **link function**
+4. Fit a logistic regression model in R using `glm()` and interpret the output from `model_parameters()`
+5. Interpret the exponentiated coefficient $\exp(\beta)$ as an **odds ratio** for both dummy and continuous predictors
+6. Explain the critical distinction between odds ratios and probability ratios, and identify when the two are approximately equal
+7. Compute and interpret **average marginal effects** and **predicted probabilities** using the `marginaleffects` package
+:::
+
+
+## Motivating Example: Titanic Survival {#sec-ch9-example}
+
+On April 15, 1912, the RMS Titanic sank after striking an iceberg on its maiden voyage. Of the 1,309 passengers in our dataset, only 500 survived --- a survival rate of 38.2%. The tragedy is seared into collective memory partly because survival was far from random. The famous "women and children first" protocol meant that passenger characteristics --- sex, age, ticket class --- strongly predicted who lived and who died.
+
+Our motivating question is: **How does passenger sex predict the probability of surviving the Titanic disaster?**
+
+This question has a binary outcome (survived: yes or no) and a binary predictor (sex: female or male), making it an ideal starting point for logistic regression.
+
+### Loading the Data
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-data-load
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Load the Titanic dataset from regdatasets
+data(titanic)
+
+# Inspect the structure
+glimpse(titanic)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-data-load"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The `glimpse()` output reveals the structure of the dataset: 1,309 passengers with variables capturing survival status, passenger class, sex, age, fare, and a text label for sex. Note that `survived` and `sex` are coded numerically (0/1), which is exactly what logistic regression requires. The `age` variable contains some missing values, which we will need to handle when using age as a predictor.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-data-load"
+#| eval: false
+```
+- `data(titanic)`: Loads the `titanic` dataset from the `regdatasets` package
+- Key variables: `survived` (1 = survived, 0 = died), `sex` (1 = female, 0 = male), `age` (in years), `pclass` (1st, 2nd, 3rd), `fare` (ticket price in British pounds)
+- `glimpse()` shows 1,309 observations with 6 variables
+
+
+:::
+
+### Exploring the Data
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-data-explore
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Create a labeled sex variable for cleaner output
+titanic <- titanic |>
+  mutate(sex_label = factor(ifelse(sex == 1, "Female", "Male")))
+
+# Cross-tabulation of survival by sex
+table(titanic$sex_label, titanic$survived,
+      dnn = c("Sex", "Survived")) |>
+  addmargins()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-data-explore"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The cross-tabulation shows the raw counts. To see the pattern more clearly, we compute survival proportions within each group:
+
+- **Males**: 161 survived out of 843 (19.1%)
+- **Females**: 339 survived out of 466 (72.7%)
+
+The difference is dramatic: women were nearly four times more likely to survive than men.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-data-explore"
+#| eval: false
+```
+- `table()` creates a 2x2 contingency table of sex by survival status
+- `addmargins()` adds row and column totals
+- The table reveals a stark difference: most women survived while most men did not
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-survival-rates
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Survival proportions by sex
+titanic |>
+  group_by(sex_label) |>
+  summarise(
+    n = n(),
+    survived = sum(survived),
+    died = n - survived,
+    prop_survived = mean(survived)
+  ) |>
+  kable(digits = 3,
+        col.names = c("Sex", "N", "Survived", "Died", "P(Survived)"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-survival-rates"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The table shows a stark contrast: approximately 19.1% of males survived compared to 72.7% of females. This large difference in survival rates suggests that sex is a strong predictor of survival, which we will quantify more precisely using logistic regression. The raw proportions serve as a baseline for comparison with the model's predictions.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-survival-rates"
+#| eval: false
+```
+- `group_by(sex_label)` splits the data by sex
+- `mean(survived)` computes the proportion surviving (since `survived` is coded 0/1, its mean equals the proportion of 1s)
+- `kable()` formats the output as a clean table
+
+
+:::
+
+### Visualizing the Relationship
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-survival-bar
+#| fig-cap: "Survival rates on the Titanic by passenger sex. Women had a dramatically higher survival rate (72.7%) compared to men (19.1%), reflecting the 'women and children first' evacuation protocol."
+#| fig-alt: "Bar chart with two vertical bars showing Titanic survival rates by sex. The x-axis displays passenger sex (Female and Male) and the y-axis shows proportion survived. The Female bar reaches approximately 72.7 percent while the Male bar reaches only 19.1 percent, illustrating a stark difference in survival rates between the two groups."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+titanic |>
+  group_by(sex_label) |>
+  summarise(prop_survived = mean(survived)) |>
+  ggplot(aes(x = sex_label, y = prop_survived, fill = sex_label)) +
+  geom_col(width = 0.6, alpha = 0.85) +
+  geom_text(aes(label = scales::percent(prop_survived, accuracy = 0.1)),
+            vjust = -0.5, fontface = "bold", size = 5) +
+  scale_fill_manual(values = c(ber640_colors["accent"], ber640_colors["primary"])) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 0.85)) +
+  labs(
+    title = "Titanic Survival Rate by Sex",
+    x = "Passenger Sex",
+    y = "Survival Rate"
+  ) +
+  guides(fill = "none")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-survival-bar"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The bar chart makes the survival disparity visually striking: the female survival rate towers over the male rate. This pattern reflects the historical "women and children first" evacuation protocol. The chart also illustrates why a binary predictor (sex) is an ideal starting point --- with only two groups, the relationship is simple to visualize and interpret before we move to more complex models.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-survival-bar"
+#| eval: false
+```
+- `geom_col()` creates a bar chart of survival proportions
+- `scales::percent()` formats the y-axis and bar labels as percentages
+- The visualization makes the survival disparity immediately apparent
+
+
+:::
+
+
+::: {.callout-note}
+## Connection to Chapters 1--8: From OLS to GLM
+In Chapters 1--8 you mastered the linear regression framework: $\text{E}(y_i) = \alpha + \beta x_i$ with normally distributed errors. That framework assumed three things that **break down** with binary outcomes:
+
+1. **The outcome is continuous** --- binary outcomes are not
+2. **Constant variance** --- for binary data, $\text{Var}(y_i) = \pi_i(1 - \pi_i)$ depends on the mean
+3. **Predicted values are unbounded** --- probabilities must stay in $[0, 1]$
+
+Logistic regression solves all three problems by wrapping the same linear predictor $\alpha + \beta x$ inside a **link function** (the logit). Everything you learned --- coefficient interpretation, hypothesis testing, model comparison --- still applies, but on a different scale. Think of logistic regression not as a new method, but as the natural **extension** of linear regression to binary outcomes.
+:::
+
+
+## From Linear to Logistic {#sec-ch9-transition}
+
+### The Linear Probability Model and Its Problems
+
+Given the dramatic difference in survival rates between men and women, your first instinct might be to fit the model you already know: ordinary linear regression. After all, `survived` is numeric (0 or 1), and `sex` is a dummy variable. We could simply write:
+
+$$
+\text{E}(\text{survived}_i \mid \text{sex}_i) = \alpha + \beta \cdot \text{sex}_i
+$$
+
+This is called the **linear probability model (LPM)** because the predicted value $\hat{y}_i = a + b x_i$ is an estimate of $P(y_i = 1 \mid x_i)$ --- the probability of the event. With a single binary predictor, the LPM actually works reasonably well: it simply estimates the group means. The trouble emerges when we add continuous predictors.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-lpm-problem
+#| fig-cap: "The linear probability model (LPM) applied to a binary outcome. Left: with a dummy predictor, the LPM simply connects the two group means --- no obvious problem. Right: with a continuous predictor (age), the LPM produces predicted probabilities below 0 and above 1 (red dashed lines), which are nonsensical."
+#| fig-alt: "Two-panel scatter plot comparing the linear probability model with different predictor types. Left panel shows survived (0 or 1) on the y-axis versus sex (Male, Female) on the x-axis with a straight line connecting group means, appearing reasonable. Right panel shows survived versus age with a fitted straight line that extends below zero and above one at the extremes, highlighted by red dashed boundary lines, demonstrating the fundamental problem of unbounded predictions in a linear probability model."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# LPM with dummy predictor (sex)
+p1 <- ggplot(titanic, aes(x = sex, y = survived)) +
+  geom_jitter(width = 0.05, height = 0.05, alpha = 0.15,
+              color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE,
+              color = ber640_colors["secondary"], linewidth = 1.2) +
+  scale_x_continuous(breaks = c(0, 1), labels = c("Male", "Female")) +
+  labs(title = "LPM: Dummy Predictor",
+       x = "Sex", y = "P(Survived)") +
+  coord_cartesian(ylim = c(-0.1, 1.1))
+
+# LPM with continuous predictor (age) -- showing the problem
+titanic_age <- titanic |> filter(!is.na(age))
+lpm_age <- lm(survived ~ age, data = titanic_age)
+
+p2 <- ggplot(titanic_age, aes(x = age, y = survived)) +
+  geom_jitter(width = 0, height = 0.05, alpha = 0.15,
+              color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE,
+              color = ber640_colors["secondary"], linewidth = 1.2) +
+  geom_hline(yintercept = c(0, 1), linetype = "dashed",
+             color = ber640_colors["secondary"], alpha = 0.5) +
+  labs(title = "LPM: Continuous Predictor",
+       x = "Age (years)", y = "P(Survived)") +
+  coord_cartesian(ylim = c(-0.2, 1.2))
+
+p1 + p2
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-lpm-problem"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The right panel reveals three fundamental problems with the linear probability model:
+
+1. **Impossible predictions**: The model can predict probabilities below 0 or above 1
+2. **Non-constant variance**: Since $\text{Var}(y_i) = \pi_i(1 - \pi_i)$ for a binary outcome, the variance depends on the mean, violating the homoscedasticity assumption
+3. **Linearity is implausible**: The relationship between a predictor and a probability is unlikely to be linear across the entire range --- probabilities should approach 0 and 1 asymptotically, not shoot past them
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-lpm-problem"
+#| eval: false
+```
+- Left panel: The LPM with a binary predictor simply connects the group proportions with a straight line --- this is fine
+- Right panel: The LPM with `age` as a predictor produces a straight line that extends below 0 and above 1
+- `geom_jitter()` adds small random noise so overlapping points are visible (binary outcomes stack at 0 and 1)
+- The red dashed lines mark the probability boundaries [0, 1]
+
+
+:::
+
+### Interactive Exploration: LPM Problems {.unnumbered}
+
+::: {.callout-tip collapse="true"}
+## Try It: See Why Linear Probability Models Fail
+
+Adjust the intercept and slope to see how the linear probability model produces impossible predictions (probabilities below 0 or above 1), while the logistic curve always stays within bounds.
+:::
+
+```{ojs}
+//| echo: false
+
+import { ber640 as lpm_ber640, plotDefaults as lpm_plotDefaults, themeColors as lpm_themeColors, sigmoid as lpm_sigmoid, seq as lpm_seq, formatCoef as lpm_formatCoef, withAlpha as lpm_withAlpha } from "../ojs/shared.js"
+
+lpm_tc = lpm_themeColors()
+```
+
+```{ojs}
+//| echo: false
+
+viewof lpm_alpha = Inputs.range([-3, 3], {value: 0.5, step: 0.1, label: "Intercept (α)"})
+viewof lpm_beta = Inputs.range([-2, 2], {value: 0.3, step: 0.05, label: "Slope (β)"})
+```
+
+```{ojs}
+//| echo: false
+
+lpm_mulberry32 = function(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
+lpm_data = {
+  const rng = lpm_mulberry32(42);
+  const n = 100;
+  const alpha_true = -2;
+  const beta_true = 0.5;
+  const data = [];
+  for (let i = 0; i < n; i++) {
+    const x = rng() * 10;
+    const p = lpm_sigmoid(alpha_true + beta_true * x);
+    const y = rng() < p ? 1 : 0;
+    const jitter = (rng() - 0.5) * 0.08;
+    data.push({x, y, yJittered: y + jitter, p});
+  }
+  return data;
+}
+
+lpm_xGrid = lpm_seq(0, 10, 200)
+
+lpm_lpmLine = lpm_xGrid.map(x => ({x, y: lpm_alpha + lpm_beta * x}))
+
+lpm_logisticCurve = lpm_xGrid.map(x => ({x, y: lpm_sigmoid(lpm_alpha + lpm_beta * x)}))
+
+lpm_oobRegions = {
+  const regions = [];
+  const xAt0 = lpm_beta !== 0 ? -lpm_alpha / lpm_beta : null;
+  const xAt1 = lpm_beta !== 0 ? (1 - lpm_alpha) / lpm_beta : null;
+
+  if (lpm_beta > 0) {
+    if (xAt0 > 0) regions.push({x1: 0, x2: Math.min(xAt0, 10), type: "below"});
+    if (xAt1 < 10) regions.push({x1: Math.max(xAt1, 0), x2: 10, type: "above"});
+  } else if (lpm_beta < 0) {
+    if (xAt1 > 0) regions.push({x1: 0, x2: Math.min(xAt1, 10), type: "above"});
+    if (xAt0 < 10) regions.push({x1: Math.max(xAt0, 0), x2: 10, type: "below"});
+  } else {
+    if (lpm_alpha < 0) regions.push({x1: 0, x2: 10, type: "below"});
+    if (lpm_alpha > 1) regions.push({x1: 0, x2: 10, type: "above"});
+  }
+  return regions.filter(r => r.x1 < r.x2 && r.x1 < 10 && r.x2 > 0);
+}
+
+lpm_oobCount = {
+  let count = 0;
+  for (const x of lpm_xGrid) {
+    const yhat = lpm_alpha + lpm_beta * x;
+    if (yhat < 0 || yhat > 1) count++;
+  }
+  return count;
+}
+
+lpm_oobPct = (lpm_oobCount / lpm_xGrid.length * 100).toFixed(1)
+
+lpm_logLikLPM = {
+  let ll = 0;
+  for (const d of lpm_data) {
+    let p = lpm_alpha + lpm_beta * d.x;
+    p = Math.max(1e-8, Math.min(1 - 1e-8, p));
+    ll += d.y * Math.log(p) + (1 - d.y) * Math.log(1 - p);
+  }
+  return ll;
+}
+
+lpm_logLikLogistic = {
+  let ll = 0;
+  for (const d of lpm_data) {
+    const p = lpm_sigmoid(lpm_alpha + lpm_beta * d.x);
+    const pClamped = Math.max(1e-8, Math.min(1 - 1e-8, p));
+    ll += d.y * Math.log(pClamped) + (1 - d.y) * Math.log(1 - pClamped);
+  }
+  return ll;
+}
+
+lpm_plot = {
+  const shadedMarks = lpm_oobRegions.map(r =>
+    Plot.rect([r], {
+      x1: "x1", x2: "x2",
+      y1: r.type === "below" ? -0.3 : 1,
+      y2: r.type === "below" ? 0 : 1.3,
+      fill: lpm_withAlpha(lpm_ber640.secondary, 0.15),
+      stroke: "none"
+    })
+  );
+
+  return Plot.plot(lpm_plotDefaults({
+    width: 680,
+    height: 420,
+    x: {label: "X", domain: [0, 10]},
+    y: {label: "P(Y = 1)", domain: [-0.3, 1.3]},
+    marks: [
+      ...shadedMarks,
+      Plot.ruleY([0], {stroke: lpm_tc.muted, strokeDasharray: "4,4"}),
+      Plot.ruleY([1], {stroke: lpm_tc.muted, strokeDasharray: "4,4"}),
+      Plot.dot(lpm_data, {
+        x: "x", y: "yJittered",
+        fill: lpm_tc.muted,
+        r: 3,
+        opacity: 0.5
+      }),
+      Plot.line(lpm_lpmLine, {
+        x: "x", y: "y",
+        stroke: lpm_ber640.secondary,
+        strokeWidth: 2.5
+      }),
+      Plot.line(lpm_logisticCurve, {
+        x: "x", y: "y",
+        stroke: lpm_ber640.accent,
+        strokeWidth: 2.5
+      }),
+      Plot.text(["LPM (Linear)"], {
+        x: [8.5], y: [1.22],
+        fill: lpm_ber640.secondary,
+        fontSize: 12,
+        fontWeight: 600
+      }),
+      Plot.text(["Logistic"], {
+        x: [8.5], y: [1.13],
+        fill: lpm_ber640.accent,
+        fontSize: 12,
+        fontWeight: 600
+      })
+    ]
+  }))
+}
+
+lpm_cards = {
+  const alphaStr = lpm_formatCoef(lpm_alpha);
+  const betaStr = lpm_formatCoef(lpm_beta);
+  const sign = lpm_beta >= 0 ? "+" : "−";
+  const betaAbs = lpm_formatCoef(Math.abs(lpm_beta));
+  const linearEq = `Ŷ = ${alphaStr} ${sign} ${betaAbs}·X`;
+  const logitInner = `${alphaStr} ${sign} ${betaAbs}·X`;
+
+  const oobColor = lpm_oobCount > 0 ? lpm_ber640.secondary : lpm_ber640.success;
+
+  return html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+    <div style="background: ${lpm_tc.bg}; border: 1px solid ${lpm_tc.muted}; border-radius: 8px; padding: 14px;">
+      <div style="font-size: 0.78em; color: ${lpm_tc.muted}; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Out-of-Bounds Predictions</div>
+      <div style="font-size: 1.5em; font-weight: 700; color: ${oobColor};">${lpm_oobCount} / ${lpm_xGrid.length} <span style="font-size: 0.6em; font-weight: 400;">(${lpm_oobPct}%)</span></div>
+      <div style="font-size: 0.8em; color: ${lpm_tc.muted}; margin-top: 2px;">LPM predictions outside [0, 1]</div>
+    </div>
+    <div style="background: ${lpm_tc.bg}; border: 1px solid ${lpm_tc.muted}; border-radius: 8px; padding: 14px;">
+      <div style="font-size: 0.78em; color: ${lpm_tc.muted}; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Log-Likelihood Comparison</div>
+      <div style="font-size: 0.85em; margin-top: 4px;">
+        <span style="color: ${lpm_ber640.secondary}; font-weight: 600;">LPM:</span> <span style="color: ${lpm_tc.text};">${lpm_logLikLPM.toFixed(2)}</span>
+      </div>
+      <div style="font-size: 0.85em; margin-top: 2px;">
+        <span style="color: ${lpm_ber640.accent}; font-weight: 600;">Logistic:</span> <span style="color: ${lpm_tc.text};">${lpm_logLikLogistic.toFixed(2)}</span>
+      </div>
+    </div>
+    <div style="background: ${lpm_tc.bg}; border: 1px solid ${lpm_tc.muted}; border-radius: 8px; padding: 14px;">
+      <div style="font-size: 0.78em; color: ${lpm_tc.muted}; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">LPM Equation</div>
+      <div style="font-size: 1.05em; font-weight: 600; color: ${lpm_ber640.secondary}; font-family: 'JetBrains Mono', 'Fira Code', monospace; margin-top: 4px;">${linearEq}</div>
+    </div>
+    <div style="background: ${lpm_tc.bg}; border: 1px solid ${lpm_tc.muted}; border-radius: 8px; padding: 14px;">
+      <div style="font-size: 0.78em; color: ${lpm_tc.muted}; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Logistic Equation</div>
+      <div style="font-size: 1.05em; font-weight: 600; color: ${lpm_ber640.accent}; font-family: 'JetBrains Mono', 'Fira Code', monospace; margin-top: 4px;">P(Y=1) = 1/(1+e<sup>-(${logitInner})</sup>)</div>
+    </div>
+  </div>`
+}
+```
+
+### The Logistic Function as a Solution
+
+We need a function that maps any real number $(-\infty, +\infty)$ to the interval $(0, 1)$. The **logistic function** does exactly this:
+
+$$
+f(z) = \frac{e^z}{1 + e^z} = \frac{1}{1 + e^{-z}}
+$$ {#eq-ch9-logistic-fn}
+
+This function produces the characteristic **S-shaped (sigmoid) curve** that approaches 0 as $z \to -\infty$ and approaches 1 as $z \to +\infty$, passing through 0.5 when $z = 0$.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-logistic-curve
+#| fig-cap: "The logistic function (S-shaped curve) compared to a straight line. The logistic function maps any value on the x-axis to a probability between 0 and 1, approaching the boundaries asymptotically rather than crossing them."
+#| fig-alt: "Line plot comparing the logistic function and a straight line. The x-axis shows the linear predictor z ranging from negative 6 to 6, and the y-axis shows probability from 0 to 1. The logistic curve follows an S-shape, staying near zero for large negative z values, rising steeply through 0.5 at z equals zero, and leveling off near one for large positive z values. The straight line crosses both the zero and one boundaries, illustrating why the logistic function is preferred for modeling probabilities."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Create a comparison of linear vs logistic curves
+curve_data <- tibble(
+  z = seq(-6, 6, length.out = 200),
+  logistic = plogis(z),
+  linear = 0.5 + 0.15 * z
+)
+
+ggplot(curve_data, aes(x = z)) +
+  geom_line(aes(y = logistic, color = "Logistic"), linewidth = 1.2) +
+  geom_line(aes(y = linear, color = "Linear"), linewidth = 1.2,
+            linetype = "dashed") +
+  geom_hline(yintercept = c(0, 1), linetype = "dotted", alpha = 0.5) +
+  geom_point(aes(x = 0, y = 0.5), size = 3, color = ber640_colors["accent"]) +
+  scale_color_manual(
+    values = c("Logistic" = ber640_colors["accent"],
+               "Linear" = ber640_colors["secondary"]),
+    name = "Function"
+  ) +
+  labs(
+    title = "Logistic Function vs Linear Function",
+    x = expression(z == alpha + beta * x),
+    y = expression(pi == P(Y == 1))
+  ) +
+  coord_cartesian(ylim = c(-0.15, 1.15))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-logistic-curve"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The logistic curve has three key properties that make it ideal for modeling probabilities:
+
+1. **Bounded**: It never crosses 0 or 1 --- no impossible predictions
+2. **Symmetric**: It is symmetric around the midpoint $(z = 0, \pi = 0.5)$
+3. **Non-linear but monotone**: The effect of $x$ on the probability is strongest near $\pi = 0.5$ and weakens as $\pi$ approaches 0 or 1 --- a "diminishing returns" property that matches our intuition about probability
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-logistic-curve"
+#| eval: false
+```
+- `plogis(z)` computes the logistic function $e^z/(1 + e^z)$ --- this is R's built-in function for the logistic CDF
+- The logistic curve stays bounded within (0, 1) regardless of $z$
+- The linear function crosses the boundaries at both ends
+- The blue dot marks the inflection point at $(0, 0.5)$, where the curve is steepest
+
+
+:::
+
+### How $\alpha$ and $\beta$ Shape the Logistic Curve {#sec-ch9-curve-shapes}
+
+Before diving into the formal model, it is helpful to visualize **how different parameter values change the logistic curve**. The intercept $\alpha$ shifts the curve left or right (changing the midpoint), while the slope $\beta$ controls how steeply the curve rises (the strength of the predictor effect).
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-curve-comparison
+#| fig-cap: "How the logistic curve changes with different parameter values. Left: varying the intercept shifts the curve horizontally (different baseline probabilities). Right: varying the slope changes the steepness (stronger vs weaker predictor effects). A slope of zero produces a flat line (no association)."
+#| fig-alt: "Two-panel line plot showing how logistic curve parameters affect its shape. Left panel displays three S-shaped curves with different intercept values (alpha equals negative 2, 0, and 2), shifting the curve left or right along the x-axis while maintaining the same steepness. Right panel displays three curves with different slope values, where a steeper slope produces a sharper transition, a moderate slope gives the standard S-shape, and a slope of zero produces a flat horizontal line at probability 0.5 indicating no association."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Create data for different parameter combinations
+x_seq <- seq(-6, 6, length.out = 300)
+
+# Panel 1: Varying intercept (alpha), fixed slope
+p_alpha <- tibble(x = rep(x_seq, 3)) |>
+  mutate(
+    alpha = rep(c(-2, 0, 2), each = length(x_seq)),
+    alpha_label = paste0("\u03b1 = ", alpha),
+    prob = plogis(alpha + 1 * x)
+  ) |>
+  ggplot(aes(x = x, y = prob, color = alpha_label)) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = 0.5, linetype = "dotted", alpha = 0.4) +
+  scale_color_manual(
+    values = c(ber640_colors["accent"], ber640_colors["primary"],
+               ber640_colors["secondary"]),
+    name = "Intercept"
+  ) +
+  labs(title = expression("Varying" ~ alpha ~ "(fixed" ~ beta ~ "= 1)"),
+       x = "x", y = expression(pi == P(Y == 1))) +
+  coord_cartesian(ylim = c(0, 1))
+
+# Panel 2: Varying slope (beta), fixed intercept
+p_beta <- tibble(x = rep(x_seq, 4)) |>
+  mutate(
+    beta = rep(c(0, 0.5, 1, 3), each = length(x_seq)),
+    beta_label = factor(paste0("\u03b2 = ", beta),
+                        levels = paste0("\u03b2 = ", c(0, 0.5, 1, 3))),
+    prob = plogis(0 + beta * x)
+  ) |>
+  ggplot(aes(x = x, y = prob, color = beta_label)) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = 0.5, linetype = "dotted", alpha = 0.4) +
+  scale_color_manual(
+    values = c(ber640_colors["warning"], ber640_colors["accent"],
+               ber640_colors["primary"], ber640_colors["secondary"]),
+    name = "Slope"
+  ) +
+  labs(title = expression("Varying" ~ beta ~ "(fixed" ~ alpha ~ "= 0)"),
+       x = "x", y = expression(pi == P(Y == 1))) +
+  coord_cartesian(ylim = c(0, 1))
+
+p_alpha + p_beta
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-curve-comparison"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+These plots build geometric intuition for logistic regression parameters:
+
+- **Intercept ($\alpha$)**: Controls the **location** of the curve. A larger $\alpha$ shifts the curve to the left, meaning higher predicted probabilities at any given $x$. The midpoint ($\pi = 0.5$) occurs at $x = -\alpha/\beta$.
+- **Slope ($\beta$)**: Controls the **steepness** of the curve. A larger $|\beta|$ creates a sharper S-shape (a stronger predictor). When $\beta = 0$, the predictor has no effect and the curve is flat. When $\beta = 3$, the transition from low to high probability happens over a narrow range of $x$.
+
+This is analogous to linear regression, where $\alpha$ is the y-intercept and $\beta$ is the slope --- except that in logistic regression, these parameters operate on the **log-odds** scale, and the effect on probability is non-linear.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-curve-comparison"
+#| eval: false
+```
+- **Left panel**: Three logistic curves with the same slope ($\beta = 1$) but different intercepts ($\alpha = -2, 0, 2$). The intercept shifts the midpoint of the curve along the $x$-axis
+- **Right panel**: Four logistic curves with the same intercept ($\alpha = 0$) but different slopes ($\beta = 0, 0.5, 1, 3$)
+- `plogis(alpha + beta * x)` computes $P(Y=1) = e^{\alpha + \beta x} / (1 + e^{\alpha + \beta x})$
+- A slope of $\beta = 0$ produces a flat line at $\pi = 0.5$ --- no predictor effect
+
+
+:::
+
+### Interactive Exploration: Logistic Curve Explorer {.unnumbered}
+
+::: {.callout-tip}
+## Try It Yourself
+
+Use the sliders to change the intercept ($\alpha$) and slope ($\beta$) of a logistic regression model and observe how the S-curve, midpoint, odds ratio, and maximum slope respond in real time.
+:::
+
+```{ojs}
+//| echo: false
+
+import { ber640 as logcurve_ber640,
+         withAlpha as logcurve_withAlpha,
+         themeColors as logcurve_themeColors,
+         plotDefaults as logcurve_plotDefaults,
+         sigmoid as logcurve_sigmoid,
+         formatCoef as logcurve_formatCoef,
+         seq as logcurve_seq } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+
+viewof logcurve_alpha = Inputs.range([-5, 5], {
+  label: "Intercept (α)",
+  step: 0.1,
+  value: 0
+})
+```
+
+```{ojs}
+//| echo: false
+
+viewof logcurve_beta = Inputs.range([-5, 5], {
+  label: "Slope (β)",
+  step: 0.1,
+  value: 1
+})
+```
+
+```{ojs}
+//| echo: false
+
+// Derived quantities
+logcurve_or = Math.exp(logcurve_beta)
+logcurve_midpoint = logcurve_beta !== 0 ? -logcurve_alpha / logcurve_beta : NaN
+logcurve_maxSlope = logcurve_beta / 4
+
+// Curve data: 200 points over x = [-6, 6]
+logcurve_curveData = {
+  const xs = logcurve_seq(-6, 6, 200);
+  return xs.map(x => ({
+    x: x,
+    p: logcurve_sigmoid(logcurve_alpha + logcurve_beta * x)
+  }));
+}
+
+// Steepest-change region: midpoint ± 1/|β| (where ~73% of probability change occurs)
+logcurve_steepRegion = {
+  if (logcurve_beta === 0 || !isFinite(logcurve_midpoint)) return [];
+  const halfWidth = 1 / Math.abs(logcurve_beta);
+  const lo = logcurve_midpoint - halfWidth;
+  const hi = logcurve_midpoint + halfWidth;
+  return [{ x1: Math.max(lo, -6), x2: Math.min(hi, 6) }];
+}
+```
+
+```{ojs}
+//| echo: false
+
+// Equation display
+html`<div style="
+  font-family: 'Cambria Math', 'STIX Two Math', Georgia, serif;
+  font-size: 16px;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  margin: 0.25rem 0 0.75rem 0;
+  background: ${logcurve_themeColors().isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'};
+  border-radius: 6px;
+  color: ${logcurve_themeColors().text};
+">
+  logit(<em>&pi;</em>) = <span style="color:${logcurve_ber640.accent}; font-weight:700;">${logcurve_formatCoef(logcurve_alpha, 1)}</span> + <span style="color:${logcurve_ber640.secondary}; font-weight:700;">${logcurve_formatCoef(logcurve_beta, 1)}</span> &times; <em>x</em>
+</div>`
+```
+
+```{ojs}
+//| echo: false
+
+// Main logistic curve plot
+Plot.plot(logcurve_plotDefaults({
+  width: 640,
+  height: 420,
+  x: { label: "x", domain: [-6, 6], grid: true },
+  y: { label: "P(Y = 1)", domain: [-0.02, 1.02], grid: true },
+  marks: [
+    // Steepest-change shaded region
+    logcurve_beta !== 0 && isFinite(logcurve_midpoint)
+      ? Plot.rectY(logcurve_steepRegion, {
+          x1: "x1",
+          x2: "x2",
+          y1: 0,
+          y2: 1,
+          fill: logcurve_ber640.warning,
+          fillOpacity: 0.10
+        })
+      : null,
+
+    // Horizontal reference line at P = 0.5
+    Plot.ruleY([0.5], {
+      stroke: logcurve_themeColors().muted,
+      strokeWidth: 1,
+      strokeDasharray: "6,4"
+    }),
+
+    // Vertical reference line at midpoint x = -α/β
+    logcurve_beta !== 0 && isFinite(logcurve_midpoint) &&
+    logcurve_midpoint >= -6 && logcurve_midpoint <= 6
+      ? Plot.ruleX([logcurve_midpoint], {
+          stroke: logcurve_ber640.accent,
+          strokeWidth: 1.5,
+          strokeDasharray: "6,4"
+        })
+      : null,
+
+    // The logistic S-curve
+    Plot.line(logcurve_curveData, {
+      x: "x",
+      y: "p",
+      stroke: logcurve_ber640.primary,
+      strokeWidth: 2.5
+    }),
+
+    // Midpoint dot
+    logcurve_beta !== 0 && isFinite(logcurve_midpoint) &&
+    logcurve_midpoint >= -6 && logcurve_midpoint <= 6
+      ? Plot.dot([{ x: logcurve_midpoint, p: 0.5 }], {
+          x: "x",
+          y: "p",
+          r: 5,
+          fill: logcurve_ber640.accent,
+          stroke: "white",
+          strokeWidth: 1.5
+        })
+      : null,
+
+    // OR annotation text
+    Plot.text([{
+      x: logcurve_beta >= 0 ? -5.5 : 5.5,
+      p: 0.95
+    }], {
+      x: "x",
+      y: "p",
+      text: d => `OR = ${logcurve_formatCoef(logcurve_or, 2)}`,
+      fill: logcurve_ber640.secondary,
+      fontWeight: 700,
+      fontSize: 13
+    }),
+
+    // Midpoint label
+    logcurve_beta !== 0 && isFinite(logcurve_midpoint) &&
+    logcurve_midpoint >= -5.5 && logcurve_midpoint <= 5.5
+      ? Plot.text([{
+          x: logcurve_midpoint,
+          p: 0.08
+        }], {
+          x: "x",
+          y: "p",
+          text: d => `x₅₀ = ${logcurve_formatCoef(logcurve_midpoint, 2)}`,
+          fill: logcurve_ber640.accent,
+          fontWeight: 600,
+          fontSize: 11
+        })
+      : null
+  ].filter(d => d !== null)
+}))
+```
+
+```{ojs}
+//| echo: false
+
+// Readout cards
+html`<div style="
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+">
+  <div style="
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: ${logcurve_withAlpha(logcurve_ber640.secondary, 0.08)};
+    border: 1px solid ${logcurve_withAlpha(logcurve_ber640.secondary, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${logcurve_ber640.secondary};">Odds Ratio</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${logcurve_themeColors().text};">
+      ${logcurve_formatCoef(logcurve_or, 3)}
+    </div>
+    <div style="font-size: 0.78rem; color: ${logcurve_themeColors().muted};">
+      ${logcurve_or >= 1
+        ? `Each +1 in x multiplies odds by ${logcurve_formatCoef(logcurve_or, 2)}`
+        : `Each +1 in x multiplies odds by ${logcurve_formatCoef(logcurve_or, 2)}`}
+    </div>
+  </div>
+  <div style="
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: ${logcurve_withAlpha(logcurve_ber640.accent, 0.08)};
+    border: 1px solid ${logcurve_withAlpha(logcurve_ber640.accent, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${logcurve_ber640.accent};">Midpoint (P = 0.5)</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${logcurve_themeColors().text};">
+      ${logcurve_beta !== 0 ? 'x = ' + logcurve_formatCoef(logcurve_midpoint, 2) : 'undefined'}
+    </div>
+    <div style="font-size: 0.78rem; color: ${logcurve_themeColors().muted};">
+      ${logcurve_beta !== 0
+        ? `P = 0.5 occurs at x = ${logcurve_formatCoef(logcurve_midpoint, 2)}`
+        : 'No midpoint when slope = 0'}
+    </div>
+  </div>
+  <div style="
+    padding: 0.6rem;
+    border-radius: 8px;
+    background: ${logcurve_withAlpha(logcurve_ber640.warning, 0.08)};
+    border: 1px solid ${logcurve_withAlpha(logcurve_ber640.warning, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${logcurve_ber640.warning};">Max Slope (&beta;/4)</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${logcurve_themeColors().text};">
+      ${logcurve_formatCoef(logcurve_maxSlope, 3)}
+    </div>
+    <div style="font-size: 0.78rem; color: ${logcurve_themeColors().muted};">
+      Max &Delta;P per unit x at the midpoint
+    </div>
+  </div>
+</div>`
+```
+
+```{ojs}
+//| echo: false
+
+// Dynamic narrative
+html`<div style="
+  font-size: 0.88rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.25rem;
+  color: ${logcurve_themeColors().text};
+  background: ${logcurve_themeColors().isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)'};
+  border-radius: 6px;
+  border-left: 3px solid ${logcurve_ber640.accent};
+">
+  ${logcurve_beta === 0
+    ? html`When <strong>&beta; = 0</strong>, the predictor has no effect. The predicted probability is constant at <em>&pi;</em> = ${logcurve_formatCoef(logcurve_sigmoid(logcurve_alpha), 3)} for all <em>x</em>, determined entirely by &alpha;.`
+    : logcurve_beta > 0
+      ? html`With <strong>&beta; = ${logcurve_formatCoef(logcurve_beta, 1)}</strong> (positive), the curve rises from left to right. Each unit increase in <em>x</em> multiplies the odds of <em>Y</em> = 1 by <strong>${logcurve_formatCoef(logcurve_or, 2)}</strong>. The steepest change in probability (<strong>${logcurve_formatCoef(Math.abs(logcurve_maxSlope), 3)}</strong> per unit) occurs at the midpoint <em>x</em> = ${logcurve_formatCoef(logcurve_midpoint, 2)}.`
+      : html`With <strong>&beta; = ${logcurve_formatCoef(logcurve_beta, 1)}</strong> (negative), the curve falls from left to right. Each unit increase in <em>x</em> multiplies the odds by <strong>${logcurve_formatCoef(logcurve_or, 2)}</strong> (a ${logcurve_formatCoef((1 - logcurve_or) * 100, 1)}% decrease). The steepest change occurs at <em>x</em> = ${logcurve_formatCoef(logcurve_midpoint, 2)}.`
+  }
+</div>`
+```
+
+
+## Probability, Odds, and Log-Odds {#sec-ch9-scales}
+
+Before we can write down the logistic regression model, we need to understand three different scales for expressing the likelihood of an event. These three scales --- **probability**, **odds**, and **log-odds** --- are mathematically equivalent (each can be converted to the others), but they have very different properties that make them useful in different contexts.
+
+### The Three Scales
+
+Let $\pi = P(Y = 1)$ be the probability of the event occurring. The three scales are:
+
+| Scale | Formula | Range | Interpretation |
+|:------|:--------|:------|:---------------|
+| **Probability** | $\pi$ | $[0, 1]$ | Proportion of times the event occurs |
+| **Odds** | $\frac{\pi}{1 - \pi}$ | $[0, +\infty)$ | Ratio of successes to failures |
+| **Log-odds (logit)** | $\log\!\left(\frac{\pi}{1 - \pi}\right)$ | $(-\infty, +\infty)$ | Unbounded, symmetric around 0 |
+
+: The three scales for expressing the likelihood of an event. {#tbl-ch9-scales}
+
+Let us compute all three scales for the Titanic survival data:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-three-scales
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Compute the three scales for each sex
+titanic_scales <- titanic |>
+  group_by(sex_label) |>
+  summarise(
+    n = n(),
+    survived = sum(survived),
+    probability = mean(survived),
+    odds = probability / (1 - probability),
+    log_odds = log(odds)
+  )
+
+titanic_scales |>
+  kable(digits = 3,
+        col.names = c("Sex", "N", "Survived", "Probability",
+                       "Odds", "Log-odds"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-three-scales"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+For **males**: $\hat{\pi} = 0.191$, odds $= 0.191/0.809 = 0.236$, log-odds $= \log(0.236) = -1.455$
+
+- The probability means about 19 out of every 100 men survived
+- The odds mean there was roughly 1 survivor for every 4.2 deaths (or 0.236 survivors per death)
+- The negative log-odds indicate the event (survival) is less likely than not
+
+For **females**: $\hat{\pi} = 0.727$, odds $= 0.727/0.273 = 2.668$, log-odds $= \log(2.668) = 0.981$
+
+- The probability means about 73 out of every 100 women survived
+- The odds mean there were roughly 2.7 survivors for every death
+- The positive log-odds indicate the event (survival) is more likely than not
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-three-scales"
+#| eval: false
+```
+- **Probability**: `mean(survived)` gives $\hat{\pi}$ directly (proportion surviving)
+- **Odds**: $\hat{\pi} / (1 - \hat{\pi})$ --- the ratio of survivors to non-survivors
+- **Log-odds**: $\log(\text{odds})$ --- the natural logarithm of the odds
+
+
+:::
+
+### Understanding Odds
+
+Odds are a way of expressing probability that may be unfamiliar from everyday life (outside of gambling). If the probability of rain is 0.80, the odds of rain are $0.80/0.20 = 4$, which we might say as "4 to 1 in favor of rain." This means we expect 4 rainy days for every 1 dry day.
+
+Key properties of odds:
+
+- Odds $= 1$ means $\pi = 0.5$ (the event is equally likely to occur or not)
+- Odds $> 1$ means $\pi > 0.5$ (the event is more likely than not)
+- Odds $< 1$ means $\pi < 0.5$ (the event is less likely than not)
+- Odds are **asymmetric**: they range from 0 to $\infty$, with 1 as the midpoint
+
+### Why Log-Odds?
+
+The log-odds (or **logit**) scale has a crucial property that makes it ideal for regression: it is **unbounded** in both directions, ranging from $-\infty$ to $+\infty$. This means we can model log-odds as a linear function of predictors without worrying about impossible values.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-three-scales
+#| fig-cap: "The same information displayed on three different scales. Probability is bounded between 0 and 1. Odds are bounded below by 0 but unbounded above. Log-odds are unbounded in both directions, making them ideal for linear modeling."
+#| fig-alt: "Three-panel plot displaying the same information on different scales. Left panel shows probability on both axes, forming a straight diagonal line bounded between 0 and 1. Middle panel shows odds on the y-axis versus probability on the x-axis, producing an exponentially increasing curve that is bounded below by zero but grows without limit. Right panel shows log-odds on the y-axis versus probability on the x-axis, producing an S-shaped curve that extends from negative infinity to positive infinity, demonstrating that log-odds are unbounded in both directions."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Create a sequence of probabilities and compute all three scales
+scale_data <- tibble(
+  probability = seq(0.01, 0.99, by = 0.01),
+  odds = probability / (1 - probability),
+  log_odds = log(odds)
+)
+
+p_prob <- ggplot(scale_data, aes(x = probability, y = probability)) +
+  geom_line(color = ber640_colors["accent"], linewidth = 1.2) +
+  geom_hline(yintercept = c(0, 1), linetype = "dashed", alpha = 0.3) +
+  labs(title = "Probability", x = expression(pi), y = "Probability") +
+  scale_x_continuous(breaks = seq(0, 1, 0.25))
+
+p_odds <- ggplot(scale_data, aes(x = probability, y = odds)) +
+  geom_line(color = ber640_colors["secondary"], linewidth = 1.2) +
+  geom_hline(yintercept = 1, linetype = "dashed", alpha = 0.3) +
+  labs(title = "Odds", x = expression(pi), y = "Odds")
+
+p_logodds <- ggplot(scale_data, aes(x = probability, y = log_odds)) +
+  geom_line(color = ber640_colors["success"], linewidth = 1.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.3) +
+  labs(title = "Log-Odds (Logit)", x = expression(pi),
+       y = "Log-odds")
+
+p_prob + p_odds + p_logodds
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-three-scales"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The three panels reveal why we use the log-odds scale for logistic regression. Probability is bounded in [0, 1] and odds are bounded below by 0 --- neither can serve as the outcome in an unconstrained linear model. The log-odds (logit) transformation stretches the probability scale to $(-\infty, +\infty)$, creating a symmetric, unbounded scale where linear modeling is appropriate. Notice how probabilities near 0.5 correspond to log-odds near 0, and the curve is steepest (most sensitive) in this region.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-three-scales"
+#| eval: false
+```
+- Left: Probability is a straight line (trivially) --- bounded between 0 and 1
+- Middle: Odds are highly asymmetric --- they compress all probabilities below 0.5 into [0, 1] and stretch all probabilities above 0.5 across $[1, \infty)$
+- Right: Log-odds are symmetric around 0 and unbounded in both directions --- the ideal scale for a regression model
+
+
+:::
+
+### Interactive Exploration: Probability, Odds, and Log-Odds {.unnumbered}
+
+::: {.callout-tip}
+## Try It Yourself
+
+Use the slider to set a probability value and watch how it maps onto the three equivalent scales. Notice how probabilities near 0 or 1 get compressed on the probability scale but stretched on the odds and log-odds scales. The natural "center" is **p = 0.50 → odds = 1 → log-odds = 0**.
+:::
+
+```{ojs}
+//| echo: false
+
+import { ber640 as scales_ber640, withAlpha as scales_withAlpha,
+         themeColors as scales_themeColors,
+         plotDefaults as scales_plotDefaults,
+         seq as scales_seq, formatCoef as scales_formatCoef } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+
+viewof scales_p = Inputs.range([0.01, 0.99], {
+  value: 0.50,
+  step: 0.01,
+  label: "Probability (p)",
+  width: 320
+})
+```
+
+```{ojs}
+//| echo: false
+
+// Derived values
+scales_odds = scales_p / (1 - scales_p)
+scales_logodds = Math.log(scales_odds)
+```
+
+```{ojs}
+//| echo: false
+
+// Build data for the three vertical gauge panels
+scales_plotData = {
+  const oddsMax = 20;
+  const normOdds = (v) => Math.log1p(v) / Math.log1p(oddsMax);
+  const normLogit = (v) => (v + 5) / 10;
+
+  const probTicks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+  const oddsTicks = [0, 0.1, 0.25, 0.5, 1, 2, 4, 7, 10, 15, 20];
+  const logitTicks = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
+
+  const spines = [
+    { panel: "1. Probability", px: 0, norm: 0 },
+    { panel: "1. Probability", px: 0, norm: 1 },
+    { panel: "2. Odds",        px: 0, norm: 0 },
+    { panel: "2. Odds",        px: 0, norm: 1 },
+    { panel: "3. Log-Odds",    px: 0, norm: 0 },
+    { panel: "3. Log-Odds",    px: 0, norm: 1 }
+  ];
+
+  const ticks = [
+    ...probTicks.map(v => ({ panel: "1. Probability", norm: v, label: v.toFixed(1), px: 0 })),
+    ...oddsTicks.map(v => ({ panel: "2. Odds", norm: normOdds(v), label: v <= 1 ? v.toFixed(1) : String(Math.round(v)), px: 0 })),
+    ...logitTicks.map(v => ({ panel: "3. Log-Odds", norm: normLogit(v), label: String(v), px: 0 }))
+  ];
+
+  const markers = [
+    { panel: "1. Probability", norm: scales_p, px: 0, color: scales_ber640.accent },
+    { panel: "2. Odds", norm: normOdds(Math.min(scales_odds, oddsMax)), px: 0, color: scales_ber640.secondary },
+    { panel: "3. Log-Odds", norm: normLogit(Math.max(-5, Math.min(5, scales_logodds))), px: 0, color: scales_ber640.success }
+  ];
+
+  const refs = [
+    { panel: "1. Probability", norm: 0.5, px: 0 },
+    { panel: "2. Odds", norm: normOdds(1), px: 0 },
+    { panel: "3. Log-Odds", norm: normLogit(0), px: 0 }
+  ];
+
+  const labels = [
+    { panel: "1. Probability", norm: scales_p,
+      text: scales_p.toFixed(2), px: 0.15, color: scales_ber640.accent },
+    { panel: "2. Odds", norm: normOdds(Math.min(scales_odds, oddsMax)),
+      text: scales_odds < 100 ? scales_odds.toFixed(2) : scales_odds.toFixed(0), px: 0.15, color: scales_ber640.secondary },
+    { panel: "3. Log-Odds", norm: normLogit(Math.max(-5, Math.min(5, scales_logodds))),
+      text: scales_logodds.toFixed(2), px: 0.15, color: scales_ber640.success }
+  ];
+
+  return { spines, ticks, markers, refs, labels };
+}
+```
+
+```{ojs}
+//| echo: false
+
+Plot.plot(scales_plotDefaults({
+  width: 640,
+  height: 420,
+  marginTop: 20,
+  marginBottom: 25,
+  marginLeft: 30,
+  marginRight: 30,
+  x: { grid: false, label: null, axis: null },
+  y: { grid: false, label: null, domain: [-0.05, 1.05], axis: null },
+  facet: { data: scales_plotData.spines, x: "panel", marginRight: 10, marginLeft: 10 },
+  fx: { label: null, padding: 0.25 },
+  marks: [
+    Plot.frame({ strokeOpacity: 0.15 }),
+
+    // Vertical spine lines
+    Plot.link(scales_plotData.spines, {
+      x1: "px", y1: 0, x2: "px", y2: 1,
+      stroke: scales_themeColors().muted,
+      strokeWidth: 1.5,
+      fx: "panel"
+    }),
+
+    // Tick marks
+    Plot.link(scales_plotData.ticks, {
+      x1: -0.08, y1: "norm", x2: 0.08, y2: "norm",
+      stroke: scales_themeColors().muted,
+      strokeWidth: 1,
+      fx: "panel"
+    }),
+
+    // Tick labels
+    Plot.text(scales_plotData.ticks, {
+      x: -0.18, y: "norm", text: "label",
+      fontSize: 11, fill: scales_themeColors().muted,
+      textAnchor: "end", fx: "panel"
+    }),
+
+    // Reference dashed lines at center
+    Plot.link(scales_plotData.refs, {
+      x1: -0.25, y1: "norm", x2: 0.25, y2: "norm",
+      stroke: scales_themeColors().muted,
+      strokeDasharray: "4,3", strokeWidth: 1,
+      fx: "panel"
+    }),
+
+    // Current value markers
+    Plot.dot(scales_plotData.markers, {
+      x: "px", y: "norm", r: 9,
+      fill: "color", stroke: "white", strokeWidth: 2,
+      fx: "panel"
+    }),
+
+    // Value labels
+    Plot.text(scales_plotData.labels, {
+      x: "px", y: "norm", text: "text",
+      fill: "color", fontWeight: 700, fontSize: 14,
+      dx: 22, textAnchor: "start", fx: "panel"
+    })
+  ]
+}))
+```
+
+```{ojs}
+//| echo: false
+
+// Readout cards
+html`<div style="
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+">
+  <div style="
+    padding: 0.6rem; border-radius: 8px;
+    background: ${scales_withAlpha(scales_ber640.accent, 0.08)};
+    border: 1px solid ${scales_withAlpha(scales_ber640.accent, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${scales_ber640.accent};">Probability</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${scales_themeColors().text};">
+      ${scales_p.toFixed(2)}
+    </div>
+    <div style="font-size: 0.8rem; color: ${scales_themeColors().muted};">Bounded [0, 1]</div>
+  </div>
+  <div style="
+    padding: 0.6rem; border-radius: 8px;
+    background: ${scales_withAlpha(scales_ber640.secondary, 0.08)};
+    border: 1px solid ${scales_withAlpha(scales_ber640.secondary, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${scales_ber640.secondary};">Odds</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${scales_themeColors().text};">
+      ${scales_odds < 100 ? scales_odds.toFixed(2) : scales_odds.toFixed(0)}
+    </div>
+    <div style="font-size: 0.8rem; color: ${scales_themeColors().muted};">
+      ${scales_p >= 0.5
+        ? (scales_odds >= 1.005 ? scales_odds.toFixed(2) + ' to 1 in favor' : '1 to 1 — even odds')
+        : '1 to ' + (1/scales_odds).toFixed(2) + ' against'}
+    </div>
+  </div>
+  <div style="
+    padding: 0.6rem; border-radius: 8px;
+    background: ${scales_withAlpha(scales_ber640.success, 0.08)};
+    border: 1px solid ${scales_withAlpha(scales_ber640.success, 0.25)};
+  ">
+    <div style="font-weight: 600; color: ${scales_ber640.success};">Log-Odds (Logit)</div>
+    <div style="font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; color: ${scales_themeColors().text};">
+      ${scales_logodds.toFixed(3)}
+    </div>
+    <div style="font-size: 0.8rem; color: ${scales_themeColors().muted};">
+      ${scales_logodds > 0.01 ? 'Positive → event more likely'
+        : scales_logodds < -0.01 ? 'Negative → event less likely'
+        : 'Zero → equally likely'}
+    </div>
+  </div>
+</div>`
+```
+
+
+::: {.callout-tip}
+## Conversion Formulas
+The three scales are interchangeable. You can always convert:
+
+**From probability to odds and log-odds:**
+$$
+\text{odds} = \frac{\pi}{1-\pi}, \qquad \text{logit}(\pi) = \log\!\left(\frac{\pi}{1-\pi}\right)
+$$
+
+**From log-odds back to probability:**
+$$
+\pi = \frac{e^{\text{logit}}}{1 + e^{\text{logit}}} = \frac{1}{1 + e^{-\text{logit}}}
+$$
+
+In R: `qlogis(pi)` converts probability to log-odds, and `plogis(logit)` converts log-odds to probability.
+:::
+
+
+## The Logistic Regression Model {#sec-ch9-model}
+
+### The Model on Three Scales
+
+The simple logistic regression model relates the probability of the outcome to a single predictor $x_i$ through the logistic function. It can be written equivalently on three scales:
+
+**Log-odds (logit) scale** --- the regression equation:
+
+$$
+\text{logit}(\pi_i) = \log\!\left(\frac{\pi_i}{1 - \pi_i}\right) = \alpha + \beta x_i
+$$ {#eq-ch9-logit}
+
+**Odds scale:**
+
+$$
+\frac{\pi_i}{1 - \pi_i} = e^{\alpha + \beta x_i} = e^{\alpha} \cdot e^{\beta x_i}
+$$ {#eq-ch9-odds}
+
+**Probability scale:**
+
+$$
+\pi_i = \frac{e^{\alpha + \beta x_i}}{1 + e^{\alpha + \beta x_i}}
+$$ {#eq-ch9-prob}
+
+::: {.callout-note}
+## Connection to Linear Regression
+The logistic regression model has the **same linear structure** as the models from Chapters 1--8: $\alpha + \beta x_i$. The difference is that this linear function operates on the **log-odds** of the probability, not on the probability itself.
+
+In the language of generalized linear models (GLMs), we say:
+
+- **Linear regression**: identity link, $\text{E}(y_i) = \alpha + \beta x_i$
+- **Logistic regression**: logit link, $\text{logit}[\text{E}(y_i)] = \alpha + \beta x_i$
+
+The **logit function** is the link that connects the linear predictor to the probability. It is the inverse of the logistic function we saw in @eq-ch9-logistic-fn.
+:::
+
+### What the Parameters Mean
+
+The parameters $\alpha$ and $\beta$ have direct interpretations on the log-odds scale:
+
+- $\alpha$ is the **log-odds** of the event when $x = 0$
+- $\beta$ is the **change in log-odds** for a one-unit increase in $x$
+
+Exponentiating gives interpretations on the odds scale:
+
+- $e^{\alpha}$ is the **odds** of the event when $x = 0$
+- $e^{\beta}$ is the **odds ratio** --- the multiplicative factor by which the odds change for a one-unit increase in $x$
+
+### Fitting the Model with `glm()`
+
+In R, logistic regression is fit using `glm()` (generalized linear model) with `family = binomial`:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-model-fit
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Fit simple logistic regression: survival predicted by sex
+model1 <- glm(survived ~ sex, family = binomial, data = titanic)
+
+# Model summary using easystats
+model_parameters(model1) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-model-fit"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The output shows two coefficients on the **log-odds** scale:
+
+- **Intercept** ($a$): The log-odds of survival when `sex = 0` (i.e., for males). Since male survival probability is 0.191, the log-odds are $\log(0.191/0.809) = -1.455$
+- **sex** ($b$): The change in log-odds when going from male (`sex = 0`) to female (`sex = 1`). The positive value indicates that being female is associated with **higher** log-odds of survival
+
+The coefficients on the log-odds scale are not directly intuitive. We need to exponentiate them to get odds ratios (@sec-ch9-odds-ratios) or convert to predicted probabilities (@sec-ch9-marginal).
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-model-fit"
+#| eval: false
+```
+- `glm(survived ~ sex, family = binomial, data = titanic)`: Fits a logistic regression model
+  - `survived ~ sex`: Formula syntax, same as `lm()`
+  - `family = binomial`: Specifies the binomial distribution with the logit link (the default link for `binomial`)
+- `model_parameters()` from the `parameters` package displays the estimated coefficients, standard errors, confidence intervals, $z$-statistics, and $p$-values
+- `|> print_md()` formats the output as a clean markdown table for consistent presentation
+- Note: logistic regression uses $z$-statistics (standard normal), not $t$-statistics, because maximum likelihood estimation does not estimate a separate residual variance
+
+
+:::
+
+
+## Estimation and Interpretation {#sec-ch9-estimation}
+
+### Maximum Likelihood Estimation
+
+Unlike linear regression, which uses OLS, logistic regression is estimated using **maximum likelihood estimation (MLE)**. The basic idea is intuitive:
+
+1. For each observation, the model predicts a probability $\hat{\pi}_i$ of the event occurring
+2. If $y_i = 1$, a good model should predict a **high** probability; if $y_i = 0$, a good model should predict a **low** probability
+3. MLE finds the parameter values $(\alpha, \beta)$ that make the observed data **most probable** --- that is, it maximizes the **likelihood function**
+
+::: {.callout-note}
+## OLS vs MLE
+| Feature | OLS (Linear Regression) | MLE (Logistic Regression) |
+|:--------|:------------------------|:--------------------------|
+| Objective | Minimize sum of squared residuals | Maximize probability of observed data |
+| Solution | Closed-form (exact formula) | Iterative (computer algorithm) |
+| Test statistic | $t$-distribution | Standard normal ($z$) |
+| Residual variance | Estimated separately ($\hat{\sigma}^2$) | Implied by the model |
+| Small-sample performance | Exact tests if normality holds | Approximate (relies on large samples) |
+
+The key practical difference: OLS gives exact $t$-tests, while MLE gives approximate $z$-tests that work well in large samples. For most applications in education research, sample sizes are large enough that the distinction is negligible.
+:::
+
+### Verifying the Estimates Manually
+
+For a model with a single dummy predictor, we can verify the `glm()` estimates by hand:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-verify-estimates
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Manual computation of logistic regression coefficients
+# For males (sex = 0): reference group
+pi_male <- mean(titanic$survived[titanic$sex == 0])
+odds_male <- pi_male / (1 - pi_male)
+logodds_male <- log(odds_male)
+
+# For females (sex = 1)
+pi_female <- mean(titanic$survived[titanic$sex == 1])
+odds_female <- pi_female / (1 - pi_female)
+logodds_female <- log(odds_female)
+
+# Compare manual calculations with glm() estimates
+tibble(
+  Source = c("Manual calculation", "glm() estimates"),
+  `Intercept (a)` = c(round(logodds_male, 3),
+                       round(coef(model1)[1], 3)),
+  `Slope (b)` = c(round(logodds_female - logodds_male, 3),
+                   round(coef(model1)[2], 3))
+) |>
+  kable(align = "lrr")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-verify-estimates"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+This confirms what the logistic regression coefficients mean for a dummy predictor:
+
+- $a = \text{logit}(\hat{\pi}_{\text{male}})$: the log-odds of survival for the reference group
+- $b = \text{logit}(\hat{\pi}_{\text{female}}) - \text{logit}(\hat{\pi}_{\text{male}})$: the difference in log-odds between the two groups
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-verify-estimates"
+#| eval: false
+```
+- For the reference group (males), the intercept equals the log-odds of survival
+- The slope equals the difference in log-odds between females and males: $\text{logit}(\hat{\pi}_{\text{female}}) - \text{logit}(\hat{\pi}_{\text{male}})$
+- The manual calculations match the `glm()` output exactly (within rounding)
+
+
+:::
+
+### Model Performance
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-model-performance
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Model performance metrics for logistic regression
+performance::model_performance(model1) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-model-performance"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The AIC and BIC provide baselines for model comparison --- we will use them later when comparing models with different predictors. Tjur's $R^2$ (also called the coefficient of discrimination) measures how well the model separates survivors from non-survivors. A higher value indicates better discrimination. For this simple model with only sex as a predictor, the value indicates moderate discriminatory power, which makes sense given the strong but imperfect association between sex and survival.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-model-performance"
+#| eval: false
+```
+- `model_performance()` reports several fit indices for logistic regression, including:
+  - **AIC** and **BIC**: Information criteria (lower is better) --- useful for comparing models
+  - **Log-likelihood**: The maximized log-likelihood value
+  - **Tjur's $R^2$**: A pseudo-$R^2$ measure that compares average predicted probabilities for events ($y=1$) versus non-events ($y=0$)
+- Unlike linear regression, there is no single universally accepted $R^2$ for logistic regression
+
+
+:::
+
+
+## Odds Ratios {#sec-ch9-odds-ratios}
+
+### Exponentiated Coefficients
+
+The log-odds coefficients from the model output are not directly interpretable in practical terms. The solution is to **exponentiate** them, which converts log-odds to **odds ratios**:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-odds-ratios
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Exponentiated coefficients = odds ratios
+model_parameters(model1, exponentiate = TRUE) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-odds-ratios"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+- **Intercept** ($e^a$): The **odds** of survival for males. Since $a$ is the log-odds for the reference group, $e^a$ is the odds for the reference group.
+- **sex** ($e^b$): The **odds ratio** comparing females to males. This tells us how many times **higher** (or lower) the odds of survival are for females relative to males.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-odds-ratios"
+#| eval: false
+```
+- `model_parameters(model1, exponentiate = TRUE)`: Exponentiates all coefficients and their confidence intervals
+- `|> print_md()` formats the output as a clean markdown table
+- The `Coefficient` column now shows **odds ratios** rather than log-odds coefficients
+- Confidence intervals are also on the odds ratio scale
+
+
+:::
+
+### Computing the Odds Ratio Manually
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-or-manual
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Manual odds ratio calculation
+or_manual <- odds_female / odds_male
+
+tibble(
+  Measure = c("Odds (Males)", "Odds (Females)",
+              "Odds Ratio (Female / Male)", "exp(b) from model"),
+  Value = c(round(odds_male, 3), round(odds_female, 3),
+            round(or_manual, 3), round(exp(coef(model1)[2]), 3))
+) |>
+  kable(align = "lr")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-or-manual"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The odds ratio provides a single number summarizing the strength of the association between sex and survival:
+
+- $\text{OR} = 1$: No association --- the odds are the same in both groups
+- $\text{OR} > 1$: Positive association --- the odds are higher in the target group (here, females)
+- $\text{OR} < 1$: Negative association --- the odds are lower in the target group
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-or-manual"
+#| eval: false
+```
+- The odds ratio is simply the ratio of the odds for the two groups: $\text{OR} = \text{odds}_{\text{female}} / \text{odds}_{\text{male}}$
+- This equals $e^b$ from the logistic regression model
+- An OR of approximately 11.3 means the odds of survival for women were about **11.3 times higher** than for men
+
+
+:::
+
+::: {.callout-important}
+## Odds Ratio Properties
+| OR Value | Meaning | Example |
+|:---------|:--------|:--------|
+| OR = 1 | No association | Sex has no relationship with survival |
+| OR > 1 | Positive association | Females have higher odds of survival |
+| OR < 1 | Negative association | Females have lower odds of survival |
+| OR = 2 | Odds are doubled | The odds are 2 times higher |
+| OR = 0.5 | Odds are halved | The odds are 50% lower (or half as large) |
+
+Odds ratios are **symmetric in a useful way**: if the OR for females vs males is 11.3, then the OR for males vs females is $1/11.3 = 0.089$.
+:::
+
+### The Critical Distinction: OR vs Probability Ratio
+
+::: {.callout-warning}
+## Odds Ratios Are NOT Probability Ratios!
+This is one of the most common misinterpretations in applied research. Consider our Titanic data:
+
+- **Probability ratio** (relative risk): $P(\text{survived} \mid \text{female}) / P(\text{survived} \mid \text{male}) = 0.727 / 0.191 = 3.81$
+- **Odds ratio**: $\text{odds}_{\text{female}} / \text{odds}_{\text{male}} = 2.668 / 0.236 = 11.30$
+
+Women were about **3.8 times more likely** to survive (probability ratio), but the **odds** of survival were about **11.3 times higher** for women (odds ratio). These are very different numbers!
+
+**When is OR $\approx$ probability ratio?** Only when the outcome is **rare** (i.e., $\pi$ is close to 0 in both groups). This is sometimes called the **rare disease assumption**. When the outcome is common (as it is here --- 38% overall survival rate), the OR substantially overstates the probability ratio.
+
+**Rule of thumb**: If $\pi < 0.10$ in both groups, the OR is a reasonable approximation to the probability ratio. Otherwise, interpret the OR strictly as an odds ratio, not as a probability ratio.
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-or-vs-rr
+#| fig-cap: "Odds ratio vs probability ratio (relative risk) across different baseline probabilities. When the event is rare (left side of the plot), the two measures are similar. As the baseline probability increases, the odds ratio increasingly overstates the relative risk."
+#| fig-alt: "Line plot with baseline probability on the x-axis ranging from 0.01 to 0.50 and the effect measure value on the y-axis. Two lines are shown: one for the probability ratio (relative risk) fixed at 2.0, and one for the corresponding odds ratio. At low baseline probabilities the two lines nearly overlap, but as the baseline probability increases the odds ratio line diverges upward, demonstrating that the odds ratio progressively overstates the relative risk when the outcome is not rare."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Show how OR diverges from RR at different baseline probabilities
+or_rr_data <- tibble(
+  pi_0 = seq(0.01, 0.50, by = 0.01),  # baseline probability
+  rr = 2.0  # fix probability ratio at 2
+) |>
+  mutate(
+    pi_1 = pmin(pi_0 * rr, 0.99),  # ensure pi_1 <= 1
+    odds_0 = pi_0 / (1 - pi_0),
+    odds_1 = pi_1 / (1 - pi_1),
+    or = odds_1 / odds_0,
+    actual_rr = pi_1 / pi_0
+  ) |>
+  filter(pi_1 < 1)
+
+ggplot(or_rr_data, aes(x = pi_0)) +
+  geom_line(aes(y = or, color = "Odds Ratio"), linewidth = 1.2) +
+  geom_line(aes(y = actual_rr, color = "Probability Ratio"), linewidth = 1.2,
+            linetype = "dashed") +
+  scale_color_manual(
+    values = c("Odds Ratio" = ber640_colors["secondary"],
+               "Probability Ratio" = ber640_colors["accent"]),
+    name = ""
+  ) +
+  labs(
+    title = "Odds Ratio vs Probability Ratio",
+    subtitle = "When the true probability ratio is 2.0",
+    x = expression("Baseline Probability" ~ (pi[0])),
+    y = "Ratio"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-or-vs-rr"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+This plot demonstrates that the odds ratio is a **faithful** measure of the odds ratio (by definition), but it should **not** be interpreted as a probability ratio or relative risk unless the outcome is rare in both groups.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-or-vs-rr"
+#| eval: false
+```
+- We fix the true probability ratio (relative risk) at exactly 2.0 and vary the baseline probability $\pi_0$
+- As $\pi_0$ increases, the odds ratio grows increasingly larger than the true probability ratio
+- At $\pi_0 = 0.01$, $\text{OR} \approx \text{RR} \approx 2.0$ (the rare event approximation works)
+- At $\pi_0 = 0.40$, the OR is substantially larger than 2.0, even though the probability ratio is still exactly 2.0
+
+
+:::
+
+::: {.callout-warning}
+## Common Misconceptions About Odds Ratios
+
+1. **"An OR of 2 means twice as likely."** This is only true when the outcome is rare. An OR of 2 means the **odds** are doubled, not the probability. When the baseline probability is 40%, an OR of 2 corresponds to a probability of about 57%, not 80%.
+
+2. **"An OR of 0.5 and an OR of 2 are equally strong."** They are! An OR of 0.5 for group A vs B is the same as an OR of 2.0 for group B vs A. Odds ratios are symmetric around 1 on the log scale: $\log(0.5) = -0.69$ and $\log(2.0) = 0.69$.
+
+3. **"A non-significant OR means no effect."** Non-significance may reflect low power rather than no effect. Always examine confidence intervals alongside $p$-values.
+
+4. **"You can compare ORs across studies with different baseline rates."** Be cautious --- odds ratios can differ between populations even when the underlying causal effect is constant, due to non-collapsibility of the OR.
+:::
+
+### Odds Ratios for Continuous Predictors
+
+When the predictor is continuous, $e^{\beta}$ represents the multiplicative change in odds for a **one-unit increase** in $x$. Let us fit a second model using age as a continuous predictor:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-continuous-predictor
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Fit logistic regression with age as continuous predictor
+model2 <- glm(survived ~ age, family = binomial, data = titanic)
+
+# Coefficients on log-odds scale
+model_parameters(model2) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-continuous-predictor"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The output shows the intercept and the coefficient for `age` on the log-odds scale. A negative coefficient for `age` indicates that older passengers had lower log-odds of survival. However, interpreting coefficients on the log-odds scale is not intuitive --- the next tabset exponentiates these values to produce odds ratios.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-continuous-predictor"
+#| eval: false
+```
+- `glm(survived ~ age, family = binomial)`: Fits logistic regression with `age` (continuous) as the predictor
+- The coefficient for `age` represents the change in log-odds of survival per one-year increase in age
+- `|> print_md()` formats the output as a clean markdown table
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-continuous-or
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Odds ratios for continuous predictor
+model_parameters(model2, exponentiate = TRUE) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-continuous-or"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+For a continuous predictor, the interpretation of $e^{\beta}$ is:
+
+- $e^{\beta} = 1$: No association between $x$ and the outcome
+- $e^{\beta} > 1$: Each one-unit increase in $x$ **increases** the odds
+- $e^{\beta} < 1$: Each one-unit increase in $x$ **decreases** the odds
+
+Because the effect is **multiplicative**, a 10-year increase in age multiplies the odds by $e^{10\beta} = (e^{\beta})^{10}$. This multiplicative property is a fundamental feature of logistic regression.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-continuous-or"
+#| eval: false
+```
+- The exponentiated coefficient for `age` is the **odds ratio per one-year increase in age**
+- If $e^b = 0.993$, this means the odds of survival decrease by about 0.7% for each additional year of age
+
+
+:::
+
+::: {.callout-tip}
+## Multiplicative Effects on Odds
+In linear regression, effects are **additive**: a one-unit increase in $x$ adds $\beta$ to the expected value of $y$.
+
+In logistic regression, effects are **multiplicative on the odds scale**: a one-unit increase in $x$ multiplies the odds by $e^{\beta}$.
+
+| $e^{\beta}$ | Interpretation |
+|:-------------|:---------------|
+| 1.00 | No change in odds |
+| 1.50 | Odds increase by 50% |
+| 2.00 | Odds double |
+| 0.50 | Odds are halved (decrease by 50%) |
+| 0.80 | Odds decrease by 20% |
+
+To express as a percentage change: $(e^{\beta} - 1) \times 100\%$.
+:::
+
+### Visualizing Odds Ratios {#sec-ch9-or-viz}
+
+A forest plot (or dot plot) is the standard way to display odds ratios with confidence intervals. Even with a single predictor, this visualization establishes a convention you will use extensively in multiple logistic regression:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-or-forest
+#| fig-cap: "Odds ratio plot comparing the sex and age models. The dashed vertical line at OR = 1 marks no association. Points to the right indicate higher odds of survival; points to the left indicate lower odds. The sex effect is dramatic (OR = 11.3), while the age effect is small (OR = 0.993 per year, OR = 0.934 per decade)."
+#| fig-alt: "Forest plot displaying odds ratios with 95 percent confidence intervals for predictors from two logistic regression models. The y-axis lists three terms: Female vs Male from Model 1, and Age (per year) and Age (per decade) from Model 2. The x-axis shows odds ratios on a log scale. A vertical dashed line at OR equals 1 marks no association. The Female vs Male point is far to the right at 11.3, indicating dramatically higher odds of survival for women. The age terms are near 1, indicating small effects per year and per decade."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Collect odds ratios from both models
+or_data <- bind_rows(
+  tidy(model1, exponentiate = TRUE, conf.int = TRUE) |>
+    filter(term != "(Intercept)") |>
+    mutate(model = "Model 1: Sex",
+           term_label = "Female vs Male"),
+  tidy(model2, exponentiate = TRUE, conf.int = TRUE) |>
+    filter(term != "(Intercept)") |>
+    mutate(model = "Model 2: Age",
+           term_label = "Per 1-year increase"),
+  # Also show a 10-year OR for age
+  tidy(model2, conf.int = TRUE) |>
+    filter(term != "(Intercept)") |>
+    mutate(
+      estimate = exp(estimate * 10),
+      conf.low = exp(conf.low * 10),
+      conf.high = exp(conf.high * 10),
+      model = "Model 2: Age",
+      term_label = "Per 10-year increase"
+    )
+)
+
+ggplot(or_data, aes(x = estimate, y = term_label, color = model)) +
+  geom_vline(xintercept = 1, linetype = "dashed", alpha = 0.5) +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high),
+                  size = 0.8, linewidth = 1) +
+  scale_color_manual(
+    values = c(ber640_colors["accent"], ber640_colors["secondary"]),
+    name = ""
+  ) +
+  scale_x_log10(breaks = c(0.5, 1, 2, 5, 10, 15)) +
+  labs(
+    title = "Odds Ratios with 95% Confidence Intervals",
+    x = "Odds Ratio (log scale)",
+    y = NULL
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-or-forest"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The forest plot reveals:
+
+- **Sex**: The OR of approximately 11.3 (with narrow CI entirely above 1) indicates a very strong association --- women had dramatically higher odds of survival
+- **Age (per year)**: The OR is very close to 1, reflecting a tiny per-year effect. The CI barely excludes 1
+- **Age (per decade)**: Rescaling to a 10-year unit makes the age effect more interpretable --- each additional decade of age reduces the odds of survival by roughly 6--7%
+
+Using a log scale ensures that an OR of 2 and an OR of 0.5 are displayed equidistant from 1, reflecting their equal strength in opposite directions.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-or-forest"
+#| eval: false
+```
+- `tidy(model, exponentiate = TRUE, conf.int = TRUE)` extracts odds ratios with CIs from each model
+- For the age model, we also compute a **10-year** OR by multiplying the log-coefficient by 10 before exponentiating: $e^{10\beta}$
+- The x-axis uses a **log scale** (`scale_x_log10()`), which is standard for odds ratios because it makes the plot symmetric around OR = 1
+- `geom_pointrange()` draws the point estimate with error bars for the confidence interval
+
+
+:::
+
+
+## Predicted Probabilities and Visualization {#sec-ch9-predicted}
+
+### Predicted Probabilities from the Model
+
+While odds ratios summarize the effect of a predictor, **predicted probabilities** are often more intuitive for communication. We can convert the model's log-odds predictions to the probability scale:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-predicted-sex
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Predicted probabilities from model1 (sex predictor)
+predictions(model1,
+            newdata = datagrid(sex = c(0, 1)),
+            type = "response") |>
+  as_tibble() |>
+  mutate(sex_label = ifelse(sex == 0, "Male", "Female")) |>
+  select(sex_label, estimate, conf.low, conf.high) |>
+  kable(digits = 3,
+        col.names = c("Sex", "P(Survived)", "95% CI Lower", "95% CI Upper"))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-predicted-sex"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The predicted probabilities are simply the observed survival proportions (since we have a single binary predictor). For models with continuous or multiple predictors, the predicted probabilities from the model smooth over the raw data.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-predicted-sex"
+#| eval: false
+```
+- `predictions()` from the `marginaleffects` package computes predicted probabilities at specified values of the predictor
+- `datagrid(sex = c(0, 1))` creates a grid with both values of `sex`
+- `type = "response"` requests predictions on the **probability** scale (rather than the log-odds scale)
+- The output shows the predicted probability of survival for each sex, with 95% confidence intervals
+
+
+:::
+
+### Visualizing the Logistic Curve
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-logistic-fit-age
+#| fig-cap: "Fitted logistic regression curve for the age model. The S-shaped curve shows how the predicted probability of survival decreases with age. The rug plot at the top and bottom shows the distribution of survivors (top) and non-survivors (bottom)."
+#| fig-alt: "Scatter plot with a fitted logistic regression curve showing predicted probability of survival on the y-axis versus passenger age on the x-axis. Individual observations are jittered at 0 and 1. The S-shaped curve gradually decreases from left to right, indicating that older passengers had lower predicted survival probabilities. Rug marks along the top edge show the age distribution of survivors and along the bottom edge show non-survivors, with a shaded confidence band around the fitted curve."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+ggplot(titanic_age, aes(x = age, y = survived)) +
+  geom_jitter(width = 0, height = 0.02, alpha = 0.1,
+              color = ber640_colors["primary"]) +
+  geom_smooth(method = "glm", formula = y ~ x,
+              method.args = list(family = binomial),
+              color = ber640_colors["accent"], fill = ber640_colors["accent"],
+              alpha = 0.2, linewidth = 1.2) +
+  geom_rug(data = filter(titanic_age, survived == 1),
+           sides = "t", alpha = 0.1, color = ber640_colors["success"]) +
+  geom_rug(data = filter(titanic_age, survived == 0),
+           sides = "b", alpha = 0.1, color = ber640_colors["secondary"]) +
+  labs(
+    title = "Logistic Regression: Survival by Age",
+    x = "Age (years)",
+    y = "P(Survived)"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-logistic-fit-age"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The logistic curve shows a gradual decline in survival probability with age. Key observations:
+
+- Young passengers had the highest predicted survival probability
+- The curve is relatively flat, reflecting the modest effect of age on survival (compared to the dramatic effect of sex)
+- The wide confidence band at extreme ages reflects fewer observations
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-logistic-fit-age"
+#| eval: false
+```
+- `geom_smooth(method = "glm", formula = y ~ x, method.args = list(family = binomial))` fits and plots the logistic regression curve
+- The S-shaped curve stays within [0, 1], unlike the linear probability model
+- `geom_rug()` adds tick marks showing where survivors (top, green) and non-survivors (bottom, red) fall along the age axis
+- The shaded band is a 95% confidence band for the predicted probability
+
+
+:::
+
+### Using `plot_predictions()` for Quick Visualization
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-plot-predictions
+#| fig-cap: "Predicted probability of survival as a function of age, with 95% confidence band, generated by plot_predictions() from the marginaleffects package."
+#| fig-alt: "Line plot generated by the marginaleffects package showing predicted probability of survival on the y-axis versus age in years on the x-axis. A single logistic curve decreases gradually from higher predicted probabilities for younger passengers to lower probabilities for older passengers. A shaded 95 percent confidence band surrounds the curve, widening at the extremes of the age distribution where data are sparse."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Quick plot using marginaleffects
+plot_predictions(model2, condition = "age", type = "response") +
+  labs(
+    title = "Predicted Survival Probability by Age",
+    x = "Age (years)",
+    y = "P(Survived)"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-plot-predictions"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The plot shows the characteristic S-shaped (sigmoid) curve of logistic regression applied to real data. The predicted probability of survival decreases gradually with age, but the relationship is weak --- the curve is relatively flat. The wide confidence band at extreme ages (very young and very old) reflects the sparsity of observations at those ages. Compare this with the linear probability model plot earlier: the logistic curve stays within the [0, 1] bounds by design.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-plot-predictions"
+#| eval: false
+```
+- `plot_predictions()` from `marginaleffects` is a one-line command for plotting model predictions
+- `condition = "age"` specifies the x-axis variable
+- `type = "response"` produces predictions on the probability scale
+- The function automatically computes and displays the 95% confidence band
+
+
+:::
+
+
+### Classification and Decision Thresholds {#sec-ch9-classification}
+
+Logistic regression predicts **probabilities**, not categories. To make a binary classification (e.g., predict "survived" or "died"), we must choose a **decision threshold**. A common default is 0.5, but this threshold is arbitrary and its choice has important consequences:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-classification-threshold
+#| fig-cap: "How the classification threshold affects sensitivity and specificity. As the threshold increases, fewer passengers are predicted to survive: sensitivity (correctly identifying survivors) decreases while specificity (correctly identifying non-survivors) increases. The dashed line marks the default threshold of 0.5."
+#| fig-alt: "Line plot with classification threshold on the x-axis ranging from 0.05 to 0.95 and metric value on the y-axis from 0 to 1. Two crossing lines are displayed: sensitivity decreases from near 1.0 at low thresholds to near 0 at high thresholds, while specificity increases from near 0 to near 1.0 over the same range. The lines cross near the middle of the threshold range. A vertical dashed line at threshold equals 0.5 marks the default classification cutoff, illustrating the inherent tradeoff between correctly identifying survivors and non-survivors."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Compute sensitivity and specificity across thresholds
+thresholds <- seq(0.05, 0.95, by = 0.01)
+
+# Use the age model for continuous predicted probabilities
+pred_probs <- predict(model2, type = "response")
+actual <- titanic_age$survived
+
+threshold_metrics <- tibble(threshold = thresholds) |>
+  mutate(
+    sensitivity = map_dbl(threshold, \(t) {
+      predicted <- as.integer(pred_probs >= t)
+      sum(predicted == 1 & actual == 1) / sum(actual == 1)
+    }),
+    specificity = map_dbl(threshold, \(t) {
+      predicted <- as.integer(pred_probs >= t)
+      sum(predicted == 0 & actual == 0) / sum(actual == 0)
+    })
+  ) |>
+  pivot_longer(cols = c(sensitivity, specificity),
+               names_to = "metric", values_to = "value")
+
+ggplot(threshold_metrics, aes(x = threshold, y = value,
+                              color = metric)) +
+  geom_line(linewidth = 1.2) +
+  geom_vline(xintercept = 0.5, linetype = "dashed", alpha = 0.5) +
+  scale_color_manual(
+    values = c("sensitivity" = ber640_colors["accent"],
+               "specificity" = ber640_colors["secondary"]),
+    labels = c("Sensitivity (True Positive Rate)",
+               "Specificity (True Negative Rate)"),
+    name = ""
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Sensitivity vs Specificity Across Thresholds",
+    subtitle = "Age model --- illustrating the trade-off in binary classification",
+    x = "Classification Threshold",
+    y = "Rate"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-classification-threshold"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+This plot illustrates a fundamental trade-off in classification:
+
+- **Lowering the threshold** catches more true survivors (higher sensitivity) but also falsely classifies more non-survivors as survivors (lower specificity)
+- **Raising the threshold** reduces false positives (higher specificity) but misses more actual survivors (lower sensitivity)
+- The optimal threshold depends on the **costs of different errors** in your specific application. In medical screening, missing a true case (false negative) may be more costly than a false alarm; in spam filtering, the reverse may be true.
+
+The age model has relatively weak discrimination, so the sensitivity and specificity curves are close together. A strong predictor like sex would show wider separation between the curves.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-classification-threshold"
+#| eval: false
+```
+- **Sensitivity** (true positive rate): proportion of actual survivors correctly classified as survivors
+- **Specificity** (true negative rate): proportion of actual non-survivors correctly classified as non-survivors
+- At a low threshold (e.g., 0.1), almost everyone is predicted to survive --- high sensitivity but low specificity
+- At a high threshold (e.g., 0.9), almost no one is predicted to survive --- low sensitivity but high specificity
+- The vertical dashed line marks the conventional threshold of 0.5
+
+
+:::
+
+::: {.callout-tip}
+## Classification Is Optional
+Logistic regression's primary purpose is to **estimate probabilities and quantify associations** (via odds ratios and marginal effects). Classification is an additional step that requires choosing a threshold, and the default of 0.5 is rarely optimal. In most applied research, reporting predicted probabilities is more informative than reporting classifications.
+:::
+
+
+## Marginal Effects {#sec-ch9-marginal}
+
+### Why Marginal Effects?
+
+Odds ratios tell us about **multiplicative** changes in odds, but many audiences --- especially in policy and practice --- prefer to know about changes in **probability**. The problem is that in logistic regression, the effect of $x$ on the probability $\pi$ depends on **where you are** on the curve. Near $\pi = 0.5$, a one-unit increase in $x$ has a relatively large effect on probability; near $\pi = 0$ or $\pi = 1$, the same increase has a much smaller effect.
+
+The **average marginal effect (AME)** solves this by computing the marginal effect at each observed value of $x$ and then averaging:
+
+$$
+\text{AME} = \frac{1}{n} \sum_{i=1}^{n} \frac{\partial \pi_i}{\partial x_i}
+$$
+
+### Computing Average Marginal Effects
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-ame-sex
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Average marginal effect of sex on survival probability
+avg_slopes(model1, type = "response")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-ame-sex"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The AME for `sex` tells us: on average, being female (rather than male) is associated with an increase of approximately 54 percentage points in the probability of survival. This is a straightforward, intuitive measure of the effect on the probability scale.
+
+Compare the three ways of expressing the sex effect:
+
+| Measure | Value | Interpretation |
+|:--------|:------|:---------------|
+| Log-odds difference | $b \approx 2.42$ | Females have 2.42 higher log-odds of survival |
+| Odds ratio | $e^b \approx 11.3$ | Odds of survival are 11.3 times higher for females |
+| AME (probability) | $\approx 0.54$ | Probability of survival is about 54 percentage points higher for females |
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-ame-sex"
+#| eval: false
+```
+- `avg_slopes()` from `marginaleffects` computes the average marginal effect
+- `type = "response"` specifies that the effect should be on the probability scale
+- For a dummy variable, the AME is the average difference in predicted probability between the two groups
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch9-ame-age
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Average marginal effect of age on survival probability
+avg_slopes(model2, type = "response")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch9-ame-age"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The AME for `age` tells us: on average, each additional year of age is associated with a decrease of approximately 1 percentage point in survival probability. This is much more intuitive than saying "the odds decrease by a factor of 0.993 per year."
+
+### Code Explanation
+```{r}
+#| ref.label: "ch9-ame-age"
+#| eval: false
+```
+- For the continuous predictor `age`, the AME represents the average change in survival probability per one-year increase in age
+- The AME is computed at each observed age and then averaged, accounting for the non-linear relationship between age and probability
+
+
+:::
+
+### Marginal Effects at Representative Values
+
+Sometimes we want to see how the marginal effect varies across the range of the predictor:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch9-marginal-age
+#| fig-cap: "Marginal effect of age on survival probability (the slope of the logistic curve) as a function of age. The effect is strongest near the middle of the probability range and weakens as age increases or decreases."
+#| fig-alt: "Line plot showing the marginal effect of age on survival probability on the y-axis versus age in years on the x-axis. A shaded 95 percent confidence ribbon surrounds the curve. The marginal effect is negative throughout, indicating that each additional year of age reduces survival probability. The magnitude of the effect is largest near the middle of the age range where predicted probabilities are closest to 0.5, and the effect attenuates toward both younger and older ages where probabilities approach the boundaries."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Marginal effects at specific ages
+slopes_by_age <- slopes(model2,
+                        newdata = datagrid(age = seq(1, 75, by = 1)),
+                        type = "response")
+
+ggplot(as_tibble(slopes_by_age), aes(x = age, y = estimate)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              fill = ber640_colors["accent"], alpha = 0.2) +
+  geom_line(color = ber640_colors["accent"], linewidth = 1.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5) +
+  labs(
+    title = "Marginal Effect of Age on P(Survived)",
+    subtitle = "How the instantaneous effect of age varies across the age range",
+    x = "Age (years)",
+    y = "Marginal Effect (change in probability per year)"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch9-marginal-age"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The marginal effect of age is negative throughout (each additional year decreases survival probability), but the magnitude varies:
+
+- The effect is strongest around the inflection point of the logistic curve
+- At extreme ages (very young or very old), the effect is weaker because the probability is already near its asymptote
+- This is a direct consequence of the S-shape of the logistic curve: changes in $x$ have the most impact when $\pi$ is near 0.5
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch9-marginal-age"
+#| eval: false
+```
+- `slopes()` computes the marginal effect at each specified value of `age`
+- The marginal effect is the instantaneous slope of the logistic curve (the derivative $\partial \pi / \partial x$) at each point
+- This plot shows how the sensitivity of survival probability to age varies across the age range
+
+
+:::
+
+
+## Comparing the Sex and Age Models {#sec-ch9-comparison}
+
+Let us put both models side by side to reinforce the key concepts:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: tbl-ch9-comparison
+#| tbl-cap: "Comparison of two simple logistic regression models predicting Titanic survival. Model 1 uses sex (binary predictor); Model 2 uses age (continuous predictor)."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Create a comparison table
+tbl1 <- tbl_regression(model1, exponentiate = TRUE) |>
+  bold_labels() |> bold_p(t = 0.05)
+
+tbl2 <- tbl_regression(model2, exponentiate = TRUE) |>
+  bold_labels() |> bold_p(t = 0.05)
+
+tbl_merge(
+  tbls = list(tbl1, tbl2),
+  tab_spanner = c("**Model 1: Sex**", "**Model 2: Age**")
+)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "tbl-ch9-comparison"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The comparison shows:
+
+- **Sex** is a very strong predictor with a large odds ratio and highly significant $p$-value
+- **Age** has a much smaller effect, with an odds ratio close to 1 (meaning each year of age makes only a small difference to the odds of survival)
+- Both models use the same estimation method (MLE) and the same link function (logit)
+
+### Code Explanation
+```{r}
+#| ref.label: "tbl-ch9-comparison"
+#| eval: false
+```
+- `tbl_regression(exponentiate = TRUE)` creates a publication-quality regression table with odds ratios
+- `tbl_merge()` places both models side by side for easy comparison
+- The table shows odds ratios, 95% confidence intervals, and $p$-values
+
+
+:::
+
+
+## Summary and Key Takeaways {#sec-ch9-summary}
+
+This chapter marked a fundamental transition from continuous outcomes (Chapters 1--8) to binary outcomes. Logistic regression shares the linear structure of all the models we have studied, but it operates on a different scale and requires a different estimation method. The key ideas are:
+
+::: {.callout-important}
+## Key Takeaways
+
+1. **Binary outcomes require special treatment.** The linear probability model can produce impossible predictions (probabilities outside [0, 1]) and violates key OLS assumptions. The logistic function solves this by mapping any real number to a valid probability.
+
+2. **Three scales, one model.** The logistic regression model can be expressed equivalently on the probability, odds, or log-odds (logit) scale. The logit scale is where the model is linear: $\text{logit}(\pi_i) = \alpha + \beta x_i$.
+
+3. **Estimation uses maximum likelihood**, not OLS. MLE finds the parameters that make the observed data most probable. In large samples, it produces $z$-tests rather than $t$-tests, but the logic of hypothesis testing is the same.
+
+4. **Coefficients are on the log-odds scale** by default. For a dummy predictor, $\beta$ is the difference in log-odds between groups. For a continuous predictor, $\beta$ is the change in log-odds per one-unit increase.
+
+5. **Exponentiated coefficients are odds ratios.** $e^{\beta}$ gives the multiplicative change in odds for a one-unit increase in $x$. For a dummy predictor, $e^{\beta}$ is the ratio of odds between the two groups.
+
+6. **Odds ratios are NOT probability ratios.** The OR equals the relative risk only when the outcome is rare ($\pi < 0.10$ in both groups). For common outcomes, the OR overstates the relative risk. Always be precise about which measure you are reporting.
+
+7. **Marginal effects translate to the probability scale.** The `avg_slopes()` function from `marginaleffects` computes the average change in probability for a one-unit change in $x$, which is often the most intuitive summary of the effect.
+
+8. **The logistic model is a generalized linear model (GLM).** It uses the same linear predictor $\alpha + \beta x$ as OLS regression but applies a logit **link function** to connect it to the binary outcome. This framework extends naturally to multiple predictors (@sec-ch10), model diagnostics (@sec-ch11), and other outcome types (@sec-ch12, @sec-ch13).
+:::
+
+
+## Exercises {#sec-ch9-exercises}
+
+::: {.callout-caution collapse="true"}
+## Exercise 9.1: Disciplinary Referrals by Sex
+Using the `disc` dataset from the `regdatasets` package, fit a logistic regression model predicting `sentoff` (whether a student was sent to the office: 1 = yes, 0 = no) from `male` (1 = male, 0 = female).
+
+a. Compute the proportion of students sent to the office separately for males and females.
+b. Fit the logistic regression model using `glm()` and verify that the intercept equals the log-odds of the event for females (the reference group).
+c. Compute and interpret the odds ratio for `male`. Are males more or less likely to be sent to the office?
+d. Compute the average marginal effect of `male` on the probability of being sent to the office.
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 9.1
+- `data(disc)` loads the dataset. Use `glm(sentoff ~ male, family = binomial, data = disc)`.
+- For part (a): `disc |> group_by(male) |> summarise(prop = mean(sentoff))`
+- For part (b): The intercept should equal `log(prop_female / (1 - prop_female))`
+- For part (c): Use `model_parameters(model, exponentiate = TRUE)`
+- For part (d): Use `avg_slopes(model, type = "response")`
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 9.2: Titanic Survival by Ticket Class
+Using the `titanic` dataset, create a binary variable `first_class` (1 if `pclass == 1`, 0 otherwise) and fit a logistic regression predicting `survived` from `first_class`.
+
+a. What is the odds ratio for first-class passengers compared to other passengers?
+b. What is the predicted probability of survival for first-class vs non-first-class passengers?
+c. Is the odds ratio a good approximation of the probability ratio in this case? Why or why not?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 9.2
+- `mutate(first_class = ifelse(pclass == 1, 1, 0))` creates the dummy variable
+- For part (b): Use `predictions(model, newdata = datagrid(first_class = c(0, 1)), type = "response")`
+- For part (c): Compute both the OR and the probability ratio ($P_1 / P_0$). The survival rate is far from rare (38% overall), so the OR will **overstate** the probability ratio. Refer to @sec-ch9-odds-ratios for the rare disease assumption.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 9.3: Continuous Predictor --- Fare
+Fit a logistic regression predicting Titanic survival from `fare` (ticket price in British pounds).
+
+a. Interpret the odds ratio for `fare`. What does a one-pound increase in fare do to the odds of survival?
+b. What about a 10-pound increase? (Hint: use $e^{10\beta}$.)
+c. Plot the predicted probability of survival as a function of fare using `plot_predictions()`.
+d. Compute the average marginal effect. On average, how much does each additional pound of fare change the survival probability?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 9.3
+- The fare variable has a wide range. Consider whether the one-unit odds ratio is practically meaningful, or whether a larger unit (e.g., 10 pounds) gives a more useful interpretation.
+- For part (b): `exp(10 * coef(model)["fare"])`
+- For part (c): `plot_predictions(model, condition = "fare", type = "response")`
+- For part (d): `avg_slopes(model, type = "response")`. The AME gives the average change in probability per one-pound increase. Multiply by 10 for a per-10-pound interpretation.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 9.4: Probability, Odds, and Log-Odds Conversions
+A study reports that 30% of students in a program dropped out before completion.
+
+a. Convert this probability to odds and log-odds.
+b. If the odds ratio for male students vs female students is 1.8, what are the odds of dropping out for males? (Assume the 30% is for females.)
+c. Convert the male odds back to a probability. Is the probability ratio equal to 1.8?
+d. Under what conditions would the odds ratio closely approximate the probability ratio?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 9.4
+- For part (a): Odds $= 0.30 / 0.70$, log-odds $= \log(0.30/0.70)$. In R: `qlogis(0.30)`
+- For part (b): Male odds $= \text{female odds} \times \text{OR} = (0.30/0.70) \times 1.8$
+- For part (c): Convert using $\pi = \text{odds}/(1 + \text{odds})$. In R: `plogis(log(male_odds))`. Compare the probability ratio $\pi_{\text{male}} / \pi_{\text{female}}$ to the OR of 1.8.
+- For part (d): The OR approximates the probability ratio when $\pi < 0.10$ in both groups (the rare event assumption). Here the baseline is 30%, so the approximation is poor.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 9.5: Visualizing LPM vs Logistic Regression
+Using the `titanic` dataset, create a side-by-side plot comparing the linear probability model and logistic regression for predicting `survived` from `fare`.
+
+a. Fit both models: `lm(survived ~ fare)` and `glm(survived ~ fare, family = binomial)`.
+b. Create a plot with two panels: one showing the LPM line and one showing the logistic curve, both overlaid on the jittered data points.
+c. At what fare values does the LPM produce impossible predictions (below 0 or above 1)?
+d. In a short paragraph, explain why the logistic model is preferred even though the LPM line might "look fine" over most of the fare range.
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 9.5
+- Use `patchwork` to combine two ggplot panels
+- For the LPM panel: `geom_smooth(method = "lm", formula = y ~ x)`
+- For the logistic panel: `geom_smooth(method = "glm", formula = y ~ x, method.args = list(family = binomial))`
+- For part (c): Use `predict(lpm_model)` and check `range()`. Also try `predict(lpm_model, newdata = tibble(fare = c(0, 300, 500)))`.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 9.6: Interpreting a Published Odds Ratio
+A published study reports: "Students who participated in tutoring had 2.5 times higher odds of passing the exam (OR = 2.50, 95% CI: 1.40--4.46, p = 0.002). The overall pass rate was 65%."
+
+a. Is it correct to say "students who participated in tutoring were 2.5 times more likely to pass"? Why or why not?
+b. If the pass rate for non-tutored students was 55%, use the OR of 2.5 to compute the odds and probability of passing for tutored students.
+c. What is the actual probability ratio? How does it compare to 2.5?
+d. If the overall pass rate had been 5% instead of 65%, would the OR be a better approximation of the probability ratio? Demonstrate with a calculation.
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 9.6
+- For part (a): "2.5 times more likely" implies a probability ratio of 2.5, but the OR is 2.5. These are only approximately equal when the event is rare.
+- For part (b): Odds for non-tutored $= 0.55/0.45$. Odds for tutored $= (0.55/0.45) \times 2.5$. Convert back: $\pi = \text{odds}/(1+\text{odds})$.
+- For part (d): Try $\pi_0 = 0.03$ (so overall $\approx 5\%$). Compute tutored probability using the same OR of 2.5 and compare OR to the probability ratio.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 9.7: Why Not Use a Linear Probability Model?
+Suppose you fit a linear probability model (LPM) predicting college admission (1 = admitted, 0 = rejected) from SAT score. The estimated equation is $\hat{P}(\text{admitted}) = -0.60 + 0.0012 \times \text{SAT}$.
+
+a. For a student with SAT = 1400, what is the predicted probability of admission? What about SAT = 1550? Are both predictions sensible?
+b. At what SAT score does the LPM predict a probability greater than 1? Why is this a fundamental problem rather than merely an inconvenience?
+c. The logistic model constrains predicted probabilities to (0, 1) by design. Explain conceptually why the S-shaped logistic curve is a more natural model for a binary outcome than a straight line.
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 9.7
+For part (a), plug in the values: $-0.60 + 0.0012 \times 1400$, etc. For part (b), set $-0.60 + 0.0012 \times \text{SAT} = 1$ and solve. The deeper issue is that probabilities are bounded but linear functions are not. For part (c), think about how the rate of change in probability should slow down as you approach 0 or 1---a phenomenon called the "ceiling/floor effect."
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 9.8: When Does the Odds Ratio Approximate the Risk Ratio?
+Consider two scenarios: (A) a disease with baseline prevalence of 2%, where exposure doubles the odds, and (B) a condition with baseline prevalence of 40%, where exposure also doubles the odds.
+
+a. For each scenario, compute the probability of the outcome for the exposed group using the given odds ratio of 2.
+b. Compute the probability ratio (risk ratio) for each scenario. In which scenario is the OR a good approximation of the risk ratio?
+c. Explain in your own words why the "rare disease assumption" matters when interpreting odds ratios as though they were risk ratios. What threshold of baseline prevalence would you use as a rough guideline?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 9.8
+For scenario A: baseline odds $= 0.02/0.98$. Multiply by 2 to get exposed odds, then convert back to probability. For scenario B: baseline odds $= 0.40/0.60$. The OR approximates the RR well when the outcome is rare (typically below 10%) because $\text{odds} = \pi/(1-\pi) \approx \pi$ when $\pi$ is small.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 9.9: Interpreting the Intercept in Logistic Regression
+A logistic regression predicting whether a customer will churn (1 = yes) from monthly bill amount yields $\hat{\beta}_0 = -2.3$ and $\hat{\beta}_1 = 0.015$.
+
+a. What is the predicted probability of churn for a customer with a bill of \$0? Is this interpretation practically meaningful?
+b. The intercept on the log-odds scale is $-2.3$. Convert this to an odds and then to a probability. What does this baseline probability represent?
+c. Compare this to interpreting the intercept in ordinary linear regression. Why is the intercept in logistic regression often less directly interpretable, and when might centering the predictor help?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 9.9
+For part (a), plug $x = 0$ into the logistic function: $\hat{\pi} = e^{-2.3}/(1 + e^{-2.3})$. A monthly bill of \$0 is usually outside the range of observed data, so extrapolation is a concern. For part (c), if you center the predictor at its mean (e.g., \$80), the intercept becomes the log-odds of churn for an "average" customer, which is far more interpretable.
+:::

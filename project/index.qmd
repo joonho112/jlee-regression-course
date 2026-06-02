@@ -1,0 +1,65 @@
+# Preface {.unnumbered}
+
+{{< include _common.qmd >}}
+
+Welcome to the **BER 640 Final Project Guide**. This book walks you through every step of the two final projects required in BER 640: Advanced Statistical Methods in Education --- from choosing a dataset and writing a proposal to running the analysis and interpreting results.
+
+## About This Guide {.unnumbered}
+
+The BER 640 final assessment consists of two independent projects:
+
+1. **Project 1: Linear Regression** --- You will apply multiple linear regression to a continuous outcome variable, building and interpreting a model using techniques learned in the first half of the course.
+
+2. **Project 2: Logistic Regression** --- You will apply logistic regression to a binary outcome variable, reporting odds ratios and predicted probabilities using techniques from the second half of the course.
+
+**Part I** of this guide explains what is expected for each project --- the required sections, grading criteria, and formatting guidelines. **Parts II and III** provide a complete worked example for each project using the PIAAC Korea dataset (included in the `data/` folder).
+
+Think of this guide as your advisor walking you through each step. Every table, figure, and interpretation you see in the worked examples is something you can adapt for your own project.
+
+## The Worked Example: PIAAC Korea Data {.unnumbered}
+
+Both worked examples use data from the Programme for the International Assessment of Adult Competencies [PIAAC; @oecd2013piaac], focusing on a sample of Korean adults. The dataset includes variables on education, work experience, numeracy proficiency, employment status, and monthly earnings --- providing a rich context for both linear and logistic regression applications.
+
+The dataset file `piaac_kor.rds` is provided in the `data/` folder of this project.
+
+## Related Resources {.unnumbered}
+
+This guide is part of a suite of materials for BER 640:
+
+- **Lecture Notes** --- Conceptual foundations and mathematical details for each topic.
+- **R Lab Manual** --- Step-by-step R tutorials aligned with each lecture.
+- **Homework Solutions** --- Worked solutions for all homework assignments.
+
+## Software Setup {.unnumbered}
+
+This guide uses the same R environment as the other BER 640 materials. You will need:
+
+- **R** (version 4.3 or later): <https://cran.r-project.org/>
+- **RStudio** (version 2023.06 or later): <https://posit.co/download/rstudio-desktop/>
+
+Install the required packages by running:
+
+```{r}
+#| eval: false
+#| code-fold: false
+install.packages("pacman")
+pacman::p_load(
+  dplyr, tidyr, forcats, stringr, purrr,
+  ggplot2, patchwork, GGally, ggrepel,
+  broom, car, lmtest, sandwich,
+  parameters, performance, effectsize,
+  see, modelbased, correlation, report,
+  datawizard, insight,
+  marginaleffects,
+  regdatasets,
+  gtsummary, gt, knitr, here
+)
+```
+
+## Citation {.unnumbered}
+
+Lee, J. (2026). *BER 640 Final Project Guide: A Step-by-Step Guide with Complete R Examples*. University of Alabama.
+
+## Acknowledgments {.unnumbered}
+
+This guide was developed for BER 640: Advanced Statistical Methods in Education in the Department of Educational Research at the University of Alabama. The PIAAC data used in the worked examples are publicly available from the OECD.

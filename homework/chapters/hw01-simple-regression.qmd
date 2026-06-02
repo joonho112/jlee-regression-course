@@ -1,0 +1,477 @@
+---
+title: "Homework 1: Simple Linear Regression Fundamentals"
+---
+
+{{< include ../_common.qmd >}}
+
+## Overview
+
+::: {.callout-note}
+## Learning Objectives
+- Distinguish between response (dependent) and explanatory (independent) variables
+- Understand the relationship between slope, intercept, and the regression line
+- Interpret prediction equations and compute predicted values
+- **Related:** Chapter 1: *Simple Linear Regression* (in Lecture Notes)
+:::
+
+
+## Problem 1
+
+### Problem Statement
+
+> For each of the following pairs of variables, specify which is the response variable and which is the explanatory variable.
+>
+> (a) College GPA and High School GPA
+> (b) Number of children and mother's education level
+> (c) Annual income and number of years of education
+> (d) Annual income and assessed value of home
+
+*Adapted from @agresti2018, Chapter 9.*
+
+### Solution
+
+The key question for identifying roles is: **"Which variable do we want to predict or explain, and which variable do we use to make that prediction?"** The response variable ($y$) is the outcome we want to predict; the explanatory variable ($x$) is the predictor we use.
+
+| Pair | Response Variable ($y$) | Explanatory Variable ($x$) |
+|:----:|:------------------------|:---------------------------|
+| (a)  | College GPA             | High School GPA            |
+| (b)  | Number of children      | Mother's education level   |
+| (c)  | Annual Income           | Number of years of education |
+| (d)  | Assessed value of home  | Annual income              |
+
+: Variable identification for each pair {.striped .hover}
+
+**Explanation for each pair:**
+
+**(a) College GPA and High School GPA.**
+We want to predict how well a student will perform in college based on their high school record. High school GPA is known before college enrollment, so it naturally serves as the explanatory variable, while college GPA is the outcome we wish to forecast.
+
+**(b) Number of children and mother's education level.**
+Research in demography often examines how a mother's educational attainment influences family size. Education level is the background characteristic (explanatory), while the number of children is the outcome that may vary as a function of education.
+
+**(c) Annual income and number of years of education.**
+A central question in labor economics is whether additional years of schooling lead to higher earnings. Years of education is the explanatory variable, and annual income is the response we seek to predict.
+
+**(d) Annual income and assessed value of home.**
+Income determines purchasing power and thus influences what kind of home a person can afford. Annual income serves as the explanatory variable, and the assessed value of the home is the response.
+
+::: {.callout-tip}
+## Key Takeaway: Identifying Response vs. Explanatory Variables
+Ask yourself two questions:
+
+1. **Which variable do I want to predict or explain?** --- That is the **response** variable ($y$).
+2. **Which variable do I use as the predictor?** --- That is the **explanatory** variable ($x$).
+
+Often the explanatory variable is determined *before* or *independently of* the response variable. Temporal or logical ordering ("which comes first?") is a useful heuristic, but the research question ultimately determines which variable plays which role.
+:::
+
+
+## Problem 2
+
+### Problem Statement
+
+> For $x$ between 0 and 10, sketch the following lines:
+>
+> (a) $y = 7 + 0.5x$
+> (b) $y = 7 + x$
+> (c) $y = 7 - x$
+> (d) $y = 7 - 0.5x$
+> (e) $y = 7$
+> (f) $y = x$
+
+### Solution
+
+::: {.panel-tabset}
+
+#### Simple Version
+
+```{r}
+#| label: fig-hw1-six-lines-simple
+#| fig-cap: "Six regression lines for x in [0, 10]. Lines (a)-(e) share the y-intercept of 7, while line (f) passes through the origin."
+#| fig-alt: "Six straight lines plotted for x from 0 to 10. Five lines share y-intercept 7 with slopes ranging from -1 to +1. Line f passes through the origin with slope 1. Positive slopes rise left to right, negative slopes fall, and zero slope is horizontal."
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot() +
+  geom_abline(intercept = 7, slope = 0.5, color = "blue") +
+  geom_abline(intercept = 7, slope = 1, color = "red", linetype = "dashed") +
+  geom_abline(intercept = 7, slope = -1, color = "darkgreen", linetype = "dotted") +
+  geom_abline(intercept = 7, slope = -0.5, color = "orange", linetype = "longdash") +
+  geom_abline(intercept = 7, slope = 0, color = "purple", linetype = "dotdash") +
+  geom_abline(intercept = 0, slope = 1, color = "brown", linetype = "twodash") +
+  coord_cartesian(xlim = c(0, 10), ylim = c(-3, 17)) +
+  labs(x = "x", y = "y", title = "Six Linear Equations")
+```
+
+#### Detailed Version
+
+```{r}
+#| label: fig-hw1-six-lines
+#| fig-cap: "Six regression lines for x in [0, 10]. Lines (a)-(e) share the y-intercept of 7, while line (f) passes through the origin."
+#| fig-alt: "Six straight lines plotted for x from 0 to 10. Five lines share y-intercept 7 with slopes ranging from -1 to +1. Line f passes through the origin with slope 1. Positive slopes rise left to right, negative slopes fall, and zero slope is horizontal."
+#| fig-width: 8
+#| fig-height: 5
+#| code-fold: true
+
+# Define line equations and labels
+line_data <- tibble(
+
+  label = c(
+    "(a) y = 7 + 0.5x",
+    "(b) y = 7 + x",
+    "(c) y = 7 - x",
+    "(d) y = 7 - 0.5x",
+    "(e) y = 7",
+    "(f) y = x"
+  ),
+  intercept = c(7, 7, 7, 7, 7, 0),
+  slope     = c(0.5, 1, -1, -0.5, 0, 1)
+)
+
+# Define colors for the six lines using ber640_colors + extras
+line_colors <- c(
+  "(a) y = 7 + 0.5x" = ber640_colors["primary"],
+  "(b) y = 7 + x"     = ber640_colors["secondary"],
+  "(c) y = 7 - x"     = ber640_colors["accent"],
+  "(d) y = 7 - 0.5x"  = ber640_colors["success"],
+  "(e) y = 7"          = ber640_colors["warning"],
+  "(f) y = x"          = ber640_colors["info"]
+)
+
+# Define linetypes for visual distinction
+line_types <- c(
+  "(a) y = 7 + 0.5x" = "solid",
+  "(b) y = 7 + x"     = "dashed",
+  "(c) y = 7 - x"     = "dotdash",
+  "(d) y = 7 - 0.5x"  = "longdash",
+  "(e) y = 7"          = "dotted",
+  "(f) y = x"          = "twodash"
+)
+
+# Build the plot
+ggplot() +
+  # Add each line using geom_abline
+  geom_abline(
+    data = line_data,
+    aes(intercept = intercept, slope = slope,
+        color = label, linetype = label),
+    linewidth = 1
+  ) +
+  # Set axis limits
+
+  coord_cartesian(xlim = c(0, 10), ylim = c(-3, 18)) +
+  # Apply custom aesthetics
+
+  scale_color_manual(values = line_colors) +
+  scale_linetype_manual(values = line_types) +
+  # Labels
+
+  labs(
+    x = "x",
+    y = "y",
+    color = "Equation",
+    linetype = "Equation",
+    title = "Six Linear Equations",
+    subtitle = "Illustrating how intercept and slope determine the line"
+  ) +
+  # Reference line at y = 7
+
+  geom_hline(yintercept = 7, color = "grey70", linewidth = 0.3) +
+  annotate("text", x = 10.2, y = 7, label = "y = 7",
+           color = "grey50", size = 3, hjust = 0)
+```
+
+:::
+
+**Interpretation:**
+
+All six lines are plotted on a single graph for comparison. Several patterns emerge:
+
+- **Lines (a) through (e)** all pass through the point $(0, 7)$, since they share the same $y$-intercept of 7. They differ only in slope.
+- **Line (f)** is the only line that passes through the **origin** $(0, 0)$, with a $y$-intercept of 0 and slope of 1.
+
+Comparing slopes:
+
+| Line | Slope ($b_1$) | Direction | Steepness |
+|:----:|:-------------:|:---------:|:---------:|
+| (a)  | $+0.5$        | Positive  | Moderate  |
+| (b)  | $+1.0$        | Positive  | Steep     |
+| (c)  | $-1.0$        | Negative  | Steep     |
+| (d)  | $-0.5$        | Negative  | Moderate  |
+| (e)  | $0$           | Flat      | None      |
+| (f)  | $+1.0$        | Positive  | Steep     |
+
+: Slope comparison across six lines {.striped .hover}
+
+- **Positive slope** ($b_1 > 0$): the line rises from left to right. A larger positive slope means a steeper upward trajectory --- compare line (b) with slope 1 to line (a) with slope 0.5.
+- **Negative slope** ($b_1 < 0$): the line falls from left to right. A larger absolute value means a steeper downward trajectory --- compare line (c) with slope $-1$ to line (d) with slope $-0.5$.
+- **Zero slope** ($b_1 = 0$): the line is perfectly horizontal, as in line (e). The predicted value of $y$ does not change regardless of $x$.
+
+::: {.callout-tip}
+## Key Takeaway: Reading Slopes Visually
+- **Positive slope** --- line goes **up** as $x$ increases (tilts to the upper right).
+- **Negative slope** --- line goes **down** as $x$ increases (tilts to the lower right).
+- **Zero slope** --- line is **flat** (horizontal); $y$ does not depend on $x$.
+- The **magnitude** (absolute value) of the slope controls **steepness**: $|b_1| = 1$ is steeper than $|b_1| = 0.5$.
+:::
+
+::: {.callout-tip}
+## Key Takeaway
+The slope of a line determines both its **direction** (positive slopes rise, negative slopes fall) and its **steepness** (larger absolute slopes produce steeper lines). A slope of zero produces a horizontal line, meaning $y$ does not change as $x$ changes. Comparing multiple lines on the same axes makes these relationships immediately visible.
+:::
+
+
+## Problem 3
+
+### Problem Statement
+
+> A college admissions officer claims that for students at that college the prediction equation $\hat{y}_i = 0.5 + 7x_i$ approximates the relationship between college GPA ($y$) and high school GPA ($x$), both ranging from 0 to 4.
+>
+> (a) Is this equation realistic? Why or why not?
+> (b) Suppose the prediction equation is actually $\hat{y}_i = 0.5 + 0.7x_i$. Interpret the slope.
+> (c) Using the prediction equation in (b), find the predicted GPA for a student having a high school GPA of (i) 3.0 and (ii) 4.0.
+> (d) Suppose the prediction equation is $\hat{y}_i = x_i$. Identify the intercept and slope and interpret their values.
+
+### Part (a): Is $\hat{y} = 0.5 + 7x$ realistic?
+
+::: {.callout-warning}
+## Unrealistic Predictions
+A prediction equation is **not realistic** if it produces predicted values outside the possible range of the response variable. Always check whether the equation yields sensible predictions across the range of plausible $x$ values.
+:::
+
+**No**, this equation is not realistic because it produces predicted values that exceed the maximum possible GPA of 4.0.
+
+For example, if a student has a high school GPA of $x = 1.0$:
+
+$$
+\hat{y} = 0.5 + 7(1.0) = 7.5
+$$
+
+A predicted college GPA of 7.5 is impossible on a 0–4 scale. In fact, for *any* high school GPA above approximately 0.5, the predicted college GPA exceeds 4.0.
+
+::: {.panel-tabset}
+
+#### Simple Version
+
+```{r}
+#| label: hw01-q3a-unrealistic-simple
+#| fig-cap: "The equation ŷ = 0.5 + 7x quickly exceeds the valid GPA range."
+#| fig-alt: "A steep red line representing y-hat equals 0.5 plus 7x rises sharply from the origin area, crossing y equals 4 almost immediately. A dashed horizontal line at y equals 4 marks the maximum valid GPA, showing the prediction is unrealistic."
+#| fig-width: 7
+#| fig-height: 5
+
+ggplot() +
+  geom_abline(intercept = 0.5, slope = 7, color = "red") +
+  geom_hline(yintercept = 4, linetype = "dashed") +
+  coord_cartesian(xlim = c(0, 4), ylim = c(0, 30)) +
+  labs(x = "High School GPA", y = "Predicted College GPA",
+       title = "Unrealistic: y-hat = 0.5 + 7x")
+```
+
+#### Detailed Version
+
+```{r}
+#| label: hw01-q3a-unrealistic
+#| code-fold: true
+#| code-summary: "Show R Code"
+#| fig-cap: "The equation ŷ = 0.5 + 7x quickly exceeds the valid GPA range (shaded region)."
+#| fig-alt: "A steep red line representing y-hat equals 0.5 plus 7x rises sharply from the origin area, crossing y equals 4 almost immediately. A dashed horizontal line at y equals 4 marks the maximum valid GPA, showing the prediction is unrealistic."
+#| fig-width: 7
+#| fig-height: 5
+
+# Data for the unrealistic line
+df_line <- data.frame(x = seq(0, 4, length.out = 200))
+df_line$y_unrealistic <- 0.5 + 7 * df_line$x
+
+ggplot(df_line, aes(x = x)) +
+  # Shade the valid GPA region
+  annotate("rect",
+           xmin = 0, xmax = 4, ymin = 0, ymax = 4,
+           fill = ber640_colors["success"], alpha = 0.15) +
+  annotate("text",
+           x = 3.5, y = 3.7,
+           label = "Valid GPA range\n(0 to 4)",
+           color = ber640_colors["success"], size = 3.5, fontface = "italic") +
+  # Unrealistic prediction line
+  geom_line(aes(y = y_unrealistic),
+            color = ber640_colors["secondary"], linewidth = 1.2) +
+  # Horizontal reference line at y = 4
+  geom_hline(yintercept = 4, linetype = "dashed",
+             color = ber640_colors["primary"], linewidth = 0.6) +
+  # Mark the example point x=1, y=7.5
+  geom_point(data = data.frame(x = 1, y = 7.5),
+             aes(x = x, y = y),
+             color = ber640_colors["secondary"], size = 3) +
+  annotate("text",
+           x = 1.3, y = 7.5,
+           label = "x = 1.0 \u2192 \u0177 = 7.5",
+           color = ber640_colors["secondary"], hjust = 0, size = 3.5) +
+  scale_x_continuous(breaks = 0:4, limits = c(0, 4)) +
+  scale_y_continuous(breaks = seq(0, 28, by = 4), limits = c(0, 28)) +
+  labs(
+    x = "High School GPA (x)",
+    y = "Predicted College GPA (\u0177)",
+    title = "Unrealistic equation: \u0177 = 0.5 + 7x"
+  )
+```
+
+:::
+
+
+### Part (b): Interpret the slope of $\hat{y} = 0.5 + 0.7x$
+
+::: {.callout-important}
+## General Interpretation Pattern
+For every one unit increase in $x$, the predicted $y$ changes by $\beta_1$ units.
+
+Always include: (1) the direction of change, (2) the amount of change, and (3) the units of both variables.
+:::
+
+In this equation, the slope is $b_1 = 0.7$. The interpretation:
+
+> With every one point increase in high school GPA, students' predicted college GPA would increase by 0.7 points.
+
+
+### Part (c): Find the predicted college GPA
+
+Using $\hat{y} = 0.5 + 0.7x$:
+
+**(i)** For a student with high school GPA of $x = 3.0$:
+
+$$
+\hat{y} = 0.5 + 0.7 \times 3.0 = 0.5 + 2.1 = 2.6
+$$
+
+**(ii)** For a student with high school GPA of $x = 4.0$:
+
+$$
+\hat{y} = 0.5 + 0.7 \times 4.0 = 0.5 + 2.8 = 3.3
+$$
+
+
+### Part (d): Interpret $\hat{y} = x$
+
+This equation has intercept $b_0 = 0$ and slope $b_1 = 1$:
+
+- **Intercept** ($b_0 = 0$): A student with a high school GPA of 0 has a predicted college GPA of 0.
+- **Slope** ($b_1 = 1$): With every one point increase in high school GPA, predicted college GPA increases by 1 point.
+
+In other words, this equation predicts that college GPA equals high school GPA exactly.
+
+
+### Comparing the Realistic Equations
+
+::: {.panel-tabset}
+
+#### Simple Version
+
+```{r}
+#| label: hw01-q3bd-comparison-simple
+#| fig-cap: "Comparison of two realistic prediction equations within the valid GPA range."
+#| fig-alt: "Two lines in the GPA range 0 to 4. A solid blue line for y-hat equals 0.5 plus 0.7x starts at 0.5 and reaches 3.3 at x equals 4. A dashed line for y-hat equals x is steeper, starting at 0 and reaching 4 at x equals 4. Both stay within the valid GPA range."
+#| fig-width: 7
+#| fig-height: 5.5
+
+ggplot() +
+  geom_abline(intercept = 0.5, slope = 0.7, color = "blue") +
+  geom_abline(intercept = 0, slope = 1, color = "darkred", linetype = "dashed") +
+  coord_cartesian(xlim = c(0, 4), ylim = c(0, 4.5)) +
+  labs(x = "High School GPA", y = "Predicted College GPA",
+       title = "Two Prediction Equations")
+```
+
+#### Detailed Version
+
+```{r}
+#| label: hw01-q3bd-comparison
+#| code-fold: true
+#| code-summary: "Show R Code"
+#| fig-cap: "Comparison of two realistic prediction equations within the valid GPA range."
+#| fig-alt: "Two lines in the GPA range 0 to 4. A solid blue line for y-hat equals 0.5 plus 0.7x starts at 0.5 and reaches 3.3 at x equals 4. A dashed line for y-hat equals x is steeper, starting at 0 and reaching 4 at x equals 4. Both stay within the valid GPA range."
+#| fig-width: 7
+#| fig-height: 5.5
+
+df_compare <- data.frame(x = seq(0, 4, length.out = 200))
+df_compare$y_eq1 <- 0.5 + 0.7 * df_compare$x
+df_compare$y_eq2 <- df_compare$x
+
+# Predicted values to annotate
+pts <- data.frame(
+  x    = c(3.0, 4.0, 3.0, 4.0),
+  y    = c(2.6, 3.3, 3.0, 4.0),
+  eq   = c("eq1", "eq1", "eq2", "eq2")
+)
+
+ggplot(df_compare, aes(x = x)) +
+  # Valid GPA region
+  annotate("rect",
+           xmin = 0, xmax = 4, ymin = 0, ymax = 4,
+           fill = ber640_colors["success"], alpha = 0.10) +
+  # Equation 1: y = 0.5 + 0.7x
+  geom_line(aes(y = y_eq1, color = "y-hat = 0.5 + 0.7x"),
+            linewidth = 1.1) +
+  # Equation 2: y = x
+  geom_line(aes(y = y_eq2, color = "y-hat = x"),
+            linewidth = 1.1, linetype = "dashed") +
+  # Annotate predicted values for eq1
+  geom_point(data = pts[1:2, ], aes(x = x, y = y),
+             color = ber640_colors["accent"], size = 3) +
+  annotate("text", x = 3.0, y = 2.35,
+           label = "(3.0, 2.6)", color = ber640_colors["accent"], size = 3.2) +
+  annotate("text", x = 3.65, y = 3.5,
+           label = "(4.0, 3.3)", color = ber640_colors["accent"], size = 3.2) +
+  # Annotate predicted values for eq2
+  geom_point(data = pts[3:4, ], aes(x = x, y = y),
+             color = ber640_colors["primary"], size = 3, shape = 17) +
+  annotate("text", x = 2.55, y = 3.15,
+           label = "(3.0, 3.0)", color = ber640_colors["primary"], size = 3.2) +
+  annotate("text", x = 3.55, y = 4.2,
+           label = "(4.0, 4.0)", color = ber640_colors["primary"], size = 3.2) +
+  scale_color_manual(
+    name = "Equation",
+    values = c("y-hat = 0.5 + 0.7x" = unname(ber640_colors["accent"]),
+               "y-hat = x"           = unname(ber640_colors["primary"]))
+  ) +
+  scale_x_continuous(breaks = 0:4, limits = c(0, 4.2)) +
+  scale_y_continuous(breaks = 0:5, limits = c(0, 4.5)) +
+  labs(
+    x = "High School GPA (x)",
+    y = "Predicted College GPA",
+    title = "Two realistic prediction equations"
+  )
+```
+
+:::
+
+::: {.callout-tip}
+## Key Takeaway: Interpreting Slopes and Intercepts
+When interpreting a prediction equation $\hat{y} = b_0 + b_1 x$:
+
+- The **intercept** ($b_0$) is the predicted value of $y$ when $x = 0$. It may or may not have a meaningful interpretation depending on the context.
+- The **slope** ($b_1$) tells you how much $\hat{y}$ changes for every one-unit increase in $x$. This is the most important quantity to interpret.
+- Always check whether the equation produces **realistic predictions** across the range of plausible $x$ values.
+:::
+
+
+::: {.callout-caution}
+## Common Mistake: Confusing a Proposed Line with an Estimated Line
+In Problem 3, the equations are *proposed* prediction equations — they are not estimated from data. Beginning students often blur the distinction between "a line someone suggests" and "the least-squares regression line estimated from actual data." In later homeworks, you will use `lm()` to estimate regression lines from data, and the coefficients will be sample estimates (not fixed known values).
+:::
+
+
+## Summary
+
+In this homework, you practiced three foundational skills for regression analysis:
+
+1. **Problem 1 — Identifying Variables**: You classified response and explanatory variables across different research scenarios, recognizing that the research question determines which variable plays which role.
+
+2. **Problem 2 — Understanding Slopes Visually**: You connected the algebraic concept of slope to its graphical representation, seeing how the steepness and direction of a line reflect the strength and direction of a linear relationship.
+
+3. **Problem 3 — Interpreting Prediction Equations**: You evaluated whether prediction equations are realistic, interpreted slopes and intercepts in context, and computed predicted values by substituting into the equation.
+
+Together, these problems build the conceptual foundation for simple linear regression: identifying the variables, understanding what the regression line looks like, and making sense of the numbers in the prediction equation.
+
+::: {.callout-note}
+## Looking Ahead
+In **HW2**, you will apply these concepts to real data. Instead of working with given equations, you will use R to fit regression models, generate predicted values, and interpret output from actual analyses. The interpretation skills you practiced here --- especially describing what the slope and intercept mean in context --- will be essential throughout the rest of the course.
+:::

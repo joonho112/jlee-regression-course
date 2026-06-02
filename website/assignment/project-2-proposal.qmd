@@ -1,0 +1,66 @@
+---
+title: "Project 2 Proposal"
+---
+
+| | |
+|---|---|
+| **Project** | Project 2: Logistic Regression |
+| **Due** | Week 12 |
+| **Weight** | 30% of Project 2 (which is 20% of final grade) |
+| **Related Guide** | [Project Guide]({{< var books.project_guide >}}){target="_blank"} |
+
+::: {.callout-tip}
+## {{< fa book >}} Project Guide
+Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed instructions, examples of strong proposals, and tips for choosing a dataset with a binary outcome.
+:::
+
+## Purpose
+
+The proposal establishes the foundation for your logistic regression project. You will identify a research question involving a binary outcome, select a dataset, and define your variables. The instructor will provide feedback to help you refine your plan.
+
+## Requirements
+
+Your proposal should include the following sections:
+
+### 1. Research Question
+
+State a clear, focused research question that can be addressed with logistic regression. Your question should involve predicting or explaining a **binary outcome** (e.g., pass/fail, yes/no, admitted/rejected).
+
+### 2. Dataset Description
+
+- Name and source of the dataset
+- How to access the dataset (URL, R package, etc.)
+- Number of observations and a brief description of the sample
+- Unit of analysis
+
+### 3. Variable Definitions
+
+Identify and describe the following:
+
+- **Outcome variable** ($y$): A binary variable suitable for logistic regression
+- **Primary predictor** ($x_1$): The main explanatory variable of interest
+- **Additional predictors**: At least one additional predictor or control variable
+
+For each variable, report:
+
+- Variable name in the dataset
+- Measurement scale (continuous, categorical, binary)
+- Brief description of what it measures
+- For the outcome variable: the coding scheme (what does 0 vs. 1 represent?)
+
+### 4. Preliminary Descriptive Statistics
+
+Provide basic descriptive statistics for your key variables:
+
+- Frequency table for the binary outcome (counts and percentages)
+- Summary statistics for continuous predictors
+- Frequency tables for categorical predictors
+- At least one visualization (bar chart, mosaic plot, or grouped comparison)
+
+## Submission
+
+Submit the following to Blackboard:
+
+- A rendered PDF or HTML document
+- Your `.qmd` source file
+- The dataset (or a link to it)

@@ -1,0 +1,2467 @@
+# Model Building {#sec-ch7}
+
+{{< include ../_common.qmd >}}
+
+
+## Introduction {#sec-ch7-intro}
+
+Over the first six chapters of this book, you have developed a powerful toolkit for regression analysis. You can fit models with continuous and categorical predictors (@sec-ch1, @sec-ch2, @sec-ch3, @sec-ch4), allow the effects of one predictor to depend on another through interactions (@sec-ch5), and model curved relationships using transformations and polynomials (@sec-ch6). You know how to interpret coefficients, compute marginal effects, and read diagnostic plots.
+
+But an important strategic question has been lurking in the background: **which predictors should be in the model?**
+
+Every research question involves choices. A study of mathematics achievement might include student-level measures such as socioeconomic status, gender, and minority status, alongside school-level characteristics such as school sector and school size. Should you include all available predictors? Only those suggested by prior theory? Should you let the data tell you which variables "matter"? These choices can dramatically affect your conclusions --- different models fitted to the same data can yield different coefficient estimates, different standard errors, and even opposite signs for the same predictor.
+
+Model building is the process of moving from a research question to a statistical model. It requires *both* subject-matter knowledge and statistical reasoning. This chapter develops two contrasting approaches:
+
+1. **The confirmatory approach** relies on theory and prior research to specify the model *before* examining the data. Variables are included (or excluded) for substantive reasons, and the analysis plan follows a structured sequence. This approach leads to firmer conclusions because the theoretical motivation is strong and fewer tests are performed.
+
+2. **The exploratory approach** uses algorithmic or data-driven procedures --- forward selection, backward elimination, stepwise regression --- to search among candidate models. These methods are useful when theory is weak, but they carry well-documented risks of overfitting, capitalizing on chance, and producing results that do not replicate.
+
+This chapter takes a clear position: **the confirmatory approach should be your default**. Subject-matter theory should motivate both data collection *and* model specification. Exploratory methods are occasionally useful as supplements --- particularly in prediction contexts or early-stage research --- but they should never replace careful thinking about which variables belong in a model and why.
+
+Before we can discuss either approach, however, we need a fundamental building block: a method for comparing two regression models to determine whether additional predictors provide a meaningful improvement. That is where we begin.
+
+::: {.callout-note}
+## Learning Objectives
+After completing this chapter, you will be able to:
+
+1. Explain the difference between confirmatory (theory-driven) and exploratory (data-driven) approaches to model building
+2. Construct and compare nested regression models using the incremental $F$-test
+3. Compute and interpret $\Delta R^2$ (change in $R^2$) when predictors are added to a model
+4. Use `anova()` in R to conduct nested model comparisons
+5. Use `compare_performance()` from the `easystats` ecosystem for side-by-side model evaluation
+6. Articulate why $R^2$ always increases with additional predictors and why adjusted $R^2$ or information criteria are needed
+7. Apply the five-step confirmatory strategy to build a regression model from a research question
+8. Explain why pre-registration of analysis plans strengthens the credibility of confirmatory findings
+:::
+
+
+## Comparing Models {#sec-ch7-comparing}
+
+### The Logic of Nested Model Comparison
+
+The most fundamental question in model building is: *does adding one or more predictors to a model produce a meaningful improvement in fit?* To answer this question, we compare two models that stand in a specific relationship to each other.
+
+A **reduced model** (sometimes called the *restricted* model) contains $g$ predictors:
+
+$$
+y_i = \alpha + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots + \beta_g x_{gi} + \epsilon_i
+$$ {#eq-ch7-reduced}
+
+A **complete model** (sometimes called the *full* model) contains the same $g$ predictors *plus* $h$ additional predictors:
+
+$$
+y_i = \alpha + \beta_1 x_{1i} + \cdots + \beta_g x_{gi} + \beta_{g+1} x_{(g+1)i} + \cdots + \beta_{g+h} x_{(g+h)i} + \epsilon_i
+$$ {#eq-ch7-complete}
+
+We say that the reduced model is **nested** within the complete model because the reduced model can be obtained from the complete model by imposing the constraints $\beta_{g+1} = \beta_{g+2} = \cdots = \beta_{g+h} = 0$. In other words, the reduced model is a special case of the complete model --- it assumes that the additional $h$ predictors have zero population coefficients.
+
+::: {.callout-note}
+## Nesting Requirement
+The incremental $F$-test requires the models to be *nested*: every predictor in the reduced model must also appear in the complete model. You cannot use this test to compare two models that contain different sets of predictors (e.g., Model A with `ses` and `female` versus Model B with `minority` and `sector`). For non-nested comparisons, information criteria such as AIC and BIC are appropriate.
+:::
+
+### Change in $R^2$ {#sec-ch7-delta-r2}
+
+Adding predictors to a model can never decrease the explained variance. The **change in $R^2$** (often written $\Delta R^2$) quantifies how much additional variance the new predictors explain:
+
+$$
+\Delta R^2 = R^2_{\text{complete}} - R^2_{\text{reduced}}
+$$ {#eq-ch7-delta-r2}
+
+A large $\Delta R^2$ suggests the additional predictors are substantively important; a small $\Delta R^2$ suggests they add little explanatory power. However, $\Delta R^2$ by itself does not tell us whether the improvement is **statistically significant** --- we need a formal test for that.
+
+### The Incremental $F$-Test
+
+The incremental $F$-test (also called the *partial $F$-test* or *extra sum of squares* test) evaluates the null hypothesis that all $h$ additional predictors have zero population coefficients:
+
+$$
+H_0: \beta_{g+1} = \beta_{g+2} = \cdots = \beta_{g+h} = 0
+$$
+
+The test statistic is constructed from the sum of squares:
+
+$$
+F = \frac{\left[\text{SSE}_{\text{reduced}} - \text{SSE}_{\text{complete}}\right] / h}{\text{SSE}_{\text{complete}} / (n - g - h - 1)}
+$$ {#eq-ch7-f-test}
+
+The numerator captures the **additional** model sum of squares attributable to the $h$ new predictors, divided by the degrees of freedom consumed ($h$). The denominator is the mean squared error of the complete model. Under $H_0$, this statistic follows an $F$-distribution with $h$ and $n - g - h - 1$ degrees of freedom.
+
+An equivalent formulation using $R^2$ values is:
+
+$$
+F = \frac{(R^2_{\text{complete}} - R^2_{\text{reduced}}) / h}{(1 - R^2_{\text{complete}}) / (n - g - h - 1)}
+$$ {#eq-ch7-f-r2}
+
+::: {.callout-tip}
+## Connection to the Overall $F$-Test
+The overall $F$-test from @sec-ch1 is a special case of the incremental $F$-test. The reduced model is the *intercept-only* model ($g = 0$, $R^2_{\text{reduced}} = 0$), and the complete model is the full regression. Setting $g = 0$ in @eq-ch7-f-r2 recovers the familiar overall $F$-statistic.
+:::
+
+### Interactive Exploration: Nested Model Comparison {.unnumbered}
+
+::: {.callout-tip collapse="false"}
+## Try It: Does Adding a Predictor Help?
+
+The true data-generating model is $Y = 1.0 \cdot X_1 + 0.8 \cdot X_2 + 0 \cdot X_3 + 0 \cdot X_4 + \varepsilon$. Predictors $X_3$ and $X_4$ are pure noise. Use the checkboxes below to build nested models by adding predictors one at a time. Watch how $R^2$ grows with each addition---but notice that only *real* predictors produce a statistically significant improvement in the incremental $F$-test. This is precisely why we need formal hypothesis testing rather than relying on $R^2$ alone.
+:::
+
+```{ojs}
+//| echo: false
+
+import { ber640 as nested_ber640, withAlpha as nested_withAlpha,
+         themeColors as nested_themeColors, plotDefaults as nested_plotDefaults,
+         normalRandom as nested_normalRandom, seq as nested_seq,
+         formatCoef as nested_formatCoef } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+
+// ── Data generation (n=100, seeded for reproducibility) ──
+nested_n = 100
+
+nested_rawX1 = nested_normalRandom(nested_n, 0, 1, 42)
+nested_rawX2 = nested_normalRandom(nested_n, 0, 1, 43)
+nested_X3 = nested_normalRandom(nested_n, 0, 1, 44)
+nested_X4 = nested_normalRandom(nested_n, 0, 1, 45)
+nested_eps = nested_normalRandom(nested_n, 0, 1, 46)
+
+// X1 is raw; X2 has r=0.3 correlation with X1
+nested_X1 = nested_rawX1
+nested_X2 = nested_rawX1.map((x1, i) => 0.3 * x1 + Math.sqrt(1 - 0.09) * nested_rawX2[i])
+
+// True model: Y = 1.0*X1 + 0.8*X2 + 0*X3 + 0*X4 + eps
+nested_Y = nested_X1.map((x1, i) =>
+  1.0 * x1 + 0.8 * nested_X2[i] + 0.0 * nested_X3[i] + 0.0 * nested_X4[i] + nested_eps[i]
+)
+
+nested_allX = {
+  return nested_X1.map((_, i) => [nested_X1[i], nested_X2[i], nested_X3[i], nested_X4[i]]);
+}
+```
+
+```{ojs}
+//| echo: false
+
+viewof nested_useX1 = Inputs.toggle({ label: "X₁ (true β = 1.0)", value: true })
+```
+
+```{ojs}
+//| echo: false
+
+viewof nested_useX2 = Inputs.toggle({ label: "X₂ (true β = 0.8)", value: false })
+```
+
+```{ojs}
+//| echo: false
+
+viewof nested_useX3 = Inputs.toggle({ label: "X₃ (noise, β = 0)", value: false })
+```
+
+```{ojs}
+//| echo: false
+
+viewof nested_useX4 = Inputs.toggle({ label: "X₄ (noise, β = 0)", value: false })
+```
+
+```{ojs}
+//| echo: false
+
+// ── Matrix algebra helpers for multiple regression via normal equations ──
+nested_matOps = {
+  // Transpose a matrix (array of rows)
+  function transpose(A) {
+    const m = A.length, n = A[0].length;
+    const T = [];
+    for (let j = 0; j < n; j++) {
+      T[j] = [];
+      for (let i = 0; i < m; i++) T[j][i] = A[i][j];
+    }
+    return T;
+  }
+
+  // Multiply two matrices
+  function multiply(A, B) {
+    const m = A.length, n = B[0].length, k = B.length;
+    const C = [];
+    for (let i = 0; i < m; i++) {
+      C[i] = [];
+      for (let j = 0; j < n; j++) {
+        let s = 0;
+        for (let l = 0; l < k; l++) s += A[i][l] * B[l][j];
+        C[i][j] = s;
+      }
+    }
+    return C;
+  }
+
+  // Invert a square matrix via Gauss-Jordan elimination
+  function invert(A) {
+    const n = A.length;
+    // Augmented matrix [A | I]
+    const M = A.map((row, i) => {
+      const aug = [...row];
+      for (let j = 0; j < n; j++) aug.push(i === j ? 1 : 0);
+      return aug;
+    });
+
+    for (let col = 0; col < n; col++) {
+      // Partial pivoting
+      let maxRow = col, maxVal = Math.abs(M[col][col]);
+      for (let row = col + 1; row < n; row++) {
+        if (Math.abs(M[row][col]) > maxVal) {
+          maxVal = Math.abs(M[row][col]);
+          maxRow = row;
+        }
+      }
+      [M[col], M[maxRow]] = [M[maxRow], M[col]];
+
+      const pivot = M[col][col];
+      if (Math.abs(pivot) < 1e-12) return null; // Singular
+
+      for (let j = 0; j < 2 * n; j++) M[col][j] /= pivot;
+
+      for (let row = 0; row < n; row++) {
+        if (row === col) continue;
+        const factor = M[row][col];
+        for (let j = 0; j < 2 * n; j++) M[row][j] -= factor * M[col][j];
+      }
+    }
+
+    return M.map(row => row.slice(n));
+  }
+
+  return { transpose, multiply, invert };
+}
+```
+
+```{ojs}
+//| echo: false
+
+// ── Fit regression with selected predictors ──
+nested_results = {
+  const { transpose, multiply, invert } = nested_matOps;
+  const n = nested_n;
+  const y = nested_Y;
+
+  // Determine which predictors are selected
+  const selected = [];
+  const labels = [];
+  if (nested_useX1) { selected.push(0); labels.push("X₁"); }
+  if (nested_useX2) { selected.push(1); labels.push("X₂"); }
+  if (nested_useX3) { selected.push(2); labels.push("X₃"); }
+  if (nested_useX4) { selected.push(3); labels.push("X₄"); }
+
+  const p = selected.length; // number of predictors (not counting intercept)
+
+  if (p === 0) {
+    // Intercept-only model
+    const yBar = y.reduce((a, b) => a + b, 0) / n;
+    const ssTot = y.reduce((s, yi) => s + (yi - yBar) ** 2, 0);
+    return {
+      labels: [],
+      coefs: [yBar],
+      se: [Math.sqrt(ssTot / (n * (n - 1)))],
+      tvals: [yBar / Math.sqrt(ssTot / (n * (n - 1)))],
+      pvals: [0],
+      R2: 0,
+      adjR2: 0,
+      SSE: ssTot,
+      SSTot: ssTot,
+      p: 0,
+      selected: [],
+      incrementalR2: [],
+      fIncr: NaN,
+      fIncrDf1: 0,
+      fIncrDf2: n - 1,
+      fIncrP: NaN,
+      lastLabel: ""
+    };
+  }
+
+  // Build design matrix X (n x (p+1)) with intercept column
+  const X = [];
+  for (let i = 0; i < n; i++) {
+    const row = [1]; // intercept
+    for (const j of selected) row.push(nested_allX[i][j]);
+    X.push(row);
+  }
+
+  const Xt = transpose(X);
+  const XtX = multiply(Xt, X.map(row => row.map(v => [v]).flat().map((v, j) => v)));
+  // Recompute properly: XtX = Xt * X
+  const XtX2 = multiply(Xt, X);
+  const XtX_inv = invert(XtX2);
+
+  if (!XtX_inv) {
+    return { labels, coefs: [], se: [], tvals: [], pvals: [], R2: 0, adjR2: 0,
+             SSE: Infinity, SSTot: 0, p, selected, incrementalR2: [],
+             fIncr: NaN, fIncrDf1: 0, fIncrDf2: n - p - 1, fIncrP: NaN, lastLabel: "" };
+  }
+
+  // Xty vector
+  const yVec = y.map(v => [v]);
+  const Xty = multiply(Xt, yVec); // (p+1) x 1
+
+  // beta = (X'X)^-1 X'y
+  const beta = multiply(XtX_inv, Xty); // (p+1) x 1
+  const coefs = beta.map(r => r[0]);
+
+  // Fitted values and residuals
+  const yBar = y.reduce((a, b) => a + b, 0) / n;
+  const ssTot = y.reduce((s, yi) => s + (yi - yBar) ** 2, 0);
+  let sse = 0;
+  for (let i = 0; i < n; i++) {
+    let yhat = 0;
+    for (let j = 0; j <= p; j++) yhat += X[i][j] * coefs[j];
+    sse += (y[i] - yhat) ** 2;
+  }
+
+  const R2 = 1 - sse / ssTot;
+  const adjR2 = 1 - (sse / (n - p - 1)) / (ssTot / (n - 1));
+  const mse = sse / (n - p - 1);
+
+  // Standard errors, t-values, p-values
+  const se = [];
+  const tvals = [];
+  const pvals = [];
+  for (let j = 0; j <= p; j++) {
+    const seJ = Math.sqrt(mse * XtX_inv[j][j]);
+    const tJ = coefs[j] / seJ;
+    se.push(seJ);
+    tvals.push(tJ);
+    // Approximate p-value using normal (adequate for n=100)
+    const absT = Math.abs(tJ);
+    // 2-sided p from t-distribution approximation
+    const pJ = 2 * (1 - _normalCdf(absT));
+    pvals.push(pJ);
+  }
+
+  // ── Incremental R² for each predictor (sequential) ──
+  const incrementalR2 = [];
+  let prevSSE = ssTot; // intercept-only SSE
+
+  for (let k = 0; k < selected.length; k++) {
+    // Fit model with first k+1 selected predictors
+    const subSel = selected.slice(0, k + 1);
+    const subP = subSel.length;
+
+    const Xsub = [];
+    for (let i = 0; i < n; i++) {
+      const row = [1];
+      for (const j of subSel) row.push(nested_allX[i][j]);
+      Xsub.push(row);
+    }
+
+    const Xst = transpose(Xsub);
+    const XstXs = multiply(Xst, Xsub);
+    const XstXs_inv = invert(XstXs);
+    if (!XstXs_inv) { incrementalR2.push(0); continue; }
+    const Xsty = multiply(Xst, yVec);
+    const betaSub = multiply(XstXs_inv, Xsty);
+    const coefsSub = betaSub.map(r => r[0]);
+
+    let sseSub = 0;
+    for (let i = 0; i < n; i++) {
+      let yhat = 0;
+      for (let j = 0; j <= subP; j++) yhat += Xsub[i][j] * coefsSub[j];
+      sseSub += (y[i] - yhat) ** 2;
+    }
+
+    const thisR2 = 1 - sseSub / ssTot;
+    const prevR2 = k === 0 ? 0 : incrementalR2.slice(0, k).reduce((a, b) => a + b, 0);
+    incrementalR2.push(thisR2 - prevR2);
+    prevSSE = sseSub;
+  }
+
+  // ── Incremental F-test for the last added predictor ──
+  let fIncr = NaN, fIncrDf1 = 1, fIncrDf2 = n - p - 1, fIncrP = NaN, lastLabel = "";
+  if (p >= 1) {
+    lastLabel = labels[labels.length - 1];
+    // Reduced model: all selected except the last
+    const reducedSel = selected.slice(0, -1);
+    const rP = reducedSel.length;
+
+    let sseReduced;
+    if (rP === 0) {
+      sseReduced = ssTot;
+    } else {
+      const Xr = [];
+      for (let i = 0; i < n; i++) {
+        const row = [1];
+        for (const j of reducedSel) row.push(nested_allX[i][j]);
+        Xr.push(row);
+      }
+      const Xrt = transpose(Xr);
+      const XrtXr_inv = invert(multiply(Xrt, Xr));
+      if (XrtXr_inv) {
+        const betaR = multiply(XrtXr_inv, multiply(Xrt, yVec));
+        const coefsR = betaR.map(r => r[0]);
+        sseReduced = 0;
+        for (let i = 0; i < n; i++) {
+          let yhat = 0;
+          for (let j = 0; j <= rP; j++) yhat += Xr[i][j] * coefsR[j];
+          sseReduced += (y[i] - yhat) ** 2;
+        }
+      } else {
+        sseReduced = ssTot;
+      }
+    }
+
+    fIncrDf1 = 1;
+    fIncrDf2 = n - p - 1;
+    fIncr = ((sseReduced - sse) / fIncrDf1) / (sse / fIncrDf2);
+    // Approximate p-value for F(1, df2) using normal approx of sqrt(F) ~ t
+    const tApprox = Math.sqrt(Math.max(0, fIncr));
+    fIncrP = 2 * (1 - _normalCdf(tApprox));
+  }
+
+  // Local normal CDF helper (A&S 26.2.17 via erfc, fixed v1.4)
+  function _normalCdf(z) {
+    if (z === Infinity) return 1;
+    if (z === -Infinity) return 0;
+    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+    const a4 = -1.453152027, a5 = 1.061405429, pp = 0.3275911;
+    const x = Math.abs(z) / Math.SQRT2;
+    const t = 1.0 / (1.0 + pp * x);
+    const erfc = (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+    return z >= 0 ? 1 - 0.5 * erfc : 0.5 * erfc;
+  }
+
+  return {
+    labels, coefs, se, tvals, pvals,
+    R2, adjR2, SSE: sse, SSTot: ssTot,
+    p, selected, incrementalR2,
+    fIncr, fIncrDf1, fIncrDf2, fIncrP,
+    lastLabel
+  };
+}
+```
+
+```{ojs}
+//| echo: false
+
+// ── Readout cards ──
+html`<div class="ojs-readouts" role="status" aria-live="polite">
+  <span class="ojs-readout ${nested_results.R2 > 0.3 ? 'ojs-readout-good' : ''}">
+    <span class="ojs-readout-label">R²</span>
+    <span class="ojs-readout-value">${nested_formatCoef(nested_results.R2, 4)}</span>
+  </span>
+  <span class="ojs-readout ${nested_results.adjR2 > 0.3 ? 'ojs-readout-good' : ''}">
+    <span class="ojs-readout-label">Adj R²</span>
+    <span class="ojs-readout-value">${nested_formatCoef(nested_results.adjR2, 4)}</span>
+  </span>
+  <span class="ojs-readout ojs-readout-info">
+    <span class="ojs-readout-label">Incr. F ${nested_results.lastLabel ? `(${nested_results.lastLabel})` : ''}</span>
+    <span class="ojs-readout-value">${isFinite(nested_results.fIncr) ? nested_formatCoef(nested_results.fIncr, 2) : '—'}</span>
+  </span>
+  <span class="ojs-readout ${nested_results.fIncrP < 0.05 ? 'ojs-readout-good' : 'ojs-readout-warning'}">
+    <span class="ojs-readout-label">${nested_results.p === 0 ? 'Select predictors' : (nested_results.fIncrP < 0.05 ? 'Significant improvement' : 'No significant improvement')}</span>
+    <span class="ojs-readout-value">${isFinite(nested_results.fIncrP) ? (nested_results.fIncrP < 0.001 ? 'p < .001' : 'p = ' + nested_results.fIncrP.toFixed(3)) : ''}</span>
+  </span>
+</div>`
+```
+
+```{ojs}
+//| echo: false
+
+// ── Bar chart: Incremental R² decomposition ──
+nested_barData = {
+  const allLabels = ["X₁", "X₂", "X₃", "X₄"];
+  const selected = [];
+  if (nested_useX1) selected.push(0);
+  if (nested_useX2) selected.push(1);
+  if (nested_useX3) selected.push(2);
+  if (nested_useX4) selected.push(3);
+
+  const data = [];
+  const cumR2 = [];
+  let running = 0;
+
+  for (let k = 0; k < selected.length; k++) {
+    const incr = nested_results.incrementalR2[k] || 0;
+    data.push({
+      predictor: allLabels[selected[k]],
+      incrementalR2: incr,
+      cumulativeR2: running + incr,
+      bottom: running,
+      isNoise: selected[k] >= 2,
+      order: k
+    });
+    running += incr;
+  }
+
+  // Add unexplained portion
+  data.push({
+    predictor: "Unexplained",
+    incrementalR2: 1 - running,
+    cumulativeR2: 1,
+    bottom: running,
+    isNoise: false,
+    order: selected.length
+  });
+
+  return data;
+}
+```
+
+```{ojs}
+//| echo: false
+
+Plot.plot(nested_plotDefaults({
+  height: 340,
+  marginLeft: 65,
+  marginBottom: 50,
+  x: {
+    label: null,
+    domain: nested_barData.map(d => d.predictor),
+    padding: 0.3
+  },
+  y: {
+    label: "Proportion of Variance",
+    domain: [0, 1],
+    grid: true,
+    tickFormat: ".0%"
+  },
+  color: {
+    domain: ["Real predictor", "Noise predictor", "Unexplained"],
+    range: [nested_ber640.accent, nested_ber640.warning, "#ddd"],
+    legend: true
+  },
+  marks: [
+    Plot.barY(nested_barData, {
+      x: "predictor",
+      y: "incrementalR2",
+      fill: d => d.predictor === "Unexplained"
+        ? "Unexplained"
+        : (d.isNoise ? "Noise predictor" : "Real predictor"),
+      tip: true,
+      title: d => `${d.predictor}\nΔR² = ${(d.incrementalR2 * 100).toFixed(2)}%`
+    }),
+    // Value labels on bars
+    Plot.text(nested_barData.filter(d => d.incrementalR2 > 0.01), {
+      x: "predictor",
+      y: d => d.incrementalR2 / 2,
+      text: d => (d.incrementalR2 * 100).toFixed(1) + "%",
+      fill: "white",
+      fontWeight: 700,
+      fontSize: 13
+    }),
+    Plot.ruleY([0])
+  ]
+}))
+```
+
+```{ojs}
+//| echo: false
+
+// ── Coefficient table ──
+nested_tableData = {
+  if (nested_results.p === 0) return [];
+  const rows = [];
+  // Intercept
+  rows.push({
+    Term: "Intercept",
+    Coefficient: nested_formatCoef(nested_results.coefs[0], 4),
+    SE: nested_formatCoef(nested_results.se[0], 4),
+    "t value": nested_formatCoef(nested_results.tvals[0], 3),
+    "p value": nested_results.pvals[0] < 0.001 ? "< .001" : nested_results.pvals[0].toFixed(4)
+  });
+  // Predictors
+  for (let k = 0; k < nested_results.labels.length; k++) {
+    const j = k + 1;
+    rows.push({
+      Term: nested_results.labels[k],
+      Coefficient: nested_formatCoef(nested_results.coefs[j], 4),
+      SE: nested_formatCoef(nested_results.se[j], 4),
+      "t value": nested_formatCoef(nested_results.tvals[j], 3),
+      "p value": nested_results.pvals[j] < 0.001 ? "< .001" : nested_results.pvals[j].toFixed(4)
+    });
+  }
+  return rows;
+}
+```
+
+```{ojs}
+//| echo: false
+
+html`${nested_results.p === 0
+  ? html`<p style="color:${nested_themeColors().muted}; text-align:center; font-style:italic;">Select at least one predictor to see results.</p>`
+  : html`<div style="max-width:640px; margin:0.5rem auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:${nested_themeColors().text};">
+        <thead>
+          <tr style="border-bottom:2px solid ${nested_themeColors().grid};">
+            <th style="text-align:left; padding:0.5rem;">Term</th>
+            <th style="text-align:right; padding:0.5rem;">Coefficient</th>
+            <th style="text-align:right; padding:0.5rem;">SE</th>
+            <th style="text-align:right; padding:0.5rem;"><em>t</em> value</th>
+            <th style="text-align:right; padding:0.5rem;"><em>p</em> value</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${nested_tableData.map(row => html`
+            <tr style="border-bottom:1px solid ${nested_themeColors().grid};">
+              <td style="text-align:left; padding:0.4rem 0.5rem; font-weight:${row.Term === 'Intercept' ? 400 : 600};">${row.Term}</td>
+              <td style="text-align:right; padding:0.4rem 0.5rem; font-family:var(--ojs-code-font);">${row.Coefficient}</td>
+              <td style="text-align:right; padding:0.4rem 0.5rem; font-family:var(--ojs-code-font);">${row.SE}</td>
+              <td style="text-align:right; padding:0.4rem 0.5rem; font-family:var(--ojs-code-font);">${row["t value"]}</td>
+              <td style="text-align:right; padding:0.4rem 0.5rem; font-family:var(--ojs-code-font); ${parseFloat(row["p value"]) < 0.05 || row["p value"] === '< .001' ? 'font-weight:700; color:' + nested_ber640.success : ''}">${row["p value"]}</td>
+            </tr>
+          `)}
+        </tbody>
+      </table>
+    </div>`
+}`
+```
+
+### Applying the $F$-Test with `anova()` in R
+
+Let us apply the incremental $F$-test to the `hsb_sub` data. We fit three models of increasing complexity and compare them sequentially.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-nested-models
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Load the data
+data(hsb_sub)
+
+# Model 1: SES only
+m1 <- lm(mathach ~ ses, data = hsb_sub)
+
+# Model 2: Add female
+m2 <- lm(mathach ~ ses + female, data = hsb_sub)
+
+# Model 3: Add minority and sector
+m3 <- lm(mathach ~ ses + female + minority + sector, data = hsb_sub)
+
+# Compare Model 1 vs Model 2
+anova(m1, m2)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-nested-models"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The `anova()` output provides:
+
+- **RSS**: Residual sum of squares for each model --- the smaller RSS corresponds to the model with more predictors (the complete model)
+- **Sum of Sq**: The difference in RSS between models, representing variance explained by the additional predictor(s)
+- **F**: The test statistic computed from @eq-ch7-f-test
+- **Pr(>F)**: The $p$-value from the $F$-distribution with $h$ and $n - g - h - 1$ degrees of freedom
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-nested-models"
+#| eval: false
+```
+- `m1` includes only `ses` as a predictor of `mathach`
+- `m2` adds `female` to the model --- this tests whether gender explains additional variance beyond SES
+- `anova(m1, m2)` conducts the incremental $F$-test, testing $H_0: \beta_{\text{female}} = 0$ with 1 degree of freedom
+- The output shows the residual sum of squares for each model, the difference (numerator of the $F$-test), and the $p$-value
+
+
+:::
+
+Now compare Model 2 with Model 3 (adding `minority` and `sector` simultaneously):
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-nested-models-2
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Compare Model 2 vs Model 3
+anova(m2, m3)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-nested-models-2"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+When $h > 1$ (testing multiple predictors simultaneously), a significant $F$-test tells you that the *set* of additional predictors is important, but it does not tell you which specific predictor drives the improvement. The individual $t$-tests in the complete model summary can help clarify.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-nested-models-2"
+#| eval: false
+```
+- Here we test whether `minority` and `sector` *jointly* contribute to the model beyond what `ses` and `female` already explain
+- This tests $H_0: \beta_{\text{minority}} = \beta_{\text{sector}} = 0$ with $h = 2$ degrees of freedom
+- A significant result means that at least one of the two additional predictors has a nonzero population coefficient
+
+
+:::
+
+### Computing $\Delta R^2$
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-delta-r2
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Extract R-squared values using easystats
+r2_m1 <- r2(m1)
+r2_m2 <- r2(m2)
+r2_m3 <- r2(m3)
+
+# Build a summary table of R² and Delta R²
+tibble(
+  Model = c("M1: ses", "M2: ses + female", "M3: ses + female + min + sect"),
+  R2 = c(r2_m1$R2, r2_m2$R2, r2_m3$R2),
+  R2_adjusted = c(r2_m1$R2_adjusted, r2_m2$R2_adjusted, r2_m3$R2_adjusted),
+  Delta_R2 = c(NA, r2_m2$R2 - r2_m1$R2, r2_m3$R2 - r2_m2$R2)
+) |>
+  mutate(across(where(is.numeric), \(x) round(x, 4))) |>
+  kable(
+    col.names = c("Model", "$R^2$", "Adj. $R^2$", "$\\Delta R^2$"),
+    caption = "R-squared values and incremental changes across nested models",
+    align = "lccc"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-delta-r2"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The $\Delta R^2$ values tell you the *proportion of additional variance* explained by each set of new predictors. Even a small $\Delta R^2$ can be statistically significant in large samples, while a large $\Delta R^2$ can be non-significant in small samples. Always report $\Delta R^2$ alongside the $F$-test to provide both practical and statistical significance.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-delta-r2"
+#| eval: false
+```
+- `r2()` from the `performance` package extracts both $R^2$ and adjusted $R^2$
+- $\Delta R^2$ is computed by simple subtraction: $R^2_{\text{larger}} - R^2_{\text{smaller}}$
+- Notice that $R^2$ can only increase as predictors are added --- this is guaranteed by the mathematics of least squares
+
+
+:::
+
+::: {.callout-note}
+## Effect Size Benchmarks for $\Delta R^2$
+Cohen (1988) proposed the following benchmarks for interpreting the magnitude of $\Delta R^2$ in behavioral research:
+
+| Effect Size | $\Delta R^2$ | Interpretation |
+|:------------|:------------:|:---------------|
+| Small       | .02          | The added predictors explain about 2% additional variance |
+| Medium      | .13          | The added predictors explain about 13% additional variance |
+| Large       | .26          | The added predictors explain about 26% additional variance |
+
+These benchmarks are rough guidelines, not rigid thresholds. In some fields (e.g., education, psychology), even a "small" $\Delta R^2$ of .02 can be practically meaningful if the predictor is easily manipulable or the outcome has important consequences. Always interpret $\Delta R^2$ in the context of your discipline and research question.
+:::
+
+### Side-by-Side Model Comparison with `compare_performance()`
+
+The `compare_performance()` function from the `easystats` ecosystem provides a convenient summary table comparing multiple models on several fit indices simultaneously.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-compare-performance
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Compare all three models side by side
+compare_performance(m1, m2, m3, rank = TRUE)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-compare-performance"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Key columns to focus on:
+
+- **R2_adjusted**: Unlike raw $R^2$, adjusted $R^2$ penalizes for additional predictors and *can* decrease if a predictor adds more noise than signal
+- **AIC / BIC**: Information criteria that balance fit against complexity; lower values indicate better models. BIC penalizes complexity more heavily than AIC
+- **RMSE**: Root mean squared error --- the typical prediction error in the original units of the outcome
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-compare-performance"
+#| eval: false
+```
+- `compare_performance()` displays $R^2$, adjusted $R^2$, AIC, BIC, RMSE, and other fit indices in a single table
+- `rank = TRUE` adds an overall ranking based on multiple criteria
+- This function works with any models fitted by `lm()` (and many other model types)
+- Unlike `anova()`, this function does *not* require models to be nested --- it can compare any set of models fitted to the same data
+
+
+:::
+
+::: {.callout-warning}
+## $R^2$ Always Increases with More Predictors
+Adding *any* predictor to a regression model will increase $R^2$ (or leave it unchanged), regardless of whether the predictor is truly related to the outcome. This mathematical fact means that raw $R^2$ is a biased measure for comparing models of different sizes. Always use **adjusted $R^2$**, which penalizes for the number of predictors, or **information criteria** (AIC, BIC) when deciding whether additional predictors improve the model. The incremental $F$-test provides the formal hypothesis test.
+:::
+
+
+## The Confirmatory Approach {#sec-ch7-confirmatory}
+
+The confirmatory approach to model building is guided by subject-matter theory. Rather than searching through many possible models and selecting the one with the best statistical fit, you specify the model *before* looking at the data --- or at least before examining the predictor--outcome relationships. The logic is straightforward: if theory tells you which variables should matter and how they should relate to the outcome, the statistical analysis becomes a *test* of that theory rather than an open-ended exploration.
+
+This approach leads to firmer conclusions for several reasons:
+
+- **Fewer tests** mean fewer opportunities for false positives
+- **Stronger theoretical motivation** means results are more interpretable and credible
+- **Competing theories** can be formalized as competing models and directly compared using the data
+- **Replication** is more likely when the analysis plan is theoretically grounded rather than data-driven
+
+### The Five-Step Confirmatory Strategy {#sec-ch7-five-steps}
+
+The following five-step workflow provides a structured process for building a regression model from a research question. Each step has a clear purpose, and the order matters.
+
+| Step | Action | Purpose |
+|:----:|:-------|:--------|
+| 1 | Include predictors whose effects you are interested in | Answer the research question |
+| 2 | Include possible confounders | Reduce omitted variable bias |
+| 3 | Check linearity for continuous predictors; relax if needed | Ensure correct functional form |
+| 4 | Consider interactions suggested by theory; retain only if significant | Allow context-dependent effects |
+| 5 | Perform model diagnostics; modify accordingly | Verify model assumptions |
+
+: The five-step confirmatory strategy for model building. {#tbl-ch7-five-steps}
+
+::: {.callout-important}
+## Research Question Drives the Model, Not $p$-values
+In the confirmatory approach, you do *not* decide which predictors to include by running regressions and looking at $p$-values. The variables are chosen for substantive reasons --- because they are central to the research question (Step 1) or because omitting them could bias the results (Step 2). $P$-values enter the picture primarily in Steps 4 and 5, where you refine the model, not in Steps 1 and 2, where you specify it.
+:::
+
+Let us walk through each step using the `hsb_sub` data. Suppose our research question is: **Does socioeconomic status (SES) predict mathematics achievement differently in public versus Catholic schools?**
+
+### Step 1: Include Predictors of Research Interest {#sec-ch7-step1}
+
+The research question focuses on SES and school sector (public vs. Catholic). These are the variables whose effects we want to estimate, so they must be in the model regardless of their statistical significance.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-step1
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Step 1: Core predictors from the research question
+data(hsb_sub)
+
+step1_model <- lm(mathach ~ ses + sector, data = hsb_sub)
+model_parameters(step1_model) |> print_md()
+r2(step1_model)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-step1"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The coefficient for `ses` represents the average increase in math achievement per unit increase in SES, holding school sector constant. The coefficient for `sector` represents the mean difference between Catholic and public schools, holding SES constant. Both coefficients address aspects of the research question.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-step1"
+#| eval: false
+```
+- `ses` is a continuous measure of socioeconomic status (centered, so 0 represents the average)
+- `sector` is coded 0 = Public, 1 = Catholic
+- Both variables are included because the research question is about the relationship between SES and math achievement across school sectors
+- We are *not* testing whether to include these variables --- they are in the model by design
+
+
+:::
+
+### Step 2: Include Possible Confounders {#sec-ch7-step2}
+
+A **confounder** is a variable that is related to both the predictor and the outcome. Omitting a confounder can bias the estimated effects of the variables you care about. Prior research on educational achievement suggests that gender and minority status are associated with both SES and math achievement, making them potential confounders.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-step2
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Step 2: Add confounders
+step2_model <- lm(mathach ~ ses + sector + minority + female, data = hsb_sub)
+model_parameters(step2_model) |> print_md()
+r2(step2_model)
+
+# Compare Step 1 and Step 2 models
+anova(step1_model, step2_model)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-step2"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Compare the SES and sector coefficients from Step 1 to those from Step 2. If the coefficients change substantially after adding the confounders, this indicates that omitting the confounders would have biased the results. The direction and magnitude of the change can be informative about the nature of the confounding.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-step2"
+#| eval: false
+```
+- `minority` and `female` are added as confounders, not because they are the focus of the research question, but to obtain less biased estimates of the SES and sector effects
+- Even if `minority` or `female` are not statistically significant, they should generally remain in the model if there is a substantive reason to believe they are confounders
+- The `anova()` test tells us whether the confounders jointly improve the model, but the decision to include them is driven by theory, not by this test
+
+
+:::
+
+#### Checking Multicollinearity with VIF {#sec-ch7-vif}
+
+When multiple predictors are included in the model, it is important to check for **multicollinearity** --- high correlations among predictors that inflate standard errors and make individual coefficients unreliable. The Variance Inflation Factor (VIF) quantifies how much the variance of each coefficient is inflated due to collinearity with the other predictors.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch7-vif
+#| fig-cap: "Variance Inflation Factors (VIF) for the Step 2 model. All values are well below the common thresholds of 5 (moderate concern) and 10 (serious concern), indicating no problematic multicollinearity."
+#| fig-alt: "Dot plot showing Variance Inflation Factor values on the horizontal axis for each predictor variable on the vertical axis. Two vertical reference lines mark thresholds at VIF equals 5 and VIF equals 10. All predictor dots fall well to the left of both threshold lines, clustering between 1 and 2, indicating that multicollinearity is not a concern in the Step 2 model."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Compute VIF for the Step 2 model
+vif_values <- car::vif(step2_model)
+
+vif_df <- tibble(
+  Predictor = names(vif_values),
+  VIF = as.numeric(vif_values)
+) |>
+  mutate(Predictor = fct_reorder(Predictor, VIF))
+
+ggplot(vif_df, aes(x = VIF, y = Predictor)) +
+  geom_point(size = 4, color = ber640_colors["accent"]) +
+  geom_segment(aes(x = 0, xend = VIF, y = Predictor, yend = Predictor),
+               color = ber640_colors["accent"], linewidth = 0.8) +
+  geom_vline(xintercept = 5, linetype = "dashed",
+             color = ber640_colors["warning"], linewidth = 0.8) +
+  geom_vline(xintercept = 10, linetype = "dashed",
+             color = ber640_colors["secondary"], linewidth = 0.8) +
+  annotate("text", x = 5.2, y = 0.6, label = "VIF = 5",
+           color = ber640_colors["warning"], hjust = 0, fontface = "bold",
+           size = 3.5) +
+  annotate("text", x = 10.2, y = 0.6, label = "VIF = 10",
+           color = ber640_colors["secondary"], hjust = 0, fontface = "bold",
+           size = 3.5) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.15))) +
+  labs(
+    title = "Variance Inflation Factors (Step 2 Model)",
+    subtitle = "Dashed lines mark common concern thresholds",
+    x = "VIF",
+    y = NULL
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch7-vif"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Examine each predictor's VIF relative to the threshold lines. If all VIF values are below 5, multicollinearity is not a concern --- the standard errors of the coefficients are not meaningfully inflated. If any VIF exceeds 5, consider whether those predictors are measuring overlapping constructs and whether one could be dropped or combined. VIF values above 10 indicate serious collinearity that requires remediation (e.g., centering interaction terms, removing redundant predictors, or combining correlated variables into composites). In the current model, all VIF values should be low because `ses`, `sector`, `minority`, and `female` measure distinct constructs.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch7-vif"
+#| eval: false
+```
+- `car::vif()` computes the Variance Inflation Factor for each predictor in the model
+- VIF = 1 means no collinearity; higher values indicate greater collinearity
+- Common thresholds: VIF > 5 suggests moderate concern; VIF > 10 suggests serious multicollinearity
+- The dot plot shows each predictor's VIF as a horizontal lollipop, with threshold lines for quick visual assessment
+- `fct_reorder()` sorts predictors by their VIF values for easier reading
+
+
+:::
+
+### Step 3: Check Linearity for Continuous Predictors {#sec-ch7-step3}
+
+For continuous predictors, the default assumption is a linear relationship with the outcome. As we saw in @sec-ch6, this assumption can be checked using LOWESS curves or by adding polynomial terms. If the linearity assumption is violated, we should relax it.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch7-linearity-check
+#| fig-cap: "Checking the linearity assumption for SES. The LOWESS curve (red dashed) is compared against the linear fit (blue). Modest departures suggest the linear specification is reasonable for this predictor."
+#| fig-alt: "Scatter plot with SES on the horizontal axis and math achievement on the vertical axis. A straight blue regression line and a red dashed LOWESS smoother are overlaid on the data points. The LOWESS curve tracks closely to the linear fit with only minor deviations, suggesting that a linear specification adequately captures the relationship between SES and math achievement."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Step 3: Check linearity of ses
+ggplot(hsb_sub, aes(x = ses, y = mathach)) +
+  geom_point(alpha = 0.4, color = "grey50") +
+  geom_smooth(method = "lm", formula = y ~ x, color = ber640_colors["accent"],
+              se = FALSE, linewidth = 1) +
+  geom_smooth(method = "loess", formula = y ~ x, color = ber640_colors["secondary"],
+              se = FALSE, linewidth = 1, linetype = "dashed") +
+  labs(
+    title = "Linearity Check: SES and Math Achievement",
+    subtitle = "Blue = linear | Red dashed = LOWESS",
+    x = "Socioeconomic Status (SES)",
+    y = "Math Achievement"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch7-linearity-check"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+If the LOWESS curve closely follows the linear fit, the linearity assumption is reasonable and no modification is needed. If there is noticeable curvature, consider adding a quadratic term (`ses + I(ses^2)`) or applying a transformation, as discussed in @sec-ch6.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch7-linearity-check"
+#| eval: false
+```
+- This plot compares a straight-line fit with a LOWESS smooth for the SES--mathach relationship
+- If the two curves diverge substantially, a polynomial or transformation may be needed (see @sec-ch6)
+- We check linearity for each continuous predictor individually; `ses` is the only continuous predictor in our current model
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-step3-polynomial
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Formally test for nonlinearity: add a quadratic term
+step3_test <- lm(mathach ~ ses + I(ses^2) + sector + minority + female,
+                 data = hsb_sub)
+
+# Compare: is the quadratic term needed?
+anova(step2_model, step3_test)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-step3-polynomial"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+A non-significant $F$-test ($p > .05$) for the quadratic term supports the linear specification. We proceed with the Step 2 model. If the test were significant, we would retain the quadratic term and update the model accordingly.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-step3-polynomial"
+#| eval: false
+```
+- `I(ses^2)` adds a squared term for SES to test for curvature
+- The `anova()` test evaluates whether the quadratic term significantly improves the model
+- If the test is not significant, we retain the simpler linear specification from Step 2
+
+
+:::
+
+### Step 4: Consider Interactions Suggested by Theory {#sec-ch7-step4}
+
+Our research question asks whether the SES effect differs across school sectors. This is precisely an interaction between `ses` and `sector` (see @sec-ch5 for a detailed treatment of interactions). Theory suggests this interaction is plausible: Catholic schools may have different instructional practices that moderate the SES--achievement relationship.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-step4
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Step 4: Add the ses × sector interaction
+step4_model <- lm(mathach ~ ses * sector + minority + female, data = hsb_sub)
+model_parameters(step4_model) |> print_md()
+r2(step4_model)
+
+# Test the interaction
+anova(step2_model, step4_model)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-step4"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+If the interaction term is significant, the SES--achievement relationship differs between public and Catholic schools. In that case, the `ses` coefficient represents the SES slope for public schools (the reference category), and `ses:sector` represents how much the SES slope *changes* for Catholic schools. If the interaction is not significant, the simpler additive model (Step 2) provides a more parsimonious account of the data.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-step4"
+#| eval: false
+```
+- `ses * sector` expands to `ses + sector + ses:sector`, adding the interaction term
+- The `anova()` test evaluates $H_0: \beta_{\text{ses} \times \text{sector}} = 0$
+- The general rule in confirmatory analysis: include interactions *suggested by theory*, but retain them only if they are statistically significant
+- If the interaction is not significant, we revert to the additive model from Step 2
+
+
+:::
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch7-interaction-plot
+#| fig-cap: "SES and math achievement by school sector. If the lines are approximately parallel, the interaction is negligible."
+#| fig-alt: "Interaction plot showing SES on the horizontal axis and math achievement on the vertical axis, with separate regression lines for each school sector distinguished by color. The regression lines run approximately parallel across sectors, indicating that the relationship between SES and math achievement does not meaningfully differ by school sector and the interaction effect is negligible."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Visualize the potential interaction
+ggplot(hsb_sub, aes(x = ses, y = mathach,
+                     color = factor(sector, labels = c("Public", "Catholic")))) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 1.2) +
+  scale_color_manual(values = c(ber640_colors["primary"], ber640_colors["secondary"])) +
+  labs(
+    title = "SES and Math Achievement by School Sector",
+    x = "Socioeconomic Status (SES)",
+    y = "Math Achievement",
+    color = "Sector"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch7-interaction-plot"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Visual inspection supports the formal test. Look at both the *direction* and *magnitude* of any slope difference. Even if the interaction is statistically significant, a very small difference in slopes may not be practically meaningful.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch7-interaction-plot"
+#| eval: false
+```
+- Separate regression lines are fitted for public and Catholic schools
+- If the lines are roughly parallel, the additive model is adequate (no interaction needed)
+- If the slopes clearly differ, the interaction model is more appropriate
+- This visualization complements the formal $F$-test from the previous code block
+
+
+:::
+
+### Step 5: Perform Model Diagnostics {#sec-ch7-step5}
+
+The final step is to evaluate the assumptions of the chosen model using diagnostic tools. Detailed diagnostic procedures are covered in @sec-ch8, but at a minimum, you should examine residual plots and check for influential observations.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch7-diagnostics
+#| fig-cap: "Basic diagnostic plots for the confirmatory model. Residuals vs. fitted values (left) and a Q-Q plot of residuals (right)."
+#| fig-alt: "Two-panel diagnostic figure. The left panel is a scatter plot of residuals on the vertical axis versus fitted values on the horizontal axis, showing a random cloud of points with no systematic pattern, supporting the constant variance assumption. The right panel is a normal Q-Q plot with theoretical quantiles on the horizontal axis and sample quantiles on the vertical axis, where points closely follow the diagonal reference line, supporting the normality assumption."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Select the final model (Step 2 if interaction is not significant,
+# Step 4 if it is)
+final_model <- step2_model
+
+# Basic diagnostic plots
+p_resid <- ggplot(data.frame(fitted = fitted(final_model),
+                              resid = resid(final_model)),
+                   aes(x = fitted, y = resid)) +
+  geom_point(alpha = 0.4, color = "grey50") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = ber640_colors["secondary"]) +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE, color = ber640_colors["accent"]) +
+  labs(title = "Residuals vs Fitted", x = "Fitted Values", y = "Residuals")
+
+p_qq <- ggplot(data.frame(resid = resid(final_model)), aes(sample = resid)) +
+  stat_qq(alpha = 0.4, color = "grey50") +
+  stat_qq_line(color = ber640_colors["secondary"]) +
+  labs(title = "Normal Q-Q Plot", x = "Theoretical Quantiles", y = "Sample Quantiles")
+
+p_resid + p_qq
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch7-diagnostics"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+If the residual plot shows a clear pattern (funnel shape, curvature), the model may need modification --- a transformation of the outcome, an additional predictor, or a different functional form. If the Q-Q plot shows heavy tails or systematic departures from the line, the normality assumption may be violated, which affects confidence intervals and $p$-values.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch7-diagnostics"
+#| eval: false
+```
+- **Residuals vs. Fitted**: Checks for non-constant variance (heteroscedasticity) and nonlinearity. The LOESS curve should be approximately flat and centered on zero.
+- **Q-Q Plot**: Checks for normality of residuals. Points should fall approximately along the diagonal line.
+- These are quick checks; @sec-ch8 covers a comprehensive diagnostic toolkit including leverage, Cook's distance, and variance inflation factors.
+
+
+:::
+
+### Summary of the Confirmatory Workflow
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-confirmatory-summary
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Summary: compare all models from the five-step process
+compare_performance(step1_model, step2_model, step4_model, rank = TRUE)
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-confirmatory-summary"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The model comparison table provides an overview of how the model evolved through the confirmatory process. Notice that the decision is *not* simply "pick the model with the highest $R^2$." The decision depends on whether the interaction is significant (Step 4), whether diagnostics reveal problems (Step 5), and whether the model tells a coherent story that aligns with theory.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-confirmatory-summary"
+#| eval: false
+```
+- This table compares the models from Steps 1, 2, and 4
+- Step 3 confirmed that linearity was adequate (no modification needed)
+- Step 5 diagnostics would inform whether any further changes are necessary
+- The final model selection balances statistical fit, parsimony, and theoretical coherence
+
+
+:::
+
+#### How Coefficients Shift Across Model Steps {#sec-ch7-coef-shift}
+
+A useful diagnostic for the confirmatory workflow is to visualize how coefficient estimates and their confidence intervals change as predictors are added at each step. Large shifts in a coefficient when new predictors enter the model indicate confounding or collinearity.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch7-forest-plot
+#| fig-cap: "Coefficient estimates and 95% confidence intervals across confirmatory model steps. Shifts in estimates when new predictors are added reveal the influence of confounding and model specification."
+#| fig-alt: "Forest plot displaying regression coefficient estimates as points with horizontal 95 percent confidence interval bars for each predictor across multiple model-building steps, distinguished by color. The vertical axis lists predictor names and the horizontal axis shows coefficient magnitude. Shifts in point estimates between steps reveal how adding covariates adjusts effect sizes due to confounding, while narrowing intervals reflect improved precision."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+# Extract tidy coefficients from each step model
+coef_step1 <- tidy(step1_model, conf.int = TRUE) |>
+  mutate(Step = "Step 1: Core")
+coef_step2 <- tidy(step2_model, conf.int = TRUE) |>
+  mutate(Step = "Step 2: + Confounders")
+coef_step4 <- tidy(step4_model, conf.int = TRUE) |>
+  mutate(Step = "Step 4: + Interaction")
+
+# Combine and filter out the intercept
+coef_all <- bind_rows(coef_step1, coef_step2, coef_step4) |>
+  filter(term != "(Intercept)") |>
+  mutate(
+    Step = factor(Step, levels = c("Step 1: Core",
+                                    "Step 2: + Confounders",
+                                    "Step 4: + Interaction")),
+    term = case_match(
+      term,
+      "ses" ~ "SES",
+      "sector" ~ "Sector (Catholic)",
+      "minority" ~ "Minority",
+      "female" ~ "Female",
+      "ses:sector" ~ "SES x Sector",
+      .default = term
+    )
+  )
+
+ggplot(coef_all, aes(x = estimate, y = term, color = Step)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey60") +
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high),
+                  position = position_dodge(width = 0.6),
+                  size = 0.5, linewidth = 0.8) +
+  scale_color_manual(values = c(
+    "Step 1: Core" = ber640_colors[["accent"]],
+    "Step 2: + Confounders" = ber640_colors[["success"]],
+    "Step 4: + Interaction" = ber640_colors[["secondary"]]
+  )) +
+  labs(
+    title = "Coefficient Stability Across Model Steps",
+    subtitle = "Point estimates with 95% confidence intervals",
+    x = "Coefficient Estimate",
+    y = NULL,
+    color = "Model Step"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch7-forest-plot"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Focus on whether a coefficient shifts substantially across steps. For example, if the SES coefficient changes when confounders are added (Step 1 to Step 2), this indicates that the Step 1 estimate was confounded. If the confidence intervals narrow as the model improves, the added predictors are reducing residual variance and improving precision. The interaction term (SES x Sector) only appears in Step 4. If it is close to zero with a wide interval, the interaction is negligible, supporting the simpler additive model from Step 2.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch7-forest-plot"
+#| eval: false
+```
+- `broom::tidy()` with `conf.int = TRUE` extracts coefficients and 95% confidence intervals from each model
+- The three step models are combined into a single data frame with a `Step` identifier
+- The intercept is excluded because it is on a different scale and less informative for this comparison
+- `position_dodge()` offsets the points vertically so estimates from different steps do not overlap
+- The vertical dashed line at zero represents the null hypothesis of no effect
+- `case_match()` provides readable predictor labels
+
+
+:::
+
+::: {.callout-tip}
+## Pre-Registration Strengthens Confirmatory Analysis
+The strongest form of confirmatory analysis involves **pre-registering** the analysis plan before collecting or examining data. Pre-registration commits you to specific hypotheses, variables, and model specifications, making it clear that the analysis was planned rather than data-driven. Platforms such as the Open Science Framework ([osf.io](https://osf.io)) provide free pre-registration templates. Even when formal pre-registration is not feasible (e.g., when analyzing secondary data), documenting your analysis plan before examining predictor--outcome relationships substantially strengthens the confirmatory nature of the work.
+:::
+
+::: {.callout-note}
+## Competing Theories as Competing Models
+One powerful application of the confirmatory approach is using regression to adjudicate between competing theoretical perspectives. If Theory A predicts that SES drives achievement differences between school sectors, while Theory B predicts that peer composition (minority concentration) is the primary driver, these theories can be formalized as different regression models and compared using the tools from @sec-ch7-comparing. The theory that produces the better-fitting model receives stronger empirical support --- though neither theory is "proven" by a single study.
+:::
+
+
+## Exploratory Approach {#sec-ch7-exploratory}
+
+When theory is weak, ambiguous, or absent, researchers sometimes turn to **data-driven** procedures. The aim: from a list of candidate predictors, find a "best" subset such that each predictor is significant after controlling for the others. The most common methods are **forward selection**, **backward elimination**, and **stepwise regression**.
+
+::: {.callout-warning}
+## Use with Extreme Caution
+Automatic variable selection is no substitute for substantive reasoning. Always prefer the confirmatory approach (@sec-ch7-confirmatory) when theory is available. Use exploratory results only as hypotheses to be confirmed.
+:::
+
+::: {.callout-tip}
+## When Exploratory Analysis IS Appropriate
+Despite the strong preference for confirmatory modeling, exploratory variable selection has legitimate uses:
+
+- **Early-stage research**: When a phenomenon is new and no established theory exists, exploratory analysis can identify promising predictors for future confirmatory studies
+- **Prediction-focused problems**: When the goal is forecasting (e.g., identifying at-risk students) rather than testing a causal theory, predictive accuracy matters more than interpretability
+- **Dimension reduction**: When the candidate predictor set is very large (e.g., dozens of survey items), exploratory methods can help narrow the field before applying substantive reasoning
+- **Supplementary analysis**: After the confirmatory model is established, exploratory analysis on the same data can suggest extensions or refinements --- provided these are clearly labeled as exploratory and pre-registered for future replication
+- **Variable screening in secondary data analysis**: When working with large administrative datasets where theory offers limited guidance on which of many available covariates to include
+
+In all these cases, **label results as exploratory**, report them separately from confirmatory findings, and cross-validate whenever possible.
+:::
+
+
+## Forward Selection {#sec-ch7-forward}
+
+Forward selection builds a model by adding predictors one at a time, always choosing the one with the most significant improvement:
+
+1. Start with the intercept-only model
+2. Try each candidate predictor; select the one with the smallest $p$-value
+3. Retaining that variable, try each remaining candidate as a second predictor
+4. Continue until no remaining variables reach significance
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-forward-auto
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+data(hsb_sub)
+
+# Automated forward selection using step()
+null_model <- lm(mathach ~ 1, data = hsb_sub)
+full_model <- lm(mathach ~ ses + female + minority + size + sector, data = hsb_sub)
+
+forward_model <- step(
+  null_model,
+  scope = list(lower = null_model, upper = full_model),
+  direction = "forward",
+  trace = 1
+)
+
+model_parameters(forward_model) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-forward-auto"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The `step()` trace shows the sequence of predictor additions. At each step, the function evaluates the AIC for every possible single-predictor addition and selects the one that reduces AIC the most. The final model includes only those predictors that survived this sequential selection. Compare the selected predictors with what theory would suggest --- discrepancies highlight the difference between statistical and substantive significance.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-forward-auto"
+#| eval: false
+```
+- `step()` starts from the null model and considers adding predictors from the full model
+- `direction = "forward"` only adds predictors, never removes
+- At each step, the function selects the predictor that produces the lowest AIC
+- The algorithm stops when no addition would reduce AIC further
+- `trace = 1` prints each step so you can see the order in which predictors enter the model
+- `model_parameters() |> print_md()` displays the final model's coefficient table in a formatted Markdown table
+
+
+:::
+
+
+## Backward Elimination {#sec-ch7-backward}
+
+Backward elimination works in the opposite direction: start with all predictors and remove the least significant one at each step.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-backward
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+full_model <- lm(mathach ~ ses + female + minority + size + sector, data = hsb_sub)
+
+backward_model <- step(full_model, direction = "backward", trace = 1)
+
+model_parameters(backward_model) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-backward"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The trace output shows the backward elimination path. At each step, the predictor whose removal causes the smallest increase (or largest decrease) in AIC is dropped. The final model contains only predictors whose removal would increase AIC. Note that a predictor dropped early may have been significant if a different predictor had been dropped first --- this path-dependence is a fundamental limitation of sequential selection methods.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-backward"
+#| eval: false
+```
+- We start from `full_model` containing all five candidate predictors
+- `direction = "backward"` only removes predictors, never adds
+- At each step, the function evaluates all possible single-predictor removals and drops the one whose removal yields the lowest AIC
+- `trace = 1` prints each elimination step, showing which predictor is dropped and the resulting AIC
+- `model_parameters() |> print_md()` displays the final retained model's coefficients
+
+
+:::
+
+### Comparing Forward and Backward Results
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-forward-vs-backward
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+tibble(
+  Method = c("Forward Selection", "Backward Elimination"),
+  Predictors = c(
+    paste(names(coef(forward_model))[-1], collapse = ", "),
+    paste(names(coef(backward_model))[-1], collapse = ", ")
+  )
+) |>
+  kable(caption = "Predictors retained by each selection method")
+
+compare_performance(forward_model, backward_model) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-forward-vs-backward"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+If forward and backward selection produce the same model, the selected predictors are relatively robust to the search path. If the models differ, pay attention to which predictors are included in one but not the other --- these are "borderline" variables whose inclusion depends on the order of evaluation. When the two methods disagree, neither result should be trusted as definitive. This is a concrete illustration of why the confirmatory approach (@sec-ch7-confirmatory) is preferred.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-forward-vs-backward"
+#| eval: false
+```
+- Discrepancies between forward and backward reveal borderline predictors whose significance depends on what else is in the model
+- This instability is one reason why automatic selection is unreliable for strong scientific claims
+- `compare_performance() |> print_md()` displays $R^2$, adjusted $R^2$, AIC, BIC, and RMSE side by side for both models
+
+
+:::
+
+
+## Stepwise Regression {#sec-ch7-stepwise}
+
+Stepwise regression combines forward and backward: at each step, it considers both adding a new predictor and dropping an existing one.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-stepwise
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+null_model <- lm(mathach ~ 1, data = hsb_sub)
+full_model <- lm(mathach ~ ses + female + minority + size + sector, data = hsb_sub)
+
+stepwise_model <- step(
+  null_model,
+  scope = list(lower = null_model, upper = full_model),
+  direction = "both",
+  trace = 1
+)
+
+model_parameters(stepwise_model) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-stepwise"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Stepwise regression typically produces a model similar to forward selection when starting from the null model, but the ability to drop previously added predictors provides an additional safeguard against early "mistakes." Compare the final stepwise model to the forward and backward results --- if all three agree, the selected set is at least stable across search strategies. However, stability across algorithms does not guarantee that the selected predictors are the "true" ones; the GIGO demonstration in @sec-ch7-problems shows why.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-stepwise"
+#| eval: false
+```
+- `direction = "both"` enables the combined forward-and-backward search
+- The algorithm stops when no single addition or removal improves AIC
+- Starting from the null model, each step considers both adding a new predictor and dropping one already in the model
+- `model_parameters() |> print_md()` displays the final selected model's coefficients in a formatted table
+
+
+:::
+
+
+### AIC Trajectory Across Selection Steps
+
+A useful diagnostic for understanding how automatic selection works is to visualize the AIC at each step of the algorithm. The `step()` function records this information in its `$anova` component.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch7-stepwise-path
+#| fig-cap: "AIC trajectory across selection steps for forward, backward, and stepwise methods. Each point represents the AIC after a predictor is added or removed. All three methods converge to similar final AIC values, but the paths differ."
+#| fig-alt: "Line plot with selection step number on the horizontal axis and AIC value on the vertical axis, showing three colored lines for forward, backward, and stepwise selection methods. Each point marks the AIC after a predictor is added or removed. All three trajectories decline and converge to similar final AIC values, but their paths differ in shape and starting point."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+data(hsb_sub)
+
+null_model <- lm(mathach ~ 1, data = hsb_sub)
+full_model <- lm(mathach ~ ses + female + minority + size + sector, data = hsb_sub)
+
+# Run all three methods and capture the anova trace
+fwd <- step(null_model,
+            scope = list(lower = null_model, upper = full_model),
+            direction = "forward", trace = 0)
+bwd <- step(full_model, direction = "backward", trace = 0)
+stp <- step(null_model,
+            scope = list(lower = null_model, upper = full_model),
+            direction = "both", trace = 0)
+
+# Extract AIC at each step from $anova
+extract_path <- function(step_obj, method_name) {
+  anova_tbl <- step_obj$anova
+  tibble(
+    Method = method_name,
+    Step   = seq_len(nrow(anova_tbl)),
+    AIC    = anova_tbl$AIC
+  )
+}
+
+path_df <- bind_rows(
+  extract_path(fwd, "Forward"),
+  extract_path(bwd, "Backward"),
+  extract_path(stp, "Stepwise")
+)
+
+ggplot(path_df, aes(x = Step, y = AIC, color = Method)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Forward"  = ber640_colors[["accent"]],
+    "Backward" = ber640_colors[["secondary"]],
+    "Stepwise" = ber640_colors[["success"]]
+  )) +
+  scale_x_continuous(breaks = function(x) seq(floor(min(x)), ceiling(max(x)), by = 1)) +
+  labs(
+    title = "AIC Trajectory Across Selection Steps",
+    subtitle = "Each point = model AIC after one predictor is added or removed",
+    x = "Selection Step",
+    y = "AIC",
+    color = "Method"
+  )
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch7-stepwise-path"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The trajectories show the "search path" each algorithm follows through model space. Forward selection starts with a high AIC (intercept-only model) and decreases as informative predictors are added. Backward elimination starts with a lower AIC (full model) and decreases further as uninformative predictors are removed. Stepwise combines both directions. When all three methods converge to similar final AIC values and select the same predictors, the result is more trustworthy (though still not confirmatory). When they diverge, it highlights the path-dependence of automatic selection and the instability of the results.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch7-stepwise-path"
+#| eval: false
+```
+- `step()` is run three times (forward, backward, stepwise) with `trace = 0` to suppress console output
+- The `$anova` component of the `step()` result records the action taken and the resulting AIC at each step
+- `extract_path()` pulls the AIC values from each step into a tidy data frame
+- The line plot shows how AIC evolves as predictors are added (forward/stepwise) or removed (backward)
+- Different starting points (null vs. full model) lead to different paths through the model space
+
+
+:::
+
+
+## Problems with Automatic Selection {#sec-ch7-problems}
+
+### GIGO: Finding Structure in Pure Noise {#sec-ch7-gigo}
+
+The most serious problem: automatic selection **finds "significant" predictors even when no true relationships exist**. This simulation demonstrates directly:
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch7-gigo
+#| fig-cap: "Distribution of predictors selected by stepwise regression across 200 simulations of pure noise data. Despite no true associations, the algorithm routinely selects one or more 'significant' predictors."
+#| fig-alt: "Histogram showing the number of predictors selected on the horizontal axis and the frequency of simulations on the vertical axis, based on 200 replications of stepwise regression applied to pure noise data. The distribution is centered above zero, demonstrating that the algorithm routinely selects one or more spurious predictors even when no real relationships exist in the data."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+set.seed(640)
+n_sims <- 200
+n <- 200
+p <- 20
+
+sim_results <- purrr::map_int(1:n_sims, function(i) {
+  noise_data <- as.data.frame(matrix(rnorm(n * (p + 1)), nrow = n))
+  names(noise_data) <- c("y", paste0("x", 1:p))
+  null_m <- lm(y ~ 1, data = noise_data)
+  full_m <- lm(y ~ ., data = noise_data)
+  step_m <- suppressWarnings(
+    step(null_m, scope = list(lower = null_m, upper = full_m),
+         direction = "both", trace = 0))
+  length(coef(step_m)) - 1
+})
+
+tibble(
+  Metric = c("Mean predictors selected", "Simulations with >= 1 predictor"),
+  Value = c(
+    as.character(round(mean(sim_results), 1)),
+    paste0(sum(sim_results >= 1), " / ", n_sims,
+           " (", round(100 * mean(sim_results >= 1), 1), "%)")
+  )
+) |>
+  kable(caption = paste("Results across", n_sims, "simulations of PURE NOISE"))
+
+ggplot(data.frame(n_selected = sim_results), aes(x = n_selected)) +
+  geom_bar(fill = ber640_colors["secondary"], alpha = 0.8) +
+  scale_x_continuous(breaks = 0:max(sim_results)) +
+  labs(title = "Stepwise Selection on Pure Noise",
+       subtitle = paste0(n_sims, " sims | n=", n, " | ", p, " noise predictors"),
+       x = "Number of Predictors Selected", y = "Count")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch7-gigo"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The summary statistics and bar chart reveal a striking finding: in the vast majority of simulations, stepwise regression selects at least one "significant" predictor even though every variable is pure noise. The mean number of selected predictors reflects the expected false positive rate given 20 candidate predictors. This demonstration is the strongest argument against relying on automatic selection for confirmatory research --- the method is designed to find patterns, and it will find them whether or not they are real.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch7-gigo"
+#| eval: false
+```
+- We generate 200 datasets with NO true associations (outcome and 20 predictors are all independent random normals)
+- In each dataset, we run stepwise selection using `step()` with `direction = "both"` and `trace = 0` (silent)
+- `purrr::map_int()` runs the simulation efficiently and counts the number of selected predictors in each replication
+- The bar chart shows how many predictors are "selected" --- typically 1--3 per simulation, despite zero real effects
+- This is GIGO: Garbage In, Garbage Out
+
+
+:::
+
+::: {.callout-important}
+## The Core Lesson
+Automatic selection is no substitute for thinking. The algorithm has no understanding of your research question. A model should reflect your understanding of the phenomenon, not just patterns in a particular sample.
+:::
+
+### Cross-Validation as a Safeguard {#sec-ch7-cv}
+
+One partial safeguard against overfitting is **cross-validation** (CV). The idea is simple: instead of evaluating a model on the same data used to build it, we repeatedly hold out a portion of the data, fit the model on the remainder, and evaluate predictions on the held-out fold. If selected predictors are genuine, the model should perform similarly on the held-out data. If they are false positives capitalizing on sample-specific noise, the model will perform noticeably worse out of sample.
+
+**$k$-Fold Cross-Validation** partitions the data into $k$ roughly equal-sized subsets (folds). For each fold $j = 1, \ldots, k$:
+
+1. Hold out fold $j$ as the **test set**
+2. Fit the model on the remaining $k - 1$ folds (the **training set**)
+3. Predict the outcome for the held-out observations and compute the prediction error (e.g., RMSE)
+
+The final CV estimate of prediction error is the average across all $k$ folds. Common choices are $k = 5$ or $k = 10$.
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch7-cv-rmse
+#| fig-cap: "Five-fold cross-validation RMSE for three competing models. Lower RMSE indicates better out-of-sample prediction. The theory-driven model (Step 4) performs comparably to more complex alternatives, demonstrating that parsimony need not sacrifice predictive accuracy."
+#| fig-alt: "Dot plot comparing five-fold cross-validation root mean squared error for three competing regression models, with model name on one axis and RMSE on the other. The theory-driven Step 4 model achieves an RMSE comparable to more complex alternatives, demonstrating that the parsimonious model does not sacrifice out-of-sample predictive accuracy. Lower RMSE values indicate better prediction."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+data(hsb_sub)
+set.seed(640)
+
+# Define 5 folds
+k <- 5
+fold_ids <- sample(rep(1:k, length.out = nrow(hsb_sub)))
+
+# Three competing models
+model_formulas <- list(
+  "Theory-driven (Step 4)" = mathach ~ ses * sector + minority + female,
+  "Full additive"          = mathach ~ ses + female + minority + size + sector,
+  "Stepwise"               = formula(step(
+    lm(mathach ~ 1, data = hsb_sub),
+    scope = list(
+      lower = lm(mathach ~ 1, data = hsb_sub),
+      upper = lm(mathach ~ ses + female + minority + size + sector, data = hsb_sub)
+    ),
+    direction = "both", trace = 0
+  ))
+)
+
+# Run 5-fold CV for each model
+cv_results <- purrr::map_dfr(names(model_formulas), function(mod_name) {
+  purrr::map_dfr(1:k, function(j) {
+    train <- hsb_sub[fold_ids != j, ]
+    test  <- hsb_sub[fold_ids == j, ]
+    fit   <- lm(model_formulas[[mod_name]], data = train)
+    preds <- predict(fit, newdata = test)
+    rmse  <- sqrt(mean((test$mathach - preds)^2))
+    tibble(Model = mod_name, Fold = j, RMSE = rmse)
+  })
+})
+
+# Summary table
+cv_summary <- cv_results |>
+  group_by(Model) |>
+  summarise(Mean_RMSE = mean(RMSE), SD_RMSE = sd(RMSE), .groups = "drop") |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
+
+cv_summary |>
+  kable(
+    col.names = c("Model", "Mean RMSE", "SD RMSE"),
+    caption = "Five-fold cross-validation results for three competing models",
+    align = "lcc"
+  )
+
+# Visualization: dot plot of fold-level RMSE
+ggplot(cv_results, aes(x = RMSE, y = Model, color = Model)) +
+  geom_jitter(height = 0.15, size = 3, alpha = 0.7) +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 5,
+               color = ber640_colors["primary"]) +
+  scale_color_manual(values = c(
+    "Theory-driven (Step 4)" = ber640_colors[["accent"]],
+    "Full additive"          = ber640_colors[["success"]],
+    "Stepwise"               = ber640_colors[["secondary"]]
+  )) +
+  labs(
+    title = "5-Fold Cross-Validation: Model Comparison",
+    subtitle = "Colored dots = fold-level RMSE | Diamond = mean RMSE",
+    x = "RMSE (Root Mean Squared Error)",
+    y = NULL
+  ) +
+  theme(legend.position = "none")
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch7-cv-rmse"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Compare the mean RMSE values across the three models. If the theory-driven model achieves comparable or better out-of-sample RMSE than the stepwise model, this supports the confirmatory approach --- the model specified by theory generalizes as well as (or better than) a data-driven selection. The standard deviation of RMSE across folds indicates how stable the model's predictions are. A model with low mean RMSE but high variability across folds may be less reliable than one with slightly higher mean RMSE but greater stability. The key lesson: cross-validation provides an honest estimate of predictive performance that penalizes overfitting automatically.
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch7-cv-rmse"
+#| eval: false
+```
+- `sample(rep(1:k, ...))` randomly assigns each observation to one of 5 folds, ensuring roughly equal fold sizes
+- Three models are compared: (1) the theory-driven model from Step 4 of the confirmatory workflow, (2) a full additive model with all candidate predictors, and (3) the model selected by stepwise regression
+- For each model-fold combination, we fit on the training folds and compute RMSE on the held-out test fold
+- `purrr::map_dfr()` iterates over models and folds, collecting results into a single data frame
+- The summary table reports the mean and standard deviation of RMSE across folds
+- The dot plot displays individual fold-level RMSE values (colored dots) with the mean marked by a diamond
+
+
+:::
+
+### Interactive Exploration: Overfitting Simulator {.unnumbered}
+
+::: {.callout-tip collapse="false"}
+## Try It: When More Is Less
+
+Adding more predictors **always** increases training R², but does it improve prediction? This simulator generates data where only **two predictors truly matter** (X₁ and X₂), then fits models with up to 20 predictors. Watch how training R² climbs while test R² peaks early and then **degrades** — a clear signature of overfitting.
+:::
+
+```{ojs}
+//| echo: false
+import { ber640 as overfit_ber640, withAlpha as overfit_withAlpha,
+         themeColors as overfit_themeColors, plotDefaults as overfit_plotDefaults,
+         normalRandom as overfit_normalRandom, formatCoef as overfit_formatCoef } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+// Seeded PRNG
+function overfit_mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function overfit_normalSample(rng) {
+  const u1 = rng(), u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+// Gaussian elimination for normal equations
+function overfit_solveNormal(XtX, XtY) {
+  const n = XtY.length;
+  const A = XtX.map((row, i) => [...row, XtY[i]]);
+  for (let col = 0; col < n; col++) {
+    let maxRow = col, maxVal = Math.abs(A[col][col]);
+    for (let row = col + 1; row < n; row++) {
+      if (Math.abs(A[row][col]) > maxVal) { maxVal = Math.abs(A[row][col]); maxRow = row; }
+    }
+    if (maxRow !== col) [A[col], A[maxRow]] = [A[maxRow], A[col]];
+    const pivot = A[col][col];
+    if (Math.abs(pivot) < 1e-12) return new Array(n).fill(0);
+    for (let j = col; j <= n; j++) A[col][j] /= pivot;
+    for (let row = 0; row < n; row++) {
+      if (row === col) continue;
+      const factor = A[row][col];
+      for (let j = col; j <= n; j++) A[row][j] -= factor * A[col][j];
+    }
+  }
+  return A.map(row => row[n]);
+}
+```
+
+```{ojs}
+//| echo: false
+viewof overfit_nPredictors = Inputs.range([1, 20], {
+  step: 1, value: 3, label: "Number of predictors (p)"
+})
+
+viewof overfit_newSample = Inputs.button("New Sample")
+```
+
+```{ojs}
+//| echo: false
+overfit_tc = overfit_themeColors()
+
+overfit_data = {
+  overfit_newSample;
+  const seed = Math.floor(Math.random() * 2147483647);
+  const rng = overfit_mulberry32(seed);
+  const n_train = 50, n_test = 50, k = 20;
+
+  function genMatrix(n) {
+    const M = [];
+    for (let i = 0; i < n; i++) {
+      const row = [];
+      for (let j = 0; j < k; j++) row.push(overfit_normalSample(rng));
+      M.push(row);
+    }
+    return M;
+  }
+
+  function genY(X, n) {
+    const Y = [];
+    for (let i = 0; i < n; i++) {
+      Y.push(1.0 * X[i][0] + 0.5 * X[i][1] + overfit_normalSample(rng) * 2);
+    }
+    return Y;
+  }
+
+  const X_train = genMatrix(n_train), X_test = genMatrix(n_test);
+  const Y_train = genY(X_train, n_train), Y_test = genY(X_test, n_test);
+  return { X_train, X_test, Y_train, Y_test, n_train, n_test };
+}
+
+overfit_results = {
+  const { X_train, X_test, Y_train, Y_test, n_train, n_test } = overfit_data;
+  const mean_train = Y_train.reduce((a, b) => a + b, 0) / n_train;
+  const mean_test = Y_test.reduce((a, b) => a + b, 0) / n_test;
+  const ss_tot_train = Y_train.reduce((s, y) => s + (y - mean_train) ** 2, 0);
+  const ss_tot_test = Y_test.reduce((s, y) => s + (y - mean_test) ** 2, 0);
+
+  const trainR2 = [], testR2 = [];
+  for (let p = 1; p <= 20; p++) {
+    const cols = p + 1;
+    const XtX = Array.from({ length: cols }, () => new Array(cols).fill(0));
+    const XtY = new Array(cols).fill(0);
+    for (let i = 0; i < n_train; i++) {
+      const row = [1];
+      for (let j = 0; j < p; j++) row.push(X_train[i][j]);
+      for (let a = 0; a < cols; a++) {
+        for (let b = 0; b < cols; b++) XtX[a][b] += row[a] * row[b];
+        XtY[a] += row[a] * Y_train[i];
+      }
+    }
+    const beta = overfit_solveNormal(XtX, XtY);
+    let ss_res_train = 0;
+    for (let i = 0; i < n_train; i++) {
+      let yhat = beta[0];
+      for (let j = 0; j < p; j++) yhat += beta[j + 1] * X_train[i][j];
+      ss_res_train += (Y_train[i] - yhat) ** 2;
+    }
+    let ss_res_test = 0;
+    for (let i = 0; i < n_test; i++) {
+      let yhat = beta[0];
+      for (let j = 0; j < p; j++) yhat += beta[j + 1] * X_test[i][j];
+      ss_res_test += (Y_test[i] - yhat) ** 2;
+    }
+    trainR2.push(1 - ss_res_train / ss_tot_train);
+    testR2.push(1 - ss_res_test / ss_tot_test);
+  }
+  return { trainR2, testR2 };
+}
+
+overfit_currentTrainR2 = overfit_results.trainR2[overfit_nPredictors - 1]
+overfit_currentTestR2 = overfit_results.testR2[overfit_nPredictors - 1]
+overfit_bestTestR2 = Math.max(...overfit_results.testR2)
+overfit_bestTestP = overfit_results.testR2.indexOf(overfit_bestTestR2) + 1
+overfit_gap = overfit_currentTrainR2 - overfit_currentTestR2
+overfit_isOverfitting = overfit_gap > 0.10
+```
+
+```{ojs}
+//| echo: false
+overfit_chartData = {
+  const data = [];
+  for (let p = 1; p <= 20; p++) {
+    data.push({ p, R2: overfit_results.trainR2[p - 1], type: "Training R²" });
+    data.push({ p, R2: overfit_results.testR2[p - 1], type: "Test R²" });
+  }
+  return data;
+}
+
+overfit_plot = {
+  const pal = overfit_ber640;
+  const tc = overfit_tc;
+  const trainColor = pal.accent;
+  const testColor = pal.secondary;
+
+  return Plot.plot(overfit_plotDefaults({
+    width: 680,
+    height: 400,
+    marginLeft: 60,
+    marginBottom: 50,
+    marginTop: 30,
+    x: { label: "Number of Predictors (p)", domain: [1, 20], ticks: [1, 2, 3, 5, 7, 10, 13, 16, 20] },
+    y: {
+      label: "R²",
+      domain: [
+        Math.min(0, Math.min(...overfit_results.testR2) - 0.05),
+        Math.min(1, Math.max(...overfit_results.trainR2) + 0.05)
+      ]
+    },
+    color: { domain: ["Training R²", "Test R²"], range: [trainColor, testColor], legend: true },
+    marks: [
+      // True R² reference
+      Plot.ruleY([overfit_results.testR2[1]], {
+        stroke: tc.muted, strokeDasharray: "6,4", strokeWidth: 1.5
+      }),
+      Plot.text([{ x: 19, y: overfit_results.testR2[1] }], {
+        x: "x", y: "y", text: ["True R²"],
+        fill: tc.muted, fontSize: 11, dy: -10, textAnchor: "end"
+      }),
+      // Current p indicator
+      Plot.ruleX([overfit_nPredictors], {
+        stroke: tc.muted, strokeDasharray: "4,3", strokeWidth: 1.5, strokeOpacity: 0.6
+      }),
+      // Lines
+      Plot.line(overfit_chartData.filter(d => d.type === "Training R²"), {
+        x: "p", y: "R2", stroke: trainColor, strokeWidth: 2.5
+      }),
+      Plot.line(overfit_chartData.filter(d => d.type === "Test R²"), {
+        x: "p", y: "R2", stroke: testColor, strokeWidth: 2.5
+      }),
+      // Current p dots
+      Plot.dot([{ p: overfit_nPredictors, R2: overfit_currentTrainR2 }], {
+        x: "p", y: "R2", fill: trainColor, r: 6, stroke: "white", strokeWidth: 2
+      }),
+      Plot.dot([{ p: overfit_nPredictors, R2: overfit_currentTestR2 }], {
+        x: "p", y: "R2", fill: testColor, r: 6, stroke: "white", strokeWidth: 2
+      })
+    ]
+  }));
+}
+```
+
+```{ojs}
+//| echo: false
+overfit_cards = {
+  const pal = overfit_ber640;
+  const tc = overfit_tc;
+  const trainColor = pal.accent;
+  const testColor = pal.secondary;
+
+  const cardStyle = (color) => `
+    display: inline-flex; flex-direction: column; align-items: center;
+    padding: 12px 18px; border-radius: 8px; min-width: 140px;
+    background: ${overfit_withAlpha(color, 0.08)};
+    border: 1.5px solid ${overfit_withAlpha(color, 0.3)};
+  `;
+  const labelStyle = (color) => `font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; color: ${color};`;
+  const valueStyle = (color) => `font-size: 22px; font-weight: 700; color: ${color}; font-family: monospace;`;
+
+  const warnColor = overfit_isOverfitting ? pal.secondary : pal.success;
+  const warnLabel = overfit_isOverfitting ? "Overfitting!" : "Good fit";
+
+  return html`<div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 8px; color: ${tc.text};">
+    <div style="${cardStyle(trainColor)}">
+      <span style="${labelStyle(trainColor)}">Training R²</span>
+      <span style="${valueStyle(trainColor)}">${overfit_currentTrainR2.toFixed(3)}</span>
+      <span style="font-size: 0.75rem; color: ${trainColor}; opacity:0.7;">p = ${overfit_nPredictors}</span>
+    </div>
+    <div style="${cardStyle(testColor)}">
+      <span style="${labelStyle(testColor)}">Test R²</span>
+      <span style="${valueStyle(testColor)}">${overfit_currentTestR2.toFixed(3)}</span>
+      <span style="font-size: 0.75rem; color: ${testColor}; opacity:0.7;">p = ${overfit_nPredictors}</span>
+    </div>
+    <div style="${cardStyle(pal.info)}">
+      <span style="${labelStyle(pal.info)}">Best Test R²</span>
+      <span style="${valueStyle(pal.info)}">${overfit_bestTestR2.toFixed(3)}</span>
+      <span style="font-size: 0.75rem; color: ${pal.info}; opacity:0.7;">at p = ${overfit_bestTestP}</span>
+    </div>
+    <div style="${cardStyle(warnColor)}">
+      <span style="${labelStyle(warnColor)}">Status</span>
+      <span style="font-size: 18px; font-weight: 700; color: ${warnColor};">${warnLabel}</span>
+      <span style="font-size: 0.75rem; color: ${warnColor};">Gap = ${overfit_gap.toFixed(3)}</span>
+    </div>
+  </div>`;
+}
+```
+
+
+## Model Fit Criteria {#sec-ch7-criteria}
+
+### $R^2$ and Adjusted $R^2$
+
+$R^2$ always increases with more predictors --- it cannot be used alone for model comparison. **Adjusted $R^2$** penalizes for complexity:
+
+$$
+R^2_{\text{adj}} = 1 - \frac{(1 - R^2)(n - 1)}{n - k - 1}
+$$ {#eq-ch7-adjr2}
+
+Adjusted $R^2$ **can decrease** when a new predictor doesn't help enough to offset the complexity penalty.
+
+### AIC and BIC
+
+$$
+\text{AIC} = -2 \log L + 2k, \qquad \text{BIC} = -2 \log L + k \log(n)
+$$ {#eq-ch7-aic-bic}
+
+- **AIC**: Optimized for prediction; lower is better
+- **BIC**: Penalizes complexity more heavily; optimized for model identification
+
+::: {.callout-note}
+## AIC vs BIC
+- **AIC** is better for **prediction** — selects the model that minimizes expected prediction error
+- **BIC** is better for **explanation** — identifies the "true" model as $n \to \infty$
+- When AIC and BIC disagree, BIC's selection is simpler. Report both.
+:::
+
+### Comparing Models Side-by-Side
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: ch7-criteria-compare
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+data(hsb_sub)
+
+m1 <- lm(mathach ~ ses, data = hsb_sub)
+m2 <- lm(mathach ~ ses + minority, data = hsb_sub)
+m3 <- lm(mathach ~ ses + minority + female, data = hsb_sub)
+m4 <- lm(mathach ~ ses + minority + female + size + sector, data = hsb_sub)
+
+compare_performance(m1, m2, m3, m4) |> print_md()
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "ch7-criteria-compare"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+Scan across the rows to see how each criterion evolves. $R^2$ will increase monotonically from M1 to M4. Adjusted $R^2$ may plateau or even decrease if the added predictors contribute little beyond what the existing predictors already explain. AIC and BIC may reach a minimum at an intermediate model, identifying the point where additional complexity no longer pays for itself. When adjusted $R^2$ and the information criteria agree, you can be more confident in the model selection; when they disagree, BIC's preference for parsimony is often a safer default for confirmatory research.
+
+### Code Explanation
+```{r}
+#| ref.label: "ch7-criteria-compare"
+#| eval: false
+```
+- `compare_performance() |> print_md()` displays $R^2$, adjusted $R^2$, AIC, BIC, and RMSE side by side in a formatted table
+- $R^2$ always increases with additional predictors; adjusted $R^2$, AIC, and BIC incorporate a complexity penalty and may favor a simpler model
+- Four nested models of increasing complexity allow you to see the trajectory of each criterion as predictors are added
+
+
+:::
+
+### Visualizing Model Comparison
+
+::: {.panel-tabset}
+### Output
+```{r}
+#| label: fig-ch7-criteria-plot
+#| fig-cap: "Model selection criteria across four nested models. R-squared always increases; other criteria can identify diminishing returns."
+#| fig-alt: "Four-panel plot showing different model selection criteria across four nested regression models. Each panel plots the model number on the horizontal axis against one criterion on the vertical axis: R-squared, adjusted R-squared, AIC, and BIC. R-squared increases monotonically with added predictors, while adjusted R-squared, AIC, and BIC reveal diminishing returns, helping identify when additional complexity no longer meaningfully improves model fit."
+#| code-fold: true
+#| code-summary: "Show R Code"
+
+perf <- compare_performance(m1, m2, m3, m4)
+
+tibble(
+  Model = rep(c("M1: SES", "M2: +Min", "M3: +Fem", "M4: +Size,Sect"), 4),
+  Criterion = rep(c("R²", "Adj R²", "AIC", "BIC"), each = 4),
+  Value = c(perf$R2, perf$R2_adjusted, perf$AIC, perf$BIC)
+) |>
+  mutate(Model = factor(Model, levels = c("M1: SES", "M2: +Min", "M3: +Fem", "M4: +Size,Sect"))) |>
+  ggplot(aes(x = Model, y = Value, group = 1)) +
+  geom_point(size = 3, color = ber640_colors["accent"]) +
+  geom_line(color = ber640_colors["accent"]) +
+  facet_wrap(~ Criterion, scales = "free_y") +
+  labs(title = "Model Selection Criteria", x = NULL, y = "Value") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 9))
+```
+
+### Output Interpretation
+```{r}
+#| ref.label: "fig-ch7-criteria-plot"
+#| code-fold: true
+#| code-summary: "Show R Code"
+```
+The four-panel display makes the key insight visually obvious: while raw $R^2$ increases with every added predictor (top-left panel), the other criteria tell a more nuanced story. Adjusted $R^2$ may flatten or dip, indicating diminishing returns. AIC and BIC may identify an intermediate model as optimal. The model where most criteria agree is typically the best choice. If AIC and BIC point to different models, report both and explain the trade-off between prediction accuracy (AIC) and parsimony (BIC).
+
+### Code Explanation
+```{r}
+#| ref.label: "fig-ch7-criteria-plot"
+#| eval: false
+```
+- The `compare_performance()` output is reshaped into long format and plotted with `facet_wrap()` to show each criterion on its own scale
+- For $R^2$ and adjusted $R^2$, **higher is better** (look for the peak)
+- For AIC and BIC, **lower is better** (look for the trough)
+- The first panel ($R^2$) always shows a monotone increase --- this is why $R^2$ alone is insufficient for model comparison
+
+
+:::
+
+
+## A Practical Strategy {#sec-ch7-strategy}
+
+::: {.callout-important}
+## Model Building Decision Checklist
+
+**Step 1: Assess Your Starting Point**
+
+- Do you have theory specifying predictors? → **Confirmatory approach**
+- No theory? → **Exploratory approach** (label it clearly)
+
+**Step 2a: Confirmatory Path**
+
+- Pre-register your analysis plan
+- Build models in a theoretically motivated sequence
+- Test each step with $\Delta R^2$ and the nested $F$-test
+- Report all steps, not just the final one
+
+**Step 2b: Exploratory Path**
+
+- Use AIC or BIC (not $p$-values) to guide selection
+- Cross-validate on held-out data
+- Treat results as hypothesis-generating
+
+**Step 3: Evaluate the Final Model**
+
+- Report $R^2$, adjusted $R^2$, AIC, BIC
+- Proceed to model diagnostics (@sec-ch8)
+:::
+
+
+::: {.callout-warning}
+## Common Mistakes in Model Building
+
+1. **Using stepwise selection then claiming confirmatory results.** If you let an algorithm choose your predictors, the analysis is exploratory --- regardless of what you write in the paper. Reporting a stepwise model as if it were theory-driven is a form of HARKing (Hypothesizing After Results are Known) and inflates false positive rates.
+
+2. **Dropping confounders because $p > .05$.** Confounders are included for substantive reasons (Step 2 of the confirmatory strategy), not because they are statistically significant. Removing a confounder with $p = .12$ can bias the coefficients of your focal predictors, defeating the purpose of including it in the first place.
+
+3. **Comparing non-nested models with `anova()`.** The incremental $F$-test requires that the reduced model be nested within the complete model. Comparing two models with different sets of predictors (e.g., `mathach ~ ses + female` vs. `mathach ~ minority + sector`) using `anova()` produces a meaningless result. Use AIC, BIC, or `compare_performance()` instead.
+
+4. **Reporting only the final model.** Transparency requires showing the model-building process, not just the endpoint. Readers need to see which predictors were considered, which were dropped and why, and how coefficients changed across steps. A table or figure showing the progression (as in @fig-ch7-forest-plot) is far more informative than a single regression table.
+:::
+
+
+## Summary and Key Takeaways {#sec-ch7-summary}
+
+::: {.callout-important}
+## Key Takeaways
+
+1. **Nested model comparison** via `anova()` tests whether additional predictors significantly improve fit; $\Delta R^2$ quantifies the magnitude
+2. **The confirmatory approach** (theory-driven) is always preferred — the 5-step strategy keeps analysis grounded in substantive knowledge
+3. **Automatic selection** (forward, backward, stepwise) inflates Type I errors and produces unstable, overfitted models
+4. **GIGO**: Stepwise regression on pure noise reliably produces "significant" models — false positives are the rule, not the exception
+5. **$R^2$ always increases** with more predictors; use **adjusted $R^2$**, **AIC**, or **BIC** for model comparison
+6. **AIC** is optimized for prediction; **BIC** for model identification (penalizes complexity more heavily)
+7. **Cross-validation** provides an honest estimate of out-of-sample performance
+8. **Pre-registration** protects against HARKing and inflated false positive rates
+9. **Report all models tried**, not just the "best" one — transparency is essential for reproducible science
+10. Model building is only half the story — @sec-ch8 covers model diagnostics, the essential complement
+:::
+
+
+## Exercises {#sec-ch7-exercises}
+
+::: {.callout-caution collapse="true"}
+## Exercise 7.1: Nested Model Comparison
+Using `hsb_sub`, compare `mathach ~ ses + female` (reduced) with `mathach ~ ses + female + minority + sector + size` (full). Report the $F$-test and $\Delta R^2$. Is the improvement practically meaningful?
+
+::: {.callout-tip collapse="true"}
+## Hint
+Use `anova(reduced, full)` for the $F$-test. Compute $\Delta R^2$ by subtracting `r2()` values. Refer to Cohen's benchmarks (small = .02, medium = .13, large = .26) for practical significance.
+:::
+
+```{r}
+#| label: ch7-ex1
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+data(hsb_sub)
+m_red  <- lm(mathach ~ ses + female, data = hsb_sub)
+m_full <- lm(mathach ~ ses + female + minority + sector + size, data = hsb_sub)
+anova(m_red, m_full)
+
+# Delta R²
+tibble(
+  Metric = "Delta R²",
+  Value = round(r2(m_full)$R2 - r2(m_red)$R2, 4)
+) |> kable()
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 7.2: Confirmatory Model Building with GCSE Data
+Apply the 5-step confirmatory strategy: (1) `gcse ~ lrt`, (2) add `gender`, (3) add `factor(school)`. Test each step with `anova()`.
+
+::: {.callout-tip collapse="true"}
+## Hint
+Fit three nested models sequentially. Use `anova(s1, s2)` and `anova(s2, s3)` to test each step. Use `compare_performance()` for a side-by-side view. Note that `factor(school)` adds many dummy variables at once.
+:::
+
+```{r}
+#| label: ch7-ex2
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+data(gcse)
+s1 <- lm(gcse ~ lrt, data = gcse)
+s2 <- lm(gcse ~ lrt + gender, data = gcse)
+s3 <- lm(gcse ~ lrt + gender + factor(school), data = gcse)
+anova(s1, s2)
+anova(s2, s3)
+compare_performance(s1, s2, s3) |> print_md()
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 7.3: Stepwise vs Confirmatory
+Run stepwise on `hsb_sub` and compare with the theory-driven model `mathach ~ ses + minority + sector`. Which would you report in a journal?
+
+::: {.callout-tip collapse="true"}
+## Hint
+Fit the theory-driven model directly. For stepwise, start from the full model with `step(..., direction = "both", trace = 0)`. Use `compare_performance()` to see which model has better fit statistics. Think about whether better AIC alone justifies reporting a data-driven model.
+:::
+
+```{r}
+#| label: ch7-ex3
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+m_theory <- lm(mathach ~ ses + minority + sector, data = hsb_sub)
+m_full   <- lm(mathach ~ ses + minority + female + size + sector, data = hsb_sub)
+m_step   <- step(m_full, direction = "both", trace = 0)
+compare_performance(m_theory, m_step) |> print_md()
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 7.4: GIGO Simulation
+Replicate the noise simulation with $n = 50$, $n = 200$, and $n = 500$ (20 noise predictors each). How does sample size affect the number of false positives?
+
+::: {.callout-tip collapse="true"}
+## Hint
+Adapt the GIGO simulation from @sec-ch7-gigo. Write a function that takes `n` as input and runs the simulation. Use `purrr::map_dfr()` to loop over the three sample sizes. Larger samples give stepwise regression more power, but also more chance to detect spurious effects --- think about what you expect to happen.
+:::
+
+```{r}
+#| label: ch7-ex4
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+set.seed(640)
+n_sims <- 100
+p <- 20
+
+run_gigo <- function(n, n_sims, p) {
+  purrr::map_int(1:n_sims, function(i) {
+    noise_data <- as.data.frame(matrix(rnorm(n * (p + 1)), nrow = n))
+    names(noise_data) <- c("y", paste0("x", 1:p))
+    null_m <- lm(y ~ 1, data = noise_data)
+    full_m <- lm(y ~ ., data = noise_data)
+    step_m <- suppressWarnings(
+      step(null_m, scope = list(lower = null_m, upper = full_m),
+           direction = "both", trace = 0))
+    length(coef(step_m)) - 1
+  })
+}
+
+gigo_results <- purrr::map_dfr(c(50, 200, 500), function(n) {
+  res <- run_gigo(n, n_sims, p)
+  tibble(
+    n = paste0("n = ", n),
+    Mean_Selected = round(mean(res), 2),
+    Pct_At_Least_1 = paste0(round(100 * mean(res >= 1), 1), "%")
+  )
+})
+
+gigo_results |>
+  kable(
+    col.names = c("Sample Size", "Mean Predictors Selected", "% with >= 1 Predictor"),
+    caption = "GIGO simulation: false positive rates across sample sizes"
+  )
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 7.5: AIC vs BIC
+Generate data from a true 3-predictor model with 7 noise predictors. Use stepwise with AIC (`k = 2`) and BIC (`k = log(n)`). Which criterion identifies the true model more often across 100 simulations?
+
+::: {.callout-tip collapse="true"}
+## Hint
+Generate `y = 1 + 2*x1 + 1.5*x2 - x3 + noise` with 10 total predictors (3 true + 7 noise). In `step()`, the `k` argument controls the penalty: `k = 2` gives AIC, `k = log(n)` gives BIC. Use `setequal()` to check whether the selected variables exactly match the true set.
+:::
+
+```{r}
+#| label: ch7-ex5
+#| code-fold: true
+#| code-summary: "Show Solution"
+
+set.seed(640)
+n_sims <- 100
+n <- 200
+
+results <- purrr::map_dfr(1:n_sims, function(i) {
+  # True model: y = 1 + 2*x1 + 1.5*x2 - 1*x3 + noise
+  x <- matrix(rnorm(n * 10), ncol = 10)
+  colnames(x) <- paste0("x", 1:10)
+  y <- 1 + 2 * x[, 1] + 1.5 * x[, 2] - 1 * x[, 3] + rnorm(n)
+  sim_data <- data.frame(y = y, x)
+
+  null_m <- lm(y ~ 1, data = sim_data)
+  full_m <- lm(y ~ ., data = sim_data)
+
+  # AIC-based stepwise (k = 2)
+  aic_model <- suppressWarnings(
+    step(null_m, scope = list(lower = null_m, upper = full_m),
+         direction = "both", k = 2, trace = 0))
+
+  # BIC-based stepwise (k = log(n))
+  bic_model <- suppressWarnings(
+    step(null_m, scope = list(lower = null_m, upper = full_m),
+         direction = "both", k = log(n), trace = 0))
+
+  true_vars <- c("x1", "x2", "x3")
+  aic_vars <- names(coef(aic_model))[-1]
+  bic_vars <- names(coef(bic_model))[-1]
+
+  tibble(
+    AIC_correct = setequal(aic_vars, true_vars),
+    BIC_correct = setequal(bic_vars, true_vars),
+    AIC_n_selected = length(aic_vars),
+    BIC_n_selected = length(bic_vars)
+  )
+})
+
+tibble(
+  Criterion = c("AIC (k = 2)", "BIC (k = log(n))"),
+  Correct_Model = c(
+    paste0(sum(results$AIC_correct), " / ", n_sims),
+    paste0(sum(results$BIC_correct), " / ", n_sims)
+  ),
+  Mean_Predictors = c(
+    round(mean(results$AIC_n_selected), 2),
+    round(mean(results$BIC_n_selected), 2)
+  )
+) |>
+  kable(
+    col.names = c("Criterion", "Times True Model Selected", "Mean Predictors Selected"),
+    caption = "AIC vs BIC: ability to recover the true 3-predictor model"
+  )
+```
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 7.6: The Danger of Data-Driven Model Building (Conceptual)
+
+A researcher has 20 candidate predictors and uses stepwise selection (forward, backward, or both) to build a model predicting student achievement. The final model includes 8 predictors, all with $p < 0.05$. The researcher reports these 8 predictors as "the significant determinants of achievement." Why is this conclusion problematic even if all $p$-values are below 0.05? How does the multiple testing problem apply here, and what would you expect to happen if the researcher applied the same stepwise procedure to a new dataset from the same population?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 7.6
+Stepwise selection evaluates many possible models, effectively conducting numerous hypothesis tests. The reported $p$-values are conditional on having been selected and are therefore biased downward --- they do not account for the search process. In a new dataset, some of the 8 "significant" predictors will likely drop out while different ones enter, because stepwise capitalizes on sample-specific noise. This is why stepwise-selected models tend to have inflated $R^2$ that shrinks on replication. The confirmatory approach avoids this by specifying the model before seeing the data.
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 7.7: Confounding, Mediation, and What to Control For (Conceptual)
+
+A researcher studying the effect of class size on student achievement is deciding whether to include "teacher workload" as a covariate. Smaller classes reduce teacher workload, which in turn may improve teaching quality and student outcomes. Should teacher workload be included in the model? What is the difference between a confounder (which should be controlled) and a mediator (which generally should not)? How would including a mediator as a covariate change the interpretation of the class size coefficient?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 7.7
+A confounder is a common cause of both the predictor and outcome --- controlling for it removes bias. A mediator lies on the causal pathway from predictor to outcome --- controlling for it blocks part of the effect you are trying to estimate. If smaller classes improve outcomes partly through reducing teacher workload, then workload is a mediator. Including it in the model would absorb part of the class size effect, making the class size coefficient represent only the "direct" effect not operating through workload. Whether this is desirable depends on the research question: do you want the total effect of class size, or only the portion not explained by workload changes?
+:::
+
+::: {.callout-caution collapse="true"}
+## Exercise 7.8: Overfitting and the Bias-Variance Tradeoff (Conceptual)
+
+A researcher fits two models to a training dataset of $n = 50$ students: Model A is a simple regression with 2 predictors ($R^2 = 0.45$), and Model B includes 15 predictors with all pairwise interactions ($R^2 = 0.92$). When both models are applied to a held-out test dataset of 50 new students, Model A achieves $R^2 = 0.41$ while Model B achieves $R^2 = 0.15$. Why did Model B, which appeared far superior on the training data, perform so poorly on new data? What does this reveal about the relationship between model complexity and generalization, and how does sample size relative to the number of parameters matter?
+:::
+
+::: {.callout-tip collapse="true"}
+## Hint for Exercise 7.8
+Model B has far more parameters than can be reliably estimated with only 50 observations. It "memorizes" idiosyncratic patterns (noise) in the training data, producing a high $R^2$ that reflects overfitting rather than genuine predictive ability. The bias-variance tradeoff is at work: Model A has higher bias (simpler, may miss real patterns) but low variance (stable across samples), while Model B has low bias but extremely high variance (unstable estimates that change dramatically from sample to sample). A common rule of thumb is to have at least 10--20 observations per estimated parameter. With 15 predictors and interactions, Model B likely estimates 100+ parameters from just 50 observations.
+:::

@@ -1,0 +1,444 @@
+---
+title: "Lab 11: Review --- Logistic Regression & Linear Diagnostics"
+---
+
+{{< include ../_common.qmd >}}
+
+## Goals
+
+::: {.callout-note}
+## What You'll Learn in This Lab
+- Review logistic regression with categorical predictors (3+ levels)
+- Fit and interpret a multiple logistic regression model
+- Create predicted probability curves for male vs. female passengers
+- Review the complete linear regression diagnostic checklist from Lab 8
+- Use `performance::check_model()` as a one-stop diagnostic dashboard
+- **Lecture Notes Reference:** Chapters 8–11 (Review)
+:::
+
+**Datasets:** `titanic` and `hsbs1` from the `regdatasets` package
+
+This is a **review lab**. We revisit two major topics from the course --- logistic regression (Labs 9--10) and linear regression diagnostics (Lab 8) --- and tie them together. Think of it as a dress rehearsal for your final analysis.
+
+
+## Setup
+
+```{r}
+#| label: lab11-setup
+
+library(regdatasets)
+data(titanic)
+data(hsbs1)
+
+# Rename sex to female (already coded 0 = male, 1 = female)
+titanic <- titanic |>
+  rename(female = sex)
+
+# Prepare hsbs1 variables (same as Lab 8)
+hsbs1 <- hsbs1 |>
+  mutate(
+    male   = if_else(gender == 1, 1L, 0L),
+    prog_f = factor(prog,
+                    levels = 1:3,
+                    labels = c("General", "Academic", "Vocational"))
+  )
+
+glimpse(titanic)
+glimpse(hsbs1)
+```
+
+
+## Part 1: Logistic Regression Review (Titanic)
+
+Let's warm up by revisiting a few models from Labs 9 and 10. We will move quickly here since you have seen all of this before.
+
+### Step 1: Gender and Survival
+
+```{r}
+#| label: review-female
+
+model_female <- glm(survived ~ female, data = titanic, family = binomial)
+exp(coef(model_female))
+exp(confint(model_female))
+```
+
+> Females had roughly `r round(exp(coef(model_female)[2]), 1)` times the odds of surviving compared to males, and the 95% CI is comfortably above 1. No surprise --- we have seen this result several times now.
+
+### Step 2: Fare (Standardized)
+
+Remember the interpretation problem with fare? A one-pound change is tiny. Standardizing makes the OR meaningful:
+
+```{r}
+#| label: review-fare-std
+
+titanic <- titanic |>
+  mutate(z_fare = (fare - mean(fare, na.rm = TRUE)) / sd(fare, na.rm = TRUE))
+
+model_z_fare <- glm(survived ~ z_fare, data = titanic, family = binomial)
+exp(coef(model_z_fare))
+exp(confint(model_z_fare))
+```
+
+> A one SD increase in fare (about `r round(sd(titanic$fare, na.rm = TRUE), 0)` pounds) is associated with an OR of roughly `r round(exp(coef(model_z_fare)[2]), 2)`. Higher fare, higher odds of survival.
+
+### Step 3: Passenger Class (3 Levels)
+
+```{r}
+#| label: review-pclass
+
+titanic <- titanic |>
+  mutate(pclass_f = factor(pclass, labels = c("1st", "2nd", "3rd")))
+
+model_pclass <- glm(survived ~ pclass_f, data = titanic, family = binomial)
+```
+
+:::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: lab11-pclass-summary
+
+summary(model_pclass)
+exp(coef(model_pclass))
+```
+
+#### Advanced
+
+```{r}
+#| label: lab11-pclass-gtsummary
+
+model_pclass |>
+  tbl_regression(exponentiate = TRUE) |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+::::
+
+> With 1st class as the reference, both 2nd and 3rd class passengers had significantly lower odds of survival. Third class passengers fared the worst.
+
+### Step 4: Predicted Probabilities by Class
+
+```{r}
+#| label: pclass-pred-plot
+#| fig-alt: "Point-and-error-bar plot showing predicted survival probabilities decreasing steeply from 1st to 2nd to 3rd class with non-overlapping confidence intervals"
+#| fig-cap: "Predicted survival probability by passenger class"
+
+em_pclass <- emmeans(model_pclass, ~ pclass_f, type = "response")
+em_df <- as.data.frame(em_pclass)
+
+ggplot(em_df, aes(x = pclass_f, y = prob)) +
+  geom_point(size = 4, color = ber640_colors["secondary"]) +
+  geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL),
+                width = 0.15, linewidth = 1, color = ber640_colors["secondary"]) +
+  labs(x = "Passenger Class",
+       y = "Predicted P(Survived)",
+       title = "Survival Probability by Passenger Class",
+       subtitle = "Error bars show 95% confidence intervals") +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent)
+```
+
+> The gradient is steep: roughly 63% for 1st class, 47% for 2nd, and 24% for 3rd. These non-overlapping CIs confirm the differences are statistically significant.
+
+
+## Part 2: Multiple Logistic Regression
+
+Now let's combine everything into a single model. This is where logistic regression gets interesting --- we can ask: **controlling for age and class, did gender still matter?**
+
+### Step 1: Fit the Full Model
+
+```{r}
+#| label: full-logistic
+
+model_full <- glm(survived ~ female + age + pclass_f,
+                  data = titanic, family = binomial)
+```
+
+:::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: full-summary
+
+summary(model_full)
+```
+
+#### Advanced
+
+```{r}
+#| label: full-gtsummary
+
+model_full |>
+  tbl_regression(exponentiate = TRUE) |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+::::
+
+### Step 2: Interpret the Odds Ratios
+
+```{r}
+#| label: full-or
+
+exp(coef(model_full))
+exp(confint(model_full))
+```
+
+> Let's walk through each predictor:
+>
+> - **female:** Controlling for age and class, females had about `r round(exp(coef(model_full)["female"]), 1)` times the odds of survival compared to males. Gender mattered enormously even after accounting for other factors.
+> - **age:** Each additional year of age is associated with an OR of about `r round(exp(coef(model_full)["age"]), 3)`. Older passengers had slightly lower odds of survival, all else equal.
+> - **2nd class vs. 1st class:** The OR of `r round(exp(coef(model_full)["pclass_f2nd"]), 2)` tells us 2nd class passengers had lower odds than 1st class, controlling for gender and age.
+> - **3rd class vs. 1st class:** An OR of `r round(exp(coef(model_full)["pclass_f3rd"]), 2)` --- third class passengers had dramatically lower odds of survival than first class, even after adjusting for gender and age.
+
+::: {.callout-tip}
+## The "Controlling For" Interpretation
+In multiple logistic regression, each OR represents the effect of that predictor **holding all other predictors constant**. So when we say females had higher odds of survival, we mean comparing a female and male passenger of the same age and same class.
+:::
+
+### Step 3: Predicted Probability Curves --- Male vs. Female
+
+This is the payoff plot. We show how the predicted probability of survival changes with age, separately for males and females, within each passenger class.
+
+```{r}
+#| label: pred-curves-gender
+#| fig-alt: "Three-panel faceted plot by passenger class showing S-shaped survival probability curves for females and males, with females consistently higher and the class gradient showing dramatic decline from 1st to 3rd class"
+#| fig-cap: "Predicted probability of survival by age, gender, and passenger class"
+#| fig-width: 10
+#| fig-height: 5
+
+# Create prediction grid
+new_data <- expand.grid(
+  age      = seq(1, 70, length.out = 100),
+  female   = c(0, 1),
+  pclass_f = factor(c("1st", "2nd", "3rd"))
+)
+
+# Get predictions on the link scale for proper CIs
+preds <- predict(model_full, newdata = new_data, type = "link", se.fit = TRUE)
+
+new_data <- new_data |>
+  mutate(
+    prob    = plogis(preds$fit),
+    ci_low  = plogis(preds$fit - 1.96 * preds$se.fit),
+    ci_high = plogis(preds$fit + 1.96 * preds$se.fit),
+    gender_label = if_else(female == 1, "Female", "Male")
+  )
+
+ggplot(new_data, aes(x = age, y = prob, color = gender_label, fill = gender_label)) +
+  geom_ribbon(aes(ymin = ci_low, ymax = ci_high), alpha = 0.15, color = NA) +
+  geom_line(linewidth = 1.2) +
+  facet_wrap(~ pclass_f) +
+  scale_color_manual(values = c("Female" = ber640_colors["secondary"],
+                                "Male"   = ber640_colors["accent"])) +
+  scale_fill_manual(values = c("Female" = ber640_colors["secondary"],
+                               "Male"   = ber640_colors["accent"])) +
+  labs(x = "Age", y = "Predicted P(Survived)",
+       color = "Gender", fill = "Gender",
+       title = "Survival Probability by Age, Gender, and Class",
+       subtitle = "Shaded bands show 95% confidence intervals") +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent)
+```
+
+> Three things jump out. First, females had much higher survival probabilities than males at every age and in every class. Second, older passengers had lower probabilities than younger ones. Third, the class gradient is massive --- a young female in 1st class had near-certain survival odds, while an older male in 3rd class had very low odds.
+
+
+## Part 3: Linear Regression Diagnostics Review (hsbs1)
+
+Now we switch gears entirely. We return to the `hsbs1` dataset from Lab 8 and run through the **complete diagnostic checklist** one more time. Think of this as a compact reference you can come back to for any regression analysis.
+
+**Research Question:** *Is there a difference in science achievement between males and females, controlling for math, reading, and course track?*
+
+### Step 1: Fit the Model
+
+```{r}
+#| label: lm-fit
+
+model_lm <- lm(sci ~ math + read + male + prog_f, data = hsbs1)
+tidy_model(model_lm)
+```
+
+> Same model as Lab 8. Now let's blitz through the diagnostics.
+
+### Step 2: Compute Residuals
+
+```{r}
+#| label: lm-residuals
+
+hsbs1 <- hsbs1 |>
+  mutate(
+    resid_rstud = rstudent(model_lm),
+    fitted_vals = fitted(model_lm)
+  )
+```
+
+We use **studentized deleted residuals** (`rstudent`) because they are the best at catching outliers --- each residual is computed from a model that excludes that observation.
+
+### Diagnostic 1: Normality
+
+::: {.panel-tabset}
+
+#### Histogram
+
+```{r}
+#| label: diag-normality-hist
+#| fig-alt: "Histogram of studentized deleted residuals with normal density overlay, showing approximately bell-shaped distribution consistent with normality"
+#| fig-cap: "Histogram of studentized deleted residuals"
+#| fig-width: 7
+#| fig-height: 4
+
+ggplot(hsbs1, aes(x = resid_rstud)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 25, fill = ber640_colors["primary"], color = "white") +
+  stat_function(fun = dnorm, color = ber640_colors["secondary"],
+                linewidth = 1.2) +
+  labs(x = "Studentized Deleted Residual", y = "Density",
+       title = "Normality Check: Histogram")
+```
+
+#### QQ Plot
+
+```{r}
+#| label: diag-normality-qq
+#| fig-alt: "QQ plot of studentized deleted residuals with points falling close to the diagonal reference line, indicating approximate normality"
+#| fig-cap: "QQ plot of studentized deleted residuals"
+#| fig-width: 6
+#| fig-height: 5
+
+ggplot(hsbs1, aes(sample = resid_rstud)) +
+  stat_qq(alpha = 0.4, color = ber640_colors["primary"]) +
+  stat_qq_line(color = ber640_colors["secondary"], linewidth = 1.2) +
+  labs(x = "Theoretical Quantiles", y = "Sample Quantiles",
+       title = "Normality Check: QQ Plot")
+```
+
+:::
+
+> Points fall close to the diagonal line in the QQ plot, and the histogram looks roughly bell-shaped. Normality looks fine.
+
+### Diagnostic 2: Constant Variance
+
+```{r}
+#| label: diag-variance
+#| fig-alt: "Residuals versus fitted values plot with LOWESS curve near zero and roughly constant spread, indicating no severe heteroscedasticity"
+#| fig-cap: "Residuals vs. fitted values"
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(hsbs1, aes(x = fitted_vals, y = resid_rstud)) +
+  geom_point(alpha = 0.3, size = 2, color = ber640_colors["primary"]) +
+  geom_hline(yintercept = 0, color = ber640_colors["secondary"], linewidth = 1) +
+  geom_smooth(method = "loess", se = FALSE, color = ber640_colors["accent"],
+              linewidth = 1.2, linetype = "dashed") +
+  labs(x = "Fitted Values", y = "Studentized Deleted Residual",
+       title = "Constant Variance Check",
+       subtitle = "Look for a fan or funnel shape")
+```
+
+> No obvious megaphone pattern. The LOWESS line hovers near zero. Constant variance looks reasonable.
+
+### Diagnostic 3: Linearity (Added-Variable Plots)
+
+```{r}
+#| label: diag-linearity
+#| fig-alt: "Multi-panel added-variable plots for math, read, male, and program type showing roughly linear partial relationships with science scores"
+#| fig-cap: "Added-variable plots for continuous predictors"
+#| fig-width: 10
+#| fig-height: 8
+
+car::avPlots(model_lm)
+```
+
+> Each panel should show a roughly linear cloud. If you see bending or curvature, the linearity assumption for that predictor may be violated. Here, the relationships look linear.
+
+### Diagnostic 4: Collinearity (VIF)
+
+```{r}
+#| label: diag-vif
+
+car::vif(model_lm)
+```
+
+> All VIF values are well below 4. Math and reading are correlated, but not enough to cause any problems. No collinearity concerns.
+
+### Diagnostic 5: Outliers
+
+```{r}
+#| label: diag-outliers
+
+hsbs1 |>
+  filter(abs(resid_rstud) > 3) |>
+  select(id, sci, math, read, male, prog_f, resid_rstud, fitted_vals)
+```
+
+> Observations with $|\text{rstudent}| > 3$ are potential outliers. Investigate them --- do not automatically delete. Check whether they are data entry errors or genuinely unusual cases.
+
+::: {.callout-important}
+## The Five-Point Checklist
+Every linear regression analysis should check:
+
+1. **Normality** --- histogram + QQ plot of studentized deleted residuals
+2. **Constant variance** --- residuals vs. fitted values plot
+3. **Linearity** --- added-variable plots (or residual vs. each predictor)
+4. **Collinearity** --- VIF (worry if > 10, monitor if > 4)
+5. **Outliers** --- $|\text{rstudent}| > 3$
+:::
+
+### Remedy: Robust Standard Errors
+
+If constant variance looks questionable (even mildly), robust SE is a good safety net. It does not change the coefficients --- only the standard errors and p-values:
+
+```{r}
+#| label: robust-se
+
+# Original OLS
+tidy_model(model_lm)
+
+# Robust (HC1)
+lmtest::coeftest(model_lm, vcov = sandwich::vcovHC(model_lm, type = "HC1"))
+```
+
+> Compare the standard errors side by side. If they are similar, heteroscedasticity is not a big concern. If they differ substantially, report the robust version.
+
+### Advanced: One-Stop Dashboard
+
+The `performance` package can produce all diagnostic plots at once:
+
+```{r}
+#| label: check-model-dashboard
+#| fig-alt: "Six-panel diagnostic dashboard from performance package showing normality, homoscedasticity, linearity, influential observations, and collinearity checks for the linear regression model"
+#| fig-cap: "Complete diagnostic dashboard"
+#| fig-width: 10
+#| fig-height: 12
+
+performance::check_model(model_lm)
+```
+
+> This is handy for a quick visual scan, but we recommend understanding each individual plot (which we just did) before relying on the dashboard.
+
+
+## Key Takeaways
+
+::: {.callout-note}
+## What We Reviewed
+
+1. **Logistic regression handles binary outcomes.** Use `glm(family = binomial)` and interpret coefficients as odds ratios via `exp(coef())`. Always report CIs alongside point estimates.
+
+2. **Categorical predictors with 3+ levels** create multiple dummy variables automatically when you use `factor()`. Choose a meaningful reference group with `relevel()`.
+
+3. **Multiple logistic regression** lets you ask "controlling for" questions. Each OR represents the effect of one predictor holding all others constant.
+
+4. **Predicted probability plots** are the best way to communicate logistic regression results to a non-technical audience. Use `predict(type = "link")` with `plogis()` for proper confidence intervals.
+
+5. **The diagnostic checklist** for linear regression is always the same: normality, constant variance, linearity, collinearity, outliers. Run through all five every time.
+
+6. **Robust standard errors** are your safety net when constant variance is questionable. They adjust SE without changing the point estimates.
+:::
+
+::: {.callout-tip}
+## Connecting Logistic and Linear Regression
+Both logistic and linear regression follow the same workflow: specify a model, fit it, interpret coefficients, check assumptions. The key difference is the outcome type (binary vs. continuous) and the scale of interpretation (odds ratios vs. raw units). The diagnostic spirit is the same --- before you trust any results, verify that the model's assumptions are reasonable.
+:::

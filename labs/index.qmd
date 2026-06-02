@@ -1,0 +1,80 @@
+# Preface {.unnumbered}
+
+This lab manual accompanies **BER 640: Advanced Statistical Methods in Education** at the University of Alabama. While the [Lecture Notes](../notes/) explain concepts and theory, this manual guides you through hands-on data analysis in R, step by step.
+
+## How to Use This Manual
+
+Each lab is designed to be worked through in order. Read the text, run each code block, and examine the output before moving on. The text between code blocks explains what the code does and how to interpret the results.
+
+**Code levels.** Most code in this manual is straightforward and meant to be typed or copied directly into your R console. Where a more polished or efficient approach exists, you will see **Simple** / **Advanced** tabs --- both produce the same result, just with different levels of sophistication. Start with the Simple tab; revisit the Advanced tab once you are comfortable with the basics.
+
+::: {.panel-tabset}
+### Simple
+```r
+# A straightforward approach
+mean(data$score)
+```
+
+### Advanced
+```r
+# A tidyverse approach
+data |> summarize(mean_score = mean(score))
+```
+:::
+
+**Callout boxes** provide additional context:
+
+::: {.callout-tip}
+## Try It Yourself
+Green boxes suggest exercises you can try on your own to deepen understanding.
+:::
+
+::: {.callout-note}
+## Concept Review
+Blue boxes briefly review the statistical concept being applied in the lab.
+:::
+
+::: {.callout-warning}
+## Common Mistake
+Yellow boxes highlight frequent errors and how to avoid them.
+:::
+
+## Software Setup
+
+All analyses use R with the `regdatasets` package, which contains all 25 course datasets. To get started:
+
+```r
+# Install the course data package
+install.packages("remotes")
+remotes::install_github("joonho112/regdatasets")
+
+# Install all required packages at once
+install.packages("pacman")
+pacman::p_load(
+  tidyverse, easystats, marginaleffects,
+  gtsummary, patchwork, car
+)
+```
+
+See the [Lecture Notes Appendix A](../notes/appendices/a-r-setup-guide.html) for detailed installation instructions.
+
+## Companion Resources
+
+This lab manual is one component of the BER 640 course materials:
+
+- **Lecture Notes**: [Advanced Statistical Methods in Education: A Regression Approach with R](../notes/) --- the primary textbook covering theory, concepts, and worked examples with full output interpretation.
+- **`regdatasets` package**: [joonho112.github.io../regdatasets](../regdatasets/) --- all 25 course datasets in a single R package, with documentation and codebooks.
+- **Homework Solutions**: A separate companion providing detailed solutions to all homework assignments.
+
+## Acknowledgments
+
+This lab manual was developed as part of the BER 640 course at the University of Alabama. The course materials build on the foundation established by **EDUC 275B: Data Analysis in Education Research 2**, taught by [Professor Sophia Rabe-Hesketh](https://gse.berkeley.edu/sophia-rabe-hesketh) at the UC Berkeley Graduate School of Education. All analysis examples have been rewritten in R to provide students with a free, open-source analytical workflow.
+
+This project was supported by the Online Teaching Innovation and Digital Education (OTIDE) initiative at the University of Alabama. The datasets used throughout are available via the [`regdatasets`](../regdatasets/) R package.
+
+If you have questions, suggestions, or notice anything that needs to be updated or corrected, please reach out at [jlee296@ua.edu](mailto:jlee296@ua.edu). Feedback is always welcome.
+
+::: {.callout-note}
+## Citation
+Lee, J. (2026). *BER 640 R Lab Manual: Hands-on Regression Analysis with R*. University of Alabama. Available at: [https://joonho112.github.io/jlee-regression-course/labs/](https://joonho112.github.io/jlee-regression-course/labs/)
+:::

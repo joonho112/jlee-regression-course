@@ -1,0 +1,6 @@
+```{r}
+#| label: common-setup
+#| include: false
+
+source(here::here("_common.R"), local = TRUE)
+```

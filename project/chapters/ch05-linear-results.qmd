@@ -1,0 +1,724 @@
+# Linear Regression Example: Results & Discussion {#sec-linear-results}
+
+{{< include ../_common.qmd >}}
+
+::: {.callout-note}
+## About This Chapter
+This chapter demonstrates **Parts 4--6** of the linear regression project
+(Descriptive Statistics, Results, and Discussion). This is the main analysis
+chapter --- the heart of the project. Every code block runs on the PIAAC Korea
+dataset and produces real output, so you can follow along step by step.
+:::
+
+
+## Part 4: Descriptive Analysis {#sec-linear-ex-part4}
+
+::: {.callout-important}
+## Guideline Reminder --- Part 4
+Before running any regressions, describe your data. Report the sample size,
+present summary statistics for all continuous variables (mean, SD, min, max)
+and frequency tables for categorical variables, and include exploratory
+visualizations that preview the relationships you will model.
+:::
+
+### Sample Overview {#sec-linear-ex-sample-overview}
+
+We begin by loading the analysis dataset and confirming the sample size.
+
+```{r}
+#| label: load-data-results
+#| message: false
+
+# Load the PIAAC Korea analysis dataset
+piaac <- readRDS(here::here("data", "piaac_kor.rds"))
+
+# Confirm sample size and check for missing data
+cat("Sample size:", nrow(piaac), "\n")
+cat("Variables:  ", ncol(piaac), "\n")
+cat("Missing values:", sum(is.na(piaac)), "\n")
+```
+
+The analytic sample contains **N = 1,357** Korean full-time workers aged
+35--54 with complete data on all analysis variables. Because we constructed a
+complete-case dataset during data preparation, there are no missing values.
+
+### Continuous Variables {#sec-linear-ex-continuous}
+
+@tbl-desc-continuous presents summary statistics for the four key continuous
+variables: log-income, years of education, work experience, and numeracy.
+
+```{r}
+#| label: tbl-desc-continuous
+#| tbl-cap: "Descriptive Statistics for Continuous Variables"
+
+piaac |>
+  select(ln_inc, schyrs, exper, numeracy) |>
+  tbl_summary(
+    type = everything() ~ "continuous",
+    statistic = all_continuous() ~ "{mean} ({sd})",
+    label = list(
+      ln_inc   ~ "Log monthly income",
+      schyrs   ~ "Years of education",
+      exper    ~ "Work experience (years)",
+      numeracy ~ "Numeracy (z-score)"
+    ),
+    digits = everything() ~ 2
+  ) |>
+  bold_labels()
+```
+
+Several features of the continuous variable distributions are worth noting:
+
+- **Log-income** has a mean of about 8.00 and ranges from 5.63 to 10.44. The
+  distribution is approximately symmetric after the log transformation, which
+  is desirable for linear regression.
+- **Years of education** averages approximately 13.7 years, reflecting Korea's
+  high educational attainment. The range (6--22 years) shows meaningful
+  variation.
+- **Work experience** averages about 16.5 years, as expected for a sample of
+  prime working-age adults (35--54). The range (0--40 years) is wide.
+- **Numeracy** is z-scored (mean $\approx$ 0, SD $\approx$ 1), ranging from
+  about $-3.8$ to $+3.0$ standard deviations.
+
+### Categorical Variables {#sec-linear-ex-categorical}
+
+@tbl-desc-categorical presents the frequency distributions of gender and
+occupational classification.
+
+```{r}
+#| label: tbl-desc-categorical
+#| tbl-cap: "Frequency Distributions of Categorical Variables"
+
+piaac |>
+  select(female, occupation) |>
+  mutate(
+    female = factor(female, levels = c(0, 1),
+                    labels = c("Male", "Female"))
+  ) |>
+  tbl_summary(
+    label = list(
+      female     ~ "Gender",
+      occupation ~ "Occupation"
+    )
+  ) |>
+  bold_labels()
+```
+
+The sample is about 60% male and 40% female. The occupational distribution
+shows that skilled occupations (managers, professionals, technicians) and
+semi-white-collar workers (clerical, service/sales) are the most common
+categories, together accounting for about 68% of the sample. Semi-blue-collar
+workers make up about 21%, and elementary occupations represent about 10% of
+the sample.
+
+
+### Visualizations {#sec-linear-ex-visualizations}
+
+#### Distribution of the Outcome Variable
+
+@fig-hist-lninc shows the distribution of log monthly income, our outcome
+variable. The log transformation produces a distribution that is approximately
+normal, which supports the normality assumption for the regression residuals.
+
+```{r}
+#| label: fig-hist-lninc
+#| fig-cap: "Distribution of Log Monthly Income"
+#| fig-alt: "Histogram of log monthly income showing an approximately normal, symmetric distribution centered around 8.0 with a dashed vertical line at the sample mean"
+#| fig-height: 4
+
+ggplot(piaac, aes(x = ln_inc)) +
+  geom_histogram(
+    bins = 30, fill = ber640_colors["accent"], color = "white", alpha = 0.8
+  ) +
+  geom_vline(
+    xintercept = mean(piaac$ln_inc),
+    linetype = "dashed", color = ber640_colors["secondary"], linewidth = 0.8
+  ) +
+  labs(
+    x = "Log monthly income",
+    y = "Count",
+    title = "Distribution of Log Monthly Income",
+    subtitle = "Dashed line = sample mean"
+  )
+```
+
+#### Scatterplots of Continuous Predictors
+
+@fig-scatter-predictors displays the bivariate relationships between
+log-income and each continuous predictor. Each panel includes both a linear
+fit (red) and a LOESS smooth (blue) to help detect nonlinearity.
+
+```{r}
+#| label: fig-scatter-predictors
+#| fig-cap: "Scatterplots of Log Income vs. Continuous Predictors"
+#| fig-alt: "Three-panel scatterplot showing log income versus education, experience, and numeracy. Education and numeracy show positive linear trends with LOESS curves confirming linearity. Experience shows a positive but slightly concave relationship where the LOESS curve bends downward at higher values, indicating diminishing returns."
+#| fig-height: 5
+
+p_schyrs <- ggplot(piaac, aes(x = as.numeric(schyrs), y = ln_inc)) +
+  geom_point(alpha = 0.15, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", se = FALSE,
+              color = ber640_colors["secondary"], linewidth = 1) +
+  geom_smooth(method = "loess", se = FALSE,
+              color = ber640_colors["accent"], linewidth = 1,
+              linetype = "dashed") +
+  labs(x = "Years of education", y = "Log income",
+       title = "Education")
+
+p_exper <- ggplot(piaac, aes(x = as.numeric(exper), y = ln_inc)) +
+  geom_point(alpha = 0.15, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", se = FALSE,
+              color = ber640_colors["secondary"], linewidth = 1) +
+  geom_smooth(method = "loess", se = FALSE,
+              color = ber640_colors["accent"], linewidth = 1,
+              linetype = "dashed") +
+  labs(x = "Work experience (years)", y = "Log income",
+       title = "Experience")
+
+p_numeracy <- ggplot(piaac, aes(x = numeracy, y = ln_inc)) +
+  geom_point(alpha = 0.15, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", se = FALSE,
+              color = ber640_colors["secondary"], linewidth = 1) +
+  geom_smooth(method = "loess", se = FALSE,
+              color = ber640_colors["accent"], linewidth = 1,
+              linetype = "dashed") +
+  labs(x = "Numeracy (z-score)", y = "Log income",
+       title = "Numeracy")
+
+p_schyrs + p_exper + p_numeracy +
+  plot_annotation(
+    subtitle = "Red = linear fit; Blue dashed = LOESS smooth"
+  )
+```
+
+Key observations from the scatterplots:
+
+- **Education** shows a clear positive linear relationship with log-income.
+  The LOESS curve closely tracks the linear fit, suggesting linearity is
+  reasonable.
+- **Experience** shows a positive but slightly curved relationship. The LOESS
+  smooth bends downward at higher experience levels, consistent with the
+  diminishing-returns pattern that justifies including the squared term
+  (`exper2_c`) in our models.
+- **Numeracy** shows a moderate positive association with log-income. The
+  relationship appears approximately linear.
+
+#### Boxplots by Categorical Predictors
+
+@fig-boxplot-categorical displays the distribution of log-income across gender
+and occupational categories.
+
+```{r}
+#| label: fig-boxplot-categorical
+#| fig-cap: "Log Income by Gender and Occupation"
+#| fig-alt: "Side-by-side boxplots in two panels. The gender panel shows males have a noticeably higher median log income than females, with the male median above the female 75th percentile. The occupation panel shows a clear earnings gradient: skilled workers earn the most, followed by semi-white-collar, semi-blue-collar, and elementary workers."
+#| fig-height: 5
+
+p_gender <- piaac |>
+  mutate(Gender = factor(female, levels = c(0, 1),
+                         labels = c("Male", "Female"))) |>
+  ggplot(aes(x = Gender, y = ln_inc, fill = Gender)) +
+  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
+  scale_fill_manual(values = c(ber640_colors["primary"],
+                               ber640_colors["accent"])) +
+  labs(x = NULL, y = "Log income", title = "Gender")
+
+p_occupation <- ggplot(piaac, aes(x = occupation, y = ln_inc,
+                                   fill = occupation)) +
+  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
+  scale_fill_manual(values = unname(ber640_colors[1:4])) +
+  labs(x = NULL, y = "Log income", title = "Occupation") +
+  theme(axis.text.x = element_text(size = 10))
+
+p_gender + p_occupation
+```
+
+Two patterns stand out:
+
+- **Gender gap:** Male workers have noticeably higher log-income than female
+  workers. The median for males is above the 75th percentile for females.
+- **Occupational hierarchy:** There is a clear earnings gradient across
+  occupational categories. Skilled workers earn the most, followed by
+  semi-white-collar, semi-blue-collar, and elementary workers.
+
+::: {.callout-tip}
+## Writing Tip
+Exploratory visualizations serve two purposes: (1) they preview the
+relationships you will model, and (2) they help you check whether the
+linearity assumption is reasonable *before* fitting the regression. Always
+describe what you see in each plot --- do not just drop in a figure without
+interpretation.
+:::
+
+
+## Part 5: Regression Analysis {#sec-linear-ex-part5}
+
+::: {.callout-important}
+## Guideline Reminder --- Part 5
+Fit your planned models, present the results in a publication-style table,
+interpret every coefficient substantively, and check regression assumptions.
+Link each model back to the research question it addresses.
+:::
+
+### Model 1: Traditional Mincer Model (RQ1) {#sec-linear-ex-results-m1}
+
+We begin by fitting Model 1, which regresses log-income on gender, years of
+education (mean-centered), work experience (mean-centered, in decades), and
+the squared experience term.
+
+```{r}
+#| label: fit-model1
+
+# --- Model 1: Traditional Mincer model ---
+model1 <- lm(ln_inc ~ female + schyrs_c + exper_c + exper2_c,
+             data = piaac)
+
+summary(model1)
+```
+
+**Interpretation of Model 1:**
+
+- **Intercept (8.20):** The predicted log-income for a *male* worker with
+  *average* education and *average* experience. In original units, this
+  corresponds to approximately $e^{8.20} \approx 3{,}641$ (PPP-adjusted
+  monthly income units).
+- **Female ($b = -0.40$, $p < .001$):** Women earn approximately
+  $100 \times (e^{-0.40} - 1) \approx -33\%$ less than men with the same
+  education and experience. This is a substantial gender gap.
+- **Years of education ($b = 0.084$, $p < .001$):** Each additional year of
+  education is associated with approximately an 8.4% increase in monthly
+  income, holding other variables constant. This is consistent with typical
+  Mincer estimates.
+- **Experience ($b = 0.169$, $p < .001$):** An additional decade of work
+  experience is associated with approximately a 16.9% increase in income.
+- **Experience squared ($b = -0.073$, $p < .001$):** The negative coefficient
+  confirms diminishing returns to experience --- the income gains from
+  additional experience decrease at higher experience levels.
+- **$R^2 = .395$:** The traditional Mincer variables explain about 39.5% of
+  the variance in log-income.
+
+
+### Model 2: Adding Occupation and Numeracy (RQ2) {#sec-linear-ex-results-m2}
+
+Model 2 extends Model 1 by adding three occupation dummy variables (with
+skilled occupations as the reference category) and numeracy proficiency.
+
+```{r}
+#| label: fit-model2
+
+# --- Model 2: + Occupation and numeracy ---
+model2 <- lm(ln_inc ~ female + schyrs_c + exper_c + exper2_c +
+               semiwhite + semiblue + elementary + numeracy,
+             data = piaac)
+
+summary(model2)
+```
+
+**Interpretation of Model 2:**
+
+- **Occupation effects** (all relative to skilled workers):
+  - *Semi-white* ($b = -0.14$, $p < .001$): Semi-white-collar workers earn
+    about 13% less than skilled workers.
+  - *Semi-blue* ($b = -0.28$, $p < .001$): Semi-blue-collar workers earn
+    about 24% less than skilled workers.
+  - *Elementary* ($b = -0.38$, $p < .001$): Elementary workers earn about 31%
+    less than skilled workers.
+  - The clear gradient across occupation categories confirms that occupational
+    classification captures meaningful earnings differences.
+- **Numeracy ($b = 0.061$, $p < .001$):** A one-standard-deviation increase
+  in numeracy proficiency is associated with approximately a 6.1% increase in
+  income, even after controlling for education, experience, and occupation.
+  This means that *what workers know* (cognitive skills) matters for earnings
+  above and beyond *how long they went to school*.
+- **Education ($b = 0.048$):** Note that the education coefficient decreased
+  from 0.084 in Model 1 to 0.048 in Model 2. This reduction occurs because
+  some of the education effect in Model 1 was actually operating through
+  occupational sorting and cognitive skills. With those pathways controlled,
+  the direct return to an additional year of education is about 4.8%.
+- **$R^2 = .435$:** Model 2 explains about 43.5% of the variance in
+  log-income, a meaningful increase of 4 percentage points over Model 1.
+
+#### Incremental F-Test: Model 1 vs. Model 2
+
+We formally test whether the four additional predictors (three occupation
+dummies + numeracy) significantly improve model fit using an incremental
+$F$-test.
+
+```{r}
+#| label: ftest-m1-m2
+
+anova(model1, model2)
+```
+
+The $F$-test is highly significant ($F(4, 1348) = 23.99$, $p < .001$),
+confirming that occupation and numeracy jointly add significant explanatory
+power beyond the traditional Mincer variables. This answers **RQ2** in the
+affirmative.
+
+
+### Model 3: Gender Interactions (RQ3) {#sec-linear-ex-results-m3}
+
+Model 3 extends Model 2 by adding interaction terms between gender and two key
+predictors: education and numeracy. These interaction terms test whether the
+*returns* to education and cognitive skills differ between men and women.
+
+```{r}
+#| label: fit-model3
+
+# --- Model 3: + Gender interactions ---
+model3 <- lm(ln_inc ~ female + schyrs_c + exper_c + exper2_c +
+               semiwhite + semiblue + elementary + numeracy +
+               fem_schyrs_c + fem_numeracy,
+             data = piaac)
+
+summary(model3)
+```
+
+**Interpretation of the interaction terms:**
+
+- **Female $\times$ Education ($b = -0.015$, $p = .160$):** The interaction
+  is not statistically significant at $\alpha = .05$. There is no evidence
+  that the returns to education differ by gender.
+- **Female $\times$ Numeracy ($b = -0.055$, $p = .068$):** This interaction
+  is marginally nonsignificant. There is a suggestive pattern that the
+  returns to numeracy may be somewhat smaller for women, but the evidence is
+  not strong enough to conclude that the difference is statistically reliable.
+- **$R^2 = .439$:** The addition of two interaction terms produces only a
+  small increase in $R^2$ (from .435 to .439).
+
+#### Incremental F-Test: Model 2 vs. Model 3
+
+```{r}
+#| label: ftest-m2-m3
+
+anova(model2, model3)
+```
+
+The incremental $F$-test for the two interaction terms yields
+$F(2, 1346) = 5.17$, $p = .006$. Although the block is statistically
+significant at $\alpha = .05$, neither individual interaction term reaches
+significance on its own. This is a case where the *joint* test detects a
+small combined effect that the individual $t$-tests lack power to isolate.
+Given the marginal nature of these results, the most conservative
+interpretation --- and the one we adopt for **RQ3** --- is that the returns to
+education and numeracy are broadly **similar for men and women**. The gender
+gap in earnings appears to operate primarily as a level difference (the main
+effect of `female`) rather than through differential returns to human capital.
+
+
+### Publication-Style Regression Table {#sec-linear-ex-reg-table}
+
+@tbl-regression-models presents all three models side by side in a
+publication-ready format.
+
+```{r}
+#| label: tbl-regression-models
+#| tbl-cap: "Nested Linear Regression Models Predicting Log Monthly Income"
+
+# Create individual tbl_regression objects
+t1 <- tbl_regression(
+  model1,
+  intercept = TRUE,
+  label = list(
+    female   ~ "Female",
+    schyrs_c ~ "Education (years, centered)",
+    exper_c  ~ "Experience (decades, centered)",
+    exper2_c ~ "Experience squared"
+  )
+) |> bold_p(t = 0.05)
+
+t2 <- tbl_regression(
+  model2,
+  intercept = TRUE,
+  label = list(
+    female    ~ "Female",
+    schyrs_c  ~ "Education (years, centered)",
+    exper_c   ~ "Experience (decades, centered)",
+    exper2_c  ~ "Experience squared",
+    semiwhite ~ "Semi-white-collar",
+    semiblue  ~ "Semi-blue-collar",
+    elementary ~ "Elementary",
+    numeracy  ~ "Numeracy (z-score)"
+  )
+) |> bold_p(t = 0.05)
+
+t3 <- tbl_regression(
+  model3,
+  intercept = TRUE,
+  label = list(
+    female       ~ "Female",
+    schyrs_c     ~ "Education (years, centered)",
+    exper_c      ~ "Experience (decades, centered)",
+    exper2_c     ~ "Experience squared",
+    semiwhite    ~ "Semi-white-collar",
+    semiblue     ~ "Semi-blue-collar",
+    elementary   ~ "Elementary",
+    numeracy     ~ "Numeracy (z-score)",
+    fem_schyrs_c ~ "Female x Education",
+    fem_numeracy ~ "Female x Numeracy"
+  )
+) |> bold_p(t = 0.05)
+
+# Merge into one table
+tbl_merge(
+  tbls = list(t1, t2, t3),
+  tab_spanner = c("**Model 1**", "**Model 2**", "**Model 3**")
+)
+```
+
+::: {.callout-tip}
+## Writing Tip
+A combined regression table is the standard way to present nested models. It
+allows the reader to see at a glance how coefficients change as new predictors
+are added. Always include confidence intervals (or standard errors) and
+significance indicators.
+:::
+
+
+### Collinearity Diagnostics {#sec-linear-ex-vif}
+
+We check for multicollinearity by computing variance inflation factors (VIFs)
+for the full model (Model 3).
+
+```{r}
+#| label: tbl-vif
+#| tbl-cap: "Variance Inflation Factors for Model 3"
+
+car::vif(model3) |>
+  as.data.frame() |>
+  setNames("VIF") |>
+  knitr::kable(digits = 2)
+```
+
+All VIF values are well below 5 (the highest is about 3.1 for `schyrs_c`),
+indicating that multicollinearity is not a concern in this analysis. Even the
+interaction terms (`fem_schyrs_c`, `fem_numeracy`) have modest VIFs, which is
+expected because we used mean-centered predictors to construct the
+interactions.
+
+::: {.callout-note}
+## VIF Guidelines
+- VIF < 5: No concern
+- VIF 5--10: Moderate concern; consider whether centering or combining
+  predictors might help
+- VIF > 10: Serious multicollinearity problem; the affected coefficients may
+  be unstable
+:::
+
+
+### Residual Diagnostics {#sec-linear-ex-residuals}
+
+We assess the regression assumptions by examining residual plots for Model 3
+(the most complex model).
+
+#### Histogram and Q--Q Plot of Residuals
+
+```{r}
+#| label: fig-residual-hist-qq
+#| fig-cap: "Normality Assessment of Residuals (Model 3)"
+#| fig-alt: "Two-panel diagnostic display. The histogram of residuals shows an approximately symmetric, bell-shaped distribution with slight heavy tails. The Q-Q plot shows points closely following the diagonal reference line with minor deviations in the tails, indicating approximate normality."
+#| fig-height: 4
+
+# Extract residuals
+resid_df <- data.frame(
+  residuals = residuals(model3),
+  fitted    = fitted(model3),
+  std_resid = rstandard(model3)
+)
+
+p_hist <- ggplot(resid_df, aes(x = residuals)) +
+  geom_histogram(bins = 30, fill = ber640_colors["accent"],
+                 color = "white", alpha = 0.8) +
+  labs(x = "Residuals", y = "Count",
+       title = "Histogram of Residuals")
+
+p_qq <- ggplot(resid_df, aes(sample = std_resid)) +
+  stat_qq(alpha = 0.3, color = ber640_colors["primary"]) +
+  stat_qq_line(color = ber640_colors["secondary"], linewidth = 0.8) +
+  labs(x = "Theoretical quantiles", y = "Standardized residuals",
+       title = "Q-Q Plot")
+
+p_hist + p_qq
+```
+
+The residual histogram is approximately symmetric and bell-shaped, with
+slight heavy tails. The Q--Q plot shows that most points follow the diagonal
+line closely, with some deviation in the tails. This is typical for earnings
+data and does not pose a serious threat to inference given the large sample
+size ($N = 1{,}357$).
+
+#### Residuals vs. Fitted Values
+
+```{r}
+#| label: fig-residual-fitted
+#| fig-cap: "Residuals vs. Fitted Values (Model 3)"
+#| fig-alt: "Scatterplot of residuals versus fitted values showing a random scatter of points around the horizontal zero line with no systematic pattern. The LOESS smooth is approximately flat near zero, supporting the linearity and homoscedasticity assumptions."
+#| fig-height: 4
+
+ggplot(resid_df, aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.15, color = ber640_colors["primary"]) +
+  geom_hline(yintercept = 0, linetype = "dashed",
+             color = ber640_colors["secondary"]) +
+  geom_smooth(method = "loess", se = FALSE,
+              color = ber640_colors["accent"], linewidth = 0.8) +
+  labs(
+    x = "Fitted values",
+    y = "Residuals",
+    title = "Residuals vs. Fitted Values",
+    subtitle = "Checking linearity and homoscedasticity"
+  )
+```
+
+The residuals-vs-fitted plot shows no obvious systematic pattern. The LOESS
+smooth is approximately flat around zero, suggesting that the linearity
+assumption is reasonable. The spread of residuals is roughly constant across
+fitted values, supporting the homoscedasticity assumption.
+
+#### Comprehensive Diagnostics with `performance::check_model()`
+
+For a comprehensive view, we can also use the `performance` package's
+diagnostic suite.
+
+```{r}
+#| label: fig-check-model
+#| fig-cap: "Comprehensive Residual Diagnostics (Model 3)"
+#| fig-alt: "Four-panel diagnostic suite from the performance package showing linearity check, homogeneity of variance, Q-Q plot of residuals, and outlier detection. All panels indicate that regression assumptions are reasonably well met with no evidence of serious violations."
+#| fig-height: 8
+#| fig-width: 9
+
+performance::check_model(
+  model3,
+  check = c("linearity", "homogeneity", "qq", "outliers")
+)
+```
+
+**Overall assessment:** The regression assumptions are reasonably well met.
+There is no evidence of serious nonlinearity, heteroscedasticity, or
+problematic outliers. The slight heavy-tailedness in the residual distribution
+is minor and unlikely to affect our conclusions given the sample size.
+
+
+## Part 6: Discussion {#sec-linear-ex-part6}
+
+::: {.callout-important}
+## Guideline Reminder --- Part 6
+Summarize your key findings, answer each research question directly, discuss
+at least 2--3 limitations, and note implications. This is where you show
+that you understand what the numbers mean.
+:::
+
+### Summary of Key Findings {#sec-linear-ex-findings}
+
+This study examined the determinants of monthly earnings among Korean
+full-time workers using a series of nested linear regression models applied
+to PIAAC Korea data ($N = 1{,}357$). The results yield three main findings.
+
+**RQ1: Returns to education and experience.** Consistent with the Mincer
+earnings function, both years of education and work experience are
+significant predictors of log-income. Each additional year of education is
+associated with approximately an 8.4% increase in monthly income in the
+baseline model (Model 1), which decreases to about 4.8% after controlling
+for occupation and numeracy (Model 2). Work experience shows the expected
+concave (diminishing-returns) pattern: income rises with experience but at a
+decreasing rate. Together, the traditional Mincer variables explain about
+39.5% of the variance in log-income.
+
+**RQ2: Added value of cognitive skills and occupation.** Occupational
+classification and numeracy proficiency add significant explanatory power
+beyond the traditional Mincer variables ($\Delta R^2 = .040$,
+$F(4, 1348) = 23.99$, $p < .001$). The occupational dummies reveal a clear
+earnings hierarchy: relative to skilled workers, semi-white-collar workers
+earn about 13% less, semi-blue-collar workers earn about 24% less, and
+elementary workers earn about 31% less. Importantly, numeracy proficiency is
+a significant predictor even after controlling for years of education and
+occupation: a one-SD increase in numeracy is associated with approximately a
+6.1% increase in income. This suggests that what workers *know* matters for
+earnings above and beyond how long they attended school.
+
+**RQ3: Gender differences in returns.** The interaction terms between gender
+and education ($p = .160$) and gender and numeracy ($p = .068$) are not
+individually significant at $\alpha = .05$. The returns to education and
+cognitive skills appear to be broadly similar for men and women. The gender
+gap in earnings operates primarily as a *level* difference: women earn
+approximately 33--35% less than men across all three models, and this gap
+persists regardless of education, experience, occupation, or cognitive
+skills.
+
+### The Persistent Gender Gap {#sec-linear-ex-gender-gap}
+
+One of the most striking findings is the large and persistent gender gap.
+The `female` coefficient is around $-0.40$ to $-0.43$ across all three
+models, corresponding to roughly a 33--35% earnings disadvantage for women
+compared with men who have the same education, experience, occupation, and
+cognitive skills. This finding is consistent with the well-documented gender
+wage gap in South Korea, which is among the largest in the OECD. The fact
+that the gap barely changes as we add controls suggests that it is not
+explained by differences in human capital or occupational sorting --- it
+likely reflects structural factors such as discrimination, career
+interruptions, or within-occupation segregation that our model cannot capture.
+
+### Limitations {#sec-linear-ex-limitations}
+
+Several limitations should be noted when interpreting these results.
+
+1. **Cross-sectional design.** Because PIAAC is a cross-sectional survey, we
+   cannot establish causal relationships. The associations between education
+   and earnings, for example, may partly reflect selection effects (e.g.,
+   more able individuals obtain more education *and* earn more) rather than a
+   true causal return to schooling.
+
+2. **Single-country sample.** Our analysis focuses on South Korea, which has
+   distinctive features (very high educational attainment, large gender wage
+   gap, specific labor market institutions). The findings may not generalize
+   to other countries or cultural contexts.
+
+3. **Selection bias.** By restricting the sample to full-time workers aged
+   35--54, we exclude part-time workers, the unemployed, and those outside the
+   labor force. This sample selection may bias our estimates, particularly for
+   the gender gap, because women are disproportionately represented among
+   nonworkers and part-time workers.
+
+4. **Self-reported earnings.** Monthly income in PIAAC is self-reported and
+   may contain measurement error. However, the log transformation helps
+   reduce the influence of extreme values.
+
+### Implications {#sec-linear-ex-implications}
+
+Despite these limitations, the findings have practical implications for
+education policy and workforce development:
+
+- The significant association between numeracy and earnings, above and beyond years of education,
+  suggests that policies focused solely on increasing educational attainment
+  (e.g., expanding college access) may be insufficient. Programs that develop
+  *actual cognitive skills* could have meaningful returns in the labor market.
+- The persistent gender earnings gap, even after extensive controls, points
+  to the need for structural interventions such as anti-discrimination
+  policies, family leave reforms, and workplace culture changes.
+- The clear occupational earnings hierarchy highlights the importance of
+  occupational counseling and training programs for workers in lower-tier
+  occupations.
+
+
+## Submission Checklist {#sec-linear-ex-checklist}
+
+::: {.callout-important}
+## Part 5 Submission Checklist
+Before submitting your Results & Discussion write-up, confirm that you have
+completed all of the following:
+
+- [ ] **Descriptive statistics** for all continuous variables (mean, SD, min,
+  max) and frequency tables for categorical variables
+- [ ] **Exploratory visualizations** (histograms, scatterplots, boxplots)
+  with written interpretations
+- [ ] **Regression models** fitted and summarized (show `summary()` output
+  or a publication-style table)
+- [ ] **Coefficient interpretation** for every predictor --- direction,
+  magnitude, significance, and substantive meaning
+- [ ] **Model comparison** using $F$-tests or $R^2$ changes to evaluate
+  incremental contributions
+- [ ] **Assumption diagnostics** (residual plots, VIF) with a brief
+  assessment of whether assumptions are met
+- [ ] **Discussion** that answers each research question, notes limitations,
+  and discusses implications
+- [ ] All code runs without errors (`eval: true` for all code chunks)
+- [ ] All figures and tables are labeled, captioned, and cross-referenced
+:::

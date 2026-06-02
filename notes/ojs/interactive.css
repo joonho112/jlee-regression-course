@@ -1,0 +1,853 @@
+/* ==========================================================================
+   BER 640 — OJS Interactive App Styles
+   Quarto Book: cosmo (light) / darkly (dark)
+   Color palette: primary=#2C3E50  secondary=#E74C3C  accent=#3498DB
+                  success=#27AE60  warning=#F39C12    info=#9B59B6
+   ========================================================================== */
+
+/* ---------- CSS Custom Properties ---------- */
+:root {
+  --ber-primary: #2C3E50;
+  --ber-secondary: #E74C3C;
+  --ber-accent: #3498DB;
+  --ber-success: #27AE60;
+  --ber-warning: #F39C12;
+  --ber-info: #9B59B6;
+
+  --ojs-bg: #ffffff;
+  --ojs-bg-subtle: #f8f9fa;
+  --ojs-text: #2C3E50;
+  --ojs-text-muted: #6c757d;
+  --ojs-border: #dee2e6;
+  --ojs-input-bg: #ffffff;
+  --ojs-input-border: #ced4da;
+  --ojs-track-bg: #dee2e6;
+  --ojs-shadow: rgba(0, 0, 0, 0.06);
+  --ojs-code-font: "SFMono-Regular", "Menlo", "Monaco", "Consolas",
+    "Liberation Mono", "Courier New", monospace;
+}
+
+[data-bs-theme="dark"] {
+  --ojs-bg: #222222;
+  --ojs-bg-subtle: #2b2b2b;
+  --ojs-text: #e0e0e0;
+  --ojs-text-muted: #adb5bd;
+  --ojs-border: #444444;
+  --ojs-input-bg: #2b2b2b;
+  --ojs-input-border: #555555;
+  --ojs-track-bg: #444444;
+  --ojs-shadow: rgba(0, 0, 0, 0.25);
+}
+
+/* ==========================================================================
+   1. Container & Layout
+   ========================================================================== */
+
+/* Constrain OJS cell output */
+.cell[data-engine="ojs"] .cell-output,
+.ojs-interactive {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Interactive app wrapper — controls + plot + readouts */
+.ojs-app {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 6px;
+  background: var(--ojs-bg-subtle);
+  border: 1px solid var(--ojs-border);
+  margin-block: 1rem;
+}
+
+/* Controls row */
+.ojs-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.ojs-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.ojs-control-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ojs-text);
+}
+
+/* Plot area */
+.ojs-plot {
+  width: 100%;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Readout row */
+.ojs-readouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   2. Theme Adaptation — SVG & Observable Plot
+   ========================================================================== */
+
+/* Transparent SVG backgrounds */
+.cell[data-engine="ojs"] svg,
+.ojs-app svg {
+  background: transparent !important;
+}
+
+/* Axis & tick text */
+.cell[data-engine="ojs"] svg text,
+.ojs-app svg text {
+  fill: var(--ojs-text);
+}
+
+[data-bs-theme="dark"] .cell[data-engine="ojs"] svg text,
+[data-bs-theme="dark"] .ojs-app svg text {
+  fill: var(--ojs-text);
+}
+
+/* Axis lines & tick marks */
+.cell[data-engine="ojs"] svg [aria-label="x-axis tick"] line,
+.cell[data-engine="ojs"] svg [aria-label="y-axis tick"] line,
+.cell[data-engine="ojs"] svg [aria-label="x-axis"] line,
+.cell[data-engine="ojs"] svg [aria-label="y-axis"] line,
+.ojs-app svg line[stroke="#000"],
+.ojs-app svg line[stroke="currentColor"] {
+  stroke: var(--ojs-text);
+}
+
+[data-bs-theme="dark"] .cell[data-engine="ojs"] svg [aria-label="x-axis tick"] line,
+[data-bs-theme="dark"] .cell[data-engine="ojs"] svg [aria-label="y-axis tick"] line,
+[data-bs-theme="dark"] .cell[data-engine="ojs"] svg [aria-label="x-axis"] line,
+[data-bs-theme="dark"] .cell[data-engine="ojs"] svg [aria-label="y-axis"] line {
+  stroke: var(--ojs-text);
+}
+
+/* Grid lines: subtle in both modes */
+.cell[data-engine="ojs"] svg [aria-label*="grid"] line,
+.ojs-app svg [aria-label*="grid"] line {
+  stroke: var(--ojs-border);
+  stroke-opacity: 0.5;
+}
+
+/* Observable Plot figure wrapper */
+.cell[data-engine="ojs"] figure,
+.ojs-app figure {
+  margin: 0;
+  color: var(--ojs-text);
+}
+
+/* Swatches / legends */
+.cell[data-engine="ojs"] .plot-swatch,
+.cell[data-engine="ojs"] [class*="legend"],
+.ojs-app .plot-swatch,
+.ojs-app [class*="legend"] {
+  color: var(--ojs-text);
+}
+
+/* ==========================================================================
+   3. Input Controls
+   ========================================================================== */
+
+/* --- General form controls --- */
+.ojs-app input,
+.ojs-app select,
+.ojs-app textarea,
+.cell[data-engine="ojs"] input,
+.cell[data-engine="ojs"] select {
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--ojs-text);
+  background-color: var(--ojs-input-bg);
+  border: 1px solid var(--ojs-input-border);
+  border-radius: 4px;
+  padding: 0.375rem 0.5rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.ojs-app input:focus,
+.ojs-app select:focus,
+.cell[data-engine="ojs"] input:focus,
+.cell[data-engine="ojs"] select:focus {
+  border-color: var(--ber-accent);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
+}
+
+/* --- Range inputs (sliders) --- */
+.ojs-app input[type="range"],
+.cell[data-engine="ojs"] input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--ojs-track-bg);
+  border: none;
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.ojs-app input[type="range"]::-webkit-slider-thumb,
+.cell[data-engine="ojs"] input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ber-accent);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px var(--ojs-shadow);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.ojs-app input[type="range"]::-moz-range-thumb,
+.cell[data-engine="ojs"] input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ber-accent);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px var(--ojs-shadow);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.ojs-app input[type="range"]::-webkit-slider-thumb:hover,
+.cell[data-engine="ojs"] input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px var(--ojs-shadow);
+}
+
+.ojs-app input[type="range"]::-moz-range-thumb:hover,
+.cell[data-engine="ojs"] input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px var(--ojs-shadow);
+}
+
+.ojs-app input[type="range"]:active::-webkit-slider-thumb,
+.cell[data-engine="ojs"] input[type="range"]:active::-webkit-slider-thumb {
+  background: #2980B9;
+  transform: scale(1.2);
+}
+
+.ojs-app input[type="range"]:active::-moz-range-thumb,
+.cell[data-engine="ojs"] input[type="range"]:active::-moz-range-thumb {
+  background: #2980B9;
+  transform: scale(1.2);
+}
+
+/* Track for webkit */
+.ojs-app input[type="range"]::-webkit-slider-runnable-track,
+.cell[data-engine="ojs"] input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ojs-track-bg);
+}
+
+.ojs-app input[type="range"]::-moz-range-track,
+.cell[data-engine="ojs"] input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ojs-track-bg);
+}
+
+.ojs-app input[type="range"]::-moz-range-progress,
+.cell[data-engine="ojs"] input[type="range"]::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ber-accent);
+}
+
+/* Dark mode thumb border */
+[data-bs-theme="dark"] .ojs-app input[type="range"]::-webkit-slider-thumb,
+[data-bs-theme="dark"] .cell[data-engine="ojs"] input[type="range"]::-webkit-slider-thumb {
+  border-color: #333333;
+}
+
+[data-bs-theme="dark"] .ojs-app input[type="range"]::-moz-range-thumb,
+[data-bs-theme="dark"] .cell[data-engine="ojs"] input[type="range"]::-moz-range-thumb {
+  border-color: #333333;
+}
+
+/* Slider value label */
+.ojs-slider-value {
+  display: inline-block;
+  font-family: var(--ojs-code-font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ber-accent);
+  min-width: 3em;
+  text-align: right;
+}
+
+/* --- Radio & Checkbox --- */
+.ojs-app input[type="radio"],
+.ojs-app input[type="checkbox"],
+.cell[data-engine="ojs"] input[type="radio"],
+.cell[data-engine="ojs"] input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.4rem;
+  accent-color: var(--ber-accent);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.ojs-app label,
+.cell[data-engine="ojs"] label {
+  color: var(--ojs-text);
+  cursor: pointer;
+}
+
+/* Observable Inputs radio/checkbox groups */
+.cell[data-engine="ojs"] form label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-right: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ojs-text);
+}
+
+/* --- Select dropdowns --- */
+.ojs-app select,
+.cell[data-engine="ojs"] select {
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 12px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+[data-bs-theme="dark"] .ojs-app select,
+[data-bs-theme="dark"] .cell[data-engine="ojs"] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23adb5bd' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+}
+
+/* --- Buttons --- */
+.ojs-app button,
+.ojs-btn,
+.cell[data-engine="ojs"] button {
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--ber-primary);
+  border: 1px solid var(--ber-primary);
+  border-radius: 4px;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease,
+    box-shadow 0.15s ease;
+  min-height: 44px;
+  line-height: 1.4;
+}
+
+.ojs-app button:hover,
+.ojs-btn:hover,
+.cell[data-engine="ojs"] button:hover {
+  background-color: #1a252f;
+  border-color: #1a252f;
+  box-shadow: 0 2px 4px var(--ojs-shadow);
+}
+
+.ojs-app button:active,
+.ojs-btn:active,
+.cell[data-engine="ojs"] button:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* Accent button variant */
+.ojs-btn-accent {
+  background-color: var(--ber-accent) !important;
+  border-color: var(--ber-accent) !important;
+}
+
+.ojs-btn-accent:hover {
+  background-color: #2980B9 !important;
+  border-color: #2980B9 !important;
+}
+
+/* Secondary (outline) button */
+.ojs-btn-outline {
+  background-color: transparent !important;
+  color: var(--ber-primary) !important;
+  border: 2px solid var(--ber-primary) !important;
+}
+
+.ojs-btn-outline:hover {
+  background-color: var(--ber-primary) !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .ojs-btn-outline {
+  color: var(--ojs-text) !important;
+  border-color: var(--ojs-text) !important;
+}
+
+[data-bs-theme="dark"] .ojs-btn-outline:hover {
+  background-color: var(--ojs-text) !important;
+  color: var(--ojs-bg) !important;
+}
+
+/* ==========================================================================
+   4. Readout Displays
+   ========================================================================== */
+
+/* Badge / pill for stats readout */
+.ojs-readout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: var(--ojs-bg);
+  border: 1px solid var(--ojs-border);
+  color: var(--ojs-text);
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease;
+  white-space: nowrap;
+}
+
+.ojs-readout-label {
+  font-family: inherit;
+  font-weight: 400;
+  color: var(--ojs-text-muted);
+}
+
+.ojs-readout-value {
+  font-family: var(--ojs-code-font);
+  font-weight: 700;
+  min-width: 4ch;
+  text-align: right;
+  transition: color 0.3s ease, opacity 0.15s ease;
+}
+
+/* Color-coded readout variants */
+.ojs-readout-good {
+  border-color: var(--ber-success);
+  background: rgba(39, 174, 96, 0.08);
+}
+
+.ojs-readout-good .ojs-readout-value {
+  color: var(--ber-success);
+}
+
+.ojs-readout-warning {
+  border-color: var(--ber-warning);
+  background: rgba(243, 156, 18, 0.08);
+}
+
+.ojs-readout-warning .ojs-readout-value {
+  color: var(--ber-warning);
+}
+
+.ojs-readout-bad {
+  border-color: var(--ber-secondary);
+  background: rgba(231, 76, 60, 0.08);
+}
+
+.ojs-readout-bad .ojs-readout-value {
+  color: var(--ber-secondary);
+}
+
+.ojs-readout-info {
+  border-color: var(--ber-info);
+  background: rgba(155, 89, 182, 0.08);
+}
+
+.ojs-readout-info .ojs-readout-value {
+  color: var(--ber-info);
+}
+
+/* Dark mode readout backgrounds */
+[data-bs-theme="dark"] .ojs-readout {
+  background: var(--ojs-bg-subtle);
+}
+
+[data-bs-theme="dark"] .ojs-readout-good {
+  background: rgba(39, 174, 96, 0.12);
+}
+
+[data-bs-theme="dark"] .ojs-readout-warning {
+  background: rgba(243, 156, 18, 0.12);
+}
+
+[data-bs-theme="dark"] .ojs-readout-bad {
+  background: rgba(231, 76, 60, 0.12);
+}
+
+[data-bs-theme="dark"] .ojs-readout-info {
+  background: rgba(155, 89, 182, 0.12);
+}
+
+/* Inline stat in prose: e.g., R² = 0.85 */
+.ojs-stat {
+  font-family: var(--ojs-code-font);
+  font-weight: 600;
+  font-size: 0.9em;
+  color: var(--ber-accent);
+  transition: color 0.3s ease;
+}
+
+/* ==========================================================================
+   5. Responsive
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .ojs-controls {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .ojs-control-group {
+    flex: 1 1 100%;
+  }
+
+  .ojs-app {
+    padding: 0.75rem;
+  }
+
+  .ojs-plot {
+    max-width: 100%;
+  }
+
+  .cell[data-engine="ojs"] .cell-output,
+  .ojs-interactive {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .ojs-readouts {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ojs-readout {
+    justify-content: space-between;
+  }
+
+  /* Hide supplementary readouts on very small screens */
+  .ojs-readout-optional {
+    display: none;
+  }
+}
+
+/* Touch targets */
+@media (pointer: coarse) {
+  .ojs-app input[type="range"]::-webkit-slider-thumb,
+  .cell[data-engine="ojs"] input[type="range"]::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+  }
+
+  .ojs-app input[type="range"]::-moz-range-thumb,
+  .cell[data-engine="ojs"] input[type="range"]::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+  }
+
+  .ojs-app input[type="radio"],
+  .ojs-app input[type="checkbox"],
+  .cell[data-engine="ojs"] input[type="radio"],
+  .cell[data-engine="ojs"] input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .ojs-app button,
+  .cell[data-engine="ojs"] button {
+    min-height: 44px;
+    padding: 0.625rem 1.25rem;
+  }
+}
+
+/* ==========================================================================
+   6. Transitions & Polish
+   ========================================================================== */
+
+/* Subtle hover on interactive wrappers */
+.ojs-app {
+  transition: box-shadow 0.2s ease;
+}
+
+.ojs-app:hover {
+  box-shadow: 0 2px 8px var(--ojs-shadow);
+}
+
+/* Prevent layout shift from value updates */
+.ojs-slider-value {
+  min-width: 4ch;
+}
+
+/* Observable cell output transitions */
+.cell[data-engine="ojs"] .cell-output {
+  transition: opacity 0.15s ease;
+}
+
+/* ==========================================================================
+   7. Accessibility
+   ========================================================================== */
+
+/* Focus-visible outlines */
+.ojs-app input:focus-visible,
+.ojs-app select:focus-visible,
+.ojs-app button:focus-visible,
+.cell[data-engine="ojs"] input:focus-visible,
+.cell[data-engine="ojs"] select:focus-visible,
+.cell[data-engine="ojs"] button:focus-visible {
+  outline: 3px solid var(--ber-accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .ojs-app *,
+  .cell[data-engine="ojs"] * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+
+  .ojs-app input[type="range"]::-webkit-slider-thumb,
+  .cell[data-engine="ojs"] input[type="range"]::-webkit-slider-thumb {
+    transition: none;
+  }
+
+  .ojs-app input[type="range"]::-moz-range-thumb,
+  .cell[data-engine="ojs"] input[type="range"]::-moz-range-thumb {
+    transition: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: more) {
+  .ojs-app,
+  .cell[data-engine="ojs"] {
+    --ojs-border-color: currentColor;
+  }
+
+  .ojs-app input[type="range"],
+  .cell[data-engine="ojs"] input[type="range"] {
+    border: 2px solid currentColor;
+  }
+
+  .ojs-readout-good,
+  .ojs-readout-warning,
+  .ojs-readout-bad {
+    border-width: 3px;
+  }
+}
+
+@media (forced-colors: active) {
+  .ojs-app input[type="range"]::-webkit-slider-thumb,
+  .cell[data-engine="ojs"] input[type="range"]::-webkit-slider-thumb {
+    background: ButtonText;
+    border-color: ButtonText;
+  }
+
+  .ojs-app input[type="range"]::-moz-range-thumb,
+  .cell[data-engine="ojs"] input[type="range"]::-moz-range-thumb {
+    background: ButtonText;
+    border-color: ButtonText;
+  }
+
+  .ojs-app svg text,
+  .cell[data-engine="ojs"] svg text {
+    fill: CanvasText;
+  }
+}
+
+/* ==========================================================================
+   8. Print Styles
+   ========================================================================== */
+
+@media print {
+  /* Hide interactive controls */
+  .ojs-app input[type="range"],
+  .ojs-app button,
+  .ojs-controls,
+  .cell[data-engine="ojs"] input[type="range"],
+  .cell[data-engine="ojs"] button {
+    display: none !important;
+  }
+
+  /* Show static plot and readouts */
+  .ojs-app {
+    border: 1px solid #cccccc;
+    background: #ffffff;
+    box-shadow: none;
+    page-break-inside: avoid;
+  }
+
+  .ojs-readout {
+    border-color: #cccccc;
+    background: #f5f5f5;
+    color: #333333;
+  }
+
+  .ojs-readout-value {
+    color: #333333 !important;
+  }
+
+  .ojs-plot svg {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* ==========================================================================
+   9. Observable Inputs Integration
+   ========================================================================== */
+
+/* Style Observable's built-in Inputs.range, Inputs.select, etc. */
+.cell[data-engine="ojs"] form {
+  font-family: inherit;
+  color: var(--ojs-text);
+}
+
+.cell[data-engine="ojs"] form output {
+  font-family: var(--ojs-code-font);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--ber-accent);
+  margin-left: 0.5rem;
+}
+
+/* Observable table styling */
+.cell[data-engine="ojs"] table {
+  font-size: 0.85rem;
+  color: var(--ojs-text);
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.cell[data-engine="ojs"] table th {
+  background: var(--ojs-bg-subtle);
+  font-weight: 600;
+  border-bottom: 2px solid var(--ojs-border);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.cell[data-engine="ojs"] table td {
+  border-bottom: 1px solid var(--ojs-border);
+  padding: 0.4rem 0.5rem;
+}
+
+.cell[data-engine="ojs"] table tr:hover {
+  background: var(--ojs-bg-subtle);
+}
+
+/* ==========================================================================
+   10. Callout Integration
+   ========================================================================== */
+
+/* When OJS apps sit inside callout-tip boxes, tighten spacing */
+.callout-tip .ojs-app {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 0;
+  margin-block: 0.5rem;
+}
+
+.callout-tip .ojs-readouts {
+  margin-top: 0.5rem;
+}
+
+/* Inside callout, controls use slightly smaller font */
+.callout-tip .ojs-app input,
+.callout-tip .ojs-app select,
+.callout-tip .ojs-app label {
+  font-size: 0.825rem;
+}
+
+/* ==========================================================================
+   Accessibility (WCAG 2.1 AA)
+   ========================================================================== */
+
+/* Screen-reader-only: visually hidden, accessible to assistive tech */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus indicators for OJS interactive elements */
+.ojs-app input[type="range"]:focus-visible,
+.ojs-app select:focus-visible,
+.ojs-app input[type="checkbox"]:focus-visible,
+.ojs-app button:focus-visible {
+  outline: 3px solid var(--ber-accent);
+  outline-offset: 2px;
+}
+
+/* Skip link for OJS app sections */
+.ojs-skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+  padding: 0.5rem 1rem;
+  background: var(--ber-accent);
+  color: #fff;
+  font-size: 0.9rem;
+  border-radius: 0 0 4px 0;
+}
+
+.ojs-skip-link:focus {
+  left: 0;
+  top: 0;
+}
+
+/* High-contrast mode support */
+@media (forced-colors: active) {
+  .ojs-app svg text {
+    fill: CanvasText;
+  }
+  .ojs-app svg line,
+  .ojs-app svg path {
+    stroke: CanvasText;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .ojs-app * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

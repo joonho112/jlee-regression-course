@@ -1,0 +1,44 @@
+---
+title: "Assignments"
+---
+
+All assignments in {{< var course.number >}} are designed to reinforce key statistical concepts and build practical skills with R. The course uses a **percentage-based grading** system with completion-based homework and mastery-based quizzes to encourage genuine learning.
+
+## Grading Breakdown
+
+| Category | Weight | Details |
+|:---------|:------:|:--------|
+| {{< fa pencil >}} [Homework](#homework) | **50%** | 8 assignments, completion-based |
+| {{< fa circle-check >}} [Module Quizzes](quizzes.qmd) | **10%** | 6 quizzes, mastery-based |
+| {{< fa chart-line >}} [Project 1: Linear Regression](final-project.qmd#project-1) | **20%** | Proposal, Draft, Final Report |
+| {{< fa chart-bar >}} [Project 2: Logistic Regression](final-project.qmd#project-2) | **20%** | Proposal, Final Report |
+| | **100%** | |
+
+
+## Homework {#homework}
+
+Eight homework assignments alternate between **conceptual** exercises (odd-numbered) and **computational** exercises (even-numbered). Homework is graded on **completion** --- submit a good-faith effort for full credit.
+
+| Assignment | Topic | Type | Due |
+|:-----------|:------|:-----|:----|
+| [HW 01](hw01.qmd) | Simple Regression | Conceptual | Week 3 |
+| [HW 02](hw02.qmd) | Dummy Regression | Computational | Week 3 |
+| [HW 03](hw03.qmd) | Confounding & Multiple Regression | Conceptual | Week 5 |
+| [HW 04](hw04.qmd) | One-Way ANOVA | Computational | Week 5 |
+| [HW 05](hw05.qmd) | Interactions | Conceptual | Week 7 |
+| [HW 06](hw06.qmd) | Two-Way ANOVA | Computational | Week 7 |
+| [HW 07](hw07.qmd) | Logistic Interpretation | Conceptual | Week 11 |
+| [HW 08](hw08.qmd) | Simpson's Paradox | Computational | Week 11 |
+
+
+## Module Quizzes
+
+Six module quizzes assess your conceptual understanding. Quizzes are **mastery-based** with unlimited attempts. See the [Module Quizzes](quizzes.qmd) page for details.
+
+
+## Projects
+
+The course includes two independent research projects that together account for **40%** of your final grade. See the [Projects Overview](final-project.qmd) for full details and timelines.
+
+- **[Project 1: Linear Regression](final-project.qmd#project-1)** (20%) --- Completed in three stages: Proposal (Week 7), Draft (Week 9), Final Report (Week 12)
+- **[Project 2: Logistic Regression](final-project.qmd#project-2)** (20%) --- Completed in two stages: Proposal (Week 12), Final Report (Week 15)

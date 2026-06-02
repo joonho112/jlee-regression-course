@@ -1,0 +1,91 @@
+---
+title: "R & RStudio Setup Guide"
+---
+
+## Overview
+
+This page provides a quick-start checklist for setting up your R computing environment. For a comprehensive, step-by-step walkthrough with screenshots and troubleshooting tips, see **Appendix A** of the Lecture Notes:
+
+{{< fa book-open >}} [**Appendix A: R Setup Guide**]({{< var books.lecture_notes >}}/appendices/a-r-setup-guide.html){target="_blank"}
+
+
+## Quick Setup Checklist
+
+Follow these steps to get up and running. Each step should take only a few minutes.
+
+### 1. Install R
+
+Download and install R from the [Comprehensive R Archive Network (CRAN)](https://cran.r-project.org/):
+
+- **Windows**: Click "Download R for Windows" and run the installer
+- **macOS**: Click "Download R for macOS" and open the `.pkg` file
+- **Linux**: Follow the instructions for your distribution
+
+::: {.callout-tip}
+## Always use the latest version
+Make sure you install **R 4.3.0 or later**. Some packages used in this course require a recent version.
+:::
+
+### 2. Install RStudio
+
+Download the free Desktop version from [posit.co/download/rstudio-desktop](https://posit.co/download/rstudio-desktop/). RStudio provides a user-friendly interface for writing code, viewing plots, and managing files.
+
+### 3. Install Essential Packages
+
+Open RStudio and run the following in the **Console** pane:
+
+```r
+# Core packages
+install.packages(c("tidyverse", "car", "broom", "marginaleffects"))
+
+# Course datasets package
+install.packages("remotes")
+remotes::install_github("joonho112/regdatasets")
+```
+
+### 4. Verify Your Installation
+
+Run this quick test to confirm everything is working:
+
+```r
+library(tidyverse)
+library(regdatasets)
+data(gcse)
+glimpse(gcse)
+```
+
+If you see a summary of the `gcse` dataset, you are all set.
+
+
+## {{< fa cloud >}} Cloud Alternative: Posit Cloud
+
+If you have trouble installing software locally, you can use [Posit Cloud](https://posit.cloud/) (formerly RStudio Cloud) as a browser-based alternative. Posit Cloud runs R and RStudio entirely in your web browser --- no installation required.
+
+::: {.callout-note}
+## Free tier limitations
+The free Posit Cloud plan provides 25 project hours per month, which should be sufficient for most coursework. If you need more time, a paid plan is available.
+:::
+
+
+## Essential Packages
+
+The table below lists the key R packages used throughout this course.
+
+| Package | Purpose | Used In |
+|---------|---------|---------|
+| `tidyverse` | Data wrangling and visualization (includes `ggplot2`, `dplyr`, `tidyr`, etc.) | All chapters |
+| `regdatasets` | Course-specific datasets (24 curated educational datasets) | All chapters |
+| `car` | Companion to Applied Regression --- diagnostic tests, Type II/III SS | Chapters 5--9 |
+| `broom` | Tidy model output (`tidy()`, `glance()`, `augment()`) | All chapters |
+| `ggplot2` | Publication-quality graphics (included in `tidyverse`) | All chapters |
+| `marginaleffects` | Marginal effects, predictions, and contrasts | Chapters 4--14 |
+
+::: {.callout-tip}
+## Installing all packages at once
+You can install all essential packages with a single command:
+
+```r
+install.packages(c("tidyverse", "car", "broom", "marginaleffects", "remotes"))
+remotes::install_github("joonho112/regdatasets")
+```
+:::

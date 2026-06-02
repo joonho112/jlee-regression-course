@@ -1,0 +1,50 @@
+---
+title: "Week 9: Model Building & Diagnostics"
+---
+
+## Overview
+
+This week combines two essential topics in applied regression: model building strategies and regression diagnostics. You will learn how to approach variable selection using both confirmatory and exploratory strategies, understand information criteria for model comparison, and then apply a suite of diagnostic tools to evaluate model assumptions. Residual plots, Q-Q plots, and influence measures such as Cook's distance and DFBETAS will help you identify problematic observations and assess whether your model provides a reliable description of the data.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Distinguish between confirmatory and exploratory approaches to model building
+- Apply forward selection, backward elimination, and stepwise procedures for variable selection
+- Use AIC and BIC to compare competing models and justify model choice
+- Construct and interpret residual plots and Q-Q plots to assess model assumptions
+- Calculate and interpret Cook's distance, DFBETAS, and leverage values to identify influential observations
+- Evaluate the practical impact of influential observations on regression conclusions
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 7: Model Building]({{< var books.lecture_notes >}}/chapters/07-model-building.html){target="_blank"}
+- {{< fa book-open >}} **Required**: [Chapter 8: Model Diagnostics]({{< var books.lecture_notes >}}/chapters/08-model-diagnostics.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 08: Regression Diagnostics]({{< var books.r_lab_book >}}/labs/lab08-diagnostics.html){target="_blank"}
+
+## Project
+
+- {{< fa file-circle-check >}} [Project 1 Draft](/assignment/project-1-draft.qmd) — Due this week
+
+## Quiz
+
+- {{< fa circle-question >}} **Quiz 4** — Covers Weeks 7--9 material
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Forward selection** | A stepwise procedure that begins with no predictors and adds them one at a time based on statistical criteria |
+| **Backward elimination** | A stepwise procedure that begins with all candidate predictors and removes them one at a time |
+| **AIC** | Akaike Information Criterion; balances model fit and complexity, favoring parsimony |
+| **BIC** | Bayesian Information Criterion; similar to AIC but applies a stronger penalty for additional parameters |
+| **Residual plot** | A scatterplot of residuals against fitted values used to check linearity and constant variance assumptions |
+| **Q-Q plot** | A quantile-quantile plot comparing residual quantiles to theoretical normal quantiles to assess normality |
+| **Cook's distance** | A summary measure of how much all fitted values change when a single observation is deleted |
+| **DFBETAS** | A measure of how much each regression coefficient changes when a single observation is removed |
+| **Leverage** | A measure of how far an observation's predictor values are from the mean of all predictor values |
+| **Influential observation** | An observation whose removal substantially changes the fitted model or its conclusions |

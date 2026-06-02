@@ -1,0 +1,62 @@
+---
+title: "Project 2 Draft"
+---
+
+| | |
+|---|---|
+| **Project** | Project 2: Logistic Regression |
+| **Due** | Week 14 |
+| **Weight** | 30% of Project 2 (which is 20% of final grade) |
+| **Related Guide** | [Project Guide]({{< var books.project_guide >}}){target="_blank"} |
+
+::: {.callout-tip}
+## {{< fa book >}} Project Guide
+Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for worked examples of each section, including model specification, diagnostics, and interpretation.
+:::
+
+## Purpose
+
+The draft is a complete working version of your logistic regression analysis. It should include all major sections of the final report, though the writing may still be rough. The instructor will provide feedback to help you strengthen the analysis and interpretation before the final submission.
+
+## Requirements
+
+Your draft should include all of the following sections:
+
+### 1. Introduction
+
+- Research question (refined from your proposal, incorporating any instructor feedback)
+- Brief motivation for why this question matters
+- Overview of your analytical approach
+
+### 2. Data and Variables
+
+- Dataset description (updated from proposal)
+- Variable definitions and coding (including the binary outcome variable)
+- Descriptive statistics and exploratory visualizations
+
+### 3. Analysis and Results
+
+- **Model specification**: State the logistic regression model(s) you are fitting
+- **Regression output**: Report coefficient estimates (log-odds), odds ratios, standard errors, and significance tests
+- **Model fit**: Report pseudo-$R^2$, AIC/BIC, and any other relevant fit statistics
+- **Interpretation**: Interpret key coefficients as odds ratios in context
+- **Additional analyses** (if applicable): Interactions, predicted probabilities, average marginal effects
+
+### 4. Model Diagnostics
+
+- Classification accuracy (confusion matrix, sensitivity, specificity)
+- Goodness-of-fit assessment (Hosmer-Lemeshow test or binned residual plot)
+- Identification of any influential observations
+
+### 5. Preliminary Conclusions
+
+- Summary of main findings
+- Limitations you have identified so far
+
+## Submission
+
+Submit the following to Blackboard:
+
+- A rendered PDF or HTML document
+- Your `.qmd` source file
+- The dataset (or a link to it)

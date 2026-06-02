@@ -1,0 +1,55 @@
+---
+title: "HW 02: Dummy Regression"
+---
+
+| | |
+|---|---|
+| **Type** | Computational |
+| **Due** | Week 3 |
+| **Weight** | Part of Homework (50% of final grade) |
+| **Grading** | Completion-based |
+| **Dataset** | `pisa2000` (US subset) from [`regdatasets`]({{< var books.regdatasets >}}){target="_blank"} |
+| **Related Reading** | [Ch 01: Simple Linear Regression]({{< var books.lecture_notes >}}/chapters/01-simple-linear-regression.html){target="_blank"} |
+| **Related Lab** | [Lab 02: Simple Regression]({{< var books.r_lab_book >}}/labs/lab02-simple-regression.html){target="_blank"} |
+
+::: {.callout-note}
+## Grading Policy
+Homework is graded on **completion**. Submit a good-faith effort for full credit. A good-faith effort means: (1) all problems are attempted, (2) for computational assignments, R code runs without errors, and (3) written interpretations are included where requested.
+:::
+
+## Setup
+
+This assignment uses the `pisa2000` dataset from the `regdatasets` package. You will analyze data from **American students only**. The outcome variable is `wleread` (reading literacy score) and the predictor is `female` (a dummy variable: 1 = female, 0 = male).
+
+## Problems
+
+### Problem 1
+
+Using data for American students, regress reading literacy (`wleread`) on the dummy variable `female`. Report the full regression output.
+
+### Problem 2
+
+Report and interpret the estimated coefficients (intercept and slope) and their standard errors. What do these values tell you about the reading performance of male and female students?
+
+### Problem 3
+
+Create a graph that displays the regression relationship between `female` and `wleread`. Your graph should clearly show the group means and the regression line.
+
+### Problem 4
+
+Test the null hypothesis that `female` has no effect on reading literacy at the **1% significance level**. State $H_0$ and $H_a$, report the test statistic and $p$-value, and state your conclusion.
+
+### Problem 5
+
+Conduct an independent-samples *t*-test comparing reading scores between male and female students. Compare the results to the regression-based test in Problem 4. What do you notice?
+
+### Problem 6
+
+Where can you find the **pooled within-group standard deviation** in the regression output? Identify it and explain how it relates to the residual standard error.
+
+
+## Submission
+
+1. Download the starter `.qmd` file from Blackboard.
+2. Complete the analysis in R, filling in the code chunks and written responses.
+3. Render your Quarto document to **PDF** and submit to Blackboard by the due date.

@@ -1,0 +1,36 @@
+---
+title: "Week 1: Welcome & R Setup"
+---
+
+## Overview
+
+Welcome to BER 640! This orientation week introduces you to the course structure, sets up your computing environment, and gets you comfortable with R and RStudio. By the end of the week, you will have a working R installation and understand the basics of how R handles data --- skills that form the foundation for every analysis in this course.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Navigate the RStudio interface and identify the purpose of each pane
+- Execute basic arithmetic and logical operations in the R console
+- Create and manipulate vectors, data frames, and other core data structures
+- Import a dataset into R and inspect its contents using summary functions
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Appendix A: R Setup Guide]({{< var books.lecture_notes >}}/appendices/a-r-setup-guide.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 01: Introduction to R]({{< var books.r_lab_book >}}/labs/lab01-intro-to-r.html){target="_blank"}
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **R** | A free, open-source programming language for statistical computing |
+| **RStudio** | An integrated development environment (IDE) that makes working with R easier |
+| **Script** | A saved file of R commands that can be run repeatedly |
+| **Vector** | A one-dimensional collection of values of the same type |
+| **Data frame** | A two-dimensional table where columns can hold different data types |
+| **Function** | A named operation that takes inputs (arguments) and returns an output |
+| **Package** | A collection of functions, data, and documentation that extends R |

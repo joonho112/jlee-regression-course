@@ -1,0 +1,52 @@
+---
+title: "Module Quizzes"
+---
+
+## Overview
+
+| | |
+|:--|:--|
+| **Quizzes** | 6 |
+| **Weight** | 10% of final grade |
+| **Platform** | Blackboard |
+| **Attempts** | Unlimited |
+
+## Purpose
+
+Module quizzes assess your understanding of key concepts from each lecture module. They are designed as a **mastery-based** learning tool --- you can retake each quiz as many times as needed to demonstrate understanding.
+
+## Quiz Schedule
+
+| Quiz | Module | Topics | Available After |
+|:-----|:-------|:-------|:----------------|
+| Quiz 1 | Foundations of Regression | Simple regression, OLS, dummy variables | Week 3 |
+| Quiz 2 | Categorical Predictors | ANCOVA, one-way ANOVA, multiple comparisons | Week 5 |
+| Quiz 3 | Interactions | Interaction effects, two-way ANOVA, simple slopes | Week 7 |
+| Quiz 4 | Model Building & Diagnostics | Nonlinear relationships, model selection, residual diagnostics | Week 9 |
+| Quiz 5 | Logistic Regression | Odds ratios, predicted probabilities, Simpson's Paradox | Week 11 |
+| Quiz 6 | Logistic Diagnostics | Goodness of fit, classification, pseudo-$R^2$ | Week 12 |
+
+## Format
+
+- Each quiz contains multiple-choice and short-answer questions.
+- Questions focus on **conceptual understanding** rather than computation.
+- Quizzes are **open-book** and **open-notes**.
+- Your **highest score** across all attempts is recorded.
+
+## Grading
+
+Quizzes are graded on a mastery scale:
+
+| Score | Criteria |
+|:-----:|:---------|
+| Full credit | 80% or higher on the quiz |
+| Partial credit | 60--79% on the quiz |
+| Minimal credit | Below 60% on the quiz |
+| No credit | Quiz not attempted |
+
+## Tips
+
+- Take each quiz after completing the corresponding lecture and lab material.
+- Use your first attempt as a **self-assessment** to identify areas for review.
+- Review the [Lecture Notes]({{< var books.lecture_notes >}}){target="_blank"} and [R Lab Book]({{< var books.r_lab_book >}}){target="_blank"} before retaking a quiz.
+- There is no penalty for multiple attempts --- keep trying until you reach mastery.

@@ -1,0 +1,250 @@
+# Overview & Getting Started {#sec-overview}
+
+{{< include ../_common.qmd >}}
+
+Welcome to the BER 640 Final Project Guide. This guide will walk you through every step of your final project --- from choosing a dataset to writing up your results. Think of it as a conversation with your advisor: I will explain what is expected, show you a complete worked example, and point out common pitfalls along the way.
+
+This opening chapter provides the big picture. By the end, you will know exactly what the final project entails, what kind of dataset you need, and how this guide is organized to help you succeed.
+
+
+## What Is the Final Project? {#sec-what-is-project}
+
+The BER 640 final assessment consists of **two independent projects** that give you the opportunity to apply the regression techniques you have learned throughout the semester to real data. Each project mirrors the workflow of an applied research study: you will formulate research questions, select and describe your variables, run an analysis, and interpret the results.
+
+**Project 1 (Linear Regression).** In this project, you will analyze a continuous outcome variable using multiple linear regression. You will build a model with several explanatory variables, check assumptions, and interpret the coefficients in substantive terms.
+
+**Project 2 (Logistic Regression).** In this project, you will analyze a binary outcome variable using logistic regression. You will estimate odds ratios, assess model fit, and discuss the practical significance of your findings.
+
+| | Project 1 | Project 2 |
+|---|---|---|
+| **Method** | Multiple Linear Regression | Logistic Regression |
+| **Outcome variable** | Continuous (approximately) | Binary (0/1) |
+| **Key output** | Regression coefficients ($b$, $\beta$) | Odds ratios (OR) |
+| **Chapters in this guide** | 2, 4--5 | 3, 6--7 |
+
+### Can I Use the Same Dataset for Both Projects?
+
+Yes --- and this is strongly encouraged. If your dataset contains both a continuous outcome and a binary outcome, you can use the same data for both projects. This approach is efficient for several reasons:
+
+- You only need to **clean and prepare one dataset**, which saves considerable time.
+- You only need to **describe the sample once**, since the Background and Methods sections will overlap substantially.
+- By the time you begin Project 2, you will already be thoroughly familiar with the variables and their distributions, so you can devote your energy to the new statistical method rather than learning a new dataset from scratch.
+- Having a **shared dataset** also creates a natural narrative arc across the two projects: you are examining different facets of the same phenomenon.
+
+Of course, if your research interests require two different datasets, that is perfectly fine. Just be aware that it means more data preparation work overall.
+
+
+## Choosing a Dataset {#sec-choosing-data}
+
+Selecting a good dataset is one of the most important decisions you will make. A dataset that fits the requirements and genuinely interests you will make the entire project more enjoyable and the writing more authentic.
+
+### What Makes a Good Dataset?
+
+Your dataset should meet the following requirements:
+
+1. **At least one approximately continuous response variable** for Project 1 (e.g., test score, income, satisfaction rating, GPA). The variable does not need to be perfectly normally distributed, but it should have enough variation to make regression meaningful.
+2. **At least one binary (0/1) response variable** for Project 2 (e.g., graduated vs. did not graduate, employed vs. unemployed, passed vs. failed, admitted vs. not admitted).
+3. **At least four explanatory variables**, including:
+   - At least one continuous predictor (e.g., age, years of experience, GPA, test score).
+   - At least one categorical predictor with three or more categories (e.g., education level, race/ethnicity, occupation type, region).
+   - The remaining predictors can be any combination of continuous and categorical variables.
+4. **Sufficient sample size.** You need enough observations to estimate regression coefficients reliably. As a rough guideline, aim for at least 200 observations.
+5. **Manageable missingness.** Some missing data is normal in real-world datasets, but excessive missingness on key variables will complicate your analysis and weaken your conclusions.
+
+::: {.callout-tip}
+## Finding the Right Dataset
+A good dataset has at least 200 observations and variables you find genuinely interesting. If the topic bores you, the writing will feel like a chore. Pick something connected to your research interests or professional experience.
+:::
+
+### Where Can I Find Data?
+
+The ideal source is your own research data or data from your advisor's lab --- using data you are already invested in makes the project feel less like a class assignment and more like genuine research. If that is not available, many excellent public-use datasets are well suited to this assignment. The following are particularly popular among education and social science researchers:
+
+- **NELS** (National Education Longitudinal Study) --- education outcomes for a nationally representative cohort.
+- **NAEP** (National Assessment of Educational Progress) --- large-scale assessment data on student achievement.
+- **PIAAC** (Programme for the International Assessment of Adult Competencies) --- adult skills and labor market outcomes across OECD countries.
+- **GSS** (General Social Survey) --- attitudes, behaviors, and demographics of U.S. adults.
+- **ECLS** (Early Childhood Longitudinal Study) --- child development and school readiness.
+- **Add Health** (National Longitudinal Study of Adolescent to Adult Health) --- health and social behavior from adolescence through adulthood.
+- **ICPSR** (<https://www.icpsr.umich.edu/>) --- a vast archive of social science datasets on nearly every topic.
+- **NCES** datasets such as HSLS:09 and ELS:2002 --- education-focused longitudinal surveys.
+
+If you are unsure whether your dataset is appropriate, bring it to office hours. I am happy to help you evaluate whether it will work for both projects.
+
+### A Note on Data Access and Ethics
+
+If you use publicly available data (e.g., PIAAC, GSS, NELS), no IRB approval is typically required because the data are de-identified. However, if you use data from your own research or your advisor's lab, make sure you have the appropriate approvals in place before you begin. When in doubt, check with your advisor or the university's IRB office.
+
+
+## The 7-Part Structure {#sec-seven-parts}
+
+Both Project 1 and Project 2 follow the same seven-part structure. This parallel design is intentional: it reinforces good research-writing habits through repetition, and it means that by the time you write Project 2, you will already be familiar with the format and can work more efficiently.
+
+The table below provides a quick summary of all seven parts. Detailed guidelines for each part appear in @sec-guidelines-linear (for Project 1) and @sec-guidelines-logistic (for Project 2).
+
+| Part | Title | What You Do |
+|:----:|-------|-------------|
+| 1 | Background & Research Questions | Motivate the study; state your RQs |
+| 2 | Methods: Subjects & Variables | Describe sample, define all variables |
+| 3 | Methods: Statistical Analysis | Explain the regression approach |
+| 4 | Results: Descriptive Analyses | Summary statistics and visualizations |
+| 5 | Results: Regression Analyses | Regression tables and interpretation |
+| 6 | Discussion | Synthesize findings, limitations |
+| 7 | Appendix | R script and diagnostic plots |
+
+Here is a brief description of each part.
+
+### Part 1: Background and Research Questions
+
+Introduce the topic and explain why it matters. Provide enough context so that a reader unfamiliar with your specific area can understand the motivation for your study. State your research questions clearly and explicitly --- the reader should never have to guess what you are investigating. For Project 1, you will typically have two or three research questions involving a continuous outcome. For Project 2, you will have at least one research question involving a binary outcome.
+
+### Part 2: Methods --- Subjects and Variables
+
+Describe your data source, the sample, and how the data were collected. Then provide an operational definition of every variable you will use: the response variable, each explanatory variable, and any control variables. Include a summary table listing variable names, descriptions, types, and coding schemes.
+
+### Part 3: Methods --- Statistical Analysis
+
+Explain the statistical approach you will use and why it is appropriate for your research questions. For Project 1, this means multiple linear regression; for Project 2, logistic regression. Describe how you will check assumptions, handle missing data, and build your model.
+
+### Part 4: Results --- Descriptive Analyses
+
+Present summary statistics (means, standard deviations, frequencies) and visualizations (histograms, bar charts, scatterplots) that help the reader understand the distribution of your variables before you move to the regression analysis. This section sets the stage: the reader should have a clear mental picture of your data before encountering any regression output. A well-constructed descriptive statistics table and a few targeted figures go a long way.
+
+### Part 5: Results --- Regression Analyses
+
+Report the results of your regression model(s) in a well-formatted table and interpret the key coefficients in substantive terms. For Project 1, discuss unstandardized and standardized coefficients, $R^2$, and the overall model $F$-test. For Project 2, discuss odds ratios, confidence intervals, and model fit statistics such as the likelihood ratio test. Do not simply report numbers --- explain what they mean in the context of your research questions.
+
+### Part 6: Discussion
+
+Summarize the main findings in plain language that a non-statistician could follow. Connect your results back to your research questions and the literature you reviewed in Part 1. Discuss limitations honestly --- every study has them, and acknowledging them demonstrates maturity as a researcher. Finally, suggest directions for future research that could address those limitations or extend your findings.
+
+### Part 7: Appendix
+
+Include your complete, annotated R script and any diagnostic plots (e.g., residual plots for Project 1, ROC curves for Project 2) that support your analysis but would interrupt the flow of the main text. The appendix is not an afterthought --- a well-organized, clearly commented R script demonstrates that you understand every step of your analysis. Graders will read your code.
+
+
+## How This Guide Is Organized {#sec-guide-organization}
+
+This guide is divided into three parts, plus appendices. You do not need to read it cover to cover before starting your project. However, I strongly recommend reading the relevant guidelines chapter (Chapter 2 for Project 1, Chapter 3 for Project 2) before you begin writing. Understanding the expectations up front will save you significant revision time later.
+
+Here is a roadmap of the entire guide.
+
+### Part I: Guidelines (Chapters 1--3)
+
+These chapters explain **what to write** and **how to write it**.
+
+- **Chapter 1** (this chapter): Overview of the final project, dataset requirements, and the 7-Part structure.
+- **Chapter 2**: Detailed guidelines for Project 1 (Linear Regression) --- what each of the seven parts should contain, with specific expectations for tables, figures, and interpretation.
+- **Chapter 3**: Detailed guidelines for Project 2 (Logistic Regression) --- the same seven parts, adapted for a binary outcome and logistic regression.
+
+### Part II: Worked Example --- Linear Regression (Chapters 4--5)
+
+These chapters provide a **complete worked example** of Project 1, from proposal to final write-up, using the PIAAC Korea dataset.
+
+- **Chapter 4**: Background, research questions, variable descriptions, and analytic plan.
+- **Chapter 5**: Descriptive statistics, regression results, interpretation, and discussion.
+
+### Part III: Worked Example --- Logistic Regression (Chapters 6--7)
+
+These chapters provide a **complete worked example** of Project 2, using the same PIAAC Korea dataset but now with a binary outcome.
+
+- **Chapter 6**: Background, research questions, variable descriptions, and analytic plan for logistic regression.
+- **Chapter 7**: Descriptive statistics, logistic regression results, odds ratio interpretation, and discussion.
+
+### Appendices
+
+The appendices contain practical reference materials that you will return to throughout your project:
+
+- A **common pitfalls checklist** --- a compilation of the most frequent mistakes students make, organized by project section. Review it before submitting each project.
+- A **complete R script** for the worked examples, fully annotated so you can understand every line.
+- **Table and figure templates** formatted to APA standards that you can adapt for your own project. Using these templates will save you formatting time and ensure a professional appearance.
+
+::: {.callout-note}
+## Use the Worked Examples as a Template
+Parts II and III show you exactly what a finished project looks like --- from the opening paragraph to the final appendix table. Study them carefully to understand the expected depth and style. Then make your project your own. Your research questions, variables, and interpretations should reflect your unique dataset and interests. Copying the structure is encouraged; copying the content is not.
+:::
+
+
+## Our Example: PIAAC Korea {#sec-piaac-example}
+
+Throughout this guide, we use a single dataset to demonstrate both projects: the **Programme for the International Assessment of Adult Competencies (PIAAC)**, administered by the OECD in 2011--2012.
+
+### About the Dataset
+
+PIAAC is a large-scale international survey that measured the cognitive skills, workplace experiences, and economic outcomes of adults across 24 participating countries and sub-national regions. It is often described as the adult equivalent of PISA (the Programme for International Student Assessment). For our worked examples, we use a subset of the Korean PIAAC data with the following characteristics:
+
+- **Population**: Korean adults aged 35--54 who are full-time employees.
+- **Sample size**: $N$ = 1,357 after applying our inclusion criteria.
+- **Data source**: OECD PIAAC Public Use File (Round 1, 2011--2012).
+
+### Variables for Project 1 (Linear Regression)
+
+The continuous outcome is **log monthly income** (PPP-adjusted). Raw income is heavily right-skewed --- a small number of people earn much more than the majority --- so we take the natural logarithm to reduce that skew. This transformation makes the variable more suitable for linear regression and, as a bonus, allows us to interpret coefficients in terms of approximate percentage changes in income.
+
+The explanatory variables include:
+
+- **Gender** (male vs. female)
+- **Years of schooling** (continuous; years of school education completed)
+- **Years of work experience** (continuous)
+- **Occupation type** (Skilled, Semi-white-collar, Semi-blue-collar, Elementary)
+- **Numeracy proficiency** (continuous score on the PIAAC numeracy assessment)
+
+### Variables for Project 2 (Logistic Regression)
+
+The binary outcome is **supervisory status**: whether the respondent is a manager or supervisor (coded 1) or a non-manager (coded 0). This is a natural binary variable --- each person either holds a supervisory role or does not.
+
+The same set of explanatory variables is used, which demonstrates how a single dataset can serve both projects. The substantive questions change --- instead of asking "What predicts income?" we now ask "What predicts the likelihood of holding a supervisory position?" --- but the data preparation and sample description are shared across both projects.
+
+### Why This Example?
+
+We chose PIAAC Korea for several reasons:
+
+1. **Dual outcomes.** It has both a continuous outcome (income) and a binary outcome (supervisory status), illustrating how one dataset can serve both projects.
+2. **Interpretable variables.** The predictors --- gender, education, experience, occupation, cognitive skills --- are substantively meaningful and easy to explain to a broad audience.
+3. **Appropriate sample size.** With $N$ = 1,357, the sample is large enough for reliable estimation of multiple regression coefficients but small enough to work with comfortably on any computer.
+4. **Public availability.** The data are freely downloadable from the OECD website, so you can follow along with every step of the analysis if you wish.
+
+You are not expected to use the PIAAC dataset for your own project (unless you want to). The worked example is meant to show you the process, the level of detail expected, and the style of writing that makes for a strong project. Your own project should reflect your unique research interests.
+
+
+## Getting Started Checklist {#sec-getting-started}
+
+Before you begin writing, work through the checklist below. These are the foundational decisions that everything else depends on. Taking the time to plan now will save you hours of revision later --- it is far easier to change a research question on paper than to rewrite an entire results section.
+
+::: {.callout-important}
+## Before You Start Writing
+
+- [ ] **Choose a dataset** that contains both a continuous response variable and a binary response variable.
+- [ ] **Identify at least four explanatory variables**, including at least one continuous predictor and at least one categorical predictor with three or more categories.
+- [ ] **Formulate two or three research questions** for Project 1 (linear regression) that involve your continuous outcome.
+- [ ] **Formulate at least one research question** for Project 2 (logistic regression) that involves your binary outcome.
+- [ ] **Read the guidelines** in @sec-guidelines-linear and @sec-guidelines-logistic before you start writing. Understanding the expectations up front will help you write more efficiently.
+
+If you can check every box, you are ready to begin. If any item gives you pause, come to office hours --- that is exactly what they are for.
+:::
+
+
+## Frequently Asked Questions {#sec-faq}
+
+Before we move on, here are answers to questions that students commonly ask at the start of the project.
+
+**How long should each project be?** Rather than an overall page limit, each section has its own recommended length --- see the section-by-section guidelines in @sec-guidelines-linear (Project 1) and @sec-guidelines-logistic (Project 2). Following those per-section limits will naturally produce a project of appropriate length. Focus on being thorough yet concise --- say what needs to be said, and no more.
+
+**Can I use a dataset from another class?** Yes, as long as it meets the requirements listed above. Reusing a cleaned dataset is fine; reusing a written report from another course is not.
+
+**What if my regression results are not statistically significant?** That is perfectly acceptable. Non-significant results are still informative and can be interpreted meaningfully in the Discussion section. Do not go searching for significance by testing dozens of models --- that is a much bigger problem than a non-significant finding.
+
+**Do I need to include a literature review?** A brief review of relevant prior work is expected in Part 1 (Background), but this is not a formal literature review paper. Three to five well-chosen references that motivate your research questions are sufficient.
+
+
+## Looking Ahead {#sec-looking-ahead}
+
+You now have the big picture: two projects, one shared structure, and a guide that walks you through every step.
+
+In the next chapter, you will find detailed guidelines for Project 1 (Linear Regression). Each of the seven parts is explained with specific expectations for content, formatting, and depth. If you are starting Project 1, turn to @sec-guidelines-linear. If you are starting Project 2, skip ahead to @sec-guidelines-logistic --- though reading both chapters is worthwhile, since the structure is parallel and the guidance is complementary.
+
+The worked examples in Parts II and III will bring these guidelines to life with concrete illustrations. When you see how each guideline translates into actual prose, tables, and figures, the expectations will feel much more concrete. Many students find it helpful to read a guidelines chapter and the corresponding worked example side by side.
+
+Good luck with your projects. The final project is your opportunity to demonstrate not just technical skill, but also the ability to think critically about data, communicate findings clearly, and engage with real research questions. That combination --- technical rigor and clear communication --- is what distinguishes a strong applied researcher.
+
+Remember: the goal is not perfection but thoughtful engagement with data. Every researcher encounters surprises in their data --- unexpected distributions, non-significant results, violated assumptions. How you respond to those surprises --- by adjusting your approach, discussing limitations honestly, and interpreting results carefully --- is what matters most.

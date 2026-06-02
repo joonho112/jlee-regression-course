@@ -1,0 +1,216 @@
+# Common Pitfalls to Avoid {#sec-pitfalls}
+
+{{< include ../_common.qmd >}}
+
+::: {.callout-warning}
+## Learn from Others' Mistakes
+This appendix compiles the most common mistakes students make on the final
+project, drawn from years of grading both linear and logistic regression
+projects. Review this checklist before submitting each part.
+:::
+
+Items marked **Logistic-specific** apply only to Project 2. Everything else
+applies to both projects.
+
+
+## Part 1: Background & Research Questions {#sec-pitfalls-part1}
+
+1. **Describing the data instead of motivating the research.** Part 1 should
+   explain *why* the topic matters, not *what* data you will use. Save data
+   descriptions for Part 2.
+
+2. **Writing vague research questions.** Bad: "What affects income?" Good: "To
+   what extent do education, experience, and literacy predict monthly earnings
+   among Korean adults, controlling for gender?" Your RQ should name the
+   outcome, key predictors, and population.
+
+::: {.callout-caution}
+## Critical Pitfall
+If your research questions do not specify the outcome variable and at least
+one predictor, it is impossible to tell what regression you plan to run.
+Every RQ must be answerable with a regression model.
+:::
+
+3. **Stating formal null hypotheses.** This project asks for substantive
+   research questions, not $H_0$ / $H_a$ pairs. Focus on the *what* and *why*,
+   not the statistical testing framework.
+
+
+## Part 2: Methods --- Subjects & Variables {#sec-pitfalls-part2}
+
+4. **Not defining categories for categorical variables.** If a variable has
+   levels, list all of them. The reader should not have to guess what the
+   categories are.
+
+5. **Not specifying the reference category for dummy variables.** Always state
+   which group is the reference (e.g., "Male is the reference category"). The
+   interpretation of every dummy coefficient depends on this choice.
+
+6. **Naming dummy variables ambiguously.** Use descriptive names like `female`
+   (1 = female, 0 = male), not generic names like `gender` or `D1`. The
+   variable name should make the coding obvious.
+
+::: {.callout-caution}
+## Critical Pitfall
+If you do not define your dummy variables and reference categories, the
+reader cannot interpret your regression coefficients. This is one of the
+most common reasons students lose points.
+:::
+
+7. **Omitting the variable table.** A concise table listing every variable
+   (name, role, type, definition) saves space and helps the reader quickly
+   grasp your analysis plan.
+
+
+## Part 3: Methods --- Statistical Analysis {#sec-pitfalls-part3}
+
+8. **Models that do not match the research questions.** Each model should map
+   to a specific RQ. If you have three RQs, you should have (at least) three
+   models, and each should be explicitly linked to its corresponding RQ.
+
+9. **Getting the regression direction backwards.** You regress *Y* on *X*,
+   meaning the outcome is on the left side of the equation. Saying "we
+   regressed education on income" means the opposite of what you intend.
+
+10. **Not writing out the model equation.** Even a simple equation like
+    $Y_i = \beta_0 + \beta_1 X_{1i} + \beta_2 X_{2i} + \varepsilon_i$ makes
+    your analysis plan unambiguous. Always include at least one equation.
+
+
+## Part 4: Results --- Descriptive Analyses {#sec-pitfalls-part4}
+
+11. **Reporting means and SDs for categorical variables.** The mean of a
+    binary variable is technically the proportion, but it is confusing. Report
+    frequencies and percentages for categorical variables; report means, SDs,
+    and ranges for continuous variables.
+
+12. **Using a different subsample for descriptives and regression.** If your
+    regression drops cases due to missing data, your descriptive statistics
+    should be computed on the *same* analytic sample. Mismatched sample sizes
+    confuse the reader.
+
+13. **No exploratory visualizations.** Include at least one figure (histogram,
+    scatterplot, boxplot, or bar chart) that previews the key relationships.
+    A table of numbers is not a substitute for a well-chosen graph.
+
+14. **Dropping figures without interpretation.** Every figure needs a written
+    description of what you observe. Do not include a plot and then move on
+    without discussing it.
+
+
+## Part 5: Results --- Regression Analyses {#sec-pitfalls-part5}
+
+::: {.callout-caution}
+## Critical Pitfall
+The single most common mistake across both projects is presenting regression
+output without interpreting the coefficients. Every coefficient must be
+interpreted in substantive terms: direction, magnitude, significance, and
+what it means in the real-world context of your study.
+:::
+
+15. **Pasting raw R output instead of a formatted table.** Never include
+    unformatted `summary()` output in your final report. Use `tbl_regression()`
+    from the `gtsummary` package to create publication-style tables (see
+    @sec-table-templates).
+
+16. **Not using `factor()` for categorical variables in R.** If you pass a
+    numeric variable (e.g., coded 0/1/2) directly to `lm()` or `glm()`, R
+    treats it as continuous. Always wrap categorical variables in `factor()` or
+    pre-define them as factors in your data.
+
+::: {.callout-caution}
+## The Reference Category Trap
+R defaults to **alphabetical** ordering for factor levels, which determines the reference category. If your categorical variable has levels "Assistant," "Associate," "Full," R will use "Assistant" as the reference — not because it makes theoretical sense, but because "A" comes first. Always use `fct_relevel(your_variable, "your_reference")` to set the intended reference category **before** fitting any models. Check with `levels(your_factor)` to confirm.
+:::
+
+::: {.callout-caution}
+## The Same-Sample Trap (Nested Models)
+When comparing nested models with `anova()`, all models must be fit on the **exact same observations**. If a variable added in Model 2 has missing values, R silently drops those rows, making Model 2 fit on fewer observations than Model 1. The `anova()` comparison then fails. **Solution:** Use `tidyr::drop_na()` on all analytical variables before fitting any models:
+```r
+analysis_data <- raw_data |> drop_na(y, x1, x2, x3, x4)
+```
+:::
+
+17. **Not interpreting every coefficient.** If a variable is in the model, it
+    must be interpreted. Do not skip the intercept, the control variables, or
+    the interaction terms. Each coefficient tells part of the story.
+
+18. **Not rounding appropriately.** Two decimal places for coefficients and
+    standard errors; three for *p*-values and correlations. Reporting 10
+    decimal places from R output signals that you copied without thinking.
+
+19. **Confusing statistical and practical significance.** A coefficient can
+    be statistically significant but substantively trivial. Always discuss
+    the *size* of the effect, not just whether it is significant.
+
+20. **Not checking regression assumptions.** For linear regression: check
+    linearity, normality of residuals, homoscedasticity, and
+    multicollinearity (VIF). For logistic regression: report the likelihood
+    ratio test, AIC/BIC, and VIF. If you skip assumption checks, you cannot
+    claim your results are trustworthy.
+
+21. **Logistic-specific: Reporting log-odds instead of odds ratios.** Odds
+    ratios are far easier to interpret. Always set `exponentiate = TRUE` in
+    `tbl_regression()` and report ORs with 95% confidence intervals.
+
+22. **Logistic-specific: Misinterpreting odds ratios.** OR = 1.15 does *not*
+    mean "15% more likely." It means the *odds* increase by a factor of 1.15.
+    Be precise about the distinction between odds and probability.
+
+23. **Logistic-specific: Not including a predicted probability graph.** The
+    predicted probability plot is the *key deliverable* for Project 2. It
+    translates abstract odds ratios into an intuitive 0--1 probability scale
+    that communicates practical significance directly.
+
+
+## Part 6: Discussion {#sec-pitfalls-part6}
+
+24. **Drawing causal conclusions from observational data.** Unless you have a
+    randomized experiment, say "is associated with" rather than "causes" or
+    "leads to." Cross-sectional data cannot establish causation.
+
+25. **Not answering each research question directly.** Your discussion should
+    explicitly revisit each numbered RQ and state what the analysis revealed.
+    Do not leave the reader to infer the answers.
+
+26. **Listing zero limitations.** Every study has limitations. Discuss at
+    least 2--3 (e.g., cross-sectional design, omitted variables,
+    generalizability, measurement error).
+
+
+## Appendix (R Script) {#sec-pitfalls-appendix}
+
+27. **Not annotating the R script.** Your appendix code should include
+    comments that explain what each block does. An uncommented wall of code
+    is difficult to grade and impossible to debug.
+
+::: {.callout-caution}
+## Critical Pitfall
+Before submitting, restart R and run your script from top to bottom (or
+render your Quarto document from scratch). If the script does not run
+without errors, you will lose points regardless of how good the content is.
+:::
+
+28. **Not checking that the script runs from top to bottom.** A script that
+    requires manually running chunks in a special order, or that depends on
+    objects from the global environment, is not reproducible.
+
+
+## Quick Self-Check Before Submission {#sec-pitfalls-checklist}
+
+Use this checklist before submitting each project:
+
+- [ ] Research question(s) are specific and clearly stated
+- [ ] Methods section describes data, sample, all variables (with categories
+  and reference groups), and analytic approach
+- [ ] At least one model equation is written out
+- [ ] Descriptive statistics are presented before regression results
+- [ ] At least one exploratory visualization is included and interpreted
+- [ ] Regression table uses proper formatting (not raw R output)
+- [ ] Every coefficient is interpreted substantively
+- [ ] Model assumptions are checked and discussed
+- [ ] Discussion answers each research question directly
+- [ ] At least 2--3 limitations are noted
+- [ ] R code is clean, commented, and runs from top to bottom
+- [ ] **Logistic only:** Odds ratios (not log-odds) are reported
+- [ ] **Logistic only:** Predicted probability graph is included

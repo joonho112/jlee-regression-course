@@ -1,0 +1,39 @@
+---
+title: "Week 10: Simple Logistic Regression"
+---
+
+## Overview
+
+This week marks the transition from continuous to binary outcomes. When the dependent variable takes only two values (e.g., pass/fail, admitted/not admitted), ordinary least squares is no longer appropriate. You will learn the logistic regression framework, which models the probability of an event using the logistic function. Central ideas include the relationship among probability, odds, and log-odds; the use of maximum likelihood estimation instead of OLS; and the interpretation of coefficients as odds ratios.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Explain why linear regression is inappropriate for binary outcomes
+- Define and convert among probability, odds, and log-odds
+- Describe the shape of the logistic curve and its connection to the logit link function
+- Explain the role of maximum likelihood estimation in fitting logistic models
+- Interpret logistic regression coefficients as odds ratios
+- Compute predicted probabilities from a fitted logistic model
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 9: Simple Logistic Regression]({{< var books.lecture_notes >}}/chapters/09-simple-logistic-regression.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 09: Introduction to Logistic Regression]({{< var books.r_lab_book >}}/labs/lab09-logistic-intro.html){target="_blank"}
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Binary outcome** | A dependent variable that takes exactly two values, typically coded as 0 and 1 |
+| **Probability** | The likelihood of the event occurring, bounded between 0 and 1 |
+| **Odds** | The ratio of the probability of the event to the probability of the non-event |
+| **Log-odds (logit)** | The natural logarithm of the odds; the scale on which logistic regression is linear |
+| **Logistic function** | The S-shaped curve that maps any real-valued log-odds to a probability between 0 and 1 |
+| **Maximum likelihood estimation (MLE)** | The method used to estimate logistic regression coefficients by finding values that maximize the likelihood of the observed data |
+| **Odds ratio** | The multiplicative change in odds associated with a one-unit increase in the predictor |
+| **Predicted probability** | The estimated probability of the event for a given set of predictor values |

@@ -1,0 +1,403 @@
+---
+title: "Lab 9: Introduction to Logistic Regression"
+---
+
+{{< include ../_common.qmd >}}
+
+## Goals
+
+::: {.callout-note}
+## What You'll Learn in This Lab
+- Understand why we need logistic regression for binary outcomes
+- Compute probabilities, odds, and odds ratios from a cross-tabulation
+- Fit a logistic regression using `glm()` with `family = binomial`
+- Interpret coefficients on the log-odds, odds, and probability scales
+- Fit logistic regression with a continuous predictor
+- **Lecture Notes Reference:** Chapter 9: *Introduction to Logistic Regression*
+:::
+
+::: {.callout-tip}
+## Stata → R Translation
+| Stata | R | Notes |
+|:------|:--|:------|
+| `logit survived female` | `glm(survived ~ female, family = binomial)` | Log-odds coefficients |
+| `logit survived female, or` | `exp(coef(model))` | Odds ratios |
+| `logistic survived female` | `tbl_regression(exponentiate = TRUE)` | OR with pretty table |
+| `cs survived female, or` | Manual calculation | Cohort study odds ratio |
+:::
+
+**Dataset:** `titanic` from the `regdatasets` package
+
+## Setup
+
+```{r}
+#| label: lab09-setup
+
+library(regdatasets)
+data(titanic)
+glimpse(titanic)
+```
+
+
+## Part 1: Meet the Titanic Data
+
+The `titanic` dataset describes the survival status of individual passengers on the Titanic. Our goal today is to model **who survived** --- a binary outcome (0 = died, 1 = survived).
+
+### Step 1: Explore the Variables
+
+```{r}
+#| label: explore-titanic
+
+titanic |>
+  summarise(
+    n = n(),
+    survived_mean = mean(survived, na.rm = TRUE),
+    age_mean = mean(age, na.rm = TRUE),
+    fare_mean = mean(fare, na.rm = TRUE)
+  ) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+
+> The variable `survived` is coded 0/1, so its mean gives us the overall survival rate. What proportion of passengers survived?
+
+### Step 2: Create the Female Dummy Variable
+
+The `sex` variable is already coded as 0 (male) and 1 (female). We'll rename it to `female` for clarity.
+
+```{r}
+#| label: create-female
+
+# The 'sex' variable is already coded as 0 = male, 1 = female
+# Rename it to 'female' for clarity
+titanic <- titanic |>
+  rename(female = sex)
+```
+
+Let's verify the coding:
+
+```{r}
+#| label: verify-female
+
+titanic |>
+  count(female)
+```
+
+> We created `female` so that 1 = female and 0 = male. This makes males the reference group, which will be important when we interpret logistic regression coefficients.
+
+### Step 3: Cross-Tabulation of Survival by Gender
+
+Before fitting any model, let's look at the raw data. A cross-tabulation tells us everything we need.
+
+```{r}
+#| label: crosstab-survive-female
+
+titanic |>
+  count(female, survived) |>
+  pivot_wider(names_from = survived, values_from = n, names_prefix = "survived_")
+```
+
+Now let's add row percentages to see survival rates within each gender:
+
+```{r}
+#| label: crosstab-proportions
+
+titanic |>
+  group_by(female) |>
+  summarise(
+    n = n(),
+    n_survived = sum(survived),
+    prop_survived = mean(survived),
+    .groups = "drop"
+  ) |>
+  mutate(prop_survived = round(prop_survived, 4))
+```
+
+> Compare the survival rates. Females had a much higher survival rate than males. This is the pattern we will model with logistic regression.
+
+
+## Part 2: Understanding Odds and Odds Ratios
+
+Before jumping into logistic regression, let's build intuition about **probabilities**, **odds**, and **odds ratios**. These three quantities are all different ways of describing the same information, and converting between them is the key skill for this lab.
+
+### Step 1: Probabilities from the Cross-Tab
+
+Let's extract the survival probabilities we just computed:
+
+```{r}
+#| label: probs-from-table
+
+# Store the survival proportions
+surv_stats <- titanic |>
+  group_by(female) |>
+  summarise(prob_survived = mean(survived), .groups = "drop")
+
+prob_male   <- surv_stats$prob_survived[surv_stats$female == 0]
+prob_female <- surv_stats$prob_survived[surv_stats$female == 1]
+
+cat("P(survived | male)   =", round(prob_male, 4), "\n")
+cat("P(survived | female) =", round(prob_female, 4), "\n")
+```
+
+### Step 2: From Probabilities to Odds
+
+**Odds** express the ratio of the probability of an event happening to the probability of it not happening:
+
+$$\text{Odds} = \frac{p}{1 - p}$$
+
+```{r}
+#| label: compute-odds
+
+odds_male   <- prob_male / (1 - prob_male)
+odds_female <- prob_female / (1 - prob_female)
+
+cat("Odds(survived | male)   =", round(odds_male, 4), "\n")
+cat("Odds(survived | female) =", round(odds_female, 4), "\n")
+```
+
+> An odds of 0.24 for males means that for every male who survived, roughly 4 died. An odds greater than 1 for females means more females survived than died.
+
+### Step 3: The Odds Ratio
+
+The **odds ratio (OR)** compares the odds between two groups:
+
+$$\text{OR} = \frac{\text{Odds(female)}}{\text{Odds(male)}}$$
+
+```{r}
+#| label: compute-or
+
+or_manual <- odds_female / odds_male
+
+cat("Odds Ratio (female vs. male) =", round(or_manual, 4), "\n")
+```
+
+> This tells us that the odds of survival for females were about `r round(or_manual, 1)` times the odds of survival for males. This is a huge difference --- and it is exactly what logistic regression will estimate for us.
+
+::: {.callout-tip}
+## The Three Scales
+Keep this conversion chain in mind --- you will use it throughout the rest of the course:
+
+**Log-odds** $\xrightarrow{\exp()}$ **Odds** $\xrightarrow{p = \text{odds}/(1+\text{odds})}$ **Probability**
+
+Going back: **Probability** $\xrightarrow{p/(1-p)}$ **Odds** $\xrightarrow{\log()}$ **Log-odds**
+:::
+
+
+## Part 3: Your First Logistic Regression
+
+Now let's fit the same analysis as a logistic regression. We use `glm()` with `family = binomial` (which uses the logit link by default).
+
+### Step 1: Fit the Model
+
+```{r}
+#| label: logit-female
+
+model_female <- glm(survived ~ female, data = titanic, family = binomial)
+```
+
+:::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: logit-female-summary
+
+summary(model_female)
+```
+
+#### Advanced
+
+```{r}
+#| label: logit-female-gtsummary
+
+model_female |>
+  tbl_regression(exponentiate = TRUE) |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+> The `exponentiate = TRUE` option displays odds ratios instead of log-odds coefficients. This is typically what we report in applied research.
+
+::::
+
+### Step 2: Interpret the Log-Odds Coefficients
+
+The default output is on the **log-odds scale**:
+
+```{r}
+#| label: logit-coefs
+
+coef(model_female)
+```
+
+> - **Intercept** (`r round(coef(model_female)[1], 4)`): This is the log-odds of survival for the reference group (males, when `female = 0`).
+> - **female** (`r round(coef(model_female)[2], 4)`): This is the difference in log-odds of survival between females and males.
+
+Log-odds are hard to interpret directly. Let's convert them.
+
+::: {.callout-warning}
+## R Reports Log-Odds, Not Odds Ratios
+R's `glm()` with `family = binomial` always reports coefficients on the **log-odds** scale. To get **odds ratios** (which is what Stata's `logistic` command reports by default), you need to exponentiate: `exp(coef(model))` or use `parameters::model_parameters(model, exponentiate = TRUE)`. Don't interpret log-odds coefficients as odds ratios!
+:::
+
+### Step 3: Transform to Odds
+
+Apply `exp()` to convert from log-odds to odds:
+
+```{r}
+#| label: logit-to-odds
+
+# Odds of survival for males (reference group)
+odds_male_model <- exp(coef(model_female)[1])
+
+# Odds of survival for females
+odds_female_model <- exp(coef(model_female)[1] + coef(model_female)[2])
+
+cat("Estimated odds (male)   =", round(odds_male_model, 4), "\n")
+cat("Estimated odds (female) =", round(odds_female_model, 4), "\n")
+```
+
+> Compare these to the odds we calculated by hand in Part 2. They should match exactly!
+
+### Step 4: Get the Odds Ratio Directly
+
+The odds ratio is simply `exp()` of the slope coefficient:
+
+```{r}
+#| label: odds-ratio
+
+exp(coef(model_female))
+```
+
+> The odds ratio for `female` is `r round(exp(coef(model_female)[2]), 2)`. This means the estimated odds of surviving for females are about `r round(exp(coef(model_female)[2]), 1)` times the odds for males --- exactly what we calculated by hand.
+
+### Step 5: Transform to Probabilities
+
+Finally, let's convert to the probability scale using the inverse logit function:
+
+```{r}
+#| label: logit-to-prob
+
+# Predicted probability of survival for males
+prob_male_model <- plogis(coef(model_female)[1])
+
+# Predicted probability of survival for females
+prob_female_model <- plogis(coef(model_female)[1] + coef(model_female)[2])
+
+cat("P(survived | male)   =", round(prob_male_model, 4), "\n")
+cat("P(survived | female) =", round(prob_female_model, 4), "\n")
+```
+
+> Again, these match our hand calculations from Part 2. With a single dummy predictor, logistic regression simply reproduces the group proportions from the cross-tabulation.
+
+::: {.callout-important}
+## Why Not Just Use Linear Regression?
+With a binary outcome, linear regression (OLS) can predict probabilities below 0 or above 1, which makes no sense. Logistic regression constrains predicted probabilities to stay between 0 and 1 by modeling the **log-odds** as a linear function of the predictors.
+:::
+
+
+## Part 4: Logistic Regression with a Continuous Predictor
+
+The real power of logistic regression emerges when we use continuous predictors. Let's model survival as a function of ticket fare.
+
+### Step 1: Fit the Model
+
+```{r}
+#| label: logit-fare
+
+model_fare <- glm(survived ~ fare, data = titanic, family = binomial)
+```
+
+:::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: logit-fare-summary
+
+summary(model_fare)
+```
+
+#### Advanced
+
+```{r}
+#| label: logit-fare-gtsummary
+
+model_fare |>
+  tbl_regression(exponentiate = TRUE) |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+::::
+
+### Step 2: Interpret the Odds Ratio
+
+```{r}
+#| label: fare-or
+
+exp(coef(model_fare))
+```
+
+> The odds ratio for `fare` is approximately `r round(exp(coef(model_fare)[2]), 4)`. For each additional British pound of fare, the odds of survival increase by about `r round((exp(coef(model_fare)[2]) - 1) * 100, 2)`%. Passengers who paid more for their tickets had higher odds of surviving.
+
+::: {.callout-tip}
+## Interpreting OR for Continuous Predictors
+- **OR > 1**: each unit increase in the predictor is associated with *higher* odds of the outcome.
+- **OR < 1**: each unit increase is associated with *lower* odds.
+- **OR = 1**: no association.
+
+For small effects close to 1, the interpretation is: (OR - 1) x 100 = percentage change in odds per unit increase.
+:::
+
+### Step 3: Predicted Probability Curve
+
+Unlike linear regression, the relationship between a continuous predictor and the predicted probability is **curved** (S-shaped):
+
+```{r}
+#| label: predicted-prob-curve
+#| fig-alt: "S-shaped predicted probability curve showing survival probability increasing with ticket fare, with jittered observed outcomes at 0 and 1"
+#| fig-cap: "Predicted probability of survival as a function of ticket fare"
+
+# Create prediction data
+pred_data <- tibble(fare = seq(0, 300, length.out = 200))
+
+pred_data <- pred_data |>
+  mutate(prob = predict(model_fare, newdata = pred_data, type = "response"))
+
+ggplot() +
+  geom_jitter(data = titanic, aes(x = fare, y = survived),
+              height = 0.03, alpha = 0.2, size = 1, color = "#2C3E50") +
+  geom_line(data = pred_data, aes(x = fare, y = prob),
+            color = "#E74C3C", linewidth = 1.2) +
+  labs(x = "Ticket Fare (British Pounds)",
+       y = "Predicted P(Survived)",
+       title = "Logistic Regression: Survival by Fare",
+       subtitle = "S-shaped curve keeps predictions between 0 and 1") +
+  scale_y_continuous(limits = c(0, 1))
+```
+
+> The jittered dots at 0 and 1 are the actual outcomes. The red S-shaped curve shows the predicted probability from our logistic model. Notice how the curve stays between 0 and 1 --- this is the advantage of logistic over linear regression for binary outcomes.
+
+
+## Key Takeaways
+
+::: {.callout-note}
+## What We Learned
+
+1. **Why logistic regression?** When the outcome is binary (0/1), linear regression can produce impossible predictions (below 0 or above 1). Logistic regression solves this by modeling the log-odds as a linear function of predictors.
+
+2. **The log-odds to odds to probability pipeline:**
+   - `glm()` estimates coefficients on the **log-odds** scale
+   - `exp(coef)` converts to the **odds** scale (odds ratios)
+   - `plogis(linear predictor)` converts to the **probability** scale
+
+3. **Odds ratio interpretation:**
+   - **OR > 1** means higher odds of the outcome
+   - **OR < 1** means lower odds of the outcome
+   - For a **dummy variable**: OR compares the odds between two groups
+   - For a **continuous variable**: OR is the multiplicative change in odds for each one-unit increase
+
+4. **In our Titanic example:**
+   - Females had roughly 11 times the odds of survival compared to males
+   - Each additional pound of fare increased the odds of survival by about 1.25%
+:::

@@ -1,0 +1,85 @@
+---
+title: "Projects Overview"
+---
+
+{{< var course.number >}} includes two independent research projects that together account for **40%** of your final grade. Each project asks you to conduct a complete regression analysis on a dataset of your choosing, applying the concepts and techniques learned in the course.
+
+::: {.callout-tip}
+## {{< fa book >}} Project Guide
+The [Project Guide]({{< var books.project_guide >}}){target="_blank"} provides step-by-step instructions, worked examples, and R code templates for every stage of both projects. Use it as your primary reference throughout.
+:::
+
+
+## Project 1: Linear Regression (20%) {#project-1}
+
+In Project 1, you will conduct a **linear regression analysis** with a continuous outcome variable. This project covers topics from the first half of the course: simple and multiple regression, categorical predictors, confounding, and interactions.
+
+### Timeline
+
+| Component | Due | Weight | Description |
+|:----------|:---:|:------:|:------------|
+| [Proposal](project-1-proposal.qmd) | Week 7 | 30% | Research question, dataset, variable definitions |
+| [Draft](project-1-draft.qmd) | Week 9 | 30% | Complete analysis with output and preliminary interpretation |
+| [Final Report](project-1-final.qmd) | Week 12 | 40% | Polished report with all sections |
+
+### Grading
+
+Project 1 is worth **20%** of your final grade, distributed across the three milestones:
+
+| Component | Weight (of Project 1) |
+|:----------|:---------------------:|
+| {{< fa file-lines >}} Proposal | 30% |
+| {{< fa file-lines >}} Draft | 30% |
+| {{< fa file-alt >}} Final Report | 40% |
+
+
+## Project 2: Logistic Regression (20%) {#project-2}
+
+In Project 2, you will conduct a **logistic regression analysis** with a binary outcome variable. This project covers topics from the second half of the course: logistic regression, odds ratios, model diagnostics, and goodness of fit.
+
+### Timeline
+
+| Component | Due | Weight | Description |
+|:----------|:---:|:------:|:------------|
+| [Proposal](project-2-proposal.qmd) | Week 12 | 20% | Research question, dataset, variable definitions |
+| [Draft](project-2-draft.qmd) | Week 14 | 30% | Complete logistic regression analysis with output, diagnostics, and preliminary interpretation |
+| [Final Report](project-2-final.qmd) | Week 15 | 50% | Polished report with all sections |
+
+### Grading
+
+Project 2 is worth **20%** of your final grade, distributed across the three milestones:
+
+| Component | Weight (of Project 2) |
+|:----------|:---------------------:|
+| {{< fa file-lines >}} Proposal | 20% |
+| {{< fa file-lines >}} Draft | 30% |
+| {{< fa file-alt >}} Final Report | 50% |
+
+
+## Choosing Your Topic
+
+You may choose **any publicly available dataset** that interests you. For Project 1, your outcome must be a **continuous variable** suitable for linear regression. For Project 2, your outcome must be a **binary variable** suitable for logistic regression. You may use different datasets for the two projects, or use the same dataset with different outcome variables.
+
+The [Project Guide, Ch. 1]({{< var books.project_guide >}}){target="_blank"} includes guidance on selecting a dataset, and the [`regdatasets` package]({{< var books.regdatasets >}}){target="_blank"} provides curated options.
+
+::: {.callout-important}
+## Dataset Approval
+Your dataset must be approved as part of each project's Proposal. Discuss your choice with the instructor if you are unsure whether it is appropriate.
+:::
+
+
+## Submission
+
+All milestones are submitted through **Blackboard**. Each submission should include:
+
+- A rendered PDF or HTML document
+- Your R script or `.qmd` source file
+- The dataset (or a link to it, if publicly hosted)
+
+
+## Getting Help
+
+- {{< fa book >}} Start with the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed instructions and worked examples
+- {{< fa comments >}} Post questions to the Blackboard discussion board
+- {{< fa envelope >}} Email {{< var instructor.name >}} at [{{< var instructor.email >}}](mailto:{{< var instructor.email >}})
+- {{< fa calendar >}} Schedule an [appointment]({{< var instructor.appointment_url >}}) during office hours

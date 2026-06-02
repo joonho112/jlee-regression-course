@@ -1,0 +1,38 @@
+---
+title: "Week 13: Latent Response & GLM"
+---
+
+## Overview
+
+This week introduces a deeper theoretical perspective on the models you have been fitting. The latent variable formulation reinterprets binary and ordinal outcomes as observable manifestations of a continuous, unobserved response. Building on this idea, the Generalized Linear Model (GLM) framework unifies the regression models covered throughout the course by specifying three components: a random component (the outcome distribution), a systematic component (the linear predictor), and a link function that connects them. You will see how OLS, logistic regression, Poisson regression, and other models are all special cases of the GLM.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Describe the latent variable formulation underlying binary regression models
+- Explain how a threshold applied to a continuous latent response produces an observed binary outcome
+- Identify the three components of a Generalized Linear Model (random, systematic, link)
+- Compare the logit and probit link functions in terms of their assumptions and interpretations
+- Explain how the GLM framework unifies the regression models studied in this course
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 12: Latent Response & Generalized Linear Models]({{< var books.lecture_notes >}}/chapters/12-latent-response-glm.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 12: Advanced Logistic Regression]({{< var books.r_lab_book >}}/labs/lab12-logistic-advanced.html){target="_blank"}
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Latent variable** | An unobserved continuous variable that underlies an observed categorical outcome |
+| **Threshold model** | A model in which the observed category is determined by whether the latent variable exceeds a threshold |
+| **Generalized Linear Model (GLM)** | A flexible framework that extends linear regression by specifying a random component, systematic component, and link function |
+| **Random component** | The probability distribution assumed for the outcome variable (e.g., normal, binomial, Poisson) |
+| **Systematic component** | The linear predictor formed by the regression coefficients and explanatory variables |
+| **Link function** | The function that connects the expected value of the outcome to the linear predictor |
+| **Logit link** | The link function based on the logistic distribution, mapping probabilities to log-odds |
+| **Probit link** | The link function based on the normal distribution, mapping probabilities to z-scores |

@@ -1,0 +1,37 @@
+---
+title: "Week 14: Ordinal Models"
+---
+
+## Overview
+
+Many outcomes in education and the social sciences are measured on ordinal scales: survey responses ranging from "strongly disagree" to "strongly agree," performance levels classified as below basic, basic, proficient, or advanced. This week extends the logistic regression framework to ordinal outcomes. The cumulative logit model, also known as ordinal logistic regression, models the probability of falling at or below each category using a set of threshold parameters and a single slope. A critical assumption -- proportional odds -- states that the effect of a predictor is constant across all cumulative splits. You will learn to fit ordinal models, interpret their coefficients, and test the proportional odds assumption.
+
+## Learning Objectives
+
+By the end of this week, you will be able to:
+
+- Distinguish ordinal outcomes from nominal and continuous outcomes
+- Describe the structure of the cumulative logit (proportional odds) model
+- Explain the proportional odds assumption and its implications for interpretation
+- Interpret regression coefficients from an ordinal logistic regression model
+- Conduct and interpret the Brant test for the proportional odds assumption
+- Discuss situations in which the proportional odds assumption may be violated
+
+## Readings
+
+- {{< fa book-open >}} **Required**: [Chapter 13: Ordinal Models]({{< var books.lecture_notes >}}/chapters/13-ordinal-models.html){target="_blank"}
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Ordinal outcome** | A categorical variable whose categories have a meaningful order but not necessarily equal intervals |
+| **Proportional odds** | The assumption that the relationship between each pair of cumulative categories is the same across all split points |
+| **Cumulative logit** | The log-odds of being at or below a given category versus above it |
+| **Ordinal logistic regression** | A regression model for ordinal outcomes that uses cumulative logits as the response |
+| **Parallel regression assumption** | Another name for the proportional odds assumption, reflecting that regression lines are parallel across cumulative splits |
+| **Brant test** | A statistical test that evaluates whether the proportional odds assumption holds for each predictor in the model |
+
+## Project
+
+- {{< fa clipboard-list >}} [Project 2 Draft](/assignment/project-2-draft.qmd) --- due this week

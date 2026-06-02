@@ -1,0 +1,119 @@
+---
+title: "Frequently Asked Questions"
+---
+
+## {{< fa laptop-code >}} Software & Setup
+
+### What if I'm new to R?
+
+That is completely fine --- no prior R experience is required for this course. Week 1 is devoted entirely to getting set up and learning the basics. Here is what we recommend:
+
+1. Follow the [R & RStudio Setup Guide](r-setup.qmd) to install your software.
+2. Work through **Appendix A** of the Lecture Notes: [R Setup Guide]({{< var books.lecture_notes >}}/appendices/a-r-setup-guide.html){target="_blank"}.
+3. Complete [Lab 01: Introduction to R]({{< var books.r_lab_book >}}/labs/lab01-intro-to-r.html){target="_blank"}, which walks you through the basics step by step.
+
+::: {.callout-tip}
+## Learning R takes practice
+You do not need to master R before the course begins. The R Lab Book provides guided, hands-on practice each week, and your skills will build incrementally over the semester.
+:::
+
+
+### What if I come from a Stata background?
+
+Welcome! Many students in education and the social sciences have prior Stata experience. You will find the transition manageable because the statistical concepts are the same --- only the syntax changes. We provide several resources to help:
+
+- {{< fa arrows-rotate >}} [Stata-to-R Cheat Sheet](stata-to-r.qmd) --- Quick command translations on this site
+- {{< fa book-open >}} [Appendix B: Stata-to-R Cheat Sheet]({{< var books.lecture_notes >}}/appendices/b-stata-to-r-cheat-sheet.html){target="_blank"} --- Comprehensive reference in the Lecture Notes
+
+Most students find that after 2--3 weeks of practice, they are comfortable with R syntax.
+
+
+### Can I use Python instead of R?
+
+All course materials, labs, homework, and the project guide are built around R. While Python is an excellent language for data science, using it in this course would mean you cannot take advantage of the R Lab Book or the `regdatasets` package. For these reasons, **R is required** for all assignments and projects.
+
+If you are interested in learning Python for statistics, we are happy to suggest resources outside of this course.
+
+
+### How do I use Posit Cloud instead of installing R locally?
+
+[Posit Cloud](https://posit.cloud/) runs R and RStudio entirely in your browser. Create a free account, start a new project, and install the course packages as described in the [R & RStudio Setup Guide](r-setup.qmd). The free tier provides 25 project hours per month. This is a good option if you have trouble with local installation or are working from a shared computer.
+
+
+## {{< fa database >}} Data & Packages
+
+### How do I install the regdatasets package?
+
+The `regdatasets` package is hosted on GitHub (not CRAN), so you need the `remotes` package to install it:
+
+```r
+install.packages("remotes")
+remotes::install_github("joonho112/regdatasets")
+```
+
+After installation, load it with `library(regdatasets)` and access any dataset with `data(dataset_name)`. See the [Datasets](datasets.qmd) page for the full list.
+
+::: {.callout-warning}
+## Installation errors?
+If you get an error during installation, make sure you have **R 4.3.0 or later** and that the `remotes` package is installed. If the problem persists, try updating R and RStudio, then run the command again.
+:::
+
+
+### What datasets can I use for the final project?
+
+You have two options:
+
+1. **Use a dataset from the `regdatasets` package.** The package contains 24 curated datasets suitable for regression analysis. Run `data(package = "regdatasets")` to see the full list.
+2. **Use an external dataset.** You may bring your own data or use a publicly available dataset relevant to your research interests. External datasets must be approved by the instructor during the Project 1 Proposal stage.
+
+See the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed requirements and the dataset approval process.
+
+
+## {{< fa pencil >}} Assignments & Grading
+
+### What if a homework is too difficult?
+
+Homework in this course is graded on **completion**, not correctness. The goal is to practice and learn, not to produce perfect answers. Here is what we suggest:
+
+1. **Try first.** Spend a reasonable amount of time working through the problem.
+2. **Review the R Lab Book.** Work through the related lab examples step by step.
+3. **Ask for help.** Email {{< var instructor.email >}} or visit office hours if you are stuck.
+4. **Submit what you have.** A good-faith effort earns full credit, even if incomplete.
+
+::: {.callout-note}
+## Completion-based grading
+Each homework is graded on good-faith effort, not accuracy. Submit your honest attempt --- even if incomplete --- and review feedback to learn from mistakes.
+:::
+
+
+### How should I format my project report?
+
+Your project report should follow the structure and conventions described in the [Writing & Style Guide](style-guide.qmd). In brief:
+
+- Use the section structure: Introduction, Data & Variables, EDA, Methods, Results, Discussion, References
+- Format tables and figures with numbers, titles, and captions
+- Report regression results in APA style (see the Style Guide for examples)
+- Submit both your rendered report **and** the `.qmd` source file for reproducibility
+
+Detailed rubrics and formatting examples are available in the [Project Guide]({{< var books.project_guide >}}){target="_blank"}.
+
+
+## {{< fa comments >}} Course Logistics
+
+### How do I contact the instructor?
+
+Email is the best way to reach {{< var instructor.name_no_title >}} at [{{< var instructor.email >}}](mailto:{{< var instructor.email >}}). Expect a response within 48 hours for course-related questions. For urgent matters, include "BER 640 - URGENT" in the subject line.
+
+You can also [schedule an appointment]({{< var instructor.appointment_url >}}) for office hours.
+
+
+### Where do I find all the course materials?
+
+All materials are open-access and linked from the course website:
+
+| Material | Link |
+|----------|------|
+| {{< fa book-open >}} Lecture Notes | [{{< var books.lecture_notes >}}]({{< var books.lecture_notes >}}){target="_blank"} |
+| {{< fa laptop-code >}} R Lab Book | [{{< var books.r_lab_book >}}]({{< var books.r_lab_book >}}){target="_blank"} |
+| {{< fa clipboard-list >}} Project Guide | [{{< var books.project_guide >}}]({{< var books.project_guide >}}){target="_blank"} |
+| {{< fa database >}} regdatasets | [{{< var books.regdatasets >}}]({{< var books.regdatasets >}}){target="_blank"} |

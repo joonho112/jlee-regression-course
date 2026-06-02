@@ -1,0 +1,87 @@
+---
+title: "Datasets (regdatasets)"
+---
+
+## Overview
+
+All datasets used in {{< var course.number >}} are bundled in the **regdatasets** R package (v0.2.0). This package provides 24 curated educational datasets drawn from published research in education, psychology, and the social sciences. Each dataset is cleaned, documented, and ready for analysis.
+
+{{< fa database >}} [**regdatasets Package Documentation**]({{< var books.regdatasets >}}){target="_blank"}
+
+
+## Installation
+
+Install the package from GitHub:
+
+```r
+# Install remotes if you haven't already
+install.packages("remotes")
+
+# Install regdatasets
+remotes::install_github("joonho112/regdatasets")
+```
+
+::: {.callout-tip}
+## Updating the package
+To get the latest version, simply re-run the `install_github()` command above. This will overwrite the existing installation.
+:::
+
+
+## Basic Usage
+
+```r
+# Load the package
+library(regdatasets)
+
+# Load a specific dataset
+data(gcse)
+
+# Explore the dataset
+glimpse(gcse)
+?gcse          # View documentation
+```
+
+
+## Key Datasets Used in This Course
+
+The table below lists the primary datasets referenced in homework assignments, labs, and lecture examples.
+
+| Dataset | Description | Used In |
+|---------|-------------|---------|
+| `gcse` | GCSE exam scores with school-level and student-level predictors | Chapter 1 (Simple Regression) |
+| `teacher_pay` | Teacher salary data across U.S. states | Chapter 2 (Simple Regression) |
+| `tutoring` | Randomized tutoring experiment with pre/post scores | Chapter 4 (ANCOVA) |
+| `star` | Tennessee STAR class-size experiment | Chapter 5 (One-Way ANOVA) |
+| `eeo_school` | Coleman Report school-level achievement data | Chapter 6 (Multiple Regression) |
+| `salary_gender` | Faculty salary data with gender and rank | Chapter 7 (Interactions) |
+| `campus_crime` | Campus crime rates and institutional characteristics | Chapter 8 (Nonlinear Relationships) |
+| `pisa2000` | PISA 2000 international assessment data | Chapter 9 (Model Building) |
+| `titanic` | Titanic passenger survival data | Chapter 10 (Simple Logistic Regression) |
+| `berk_sub` | Berkeley admissions subset (Simpson's paradox) | Chapter 11 (Multiple Logistic Regression) |
+| `contraception` | Contraceptive use in Bangladesh (binary/ordinal outcome) | Chapters 13--14 (GLM & Ordinal) |
+
+::: {.callout-note}
+## Additional datasets
+The `regdatasets` package contains 24 datasets in total. Many additional datasets appear in the R Lab Book and supplementary exercises. Run `data(package = "regdatasets")` to see the full list.
+:::
+
+
+## Exploring Available Datasets
+
+To see all datasets in the package:
+
+```r
+# List all datasets
+data(package = "regdatasets")
+
+# Get help for a specific dataset
+?star
+?grad_admit
+```
+
+Each dataset includes full documentation describing the variables, their types, and the original source.
+
+
+## Using Datasets in Your Final Project
+
+You are welcome to use any dataset from the `regdatasets` package for your final project. You may also use an external dataset relevant to your research interests. See the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for dataset requirements and approval procedures.

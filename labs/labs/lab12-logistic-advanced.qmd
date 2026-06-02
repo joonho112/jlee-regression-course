@@ -1,0 +1,540 @@
+---
+title: "Lab 12: Advanced Logistic Regression"
+---
+
+{{< include ../_common.qmd >}}
+
+## Goals
+
+::: {.callout-note}
+## What You'll Learn in This Lab
+- Fit and interpret interactions in logistic regression
+- Conduct Wald tests and likelihood ratio (LR) tests for logistic models
+- Assess goodness-of-fit using the Pearson chi-square test
+- Compute predicted probabilities at specific covariate values
+- **Lecture Notes Reference:** Chapter 10: *Multiple Logistic Regression* and Chapter 11: *Logistic Diagnostics*
+:::
+
+::: {.callout-tip}
+## Stata → R Translation
+| Stata | R | Notes |
+|:------|:--|:------|
+| `logit ... i.female#c.age` | `glm(... ~ female * age)` | Interaction in logistic |
+| `testparm female` | `car::Anova(type = "III")` | Wald test for predictor |
+| `lrtest model1 model2` | `anova(m1, m2, test = "LRT")` | Likelihood ratio test |
+| `estat gof, table` | Manual Pearson chi-square | Goodness-of-fit test |
+| `margins female, at(age = 45)` | `marginaleffects::predictions()` | Predicted probabilities |
+:::
+
+**Dataset:** `titanic` from the `regdatasets` package
+
+Welcome to the final lab of BER 640. We have come a long way --- from simple regression lines in Lab 1 to the full machinery of logistic regression. In this lab we bring it all together: interactions, hypothesis tests, goodness-of-fit, and predicted probabilities. By the end, you will have every tool you need to build, test, and communicate a logistic regression analysis from start to finish.
+
+
+## Setup
+
+```{r}
+#| label: lab12-setup
+
+library(regdatasets)
+data(titanic)
+
+# Rename sex to female (already coded 0 = male, 1 = female)
+titanic <- titanic |>
+  rename(female = sex) |>
+  mutate(pclass_f = factor(pclass, labels = c("1st", "2nd", "3rd")))
+
+glimpse(titanic)
+```
+
+
+## Part 1: Multiple Logistic Regression
+
+Before we tackle interactions, let's fit a clean multiple logistic regression and make sure we can interpret every piece of it.
+
+### Step 1: Fit the Model
+
+```{r}
+#| label: multiple-logistic
+
+model1 <- glm(survived ~ female + age, data = titanic, family = binomial)
+```
+
+:::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: model1-summary
+
+summary(model1)
+```
+
+#### Advanced
+
+```{r}
+#| label: model1-gtsummary
+
+model1 |>
+  tbl_regression(exponentiate = TRUE) |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+::::
+
+### Step 2: Odds Ratios and Confidence Intervals
+
+```{r}
+#| label: model1-or
+
+exp(coef(model1))
+exp(confint(model1))
+```
+
+> Let's interpret each predictor:
+>
+> - **female:** Controlling for age, females had about `r round(exp(coef(model1)["female"]), 1)` times the odds of survival compared to males. The 95% CI is well above 1, confirming this is a large and significant effect.
+> - **age:** Each additional year of age is associated with an OR of about `r round(exp(coef(model1)["age"]), 3)`. That is, older passengers had slightly lower odds of survival, holding gender constant.
+
+::: {.callout-tip}
+## The "Controlling For" Logic
+In this model, the OR for `female` compares a female and male passenger **of the same age**. The OR for `age` describes the effect of aging one year for passengers **of the same gender**. This "all else equal" interpretation is the power of multiple regression.
+:::
+
+### Step 3: Predicted Probability Curves by Gender
+
+This is the plot that makes logistic regression click for most audiences. We show how the predicted probability of survival changes with age, separately for males and females.
+
+```{r}
+#| label: pred-curves-gender
+#| fig-alt: "Two S-shaped predicted probability curves for females and males showing survival decreasing with age, with females consistently higher and the curves parallel on the log-odds scale"
+#| fig-cap: "Predicted probability of survival by age and gender (no interaction)"
+#| fig-width: 8
+#| fig-height: 5
+
+new_data <- expand.grid(
+  age    = seq(1, 70, length.out = 200),
+  female = c(0, 1)
+)
+
+preds <- predict(model1, newdata = new_data, type = "link", se.fit = TRUE)
+
+new_data <- new_data |>
+  mutate(
+    prob    = plogis(preds$fit),
+    ci_low  = plogis(preds$fit - 1.96 * preds$se.fit),
+    ci_high = plogis(preds$fit + 1.96 * preds$se.fit),
+    gender_label = if_else(female == 1, "Female", "Male")
+  )
+
+ggplot(new_data, aes(x = age, y = prob, color = gender_label, fill = gender_label)) +
+  geom_ribbon(aes(ymin = ci_low, ymax = ci_high), alpha = 0.15, color = NA) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = c("Female" = ber640_colors["secondary"],
+                                "Male"   = ber640_colors["accent"])) +
+  scale_fill_manual(values = c("Female" = ber640_colors["secondary"],
+                               "Male"   = ber640_colors["accent"])) +
+  labs(x = "Age", y = "Predicted P(Survived)",
+       color = "Gender", fill = "Gender",
+       title = "Survival Probability by Age and Gender",
+       subtitle = "No interaction: curves are parallel on the log-odds scale") +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent)
+```
+
+> Notice that the two curves never cross and maintain a roughly constant vertical gap. That is because, without an interaction term, the **log-odds** difference between males and females is the same at every age. The curves look parallel on the log-odds scale (though not exactly parallel on the probability scale due to the logistic transformation). Is that assumption realistic? Let's find out.
+
+
+## Part 2: Interactions in Logistic Regression
+
+In linear regression (Lab 6), we learned that an interaction means the slope of one predictor depends on the level of another. The same idea applies in logistic regression, but now the interaction operates on the **log-odds** scale.
+
+### Step 1: Fit the Interaction Model
+
+```{r}
+#| label: interaction-model
+
+model2 <- glm(survived ~ female * age, data = titanic, family = binomial)
+```
+
+:::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: model2-summary
+
+summary(model2)
+```
+
+#### Advanced
+
+```{r}
+#| label: model2-gtsummary
+
+model2 |>
+  tbl_regression(exponentiate = TRUE) |>
+  bold_labels() |>
+  bold_p(t = 0.05)
+```
+
+::::
+
+### Step 2: Interpret the Interaction
+
+```{r}
+#| label: model2-coefs
+
+round(coef(model2), 4)
+```
+
+> In the model `survived ~ female * age`, R creates four terms:
+>
+> - `(Intercept)`: log-odds of survival for a male (female = 0) at age = 0
+> - `female`: the **difference** in log-odds between female and male **at age = 0**
+> - `age`: the effect of age **for males** (female = 0)
+> - `female:age`: how much the age effect **changes** for females compared to males
+
+The interaction term `female:age` tells us whether the age-survival relationship differs by gender. If it is non-zero, the OR of being female is not constant --- it depends on age.
+
+### Step 3: Compute the OR of Female at Specific Ages
+
+Because of the interaction, we cannot report a single OR for `female`. Instead, the OR depends on age:
+$$\text{OR}_{\text{female at age} = a} = \exp\!\bigl(b_{\text{female}} + b_{\text{female:age}} \times a\bigr)$$
+
+```{r}
+#| label: or-at-ages
+
+b <- coef(model2)
+
+ages <- c(5, 20, 40, 60)
+
+or_female <- tibble(
+  Age = ages,
+  log_OR = b["female"] + b["female:age"] * ages,
+  OR     = exp(log_OR)
+) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
+
+knitr::kable(or_female, col.names = c("Age", "Log OR", "OR of Female vs. Male"))
+```
+
+> The OR of being female **decreases** with age. For a 5-year-old, the female advantage is enormous. For a 60-year-old, it is smaller (though still substantial). This makes historical sense --- "women and children first" meant young women and girls had the highest survival advantage.
+
+### Step 4: Predicted Probability Curves with Interaction
+
+```{r}
+#| label: interaction-curves
+#| fig-alt: "Two predicted probability curves for females and males showing non-parallel patterns where the gender gap in survival narrows with increasing age, reflecting the interaction effect"
+#| fig-cap: "Predicted probability with interaction: non-parallel curves"
+#| fig-width: 8
+#| fig-height: 5
+
+new_data2 <- expand.grid(
+  age    = seq(1, 70, length.out = 200),
+  female = c(0, 1)
+)
+
+preds2 <- predict(model2, newdata = new_data2, type = "link", se.fit = TRUE)
+
+new_data2 <- new_data2 |>
+  mutate(
+    prob    = plogis(preds2$fit),
+    ci_low  = plogis(preds2$fit - 1.96 * preds2$se.fit),
+    ci_high = plogis(preds2$fit + 1.96 * preds2$se.fit),
+    gender_label = if_else(female == 1, "Female", "Male")
+  )
+
+ggplot(new_data2, aes(x = age, y = prob, color = gender_label, fill = gender_label)) +
+  geom_ribbon(aes(ymin = ci_low, ymax = ci_high), alpha = 0.15, color = NA) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = c("Female" = ber640_colors["secondary"],
+                                "Male"   = ber640_colors["accent"])) +
+  scale_fill_manual(values = c("Female" = ber640_colors["secondary"],
+                               "Male"   = ber640_colors["accent"])) +
+  labs(x = "Age", y = "Predicted P(Survived)",
+       color = "Gender", fill = "Gender",
+       title = "Survival Probability by Age and Gender (with Interaction)",
+       subtitle = "The gender gap narrows with age") +
+  scale_y_continuous(limits = c(0, 1), labels = scales::percent)
+```
+
+> Compare this to the no-interaction plot from Part 1. Now the curves are **not parallel** --- the gap between males and females is wider for younger passengers and narrower for older ones. That is the interaction in action: the effect of gender depends on age.
+
+### Step 5: Predicted Comparisons at Specific Ages
+
+The `marginaleffects` package can compute the female-vs-male comparison at any age we choose:
+
+```{r}
+#| label: avg-comparisons
+
+# Predicted probability difference (female - male) at specific ages
+comparisons_age <- comparisons(
+  model2,
+  variables = "female",
+  newdata = datagrid(age = c(10, 20, 40, 60))
+)
+
+comparisons_age |>
+  as.data.frame() |>
+  select(age, estimate, std.error, p.value, conf.low, conf.high) |>
+  mutate(across(where(is.numeric), \(x) round(x, 4))) |>
+  knitr::kable()
+```
+
+> These are the **marginal effects** of being female (vs. male) on the probability scale at each age. The effect is largest for young passengers and shrinks as age increases. This is a clean way to communicate how an interaction plays out in practice.
+
+
+## Part 3: Hypothesis Testing
+
+We have two main tools for testing predictors in logistic regression: the **Wald test** and the **likelihood ratio (LR) test**. Both ask the same question --- does this predictor matter? --- but they go about it differently.
+
+### Wald Test
+
+The Wald test uses the estimated coefficients and their standard errors. It is the default test reported in `summary()`. For testing **sets** of predictors (e.g., all terms involving `female`), we use `car::Anova()`:
+
+```{r}
+#| label: wald-test
+
+car::Anova(model2, type = "III")
+```
+
+> Type III sums of squares test each predictor **adjusting for all others**. The `female` row tests whether the main effect of female is significant (at age = 0, which is extrapolation --- be cautious). The `female:age` row tests whether the interaction is significant.
+
+::: {.callout-tip}
+## Wald Test vs. z-Test in summary()
+The z-tests in `summary(model2)` and the Wald chi-square tests in `car::Anova()` are closely related. For a single-coefficient predictor, $\chi^2 = z^2$. The advantage of `car::Anova()` is that it can test multi-degree-of-freedom predictors (like a 3-level factor) with a single test.
+:::
+
+### Likelihood Ratio Test
+
+::: {.callout-warning}
+## Same Sample Required for Likelihood Ratio Tests
+When comparing two nested models with a likelihood ratio test, both models **must be fit on exactly the same observations**. If one model drops observations due to missing values that the other retains, the test is invalid. Always filter to complete cases first, then fit both models on that filtered dataset.
+:::
+
+The LR test compares the fit of two nested models: one with the predictor and one without. It is generally considered more reliable than the Wald test, especially in small samples.
+
+```{r}
+#| label: lr-test-setup
+
+# IMPORTANT: Both models must use the same observations!
+# First, identify complete cases for the full model
+titanic_cc <- titanic |>
+  filter(complete.cases(survived, female, age))
+
+# Fit both models on the SAME data
+model_full    <- glm(survived ~ female * age, data = titanic_cc, family = binomial)
+model_reduced <- glm(survived ~ female + age, data = titanic_cc, family = binomial)
+
+nobs(model_full)
+nobs(model_reduced)
+```
+
+```{r}
+#| label: lr-test
+
+anova(model_reduced, model_full, test = "LRT")
+```
+
+> The LR test compares the deviance of the reduced model (no interaction) to the full model (with interaction). A significant p-value means the interaction term improves model fit.
+
+::: {.callout-important}
+## The Same-Sample Trap
+Both models in a likelihood ratio test **must** be fit on identical observations. If the reduced model uses a different sample (e.g., because it has fewer missing values), the deviances are not comparable. Always filter to complete cases first. Here is what can go wrong:
+
+```{r}
+#| label: lr-test-wrong
+
+# BAD: different samples if 'age' has missing values
+model_wrong <- glm(survived ~ female, data = titanic, family = binomial)
+
+cat("Full model N: ", nobs(model_full), "\n")
+cat("Wrong reduced model N:", nobs(model_wrong), "\n")
+```
+
+If these Ns differ, `anova()` may give you a misleading result. Always check.
+:::
+
+### Testing a Set of Predictors
+
+We can also use LR tests to ask broader questions, like "does gender matter at all?" (testing both the main effect and the interaction together):
+
+```{r}
+#| label: lr-test-set
+
+# Remove ALL terms involving female
+model_age_only <- glm(survived ~ age, data = titanic_cc, family = binomial)
+
+anova(model_age_only, model_full, test = "LRT")
+```
+
+> This tests 2 degrees of freedom (the main effect of `female` and the `female:age` interaction jointly). The highly significant result confirms that gender matters for survival, even after accounting for age.
+
+
+## Part 4: Goodness-of-Fit
+
+How do we know our logistic model fits the data adequately? For models with only categorical predictors (or a small number of covariate patterns), we can use the **Pearson chi-square** goodness-of-fit test.
+
+### Step 1: A Model with Categorical Predictors Only
+
+```{r}
+#| label: gof-model
+
+model_gof <- glm(survived ~ female + pclass_f, data = titanic, family = binomial)
+summary(model_gof)
+```
+
+> With only `female` (binary) and `pclass_f` (3 levels), there are $2 \times 3 = 6$ unique covariate patterns. The Pearson chi-square test compares observed and expected frequencies within each pattern.
+
+### Step 2: Manual Pearson Chi-Square Test
+
+This follows the same approach used in the Homework Solutions book:
+
+```{r}
+#| label: gof-pearson
+
+# Step 1: Get per-row predicted probabilities using augment()
+titanic_augmented <- broom::augment(model_gof, type.predict = "response")
+
+# Step 2: Aggregate by covariate pattern (unique predictor combinations)
+gof_table <- titanic_augmented |>
+  group_by(female, pclass_f) |>
+  summarise(
+    n = n(),
+    obs_1 = sum(survived),
+    pred_prob = first(.fitted),  # same for all rows in the pattern
+    .groups = "drop"
+  ) |>
+  mutate(
+    exp_1 = n * pred_prob,
+    exp_0 = n * (1 - pred_prob),
+    obs_0 = n - obs_1
+  )
+
+gof_table |>
+  mutate(across(where(is.numeric), \(x) round(x, 3))) |>
+  knitr::kable()
+```
+
+```{r}
+#| label: gof-chi-sq
+
+# Grouped Pearson chi-square
+n_patterns <- nrow(gof_table)
+n_params <- length(coef(model_gof))
+df_gof <- n_patterns - n_params
+
+pearson_chisq <- sum(
+  (gof_table$obs_1 - gof_table$exp_1)^2 / gof_table$exp_1 +
+  (gof_table$obs_0 - gof_table$exp_0)^2 / gof_table$exp_0
+)
+p_gof <- pchisq(pearson_chisq, df = df_gof, lower.tail = FALSE)
+
+cat("Number of covariate patterns:", n_patterns, "\n")
+cat("Number of parameters:", n_params, "\n")
+cat("Pearson chi2(", df_gof, ") =", round(pearson_chisq, 2), "\n")
+cat("p-value =", round(p_gof, 4), "\n")
+```
+
+> A **non-significant** p-value means we fail to reject the null hypothesis that the model fits adequately. That is good news --- it means our model's predicted probabilities are consistent with the observed data.
+
+::: {.callout-note}
+## What Would Lack of Fit Mean?
+If the Pearson test were significant, it would suggest our model is missing something important. The most common culprit is a **missing interaction**. For example, if the effect of gender on survival differs across passenger classes, we would need to add a `female:pclass_f` interaction. A significant goodness-of-fit test is a signal to reconsider the model specification.
+:::
+
+::: {.callout-tip}
+## When to Use the Pearson Test
+The Pearson chi-square goodness-of-fit test works best when there are few unique covariate patterns (i.e., categorical predictors only or a small number of grouped continuous predictors). When you have continuous predictors that create many unique patterns, alternative approaches like the Hosmer-Lemeshow test (which groups observations by predicted probability) are more appropriate.
+:::
+
+
+## Part 5: Predicted Probabilities at Specific Values
+
+For your final report or presentation, you often want to present a clean table of predicted probabilities at substantively meaningful covariate values. The `marginaleffects` package makes this straightforward.
+
+### Step 1: Predictions at a Grid of Values
+
+```{r}
+#| label: predictions-grid
+
+model_final <- glm(survived ~ female + age + pclass_f, data = titanic, family = binomial)
+
+pred_table <- predictions(
+  model_final,
+  newdata = datagrid(
+    female   = c(0, 1),
+    age      = c(10, 25, 40, 60),
+    pclass_f = c("1st", "2nd", "3rd")
+  )
+)
+
+pred_table |>
+  select(female, age, pclass_f, estimate, conf.low, conf.high) |>
+  mutate(
+    Gender = if_else(female == 1, "Female", "Male"),
+    across(c(estimate, conf.low, conf.high), \(x) round(x, 3))
+  ) |>
+  select(Gender, Age = age, Class = pclass_f,
+         `P(Survived)` = estimate,
+         `95% CI Lower` = conf.low,
+         `95% CI Upper` = conf.high) |>
+  knitr::kable()
+```
+
+> This table tells a vivid story. A 10-year-old girl in 1st class had a very high predicted probability of survival. An older male in 3rd class had a very low one. These specific numbers bring the model to life in a way that a single odds ratio never could.
+
+### Step 2: An Alternative with emmeans
+
+If you prefer `emmeans`, you can get predicted probabilities at specific covariate values using the `at` argument:
+
+```{r}
+#| label: emmeans-at-values
+
+# Using emmeans with specific covariate values
+# Note: emmeans works best with factor predictors;
+# for continuous covariates, use cov.reduce = list(age = c(25, 50))
+em_pred <- emmeans(
+  model_gof,
+  ~ female | pclass_f,
+  type = "response"
+)
+
+as.data.frame(em_pred) |>
+  mutate(
+    Gender = if_else(female == 1, "Female", "Male"),
+    across(c(prob, asymp.LCL, asymp.UCL), \(x) round(x, 3))
+  ) |>
+  select(Gender, Class = pclass_f,
+         `P(Survived)` = prob,
+         `95% CI Lower` = asymp.LCL,
+         `95% CI Upper` = asymp.UCL) |>
+  knitr::kable()
+```
+
+> Note that `predictions()` above uses `model_final` (which includes `age`), while `emmeans()` here uses `model_gof` (which does not include `age`). The predicted probabilities will differ because the models are different. Both approaches are valid --- just be sure to use the model that matches your research question.
+
+
+## Key Takeaways
+
+::: {.callout-note}
+## What We Learned
+
+1. **Interactions in logistic regression** mean the odds ratio of one predictor depends on the value of another. With `female * age`, the female survival advantage was larger for younger passengers than older ones.
+
+2. **Wald tests** (`car::Anova(type = "III")`) use the estimated coefficients and SEs to test predictors. They are convenient but can be unreliable in small samples.
+
+3. **Likelihood ratio tests** (`anova(reduced, full, test = "LRT")`) compare the deviance of nested models. They are generally preferred over Wald tests. **Critical rule:** both models must be fit on the exact same observations.
+
+4. **Goodness-of-fit** via the Pearson chi-square test tells you whether the model's predictions match the observed data. A non-significant result is reassuring. A significant result suggests a missing predictor or interaction.
+
+5. **Always report OR + CI + p-value** for each predictor. For interactions, report the OR at meaningful values of the moderator rather than a single "overall" OR.
+
+6. **Predicted probability tables** at specific covariate values are the clearest way to communicate your results to a non-statistical audience.
+:::
+
+::: {.callout-important}
+## Congratulations
+You have now completed all 12 labs in the BER 640 R Lab Manual. You can fit and interpret linear and logistic regression models, check assumptions, handle interactions, test hypotheses, and communicate results through tables and plots. These are the core skills of applied regression analysis --- and they will serve you well in any research context that involves quantitative data.
+:::

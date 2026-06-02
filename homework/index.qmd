@@ -1,0 +1,92 @@
+# Preface {.unnumbered}
+
+This companion volume provides complete solutions for all 8 homework assignments in **BER 640: Advanced Statistical Methods in Education**. Each solution includes full R code, statistical output, and detailed interpretations to help students verify their work and deepen their understanding of regression analysis.
+
+## How to Use This Book
+
+### Panel Tabsets
+
+Each problem's solution uses a **panel-tabset** format with two tabs:
+
+::: {.panel-tabset}
+### Solution
+The R output is displayed with code behind a **fold** (click "Code" to expand). Below the output, bullet-point interpretations walk through the key findings. Start here to check your answers.
+
+### Code Explanation
+The full R code is displayed *expanded* (not folded), followed by line-by-line explanations of what each function and argument does. Use this tab when you want to understand the programming behind the analysis.
+:::
+
+::: {.callout-tip}
+## Suggested Workflow
+1. **Attempt the problem yourself first** before consulting the solution.
+2. Check the **Solution** tab to compare your output and interpretation.
+3. If your code differs, review the **Code Explanation** tab to understand the approach used here.
+:::
+
+### Difficulty Tags
+
+Each problem is tagged with one of three difficulty levels:
+
+| Tag | Description |
+|:----|:------------|
+| `Conceptual` | Focuses on understanding and interpreting statistical concepts. Minimal coding required. |
+| `Applied` | Requires writing R code to analyze data and interpret results. |
+| `Challenge` | Extends beyond routine applications. May involve combining multiple techniques or thinking critically about assumptions. |
+
+### Callout Boxes
+
+::: {.callout-note}
+## Theoretical Background
+Blue boxes provide mathematical foundations and theoretical context relevant to the problem.
+:::
+
+::: {.callout-tip}
+## Practical Insight
+Green boxes highlight useful tips, alternative approaches, or practical insights.
+:::
+
+::: {.callout-warning}
+## Common Pitfall
+Yellow boxes warn about common mistakes students make on each problem.
+:::
+
+::: {.callout-important}
+## Key Takeaway
+Red boxes summarize the most important statistical lessons from each problem.
+:::
+
+### Cross-References to Lecture Notes
+
+Each problem includes a reference to the corresponding chapter in the [Lecture Notes](../notes/) book. If you need to review the underlying concepts before attempting a problem, follow the link to the relevant lecture material.
+
+## Software Setup
+
+All analyses use R with the `regdatasets` package, which contains all 25 course datasets. To get started:
+
+```r
+# Install the course data package
+install.packages("remotes")
+remotes::install_github("joonho112/regdatasets")
+
+# Install all required packages at once
+install.packages("pacman")
+pacman::p_load(
+  tidyverse, easystats, marginaleffects,
+  gtsummary, patchwork, car
+)
+```
+
+See the [R Setup Guide](../notes/appendices/a-r-setup-guide.html) in the Lecture Notes for detailed installation instructions.
+
+## Acknowledgments
+
+These homework solutions accompany the BER 640 course at the University of Alabama. The course materials build on the foundation established by **EDUC 275B: Data Analysis in Education Research 2** at UC Berkeley, originally developed by [Professor Sophia Rabe-Hesketh](https://gse.berkeley.edu/sophia-rabe-hesketh).
+
+This project was supported by the Online Teaching Innovation and Digital Education (OTIDE) initiative at the University of Alabama. The datasets used throughout are available via the [`regdatasets`](../regdatasets/) R package.
+
+If you have questions, suggestions, or notice errors, please reach out at [jlee296@ua.edu](mailto:jlee296@ua.edu).
+
+::: {.callout-note}
+## Citation
+Lee, J. (2026). *BER 640 Homework Solutions: Complete Solutions with R*. University of Alabama. Available at: [https://joonho112.github.io/jlee-regression-course/homework/](https://joonho112.github.io/jlee-regression-course/homework/)
+:::

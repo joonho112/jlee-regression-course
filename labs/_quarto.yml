@@ -1,0 +1,81 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "BER 640 R Lab Manual"
+  subtitle: "Hands-on Regression Analysis with R"
+  author: "JoonHo Lee"
+  date: "2026"
+  date-format: "YYYY"
+  site-url: https://joonho112.github.io/jlee-regression-course/labs/
+  repo-url: https://github.com/joonho112/jlee-regression-course
+  repo-subdir: labs
+  repo-actions: [edit, issue]
+  search: true
+  reader-mode: true
+
+  sidebar:
+    style: floating
+    collapse-level: 2
+
+  chapters:
+    - index.qmd
+    - part: "Part I: Foundations"
+      chapters:
+        - labs/lab01-intro-to-r.qmd
+        - labs/lab02-simple-regression.qmd
+    - part: "Part II: Linear Regression"
+      chapters:
+        - labs/lab03-anova-ancova.qmd
+        - labs/lab04-categorical-contrasts.qmd
+        - labs/lab05-multiple-regression.qmd
+        - labs/lab06-interactions.qmd
+    - part: "Part III: Model Evaluation"
+      chapters:
+        - labs/lab07-model-building.qmd
+        - labs/lab08-diagnostics.qmd
+    - part: "Part IV: Logistic Regression"
+      chapters:
+        - labs/lab09-logistic-intro.qmd
+        - labs/lab10-logistic-extended.qmd
+        - labs/lab11-logistic-diagnostics.qmd
+        - labs/lab12-logistic-advanced.qmd
+    - references.qmd
+
+  page-navigation: true
+  back-to-top-navigation: true
+
+bibliography: references.bib
+csl: apa.csl
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    code-fold: false
+    code-tools: true
+    code-link: true
+    code-line-numbers: true
+    highlight-style: github
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    fig-width: 7
+    fig-height: 5
+    fig-dpi: 300
+    fig-align: center
+    df-print: kable
+
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+
+crossref:
+  fig-prefix: "Figure"
+  tbl-prefix: "Table"
+  eq-prefix: "Eq."
+  sec-prefix: "Section"

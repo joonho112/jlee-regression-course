@@ -1,0 +1,50 @@
+---
+title: "HW 05: Interactions"
+---
+
+| | |
+|---|---|
+| **Type** | Conceptual |
+| **Due** | Week 7 |
+| **Weight** | Part of Homework (50% of final grade) |
+| **Grading** | Completion-based |
+| **Related Reading** | [Ch 05: Interactions]({{< var books.lecture_notes >}}/chapters/05-interactions.html){target="_blank"} |
+| **Related Lab** | [Lab 05: Multiple Regression]({{< var books.r_lab_book >}}/labs/lab05-multiple-regression.html){target="_blank"} |
+
+::: {.callout-note}
+## Grading Policy
+Homework is graded on **completion**. Submit a good-faith effort for full credit. A good-faith effort means: (1) all problems are attempted, (2) for computational assignments, R code runs without errors, and (3) written interpretations are included where requested.
+:::
+
+## Context
+
+The problems below refer to results from Langton (1994), who examined the effect of organizational characteristics on individual income using survey data. The table from this study includes two regression models predicting (log) individual income:
+
+- **Model 1**: Main effects only (Sex, Size, Salary variation, and other controls)
+- **Model 2**: Adds an interaction between Sex and Salary variation
+
+In the data, Sex is coded 1 = male, 0 = female. Salary variation measures within-organization wage dispersion.
+
+## Problems
+
+### Problem 1
+
+Using the results from **Model 1** (main effects only), interpret all of the regression coefficients. For each coefficient, state what it means in the context of the study.
+
+### Problem 2
+
+Using the results from **Model 2** (which includes the interaction term):
+
+a. Interpret the coefficient for **Sex**.
+b. Interpret the coefficient for **Salary variation**.
+c. Interpret the coefficient for the **Sex $\times$ Salary variation** interaction.
+
+### Problem 3
+
+Based on the interaction model (Model 2), does the male--female wage differential **increase** as there is more wage dispersion within an organization? Explain how you can tell from the regression results, and discuss the substantive implications.
+
+
+## Submission
+
+1. Complete all problems, showing your work clearly.
+2. Submit your completed assignment as a **PDF** to Blackboard by the due date.

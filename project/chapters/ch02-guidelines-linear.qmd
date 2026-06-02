@@ -1,0 +1,304 @@
+# Project 1: Linear Regression Guidelines {#sec-guidelines-linear}
+
+{{< include ../_common.qmd >}}
+
+This chapter walks you through the seven required parts of the linear regression project. For each part, you will find the expectations, page limits, and advice to help you produce a strong final product. Read this chapter carefully before you begin writing.
+
+::: {.callout-note}
+## Overall Page Limits
+The main text of your project (Parts 1--6) should not exceed approximately **6 pages** of single-spaced text. Tables, figures, and the appendix are in addition to this limit. Quality and clarity matter more than length.
+:::
+
+
+## Part 1: Background and Research Questions {#sec-linear-part1}
+
+*Maximum length: 1 page*
+
+Begin your project by motivating the topic and stating your research questions. The goal is to convince the reader that the questions you are asking are worth investigating and that a regression analysis is the right tool to address them.
+
+::: {.callout-note}
+## Expectations for Part 1
+- Provide a brief paragraph motivating **why** the topic matters.
+- Formulate **2--3 research questions** that you will address with linear regression.
+- **Number** your research questions (RQ1, RQ2, RQ3). You will refer back to these numbers throughout the project.
+- Each research question should involve a clear outcome variable and one or more predictor variables.
+:::
+
+::: {.callout-tip}
+## Research Question Template
+A well-formed research question for a regression project often follows this pattern:
+
+> "Is there a relationship between [outcome Y] and [predictor X], after controlling for [covariates]?"
+
+or
+
+> "Is there a difference in [outcome Y] between [groups defined by a categorical predictor] after controlling for [covariates]?"
+
+These templates help ensure your questions are answerable with the methods you will use.
+:::
+
+::: {.callout-warning}
+## Common Mistakes in Part 1
+- **Describing the data here.** Save all data and variable descriptions for Part 2. Part 1 should focus on the *why*, not the *what*.
+- **Stating null hypotheses.** This project does not require formal null and alternative hypotheses. Focus on substantive research questions.
+- **Asking vague questions.** Avoid questions like "What predicts Y?" without specifying which predictors you plan to examine.
+:::
+
+
+## Part 2: Methods --- Subjects and Variables {#sec-linear-part2}
+
+*Maximum length: 1 page*
+
+This section describes the data you will analyze. The reader should finish Part 2 knowing exactly what dataset you are using, who the subjects are, and how every variable is measured and coded.
+
+::: {.callout-note}
+## Expectations for Part 2
+- Identify the **data source** and briefly describe the study design (e.g., survey, observational study).
+- Describe the **subjects**: who they are, how they were sampled, and the sample size.
+- For **each variable** in your analysis, provide:
+  - The variable name (as it appears in the dataset)
+  - Whether it is **continuous** or **categorical**
+  - The measurement scale or unit (e.g., years, dollars, Likert scale 1--5)
+  - For categorical variables: list **all categories** and specify which category serves as the **reference group**
+- If you create dummy variables from a categorical predictor, define each dummy variable explicitly (e.g., $D_1 = 1$ if female, 0 otherwise).
+:::
+
+::: {.callout-tip}
+## Organizing Variable Descriptions
+A concise table can help the reader quickly grasp your variables:
+
+| Variable | Role | Type | Description |
+|----------|------|------|-------------|
+| `earnings` | Outcome | Continuous | Monthly earnings in USD |
+| `education` | Predictor | Continuous | Years of formal education |
+| `gender` | Predictor | Categorical | Male (ref), Female |
+| `region` | Predictor | Categorical | Urban (ref), Suburban, Rural |
+
+Follow the table with a sentence or two defining the dummy variables for each categorical predictor.
+:::
+
+::: {.callout-warning}
+## Common Mistakes in Part 2
+- **Listing categories without defining the reference group.** For every categorical variable, you must state which category is the reference. Without this, the reader cannot interpret your regression coefficients.
+- **Omitting the coding scheme for dummy variables.** If `region` has three categories, you need two dummy variables. Define them explicitly.
+- **Including variables you do not use in the analysis.** Every variable described here should appear in at least one of your models.
+:::
+
+
+## Part 3: Methods --- Statistical Analysis {#sec-linear-part3}
+
+*Maximum length: half a page*
+
+This short section tells the reader exactly which regression model(s) you will fit and connects each model to a specific research question.
+
+::: {.callout-note}
+## Expectations for Part 3
+- State the regression model(s) you will estimate. You may write them in equation form or in words.
+- **Link each model to specific research questions.** For example: "To address RQ1 and RQ2, we fit the following model: $Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_3 + \varepsilon$."
+- If you fit more than one model (e.g., a reduced model and a full model), explain the purpose of each.
+- State the significance level you will use (typically $\alpha = 0.05$).
+:::
+
+::: {.callout-tip}
+## Connecting Models to Research Questions
+A clear way to organize this section:
+
+- "To address **RQ1**, we regressed monthly earnings on years of education, gender, and region."
+- "To address **RQ2**, we added an interaction term between education and gender to examine whether the relationship between education and earnings differs by gender."
+
+This makes it easy for the reader (and the grader) to follow your analytic logic.
+:::
+
+::: {.callout-warning}
+## Common Mistakes in Part 3
+- **Describing the model without linking it to a research question.** Every model must have a purpose tied to your RQs.
+- **Forgetting to mention the significance level.** A simple sentence such as "All tests were conducted at the $\alpha = 0.05$ level" is sufficient.
+:::
+
+
+## Part 4: Results --- Descriptive Analyses {#sec-linear-part4}
+
+*Maximum length: 1 page of text + up to 3 pages of tables and figures*
+
+Before jumping into regression results, you need to describe your data. Descriptive statistics and visualizations help you (and the reader) understand the distributions, spot potential problems, and set the stage for the regression analysis.
+
+::: {.callout-note}
+## Expectations for Part 4
+- Report the **final analytic sample size** and describe any missing data.
+- For **continuous variables**: report the mean, standard deviation, minimum, and maximum.
+- For **categorical variables**: report frequency counts and percentages.
+- Include appropriate **graphs**:
+  - A **histogram** of the outcome variable
+  - **Scatterplots** of the outcome vs. each continuous predictor
+  - **Boxplots** of the outcome by each categorical predictor
+- If you apply a **transformation** to any variable (e.g., log transformation), explain why, and redo the descriptive statistics for the transformed variable.
+- Write a brief narrative summarizing key patterns you observe.
+:::
+
+::: {.callout-important}
+## Run Descriptives on the Complete-Case Subsample
+Your descriptive statistics must be computed on the **same set of cases** that will be used in the regression analysis. If your regression drops cases with missing values (listwise deletion), your descriptive statistics should be based on that same complete-case subsample. This ensures consistency between Parts 4 and 5.
+:::
+
+::: {.callout-tip}
+## What to Look for in Your Descriptives
+- **Skewed distributions**: Does the histogram of your outcome variable look roughly symmetric, or is it heavily skewed? A skewed outcome may benefit from a log transformation.
+- **Outliers**: Are there extreme values in scatterplots that could be influential?
+- **Expected patterns**: Do the boxplots show group differences that align with your research questions?
+- **Adequate variation**: If a categorical predictor has a category with very few observations, your regression estimates for that group may be unstable.
+:::
+
+
+## Part 5: Results --- Regression Analyses {#sec-linear-part5}
+
+*Maximum length: 2 pages of text + up to 2 pages of tables*
+
+This is the core of your project. You will fit the regression model(s) described in Part 3, check assumptions, and interpret every coefficient.
+
+::: {.callout-note}
+## Expectations for Part 5
+1. **Fit the model(s)** from Part 3 and present a publication-style regression table that includes:
+   - Estimated coefficients ($\hat{\beta}$)
+   - Standard errors (SE)
+   - 95% confidence intervals
+   - *p*-values
+2. **Check for collinearity**: Report VIF values. Flag any predictor with VIF > 5.
+3. **Check for linearity**: Use added-variable (partial regression) plots or try polynomial terms to assess whether the linear specification is adequate.
+4. **Residual diagnostics**: Produce residual plots (residuals vs. fitted values, Q-Q plot of residuals). Place these graphs in the **Appendix** (Part 7), but summarize your conclusions in the text.
+5. **Categorical predictors with 3+ categories**: Report the overall *F*-test *p*-value for the set of dummy variables, in addition to the individual coefficient tests.
+6. **Interpret ALL coefficients** substantively. Do not simply say a coefficient is "significant" or "not significant."
+:::
+
+::: {.callout-tip}
+## How to Interpret Coefficients
+For each predictor, write a sentence like:
+
+- **Continuous predictor**: "A one-unit increase in [X] is associated with a [b] unit increase (or decrease) in [Y], holding all other variables constant ($b = \text{value}$, $p = \text{value}$)."
+- **Dummy variable**: "On average, [group] scored [b] units higher (or lower) on [Y] than [reference group], holding all other variables constant ($b = \text{value}$, $p = \text{value}$)."
+
+Always include the direction, the magnitude, and a reference to statistical significance.
+:::
+
+::: {.callout-tip}
+## Regression Table Format
+A well-organized regression table might look like this:
+
+| Predictor | $\hat{\beta}$ | SE | 95% CI | *p* |
+|-----------|---------|------|--------|-------|
+| (Intercept) | 1250.3 | 120.5 | [1013.1, 1487.5] | < .001 |
+| Education (years) | 85.2 | 12.3 | [61.1, 109.3] | < .001 |
+| Gender: Female | -210.4 | 45.6 | [-299.8, -121.0] | < .001 |
+| Region: Suburban | -50.1 | 55.2 | [-158.3, 58.1] | .364 |
+| Region: Rural | -130.7 | 60.8 | [-250.0, -11.4] | .032 |
+
+Include $R^2$, adjusted $R^2$, and the overall *F*-test at the bottom of the table.
+:::
+
+::: {.callout-warning}
+## Common Mistakes in Part 5
+- **Skipping assumption checks.** You must address collinearity (VIF), linearity, and residual diagnostics. Even if everything looks fine, state that you checked and briefly describe what you found.
+- **Reporting only *p*-values without interpretation.** Saying "education is significant at *p* < .001" is not enough. You must interpret the coefficient in context.
+- **Ignoring non-significant predictors.** Every coefficient in your model must be interpreted, whether it is statistically significant or not.
+- **Forgetting the overall *F*-test for multi-category predictors.** If `region` has three categories (two dummies), the individual *p*-values do not tell you whether the variable as a whole is significant. Report the *F*-test.
+:::
+
+
+## Part 6: Discussion {#sec-linear-part6}
+
+*Maximum length: half a page*
+
+The discussion ties everything together. Step back from the numbers and address what the results mean in the context of your research questions.
+
+::: {.callout-note}
+## Expectations for Part 6
+- **Answer each research question** by referring to the relevant regression results from Part 5.
+- Discuss the **practical significance** of your findings --- do the effects matter in the real world?
+- Note any **limitations** of your analysis (e.g., cross-sectional data cannot establish causation, potential confounders not included).
+- Be **concise**. Do not repeat the numbers from Part 5. Instead, focus on the meaning and implications.
+:::
+
+::: {.callout-warning}
+## Common Mistakes in Part 6
+- **Restating regression coefficients verbatim.** The discussion should focus on what the results *mean*, not re-list the numbers.
+- **Overclaiming causation.** Unless your study design supports causal inference, use language like "is associated with" rather than "causes" or "affects."
+- **Ignoring non-significant findings.** A non-significant result is still a finding. Briefly discuss what it might mean.
+:::
+
+
+## Part 7: Appendix {#sec-linear-part7}
+
+The appendix contains supporting materials that are important but would interrupt the flow of the main text.
+
+::: {.callout-note}
+## Expectations for Part 7
+- **Residual diagnostic graphs**: Include at minimum a residuals-vs-fitted-values plot and a Q-Q plot of residuals.
+- **Annotated R script**: Include your complete R code, organized and commented so that a reader could reproduce your analysis. Think of this as equivalent to a Stata do-file --- it should run from start to finish without errors.
+:::
+
+::: {.callout-tip}
+## Tips for the R Script
+- Use **comments** (`#`) generously to explain each step.
+- Organize the script in the same order as the project: data loading, data cleaning, descriptives, regression, diagnostics.
+- Make sure the script runs **from a clean R session** without relying on objects left in your workspace.
+- Include any data transformations (e.g., log transformations, recoding) so the reader can see exactly what you did.
+:::
+
+
+## Submission Checklist {#sec-linear-checklist}
+
+Before you submit, review every item below. A missing component is the easiest way to lose points.
+
+::: {.callout-important}
+## Project 1 Submission Checklist
+
+**Part 1 --- Background and Research Questions**
+
+- [ ] Topic is motivated with a clear rationale
+- [ ] 2--3 research questions are stated and numbered (RQ1, RQ2, ...)
+- [ ] No data descriptions appear in Part 1
+
+**Part 2 --- Methods: Subjects and Variables**
+
+- [ ] Data source and study design are described
+- [ ] Sample is described (who, how many)
+- [ ] Every variable lists its name, type, and scale
+- [ ] Every categorical variable has a defined reference category
+- [ ] Dummy variables are explicitly defined
+
+**Part 3 --- Methods: Statistical Analysis**
+
+- [ ] Regression model(s) are stated
+- [ ] Each model is linked to specific research questions
+- [ ] Significance level ($\alpha$) is stated
+
+**Part 4 --- Results: Descriptive Analyses**
+
+- [ ] Sample size and missing data are reported
+- [ ] Means and SDs for continuous variables
+- [ ] Frequencies for categorical variables
+- [ ] Histogram of outcome variable is included
+- [ ] Scatterplots (outcome vs. continuous predictors) are included
+- [ ] Boxplots (outcome by categorical predictors) are included
+- [ ] Descriptives are based on the complete-case subsample
+- [ ] Any transformations are described and descriptives are updated
+
+**Part 5 --- Results: Regression Analyses**
+
+- [ ] Publication-style regression table with $\hat{\beta}$, SE, CI, *p*-values
+- [ ] VIF values are reported (collinearity check)
+- [ ] Linearity is assessed (added-variable plots or polynomial terms)
+- [ ] Residual diagnostics are summarized (detailed graphs in Appendix)
+- [ ] Overall *F*-test reported for categorical predictors with 3+ categories
+- [ ] Every coefficient is interpreted substantively
+
+**Part 6 --- Discussion**
+
+- [ ] Each research question is addressed
+- [ ] Results are discussed in context (not just numbers repeated)
+- [ ] Limitations are acknowledged
+
+**Part 7 --- Appendix**
+
+- [ ] Residual diagnostic graphs are included
+- [ ] Annotated R script is included and runs without errors
+:::

@@ -1,0 +1,54 @@
+---
+title: "HW 01: Simple Regression"
+---
+
+| | |
+|---|---|
+| **Type** | Conceptual |
+| **Due** | Week 3 |
+| **Weight** | Part of Homework (50% of final grade) |
+| **Grading** | Completion-based |
+| **Related Reading** | [Ch 01: Simple Linear Regression]({{< var books.lecture_notes >}}/chapters/01-simple-linear-regression.html){target="_blank"} |
+| **Related Lab** | [Lab 01: Intro to R]({{< var books.r_lab_book >}}/labs/lab01-intro-to-r.html){target="_blank"} |
+
+::: {.callout-note}
+## Grading Policy
+Homework is graded on **completion**. Submit a good-faith effort for full credit. A good-faith effort means: (1) all problems are attempted, (2) for computational assignments, R code runs without errors, and (3) written interpretations are included where requested.
+:::
+
+## Problems
+
+### Problem 1
+
+For each of the following pairs of variables, identify which is the **response variable** ($y$) and which is the **explanatory variable** ($x$). Briefly justify your choice.
+
+a. College GPA and High School GPA
+b. Number of children and Mother's education level
+c. Annual income and Years of education
+d. Annual income and Home value
+
+### Problem 2
+
+For values of $x$ between 0 and 10, sketch each of the following lines on the same graph. Label each line clearly.
+
+a. $y = 7 + 0.5x$
+b. $y = 7 + x$
+c. $y = 7 - x$
+d. $y = 7 - 0.5x$
+e. $y = 7$
+f. $y = x$
+
+### Problem 3
+
+A college admissions officer claims that the relationship between college GPA ($y$) and high school GPA ($x$) can be described by the regression equation $\hat{y} = 0.5 + 7x$.
+
+a. Is this equation realistic? Explain why or why not.
+b. Suppose the actual equation is $\hat{y} = 0.5 + 0.7x$. Interpret the slope in context.
+c. Using the equation from (b), predict the college GPA for a student with a high school GPA of 3.0. Repeat for a high school GPA of 4.0.
+d. Suppose instead that $\hat{y} = x$. Interpret this equation in context. What would it mean for the relationship between college GPA and high school GPA?
+
+
+## Submission
+
+1. Complete all problems, showing your work clearly.
+2. Submit your completed assignment as a **PDF** to Blackboard by the due date.

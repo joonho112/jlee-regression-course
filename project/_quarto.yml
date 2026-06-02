@@ -1,0 +1,79 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "BER 640 Final Project Guide"
+  subtitle: "A Step-by-Step Guide with Complete R Examples"
+  author: "JoonHo Lee"
+  date: "2026"
+  date-format: "YYYY"
+  site-url: https://joonho112.github.io/jlee-regression-course/project/
+  repo-url: https://github.com/joonho112/jlee-regression-course
+  repo-subdir: project
+  repo-actions: [edit, issue]
+  search: true
+  reader-mode: true
+
+  sidebar:
+    style: floating
+    collapse-level: 2
+
+  chapters:
+    - index.qmd
+    - part: "Part I: Project Guidelines"
+      chapters:
+        - chapters/ch01-overview.qmd
+        - chapters/ch02-guidelines-linear.qmd
+        - chapters/ch03-guidelines-logistic.qmd
+    - part: "Part II: Worked Example — Linear Regression"
+      chapters:
+        - chapters/ch04-linear-proposal.qmd
+        - chapters/ch05-linear-results.qmd
+    - part: "Part III: Worked Example — Logistic Regression"
+      chapters:
+        - chapters/ch06-logistic-proposal.qmd
+        - chapters/ch07-logistic-results.qmd
+    - part: "Appendices"
+      chapters:
+        - appendices/app-a-pitfalls.qmd
+        - appendices/app-b-r-script.qmd
+        - appendices/app-c-table-templates.qmd
+    - references.qmd
+
+  page-navigation: true
+  back-to-top-navigation: true
+
+bibliography: references.bib
+csl: apa.csl
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    code-fold: false
+    code-tools: true
+    code-link: true
+    code-line-numbers: true
+    highlight-style: github
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    fig-width: 7
+    fig-height: 5
+    fig-dpi: 300
+    fig-align: center
+    df-print: kable
+
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+
+crossref:
+  fig-prefix: "Figure"
+  tbl-prefix: "Table"
+  eq-prefix: "Eq."
+  sec-prefix: "Section"

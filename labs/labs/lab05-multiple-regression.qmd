@@ -1,0 +1,294 @@
+---
+title: "Lab 5: Multiple Regression and Partial Correlation"
+---
+
+{{< include ../_common.qmd >}}
+
+## Goals
+
+::: {.callout-note}
+## What You'll Learn in This Lab
+- Fit a multiple regression model with two continuous predictors
+- Interpret coefficients as effects "controlling for" other variables
+- Compute and interpret partial correlations
+- Understand the "what's left" logic behind partial correlation using residuals
+- Create added-variable plots to visualize partial relationships
+- Compute standardized regression coefficients to compare predictor importance
+- **Lecture Notes Reference:** Chapter 4: *Continuous Predictors*
+:::
+
+::: {.callout-tip}
+## Stata → R Translation
+| Stata | R | Notes |
+|:------|:--|:------|
+| `regress salary marketc yearsdg, beta` | `parameters::standardize_parameters()` | Standardized (beta) coefficients |
+| `pcorr salary marketc yearsdg` | `correlation::correlation(partial = TRUE)` | Partial correlations |
+| `avplots` | `car::avPlots()` | Added-variable (partial) plots |
+:::
+
+**Dataset:** `faculty` from the `regdatasets` package
+
+
+## Part 1: Brief Review --- Single-Predictor Models
+
+In Lab 4, we explored categorical predictors and planned comparisons. Before we move to multiple regression, let's reload the `faculty` data and set up the variables we need.
+
+```{r}
+#| label: lab05-setup
+
+library(regdatasets)
+data(faculty)
+glimpse(faculty)
+```
+
+Recall that `market` captures the discipline-specific market demand for faculty in each department. Since zero market demand is not meaningful, we center it:
+
+```{r}
+#| label: center-market
+
+faculty <- faculty |>
+  mutate(market_c = market - mean(market))
+```
+
+Let's quickly fit two single-predictor models to set the stage for what comes next. First, salary predicted by centered market demand:
+
+```{r}
+#| label: review-market
+
+model_market <- lm(salary ~ market_c, data = faculty)
+summary(model_market)
+```
+
+And salary predicted by years since degree:
+
+```{r}
+#| label: review-yearsdg
+
+model_years <- lm(salary ~ yearsdg, data = faculty)
+summary(model_years)
+```
+
+> Take note of the $R^2$ values from each model. We will compare them to the multiple regression model shortly.
+
+
+## Part 2: Multiple Regression with Two Continuous Predictors
+
+Now the key question: what happens when we put **both** predictors in the model at the same time?
+
+```{r}
+#| label: multiple-regression
+
+model_multi <- lm(salary ~ market_c + yearsdg, data = faculty)
+summary(model_multi)
+```
+
+This is the heart of multiple regression. Each coefficient now has a specific interpretation:
+
+- **`market_c`**: the expected change in salary for a one-unit increase in market demand, **holding years since degree constant**.
+- **`yearsdg`**: the expected change in salary for one additional year since degree, **holding market demand constant**.
+
+The phrase "holding constant" (or "controlling for") is critical. In a single-predictor model, the coefficient captures **everything** associated with that predictor --- including its overlap with other variables. In a multiple regression, each coefficient isolates the **unique** contribution of that predictor after removing the influence of the others.
+
+::: {.callout-important}
+## The "Controlling For" Interpretation
+In multiple regression, the coefficient for $X_1$ answers:
+*"If two faculty members have the same value of $X_2$, how much does salary differ for a one-unit difference in $X_1$?"*
+
+This is why multiple regression is so powerful --- it lets us separate the effects of correlated predictors.
+:::
+
+### Comparing $R^2$ Values
+
+Let's see how much explanatory power we gain by using both predictors:
+
+```{r}
+#| label: compare-r-squared
+
+tibble(
+  Model   = c("market_c only", "yearsdg only", "market_c + yearsdg"),
+  R_squared = c(
+    summary(model_market)$r.squared,
+    summary(model_years)$r.squared,
+    summary(model_multi)$r.squared
+  )
+) |>
+  mutate(R_squared = round(R_squared, 4))
+```
+
+> Notice that the combined $R^2$ is **less than the sum** of the two individual $R^2$ values. This is because the two predictors share some explanatory power --- they are correlated with each other. Multiple regression partitions the variance in salary into the unique contribution of each predictor plus their shared overlap.
+
+
+## Part 3: Understanding Partial Correlation
+
+We just saw that each regression coefficient represents a "controlled" effect. Partial correlation captures the same idea in correlation form. The **partial correlation** between salary and market demand, controlling for years since degree, tells us: *how strongly are salary and market demand related, after we remove the influence of years since degree from both?*
+
+### Step 1: Regular Pearson Correlations
+
+First, let's see the zero-order (simple) correlations among our three variables:
+
+```{r}
+#| label: pearson-correlations
+
+faculty |>
+  select(salary, market_c, yearsdg) |>
+  cor() |>
+  round(4)
+```
+
+These are the standard Pearson correlations --- each one ignores all other variables.
+
+### Step 2: Partial Correlations
+
+Now let's compute partial correlations using the `correlation` package:
+
+```{r}
+#| label: partial-correlations
+
+# Partial correlations using easystats correlation package
+faculty |>
+  select(salary, market_c, yearsdg) |>
+  correlation::correlation(partial = TRUE)
+```
+
+> Compare the partial correlations to the zero-order correlations above. How do they differ? The partial correlation between salary and `market_c` is the correlation **after removing the linear effect of `yearsdg` from both variables**. Similarly, the partial correlation between salary and `yearsdg` controls for `market_c`.
+
+### Step 3: The "What's Left" Explanation
+
+Partial correlation might seem abstract, so let's build it from scratch. The logic is simple:
+
+1. **Remove yearsdg from salary:** Regress salary on yearsdg, save the residuals. These residuals represent the part of salary that has nothing to do with yearsdg.
+2. **Remove yearsdg from market_c:** Regress market_c on yearsdg, save the residuals. These residuals represent the part of market demand that has nothing to do with yearsdg.
+3. **Correlate the two sets of residuals:** This correlation is the partial correlation.
+
+Let's do it step by step:
+
+```{r}
+#| label: residual-salary
+
+# Step 1: Remove yearsdg from salary
+resid_salary <- residuals(lm(salary ~ yearsdg, data = faculty))
+```
+
+```{r}
+#| label: residual-market
+
+# Step 2: Remove yearsdg from market_c
+resid_market <- residuals(lm(market_c ~ yearsdg, data = faculty))
+```
+
+```{r}
+#| label: partial-from-residuals
+
+# Step 3: Correlate the residuals
+cor(resid_salary, resid_market) |> round(4)
+```
+
+> This should match the partial correlation between salary and `market_c` (controlling for `yearsdg`) from the `correlation::correlation(partial = TRUE)` output above. This is the "what's left" interpretation: after we strip out everything that yearsdg explains in both salary and market demand, how strongly are the leftovers related?
+
+::: {.callout-tip}
+## Why This Matters
+The residual-based explanation is not just a mathematical trick. It reveals the core logic of multiple regression: **each coefficient reflects the relationship between a predictor and the outcome after the other predictors have had their say.** When you report that market demand is significantly related to salary "controlling for years since degree," you are saying exactly this --- the leftovers are still correlated.
+:::
+
+### Step 4: Added-Variable Plots
+
+The `car` package provides a beautiful visualization of this residual logic. An **added-variable plot** (also called a partial regression plot) shows the residual-vs-residual scatterplot for each predictor:
+
+```{r}
+#| label: avplots
+#| fig-alt: "Two-panel added-variable plot showing the partial relationship of each predictor with salary after controlling for the other: left panel shows a positive slope for centered marketability and right panel shows a positive slope for years since degree"
+#| fig-width: 10
+#| fig-height: 5
+
+car::avPlots(model_multi)
+```
+
+> Each panel shows the relationship between one predictor and salary **after removing the effect of the other predictor from both**. The slope of the line in each panel equals the corresponding regression coefficient from the multiple regression model. These plots are a powerful diagnostic tool --- they show you the partial relationship that each coefficient is capturing.
+
+::: {.callout-note}
+## Reading Added-Variable Plots
+
+- **X-axis:** Residuals from regressing the predictor on all *other* predictors (what's left of the predictor).
+- **Y-axis:** Residuals from regressing salary on all *other* predictors (what's left of salary).
+- **Slope:** Equals the multiple regression coefficient for that predictor.
+- **Spread:** Shows how much variation in salary is explained uniquely by that predictor.
+
+If you see a clear linear trend, the predictor has a strong unique contribution. If the points are scattered with no trend, the predictor adds little after controlling for the others.
+:::
+
+
+## Part 4: Standardized Coefficients
+
+In our model, `market_c` and `yearsdg` are measured on different scales. Market demand might range from 0 to 10, while years since degree might range from 1 to 40. This makes it hard to compare their raw coefficients directly --- a one-unit change means very different things for each variable.
+
+**Standardized coefficients** (beta weights) solve this problem by putting both predictors on the same scale: standard deviations.
+
+::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: standardized-simple
+
+parameters::standardize_parameters(model_multi)
+```
+
+> The standardized coefficients (the `Std_Coefficient` column) tell us: "When market demand increases by **1 standard deviation**, salary increases by $\beta$ standard deviations, holding yearsdg constant." This lets us compare the relative importance of market demand and years since degree on the same scale.
+
+#### Advanced
+
+Standardized coefficients are obtained by fitting the model to z-scored (standardized) versions of all variables. We can verify this manually:
+
+```{r}
+#| label: standardized-manual
+
+faculty_z <- faculty |>
+  mutate(
+    salary_z   = scale(salary)   |> as.numeric(),
+    market_c_z = scale(market_c) |> as.numeric(),
+    yearsdg_z  = scale(yearsdg)  |> as.numeric()
+  )
+
+model_z <- lm(salary_z ~ market_c_z + yearsdg_z, data = faculty_z)
+tidy_model(model_z)
+```
+
+> The coefficients from the z-scored model should match the standardized parameters above. Notice that the intercept is essentially zero --- when all predictors are at their mean (z = 0), the predicted outcome is also at its mean (z = 0).
+
+:::
+
+### When to Use Standardized Coefficients
+
+Standardized coefficients are useful when:
+
+- **Predictors are on different scales** and you want to compare their relative importance.
+- **You want to communicate effect sizes** in a scale-free way.
+
+However, keep in mind:
+
+- **Unstandardized coefficients** are easier to interpret in practical terms ("$1,000 more salary per year since degree").
+- **Standardized coefficients depend on the sample variability.** If one predictor has restricted range in your sample, its standardized coefficient will be smaller even if the underlying relationship is strong.
+
+::: {.callout-tip}
+## Reporting Both
+In practice, many researchers report **unstandardized coefficients** in the main results (for practical interpretation) and include **standardized coefficients** in a supplementary table (for comparing relative importance). This gives readers both perspectives.
+:::
+
+
+## Key Takeaways
+
+::: {.callout-tip}
+## What We Learned
+
+1. **Multiple regression isolates unique effects.** Each coefficient represents the relationship between a predictor and the outcome, controlling for all other predictors in the model.
+
+2. **Combined $R^2$ is less than the sum of individual $R^2$ values.** This happens because correlated predictors share explanatory power. Multiple regression partitions variance into unique and shared components.
+
+3. **Partial correlation quantifies controlled relationships.** The partial correlation between $X$ and $Y$ controlling for $Z$ is the correlation between the residuals from regressing $X$ on $Z$ and the residuals from regressing $Y$ on $Z$. It is the "what's left" after removing $Z$'s influence from both.
+
+4. **Added-variable plots visualize partial relationships.** Each panel shows the residual-vs-residual scatterplot, and the slope equals the regression coefficient. Use `car::avPlots()` to create them.
+
+5. **Standardized coefficients allow cross-predictor comparison.** They express effects in standard deviation units, making it possible to compare the relative importance of predictors measured on different scales.
+
+**Next:** In Lab 6, we will introduce **interaction terms** --- allowing the effect of one predictor to depend on the value of another.
+:::

@@ -1,0 +1,415 @@
+---
+title: "Lab 7: Model Building and Nonlinear Relationships"
+---
+
+{{< include ../_common.qmd >}}
+
+## Goals
+
+::: {.callout-note}
+## What You'll Learn in This Lab
+- Compare nested models using F-tests (`anova()` and `car::linearHypothesis()`)
+- Detect nonlinearity with LOWESS smoothing curves
+- Apply log and square-root transformations to address skewness
+- Fit polynomial regression models (quadratic, cubic)
+- Model piecewise constant relationships using `cut()`
+- **Lecture Notes Reference:** Chapter 6: *Nonlinear Relationships* and Chapter 7: *Model Building*
+:::
+
+**Dataset:** `hsbs1` from the `regdatasets` package
+
+
+## Setup
+
+```{r}
+#| label: lab07-setup
+
+library(regdatasets)
+data(hsbs1)
+
+hsbs1 <- hsbs1 |>
+  mutate(
+    prog_f = factor(prog,
+                    levels = 1:3,
+                    labels = c("General", "Academic", "Vocational")),
+    race_f = factor(race,
+                    levels = 1:4,
+                    labels = c("Hispanic", "Asian", "African-Am", "White"))
+  )
+
+glimpse(hsbs1)
+```
+
+
+## Part 1: Model Comparison --- Testing Sets of Predictors
+
+So far, every time we wanted to test whether a predictor matters, we looked at its individual *t*-test. But what about categorical variables with more than two levels? A 3-category variable like `prog` uses **two** dummy indicators, and we need a **joint** test that asks: "Do these two dummies, taken together, improve the model?"
+
+The tool for this is the **incremental F-test** --- compare a reduced model (without the predictors in question) to a full model (with them), and see whether the improvement in $R^2$ is statistically significant.
+
+### Fitting the Reduced and Full Models
+
+```{r}
+#| label: reduced-full-models
+
+model_reduced <- lm(write ~ read, data = hsbs1)
+model_full    <- lm(write ~ read + prog_f, data = hsbs1)
+```
+
+The reduced model predicts writing from reading alone. The full model adds program type (`prog_f`), which requires two dummy variables (Academic vs. General, Vocational vs. General).
+
+### The F-Test with `anova()`
+
+```{r}
+#| label: anova-comparison
+
+anova(model_reduced, model_full)
+```
+
+> The null hypothesis is $H_0$: all coefficients for `prog_f` equal zero --- meaning program type adds nothing beyond reading score. A significant *p*-value tells us the full model fits meaningfully better.
+
+Let's also look at what the full model actually estimates:
+
+```{r}
+#| label: full-model-output
+
+tidy_model(model_full)
+```
+
+### Alternative: `car::linearHypothesis()`
+
+The `linearHypothesis()` function from the `car` package lets you test the same hypothesis directly on the full model, without fitting the reduced model separately. You specify which coefficients should equal zero:
+
+```{r}
+#| label: linear-hypothesis-prog
+
+linearHypothesis(model_full, c("prog_fAcademic = 0", "prog_fVocational = 0"))
+```
+
+> You should get the same F-statistic and *p*-value as `anova()`. The two approaches are equivalent --- `linearHypothesis()` is simply more convenient when you want to test a subset of coefficients without re-fitting a reduced model.
+
+### Another Example: Testing Race
+
+Let's test whether race contributes beyond reading and program:
+
+```{r}
+#| label: test-race
+
+model_no_race   <- lm(write ~ read + prog_f, data = hsbs1)
+model_with_race <- lm(write ~ read + prog_f + race_f, data = hsbs1)
+
+anova(model_no_race, model_with_race)
+```
+
+::: {.callout-tip}
+## When to Use Incremental F-Tests
+Use them whenever you want to test a **set** of predictors simultaneously: a multi-category factor, a block of control variables, or an interaction that involves multiple terms. Individual *t*-tests only test one coefficient at a time.
+:::
+
+
+## Part 2: Detecting Nonlinearity
+
+Before we fit more complex models, we need a way to *see* whether the linear assumption holds. The key visual tool is the **LOWESS** (Locally Weighted Scatterplot Smoother) curve --- a flexible, data-driven curve that reveals the shape of the relationship without assuming linearity.
+
+### Linear Fit vs. LOWESS: Read and Concept
+
+```{r}
+#| label: lowess-linear-concept
+#| fig-alt: "Scatterplot with linear and LOWESS curves showing reading score versus self-concept, where both curves nearly overlap indicating a linear relationship"
+#| fig-cap: "Reading vs. self-concept: the linear fit tracks the LOWESS curve well."
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(hsbs1, aes(x = concept, y = read)) +
+  geom_point(alpha = 0.3, size = 2, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", se = FALSE, color = ber640_colors["secondary"],
+              linewidth = 1.2) +
+  geom_smooth(method = "loess", se = FALSE, color = ber640_colors["accent"],
+              linewidth = 1.2, linetype = "dashed") +
+  labs(
+    x = "Self-Concept", y = "Reading Score",
+    title = "Read vs. Concept: Linear Looks Fine",
+    subtitle = "Solid red = linear fit | Dashed blue = LOWESS"
+  )
+```
+
+Here, the LOWESS curve and the straight line nearly overlap --- a good sign that linearity is reasonable.
+
+### Linear Fit vs. LOWESS: Write and Read
+
+```{r}
+#| label: lowess-linear-write
+#| fig-alt: "Scatterplot with linear and LOWESS curves showing reading score versus writing score, with slight curvature visible at the extremes of the LOWESS curve"
+#| fig-cap: "Writing vs. reading: is there curvature the linear fit misses?"
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(hsbs1, aes(x = write, y = read)) +
+  geom_point(alpha = 0.3, size = 2, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", se = FALSE, color = ber640_colors["secondary"],
+              linewidth = 1.2) +
+  geom_smooth(method = "loess", se = FALSE, color = ber640_colors["accent"],
+              linewidth = 1.2, linetype = "dashed") +
+  labs(
+    x = "Writing Score", y = "Reading Score",
+    title = "Read vs. Write: Any Curvature?",
+    subtitle = "Solid red = linear fit | Dashed blue = LOWESS"
+  )
+```
+
+> Look carefully: if the LOWESS curve bends away from the straight line at the extremes, that is a clue that a nonlinear specification (polynomial, transformation) might be warranted. We will address this in Parts 4 and 5.
+
+
+## Part 3: Data Transformations
+
+When a variable is heavily skewed, a transformation can make the distribution more symmetric and the relationship with other variables more linear. The two most common transformations are:
+
+- **Log transformation** `log(x)`: best for strong positive skew (long right tail).
+- **Square-root transformation** `sqrt(x)`: a gentler option for moderate skew.
+
+### Creating a Skewed Variable
+
+The `hsbs1` variables are fairly well-behaved, so let's simulate a positively skewed variable to see transformations in action. We exponentiate `career` (which is roughly normal) to create something that mimics income or reaction time:
+
+```{r}
+#| label: create-skewed
+
+hsbs1 <- hsbs1 |>
+  mutate(career_exp = exp(career / 10))
+
+summary(hsbs1$career_exp)
+```
+
+### Before and After: Histograms
+
+```{r}
+#| label: transformation-histograms
+#| fig-alt: "Three-panel histogram showing original right-skewed distribution, log-transformed distribution approaching symmetry, and square-root-transformed distribution with moderate correction"
+#| fig-cap: "Left: original skewed variable. Middle: log-transformed. Right: sqrt-transformed."
+#| fig-width: 10
+#| fig-height: 4
+
+p_raw <- ggplot(hsbs1, aes(x = career_exp)) +
+  geom_histogram(bins = 25, fill = ber640_colors["primary"], color = "white") +
+  labs(title = "Original (Skewed)", x = "career_exp", y = "Count")
+
+p_log <- ggplot(hsbs1, aes(x = log(career_exp))) +
+  geom_histogram(bins = 25, fill = ber640_colors["accent"], color = "white") +
+  labs(title = "Log-Transformed", x = "log(career_exp)", y = "Count")
+
+p_sqrt <- ggplot(hsbs1, aes(x = sqrt(career_exp))) +
+  geom_histogram(bins = 25, fill = ber640_colors["success"], color = "white") +
+  labs(title = "Sqrt-Transformed", x = "sqrt(career_exp)", y = "Count")
+
+p_raw + p_log + p_sqrt
+```
+
+> The log transformation pulls in the long right tail dramatically. The square-root transformation is more moderate. Choose whichever produces a roughly symmetric distribution.
+
+::: {.callout-important}
+## When to Transform
+- **Log:** the variable spans several orders of magnitude or has strong positive skew. Common for income, population, reaction times. Requires all values to be positive.
+- **Square root:** moderate positive skew, or count data. Also requires non-negative values.
+- **Interpretation changes:** a one-unit increase in log(x) corresponds to a multiplicative change in x (roughly a percentage change), not an additive change.
+:::
+
+
+## Part 4: Polynomial Regression
+
+When the LOWESS curve suggests a bend, one approach is to add polynomial terms --- $x^2$ for a quadratic, $x^3$ for a cubic. This keeps the model within the linear regression framework (polynomial terms are just additional predictors).
+
+### Quadratic Model
+
+Let's fit a quadratic model predicting reading from writing:
+
+```{r}
+#| label: quadratic-model
+
+model_linear    <- lm(read ~ write, data = hsbs1)
+model_quadratic <- lm(read ~ write + I(write^2), data = hsbs1)
+
+tidy_model(model_quadratic)
+```
+
+> The `I()` function tells R to treat `write^2` as an arithmetic operation rather than a formula operator. Alternatively, you can use `poly(write, 2, raw = TRUE)` to get the same result.
+
+### Testing the Quadratic Term
+
+Is the quadratic term significant? We compare the linear and quadratic models:
+
+```{r}
+#| label: test-quadratic
+
+anova(model_linear, model_quadratic)
+```
+
+If the *p*-value is small, the curvature is statistically meaningful. If not, the straight line was good enough.
+
+### Adding a Cubic Term
+
+We can go further and test whether a cubic term helps:
+
+```{r}
+#| label: cubic-model
+
+model_cubic <- lm(read ~ write + I(write^2) + I(write^3), data = hsbs1)
+
+anova(model_quadratic, model_cubic)
+```
+
+> If the cubic term is not significant, stop at the quadratic. This is the standard strategy: start simple, add complexity only when the data demand it.
+
+::: {.callout-important}
+## The Hierarchy Principle
+If a higher-order term (e.g., $x^2$) is in the model, **always keep all lower-order terms** ($x$) regardless of their individual significance. Removing $x$ while keeping $x^2$ changes the meaning of the quadratic term and makes the model uninterpretable.
+:::
+
+### Visualizing the Polynomial Fit
+
+```{r}
+#| label: polynomial-plot
+#| fig-alt: "Scatterplot of reading versus writing scores with three overlaid curves: linear, quadratic, and cubic fits that are nearly indistinguishable, suggesting minimal curvature"
+#| fig-cap: "Comparing linear, quadratic, and cubic fits."
+#| fig-width: 8
+#| fig-height: 5
+
+# Generate predictions on a grid
+write_grid <- tibble(write = seq(min(hsbs1$write), max(hsbs1$write), length.out = 200))
+
+write_grid <- write_grid |>
+  mutate(
+    linear    = predict(model_linear,    newdata = write_grid),
+    quadratic = predict(model_quadratic, newdata = write_grid),
+    cubic     = predict(model_cubic,     newdata = write_grid)
+  ) |>
+  pivot_longer(cols = c(linear, quadratic, cubic),
+               names_to = "model", values_to = "predicted") |>
+  mutate(model = factor(model, levels = c("linear", "quadratic", "cubic")))
+
+ggplot(hsbs1, aes(x = write, y = read)) +
+  geom_point(alpha = 0.3, size = 2, color = "grey60") +
+  geom_line(data = write_grid, aes(y = predicted, color = model),
+            linewidth = 1.2) +
+  scale_color_manual(
+    values = c("linear" = ber640_colors["secondary"],
+               "quadratic" = ber640_colors["accent"],
+               "cubic" = ber640_colors["success"]),
+    labels = c("Linear", "Quadratic", "Cubic")
+  ) +
+  labs(
+    x = "Writing Score", y = "Reading Score", color = "Model",
+    title = "Polynomial Regression: Read ~ Write",
+    subtitle = "Does adding curvature improve the fit?"
+  )
+```
+
+> Look at whether the curves separate meaningfully. If the quadratic and linear lines are nearly identical, the extra complexity was unnecessary.
+
+
+## Part 5: Piecewise Constant Relationships
+
+Sometimes the relationship is not smooth at all --- instead, the outcome jumps up at certain thresholds. A **piecewise constant** model captures this by cutting a continuous predictor into groups and using those groups as dummy variables.
+
+### Cutting Reading into Quartile Groups
+
+```{r}
+#| label: create-quartile-groups
+
+hsbs1 <- hsbs1 |>
+  mutate(
+    read_q = cut(read,
+                 breaks = quantile(read, probs = c(0, .25, .50, .75, 1)),
+                 include.lowest = TRUE,
+                 labels = c("Q1", "Q2", "Q3", "Q4"))
+  )
+
+hsbs1 |> count(read_q)
+```
+
+### Regression with Quartile Dummies
+
+```{r}
+#| label: piecewise-model
+
+model_piecewise <- lm(write ~ read_q, data = hsbs1)
+tidy_model(model_piecewise)
+```
+
+> The intercept is the mean writing score for Q1 (the reference group). Each coefficient is the difference in mean writing between that quartile and Q1.
+
+### Comparing All Approaches Visually
+
+Let's put the linear, polynomial, and piecewise fits side by side:
+
+```{r}
+#| label: comparison-plot
+#| fig-alt: "Three-panel comparison showing linear fit as a straight line, quadratic fit with slight curvature, and piecewise constant fit as horizontal segments at quartile group means"
+#| fig-cap: "Three ways to model the read-write relationship."
+#| fig-width: 10
+#| fig-height: 5
+
+# Piecewise predictions (step function)
+piecewise_means <- hsbs1 |>
+  group_by(read_q) |>
+  summarise(
+    read_min  = min(read),
+    read_max  = max(read),
+    predicted = mean(write),
+    .groups   = "drop"
+  )
+
+p_linear <- ggplot(hsbs1, aes(x = read, y = write)) +
+  geom_point(alpha = 0.3, size = 1.5, color = "grey60") +
+  geom_smooth(method = "lm", se = FALSE,
+              color = ber640_colors["secondary"], linewidth = 1.2) +
+  labs(title = "Linear", x = "Reading", y = "Writing")
+
+p_poly <- ggplot(hsbs1, aes(x = read, y = write)) +
+  geom_point(alpha = 0.3, size = 1.5, color = "grey60") +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE,
+              color = ber640_colors["accent"], linewidth = 1.2) +
+  labs(title = "Quadratic", x = "Reading", y = "Writing")
+
+p_piece <- ggplot(hsbs1, aes(x = read, y = write)) +
+  geom_point(alpha = 0.3, size = 1.5, color = "grey60") +
+  geom_segment(data = piecewise_means,
+               aes(x = read_min, xend = read_max,
+                   y = predicted, yend = predicted),
+               color = ber640_colors["success"], linewidth = 1.5) +
+  labs(title = "Piecewise Constant", x = "Reading", y = "Writing")
+
+p_linear + p_poly + p_piece
+```
+
+> The linear model assumes a constant slope everywhere. The quadratic allows curvature. The piecewise model makes no shape assumption at all --- it just estimates a separate mean for each group. The tradeoff: piecewise is the most flexible but throws away information about *where within* each quartile a student falls.
+
+::: {.callout-tip}
+## Choosing a Nonlinear Strategy
+
+| Strategy | Best When | Drawback |
+|---|---|---|
+| **Polynomial** | Smooth curvature visible in LOWESS | Unstable at extremes (high-order) |
+| **Transformation** | Skewed predictors or outcomes | Changes the scale of interpretation |
+| **Piecewise constant** | Known meaningful thresholds | Loses within-group variation |
+
+Start with LOWESS to *see* the relationship, then choose the simplest specification that captures the pattern.
+:::
+
+
+## Key Takeaways
+
+::: {.callout-note}
+## What to Remember
+
+1. **Incremental F-tests** let you test whether a *set* of predictors (e.g., all dummies for a multi-category factor) jointly improve the model. Use `anova(reduced, full)` or `car::linearHypothesis()`.
+
+2. **LOWESS curves** are your best diagnostic for nonlinearity. Overlay them on scatterplots and compare with the linear fit --- if they diverge, consider a nonlinear specification.
+
+3. **Log and sqrt transformations** address skewness. Log is stronger; sqrt is gentler. Both require positive values and change the interpretation of coefficients.
+
+4. **Polynomial regression** adds $x^2$, $x^3$, etc. as predictors. Always follow the **hierarchy principle**: keep lower-order terms when higher-order terms are significant.
+
+5. **Piecewise constant models** use `cut()` to turn a continuous variable into groups. Maximum flexibility, but they discard within-group information.
+
+6. **Model building is iterative:** visualize first, then formalize with a test. Let the data guide complexity --- add it when needed, not by default.
+:::

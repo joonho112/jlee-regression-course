@@ -1,0 +1,19 @@
+# Rendered / assembled output (build artifacts)
+_site/
+_book/
+.quarto/
+site_libs/
+
+# Quarto computation cache (_freeze) is intentionally COMMITTED so the site
+# rebuilds in CI without re-executing R. Do not ignore it.
+
+# R / IDE
+.Rproj.user/
+*.Rproj
+.Rhistory
+.RData
+.Ruserdata
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,62 @@
+---
+title: "Project 1 Draft"
+---
+
+| | |
+|---|---|
+| **Project** | Project 1: Linear Regression |
+| **Due** | Week 9 |
+| **Weight** | 30% of Project 1 (which is 20% of final grade) |
+| **Related Guide** | [Project Guide]({{< var books.project_guide >}}){target="_blank"} |
+
+::: {.callout-tip}
+## {{< fa book >}} Project Guide
+Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for worked examples of each section, including model specification, diagnostics, and interpretation.
+:::
+
+## Purpose
+
+The draft is a complete working version of your linear regression analysis. It should include all major sections of the final report, though the writing may still be rough. The instructor will provide feedback to help you strengthen the analysis and interpretation before the final submission.
+
+## Requirements
+
+Your draft should include all of the following sections:
+
+### 1. Introduction
+
+- Research question (refined from your proposal, incorporating any instructor feedback)
+- Brief motivation for why this question matters
+- Overview of your analytical approach
+
+### 2. Data and Variables
+
+- Dataset description (updated from proposal)
+- Variable definitions and coding
+- Descriptive statistics and exploratory visualizations
+
+### 3. Analysis and Results
+
+- **Model specification**: State the regression model(s) you are fitting
+- **Regression output**: Report coefficient estimates, standard errors, and significance tests
+- **Model fit**: Report $R^2$ and any other relevant fit statistics
+- **Interpretation**: Interpret key coefficients in context
+- **Additional analyses** (if applicable): Interactions, multiple comparisons, etc.
+
+### 4. Model Diagnostics
+
+- Residual plots (residuals vs. fitted, Q-Q plot)
+- Assessment of key assumptions (linearity, normality, homoscedasticity)
+- Identification of any influential observations
+
+### 5. Preliminary Conclusions
+
+- Summary of main findings
+- Limitations you have identified so far
+
+## Submission
+
+Submit the following to Blackboard:
+
+- A rendered PDF or HTML document
+- Your `.qmd` source file
+- The dataset (or a link to it)

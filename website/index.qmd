@@ -1,0 +1,105 @@
+---
+title: "{{< var course.number >}}: {{< var course.title >}}"
+subtitle: "{{< var course.subtitle >}}"
+toc: false
+sidebar: false
+page-layout: full
+---
+
+::: {.lead}
+Welcome to **BER 640: Advanced Statistical Methods in Education**. This course provides a comprehensive treatment of regression analysis for graduate students in education, covering simple and multiple linear regression, ANOVA, logistic regression, and generalized linear models.
+:::
+
+---
+
+::: {.grid .course-details}
+
+::: {.g-col-4}
+### Instructor
+- {{< fa user >}} [{{< var instructor.name >}}]({{< var instructor.url >}})
+- {{< fa envelope >}} [{{< var instructor.email >}}](mailto:{{< var instructor.email >}})
+- {{< fa building >}} {{< var instructor.office >}}
+- {{< fa clock >}} {{< var instructor.office_hours >}}
+:::
+
+::: {.g-col-4}
+### Course Details
+- {{< fa calendar >}} {{< var course.semester >}}
+- {{< fa calendar-days >}} {{< var course.dates >}}
+- {{< fa location-dot >}} {{< var course.location >}}
+:::
+
+::: {.g-col-4}
+### Course Materials
+- {{< fa book >}} [Lecture Notes]({{< var books.lecture_notes >}}){target="_blank"}
+- {{< fa laptop-code >}} [R Lab Book]({{< var books.r_lab_book >}}){target="_blank"}
+- {{< fa clipboard-list >}} [Project Guide]({{< var books.project_guide >}}){target="_blank"}
+- {{< fa database >}} [regdatasets Package]({{< var books.regdatasets >}}){target="_blank"}
+:::
+
+:::
+
+---
+
+## Course Overview
+
+This course adopts a **"specific to general"** pedagogical approach, beginning with simple linear regression (a model most students have encountered) and progressively extending to more complex models. By the end of the semester, students will see that familiar tests like the t-test and ANOVA are special cases of the **Generalized Linear Model (GLM)**.
+
+### Learning Arc
+
+```{mermaid}
+%%| fig-width: 9
+%%| fig-alt: "Course learning arc diagram showing four parts: Part I Foundations (SLR, ANCOVA/ANOVA), Part II Extensions (Multiple Regression, Interactions), Part III Model Quality (Diagnostics), Part IV Beyond Linear (Logistic Regression, GLM/Ordinal). Arrows show the progressive flow from simple to complex models."
+flowchart TD
+    subgraph P1["Part I: Foundations"]
+        A["SLR"] --> B["ANCOVA/ANOVA"]
+    end
+    subgraph P2["Part II: Extensions"]
+        C["Multiple Regression"] --> D["Interactions"]
+    end
+    subgraph P3["Part III: Model Quality"]
+        E["Diagnostics"]
+    end
+    subgraph P4["Part IV: Beyond Linear"]
+        F["Logistic Regression"] --> G["GLM/Ordinal"]
+    end
+
+    B --> C
+    D --> E
+    E --> F
+
+    style A fill:#2171B5,color:#fff,stroke:#1A5276,stroke-width:2px
+    style B fill:#2171B5,color:#fff,stroke:#1A5276,stroke-width:2px
+    style C fill:#2C3E50,color:#fff,stroke:#1A252F,stroke-width:2px
+    style D fill:#2C3E50,color:#fff,stroke:#1A252F,stroke-width:2px
+    style E fill:#C0392B,color:#fff,stroke:#922B21,stroke-width:2px
+    style F fill:#C0392B,color:#fff,stroke:#922B21,stroke-width:2px
+    style G fill:#1E8449,color:#fff,stroke:#145A32,stroke-width:2px
+
+    style P1 fill:#EBF5FB,stroke:#2171B5,stroke-width:2px,color:#2C3E50
+    style P2 fill:#EBEDEF,stroke:#2C3E50,stroke-width:2px,color:#2C3E50
+    style P3 fill:#FDEDEC,stroke:#C0392B,stroke-width:2px,color:#2C3E50
+    style P4 fill:#EAFAF1,stroke:#1E8449,stroke-width:2px,color:#2C3E50
+```
+
+The course progresses from foundational regression models (Part I) through extensions and diagnostics (Parts II--III) to categorical outcomes and the unifying GLM framework (Part IV).
+
+### What You Will Learn
+
+1. **Specify and interpret** regression models with continuous and categorical predictors
+2. **Diagnose** model assumptions and identify influential observations
+3. **Build** models using both confirmatory and exploratory strategies
+4. **Extend** regression to binary and ordinal outcomes via logistic regression
+5. **Unify** all course models within the Generalized Linear Model (GLM) framework
+6. **Implement** all analyses in R with reproducible code
+
+### Course Materials
+
+All course materials are open-access and published on GitHub Pages:
+
+| Material | Description |
+|----------|-------------|
+| [**Lecture Notes**]({{< var books.lecture_notes >}}){target="_blank"} | Primary textbook with theory, math, and R code (13 chapters) |
+| [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | Hands-on R tutorials for each topic (12 labs) |
+| [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines and examples for the two course projects |
+| [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package with 24 curated datasets |

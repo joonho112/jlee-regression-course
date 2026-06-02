@@ -1,0 +1,226 @@
+---
+title: Syllabus
+---
+
+:::: {.grid .course-details}
+
+::: {.g-col-12 .g-col-sm-6 .g-col-md-4}
+### Instructor
+
+- {{< fa user >}} [{{< var instructor.name >}}]({{< var instructor.url >}})
+- {{< fa building >}} {{< var instructor.office >}}
+- {{< fa envelope >}} [{{< var instructor.email >}}](mailto:{{< var instructor.email >}})
+- {{< fa clock >}} {{< var instructor.office_hours >}}
+:::
+
+::: {.g-col-12 .g-col-sm-6 .g-col-md-4}
+### Course Details
+
+- {{< fa calendar >}} {{< var course.semester >}}
+- {{< fa calendar-days >}} {{< var course.dates >}}
+- {{< fa location-dot >}} {{< var course.location >}}
+:::
+
+::: {.g-col-12 .g-col-md-4}
+### Contact Policy
+
+{{< var instructor.contact_policy >}}
+
+[{{< fa calendar-check >}} Schedule an appointment]({{< var instructor.appointment_url >}})
+:::
+
+::::
+
+
+## Course Description
+
+**{{< var course.number >}}: {{< var course.title >}}** is a graduate-level course that develops practical competence in regression-based data analysis using R. This course follows a **"specific to general" pedagogical approach**, beginning with simple linear regression---a model most students have encountered---and progressively extending to more complex frameworks.
+
+### Learning Arc
+
+We begin with **Simple Linear Regression** and expand to:
+
+- **ANCOVA and ANOVA** --- regression with categorical predictors
+- **Multiple Regression** --- adding continuous predictors and understanding confounding
+- **Interactions and Nonlinear Relationships** --- capturing complexity in data
+- **Model Building and Diagnostics** --- ensuring model validity
+- **Logistic Regression** --- extending to binary outcomes
+- **Generalized Linear Models** --- the unifying framework
+
+By semester's end, you'll understand that familiar tests like the *t*-test and ANOVA are simply special cases of the regression model.
+
+
+## Learning Objectives
+
+By the end of this course, you will be able to:
+
+1. **Specify** linear and generalized linear regression models with continuous and categorical predictors, interactions, and nonlinear terms
+2. **Interpret** regression coefficients, confidence intervals, and test statistics in substantive and statistical terms
+3. **Diagnose** violations of model assumptions and identify influential observations
+4. **Build** parsimonious models using confirmatory and exploratory strategies
+5. **Extend** regression to binary and ordinal outcomes via logistic and ordinal regression
+6. **Implement** all statistical analyses in R with reproducible, well-documented code
+7. **Communicate** statistical findings clearly to diverse audiences
+
+
+## Course Materials
+
+All course materials are **open-access** and free. You will also need R, RStudio, and internet access.
+
+### Textbooks and Resources
+
+| Material | Description |
+|----------|-------------|
+| {{< fa book-open >}} [**Lecture Notes**]({{< var books.lecture_notes >}}){target="_blank"} | Primary textbook: 13 chapters covering theory, math, and R code |
+| {{< fa laptop-code >}} [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | 12 hands-on tutorials for applied practice |
+| {{< fa clipboard-list >}} [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines, examples, and rubrics for the course projects |
+| {{< fa database >}} [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package with 24 curated educational datasets |
+
+### Software
+
+- **R** (free) --- Download from [cran.r-project.org](https://cran.r-project.org/)
+- **RStudio** (free) --- Download from [posit.co](https://posit.co/download/rstudio-desktop/)
+- **Posit Cloud** --- Free browser-based RStudio at [posit.cloud](https://posit.cloud/) (no installation needed)
+
+For installation help, see the [R Setup Guide](/resource/r-setup.qmd).
+
+
+## Course Structure
+
+This is a **fully asynchronous online course**. Each week, you will:
+
+1. {{< fa book-open >}} **Read** the Lecture Notes chapter(s)
+2. {{< fa laptop-code >}} **Complete** the R Lab tutorial(s)
+3. {{< fa pencil >}} **Submit** Homework or Project Milestone (when due)
+4. {{< fa clipboard-check >}} **Take** the Module Quiz (when due)
+
+See the [Schedule](/schedule.qmd) for the 15-week outline.
+
+**Expected workload**: 10--12 hours per week for a 3-credit graduate course.
+
+
+## Grading and Assessment
+
+::: {.callout-note}
+## Grading Philosophy
+
+This course prioritizes **learning over perfection**. Homework is graded on completion (not correctness), and quizzes allow unlimited attempts. This approach reduces statistics anxiety and encourages genuine engagement with the material.
+
+*Note: This website reflects the updated Fall 2026 assessment plan. If there are any discrepancies with earlier course documentation, this website is the authoritative source.*
+:::
+
+Your final grade is based on four components:
+
+### Grading Breakdown
+
+| Category | Weight | Details |
+|----------|:------:|---------|
+| **Homework** | 50% | 8 assignments (completion-based) |
+| **Module Quizzes** | 10% | 6 quizzes (mastery-based, unlimited attempts) |
+| **Project 1: Linear Regression** | 20% | Proposal + Draft + Final Report |
+| **Project 2: Logistic Regression** | 20% | Proposal + Draft + Final Report |
+| **Total** | **100%** | |
+
+### Assignment Details
+
+**Homework (50%)**: Eight assignments, approximately biweekly. Odd-numbered homework focuses on conceptual questions (hand calculations, interpretation); even-numbered focuses on computational problems (R code, data analysis). Graded for **completion**: full credit for demonstrating genuine effort, zero for non-submission. A "meaningful attempt" means:
+
+- All problems are attempted (even if you are unsure of the answer)
+- For computational assignments: R code runs without errors
+- Written interpretations are included where requested
+
+**Module Quizzes (10%)**: Six concept-check quizzes with multiple-choice and short-answer questions. **Mastery-based**: unlimited attempts, highest score counts. Open-book and open-notes. Scoring 80% or higher earns full credit.
+
+**Project 1: Linear Regression (20%)**: A complete linear regression analysis on a dataset of your choosing.
+
+| Component | Due | Weight |
+|-----------|:---:|:------:|
+| Proposal | Week 7 | 30% of Project 1 |
+| Draft | Week 9 | 30% of Project 1 |
+| Final Report | Week 12 | 40% of Project 1 |
+
+**Project 2: Logistic Regression (20%)**: A complete logistic regression analysis, building on skills from Project 1.
+
+| Component | Due | Weight |
+|-----------|:---:|:------:|
+| Proposal | Week 12 | 20% of Project 2 |
+| Draft | Week 14 | 30% of Project 2 |
+| Final Report | Week 15 | 50% of Project 2 |
+
+See the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed guidelines and worked examples.
+
+### Letter Grades
+
+| Grade | Range | | Grade | Range |
+|:-----:|:-----:|-|:-----:|:-----:|
+| A | 90--100% | | C | 70--76% |
+| B+ | 87--89% | | D | 60--69% |
+| B | 80--86% | | F | < 60% |
+| C+ | 77--79% | | | |
+
+
+## Course Policies
+
+### Late Work
+
+- **10% per day** deducted for late submissions
+- **Extensions** granted for documented hardships---email me with details
+- **Absolute cutoff**: No work accepted more than **7 days late** without prior arrangement
+
+### Academic Integrity
+
+All work must comply with the [University of Alabama Academic Misconduct Policy](https://catalog.ua.edu/undergraduate/about/academic-regulations/student-expectations/academic-misconduct-policy/).
+
+**Regarding AI tools** (ChatGPT, Copilot, etc.):
+
+- You **may** use AI tools to learn concepts and debug code
+- You **must** understand and adapt any AI-generated code
+- You **cannot** submit entirely AI-generated work without attribution and substantial modification
+- If in doubt, disclose your use of AI---transparency is never penalized
+
+### Disability Accommodations
+
+Students with disabilities should register with the [Office of Disability Services (ODS)](https://ods.ua.edu/) and share their accommodation letter during the first week of class.
+
+### Religious Observances
+
+Contact me at least one week in advance if religious observances conflict with deadlines.
+
+### Title IX
+
+The University of Alabama is committed to providing a safe environment. For confidential support, contact the [UA Counseling Center](https://counseling.sl.ua.edu/) at (205) 348-3863. For formal reports, contact the [Title IX Office](https://titleix.ua.edu/) at (205) 348-5496.
+
+
+## Getting Help
+
+::: {.callout-important}
+## You Can Do This
+
+Every programmer---from beginners to experts---gets stuck. It is 100% normal.
+
+When you're stuck:
+
+1. **Take a break.** Step away. Your subconscious will keep working.
+2. **Read the error message carefully.** Google "rstats [your error]".
+3. **Ask for help.** Email me or visit office hours.
+4. **Review the R Lab Book.** Work through the examples step by step.
+
+You will get unstuck. I promise.
+:::
+
+### Contact Me
+
+- **Email**: [{{< var instructor.email >}}](mailto:{{< var instructor.email >}}) --- I aim to respond within 48 hours
+- **Urgent matters**: Include "BER 640 - URGENT" in the subject line
+- **Appointments**: [Schedule a meeting]({{< var instructor.appointment_url >}}) via Zoom or in-person
+
+### Additional Support
+
+- **Counseling Center**: [counseling.sl.ua.edu](https://counseling.sl.ua.edu/) --- free, confidential support
+- **Dean of Students**: [dos.sl.ua.edu](https://dos.sl.ua.edu/) --- emergency financial assistance, food pantry, housing support
+- **Writing Center**: [writingcenter.ua.edu](https://writingcenter.ua.edu/)
+- **UA IT Help Desk**: [oit.ua.edu](https://oit.ua.edu/) --- (205) 348-5555
+
+### Course Resources
+
+Browse the [Resources](/resource/index.qmd) page for R setup guides, dataset documentation, style guides, and FAQs.

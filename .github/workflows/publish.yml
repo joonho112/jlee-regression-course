@@ -1,0 +1,71 @@
+name: Publish course site
+
+# Build the full BER 640 course site and deploy it to GitHub Pages.
+# One push to `main` rebuilds and redeploys everything.
+#
+# Design notes:
+#   * The Quarto books commit their _freeze/ caches, so rendering reuses the
+#     frozen R results and does NOT re-execute R. (Quarto is pinned to the
+#     version used to create the caches so the freeze is reused as-is.)
+#   * The course website (site root) contains no executable code.
+#   * regdatasets keeps its own repo and commits its prebuilt pkgdown docs/,
+#     so we just clone it and copy the docs in — no R build required here.
+#
+# One-time setup: Settings -> Pages -> Source: "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: "1.9.37"
+
+      - name: Render Quarto projects (reuses committed _freeze)
+        run: |
+          quarto render website
+          quarto render notes
+          quarto render labs
+          quarto render homework
+          quarto render project
+
+      - name: Fetch prebuilt regdatasets pkgdown site
+        run: |
+          git clone --depth 1 https://github.com/joonho112/regdatasets.git ../regdatasets
+
+      - name: Assemble unified _site/
+        run: bash scripts/assemble.sh
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

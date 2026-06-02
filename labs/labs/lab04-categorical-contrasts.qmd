@@ -1,0 +1,432 @@
+---
+title: "Lab 4: Categorical Variables and Planned Comparisons"
+---
+
+{{< include ../_common.qmd >}}
+
+## Goals
+
+::: {.callout-note}
+## What You'll Learn in This Lab
+- Understand why `factor()` is essential for categorical predictors
+- Interpret dummy-coded regression coefficients with a three-level predictor
+- Use `emmeans` for planned comparisons and custom contrasts
+- Apply the Sidak correction for pairwise comparisons
+- Change the reference group and see how coefficients change
+- **Lecture Notes Reference:** Chapter 3: *One-Way ANOVA*
+:::
+
+::: {.callout-tip}
+## Stata → R Translation
+| Stata | R | Notes |
+|:------|:--|:------|
+| `regress salary i.rank` | `lm(salary ~ factor(rank))` | Use `factor()` for categorical variables |
+| `lincom full-assoc` | `emmeans::contrast()` | Linear combinations via estimated marginal means |
+| `oneway salary rank, sidak` | `emmeans::pairs(adjust = "sidak")` | Pairwise comparisons with multiplicity correction |
+:::
+
+**Dataset:** `faculty` from the `regdatasets` package
+
+
+## Part 1: Quick Review --- ANOVA with the Faculty Data
+
+In Lab 3, we explored the `faculty` dataset and tested whether salary differs by gender. Let's reload the data and briefly revisit that result before moving on to the main topic: using **rank** as a categorical predictor.
+
+```{r}
+#| label: lab04-setup
+
+library(regdatasets)
+data(faculty)
+glimpse(faculty)
+```
+
+A quick reminder of what we found last time --- a one-way ANOVA of salary by gender:
+
+```{r}
+#| label: review-gender-anova
+
+model_gender <- lm(salary ~ male, data = faculty)
+summary(model_gender)
+```
+
+> The coefficient for `male` is the mean salary difference between men and women. We established in Lab 3 that ANOVA and regression with a dummy predictor give identical results. Today, we extend this idea to a predictor with **three** levels: academic rank.
+
+
+## Part 2: Regression with a Categorical Predictor (Rank)
+
+The variable `rank` has three levels:
+
+- **1** = Assistant Professor
+- **2** = Associate Professor
+- **3** = Full Professor
+
+We want to test whether salary differs across these three ranks. Sounds straightforward --- but there is a trap waiting for us.
+
+### The Wrong Way: Treating Rank as Continuous
+
+Watch what happens if we simply plug `rank` into `lm()` without telling R it is categorical:
+
+```{r}
+#| label: rank-wrong
+
+model_wrong <- lm(salary ~ rank, data = faculty)
+summary(model_wrong)
+```
+
+> This model treats rank as a **continuous number** and fits a single straight line through ranks 1, 2, and 3. It forces the salary jump from Assistant to Associate to be **exactly the same** as from Associate to Full. That is a very strong assumption --- and almost certainly wrong.
+
+### The Right Way: Using `factor()`
+
+When we wrap `rank` in `factor()`, R creates dummy variables automatically:
+
+```{r}
+#| label: rank-factor
+
+faculty <- faculty |>
+  mutate(rank_f = factor(rank,
+                         levels = c(1, 2, 3),
+                         labels = c("Assistant", "Associate", "Full")))
+```
+
+Now let's fit the model properly:
+
+```{r}
+#| label: rank-correct
+
+model_rank <- lm(salary ~ rank_f, data = faculty)
+summary(model_rank)
+```
+
+> With `factor()`, R creates **two dummy variables** automatically:
+>
+> - `rank_fAssociate`: compares Associate to the reference group (Assistant)
+> - `rank_fFull`: compares Full to the reference group (Assistant)
+>
+> The **intercept** is the mean salary for **Assistant Professors** (the reference group). Each coefficient is a **difference from that reference group**.
+
+::: {.callout-important}
+## Always Use `factor()` for Categorical Variables
+When a categorical variable is coded as numbers (1, 2, 3), R treats it as continuous by default. You **must** use `factor()` to tell R these are group labels, not a numeric scale. This is one of the most common mistakes in applied regression.
+:::
+
+::: {.callout-warning}
+## Factor Level Ordering: R vs. Stata
+R orders factor levels **alphabetically** by default (e.g., "Assistant" < "Associate" < "Full"). Stata orders them by their **numeric code** (e.g., 1, 2, 3). This means the reference group may differ between the two programs. Always check with `levels(your_factor)` to confirm which level is the reference.
+:::
+
+### Verify with Group Means
+
+Let's confirm the coefficients by computing group means directly:
+
+```{r}
+#| label: rank-means
+
+faculty |>
+  group_by(rank_f) |>
+  summarise(
+    n = n(),
+    mean_salary = mean(salary),
+    sd_salary   = sd(salary),
+    .groups = "drop"
+  ) |>
+  mutate(across(where(is.numeric) & !n, \(x) round(x, 2)))
+```
+
+> Check: the intercept should match the Assistant mean. The Associate coefficient should equal the Associate mean minus the Assistant mean. The Full coefficient should equal the Full mean minus the Assistant mean.
+
+### Equivalence with ANOVA
+
+The regression F-test and the ANOVA F-test are identical:
+
+::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: anova-rank-aov
+
+anova_rank <- aov(salary ~ rank_f, data = faculty)
+summary(anova_rank)
+```
+
+#### Advanced
+
+```{r}
+#| label: anova-rank-lm
+
+anova(model_rank)
+```
+
+```{r}
+#| label: anova-rank-tidy
+
+tidy_model(model_rank)
+```
+
+:::
+
+> The F-statistic from `aov()` and `anova()` is the same. This confirms: one-way ANOVA is just regression with dummy variables.
+
+
+## Part 3: Planned Comparisons with `emmeans`
+
+The regression output gives us comparisons to the **reference group** (Assistant). But what if we want other comparisons? For example:
+
+- Associate vs. Full?
+- The average of Associate and Full vs. Assistant?
+
+This is where `emmeans` (Estimated Marginal Means) comes in. It lets us extract group means and test **any** comparison we want.
+
+### Step 1: Estimated Marginal Means
+
+```{r}
+#| label: emmeans-rank
+
+emm_rank <- emmeans(model_rank, "rank_f")
+emm_rank
+```
+
+> These are the predicted means for each rank. Because we have no covariates, they are identical to the raw group means.
+
+::: {.callout-note}
+## Two Post-Estimation Packages
+The Lecture Notes use the `marginaleffects` package for predicted values and comparisons. In this lab, we use the `emmeans` package, which provides a particularly intuitive interface for **custom contrasts** and **planned comparisons**. Both packages produce the same results for standard tasks like pairwise comparisons. Think of `marginaleffects` as the "general-purpose" tool and `emmeans` as the "contrast specialist."
+:::
+
+### Step 2: Associate vs. Assistant
+
+This comparison is already in the regression output (the `rank_fAssociate` coefficient). But let's see how to get it from `emmeans`:
+
+::: {.panel-tabset}
+
+#### Simple
+
+```{r}
+#| label: contrast-assoc-assist
+
+contrast(emm_rank, method = list("Associate - Assistant" = c(-1, 1, 0)))
+```
+
+#### Advanced
+
+The weights `c(-1, 1, 0)` mean: subtract the first group (Assistant) from the second (Associate), and ignore the third (Full). The estimate should match the `rank_fAssociate` coefficient from the regression output.
+
+```{r}
+#| label: contrast-assoc-assist-confint
+
+contrast(emm_rank, method = list("Associate - Assistant" = c(-1, 1, 0))) |>
+  confint()
+```
+
+:::
+
+> The estimate and p-value should match the `rank_fAssociate` coefficient from `summary(model_rank)`. The `emmeans` approach is more explicit about what we are comparing.
+
+### Step 3: Full vs. Associate
+
+This comparison is **not** directly available from the regression output (which only compares to the reference group). With `emmeans`, it is easy:
+
+```{r}
+#| label: contrast-full-assoc
+
+contrast(emm_rank, method = list("Full - Associate" = c(0, -1, 1)))
+```
+
+> The weights `c(0, -1, 1)` subtract the Associate mean from the Full mean. Is the salary jump from Associate to Full statistically significant?
+
+### Step 4: A Custom Contrast --- Higher Ranks vs. Assistant
+
+Suppose we want to compare the **average salary of Associate and Full Professors** to the salary of Assistant Professors. This is a custom planned comparison:
+
+```{r}
+#| label: contrast-higher-vs-assist
+
+contrast(emm_rank,
+         method = list("Avg(Assoc, Full) - Assistant" = c(-1, 0.5, 0.5)))
+```
+
+> The weights `c(-1, 0.5, 0.5)` take the average of Associate and Full (each weighted 0.5) and subtract the Assistant mean (weighted -1). Notice the weights sum to zero --- this is a requirement for a valid contrast.
+
+::: {.callout-tip}
+## Contrast Weights Must Sum to Zero
+For any valid contrast, the weights must sum to zero. This ensures we are comparing one group (or combination of groups) **against** another, rather than just computing a weighted average.
+:::
+
+### Step 5: Multiple Planned Contrasts at Once
+
+We can test several planned contrasts in a single call:
+
+```{r}
+#| label: contrast-all-planned
+
+my_contrasts <- list(
+  "Associate - Assistant"          = c(-1,  1,   0),
+  "Full - Associate"               = c( 0, -1,   1),
+  "Avg(Assoc, Full) - Assistant"   = c(-1,  0.5, 0.5)
+)
+
+contrast(emm_rank, method = my_contrasts)
+```
+
+> All three planned comparisons are tested simultaneously. Each row gives the estimated difference, standard error, t-statistic, and p-value.
+
+
+## Part 4: Pairwise Comparisons with Sidak Correction
+
+Sometimes you want to compare **all pairs** of groups. With three ranks, there are three pairwise comparisons:
+
+- Assistant vs. Associate
+- Assistant vs. Full
+- Associate vs. Full
+
+The danger of testing all pairs is **inflated Type I error** --- the more tests you run, the greater the chance of a false positive. The **Sidak correction** adjusts p-values to control this.
+
+### All Pairwise Comparisons
+
+```{r}
+#| label: pairwise-sidak
+
+pairs(emm_rank, adjust = "sidak")
+```
+
+> The `adjust = "sidak"` argument applies the Sidak correction to the p-values. Compare these adjusted p-values to the unadjusted ones from our planned contrasts above. The Sidak-corrected p-values are larger (more conservative) because they account for the multiple testing problem.
+
+### Unadjusted vs. Sidak-Adjusted
+
+Let's see the difference side by side:
+
+```{r}
+#| label: pairwise-comparison
+
+bind_rows(
+  pairs(emm_rank, adjust = "none") |>
+    as_tibble() |>
+    mutate(correction = "None"),
+  pairs(emm_rank, adjust = "sidak") |>
+    as_tibble() |>
+    mutate(correction = "Sidak")
+) |>
+  select(contrast, estimate, SE, p.value, correction) |>
+  mutate(across(where(is.numeric), \(x) round(x, 4)))
+```
+
+> Notice how the Sidak correction increases the p-values. In this case, with large salary differences across ranks, all comparisons remain significant even after correction. In other datasets with smaller effects, the correction can change your conclusions.
+
+::: {.callout-note}
+## Other Corrections
+The Sidak correction is just one option. Common alternatives include:
+
+- **Bonferroni**: multiply each p-value by the number of tests. Slightly more conservative than Sidak.
+- **Tukey**: specifically designed for all pairwise comparisons. Use `adjust = "tukey"`.
+- **None**: no correction. Only appropriate for a small number of **pre-planned** comparisons.
+
+For most exploratory pairwise comparisons, Sidak or Tukey are good default choices.
+:::
+
+### Connection to the Overall F-Test
+
+The overall ANOVA F-test tells us whether **any** group differs from any other. The pairwise comparisons tell us **which specific** pairs differ. They complement each other:
+
+```{r}
+#| label: overall-f-test
+
+anova(model_rank)
+```
+
+> The significant F-test tells us that rank is related to salary overall. The pairwise comparisons (above) tell us that all three rank pairs differ significantly --- even after the Sidak correction.
+
+
+## Part 5: Changing the Reference Group
+
+So far, R has used **Assistant Professor** (the first level) as the reference group. Every regression coefficient is a comparison to Assistant. But what if we want **Full Professor** as the reference? Then the coefficients would tell us how much less the other ranks earn compared to Full Professors.
+
+### Relevel the Factor
+
+```{r}
+#| label: relevel-rank
+
+faculty <- faculty |>
+  mutate(rank_f2 = relevel(rank_f, ref = "Full"))
+
+# Check the new level order
+levels(faculty$rank_f2)
+```
+
+### Re-run the Regression
+
+```{r}
+#| label: model-relevel
+
+model_rank2 <- lm(salary ~ rank_f2, data = faculty)
+summary(model_rank2)
+```
+
+> Now the **intercept** is the mean salary for **Full Professors**. The coefficients for Assistant and Associate are **negative** --- they tell us how much less each group earns compared to Full Professors.
+
+### Side-by-Side Comparison
+
+::: {.panel-tabset}
+
+#### Reference = Assistant
+
+```{r}
+#| label: compare-ref-assistant
+
+tidy_model(model_rank)
+```
+
+#### Reference = Full
+
+```{r}
+#| label: compare-ref-full
+
+tidy_model(model_rank2)
+```
+
+:::
+
+> Compare the two tables. The **model is the same** --- same F-statistic, same $R^2$, same residual standard error. Only the **parameterization** changes. Changing the reference group does not change what the model says about the data; it changes how the story is told through the coefficients.
+
+::: {.callout-tip}
+## Choosing a Reference Group
+Pick the reference group that makes interpretation easiest. Common choices:
+
+- **The largest group** (for stability of the intercept estimate)
+- **A control or baseline group** (for treatment comparisons)
+- **The group of theoretical interest** (the group others are compared against)
+
+There is no "correct" choice --- it depends on your research question.
+:::
+
+### The `emmeans` Results Do Not Change
+
+Regardless of which reference group we use, `emmeans` gives the same estimated means and contrasts:
+
+```{r}
+#| label: emmeans-relevel
+
+emmeans(model_rank2, "rank_f2")
+```
+
+> The estimated marginal means are identical to what we got earlier. The reference group affects only the regression coefficients, not the underlying group means or contrasts. This is one reason `emmeans` is so useful --- it gives you interpretable results that do not depend on the coding scheme.
+
+
+## Key Takeaways
+
+::: {.callout-tip}
+## What We Learned
+
+1. **Always use `factor()` for categorical predictors.** Without it, R treats numbered categories (1, 2, 3) as a continuous scale, fitting a single slope instead of separate group means.
+
+2. **Reference group determines coefficient interpretation.** The intercept equals the reference group mean, and each coefficient is a difference from that reference. Use `relevel()` to change the reference group.
+
+3. **`emmeans` is your best friend for group comparisons.** It extracts estimated marginal means and lets you test any contrast --- planned comparisons, pairwise comparisons, or custom contrasts with user-defined weights.
+
+4. **Contrast weights must sum to zero.** This ensures you are comparing one group (or combination) against another.
+
+5. **The Sidak correction protects against multiple testing.** When you test all pairwise comparisons, use `adjust = "sidak"` (or `"tukey"`) to control the family-wise error rate.
+
+6. **Changing the reference group changes the coefficients but not the model.** The F-statistic, $R^2$, and all group means remain identical. Only the interpretation of the intercept and slopes changes.
+
+**Next:** In Lab 5, we will add continuous covariates alongside categorical predictors to build multiple regression models --- and learn how to interpret coefficients when several variables are in the model simultaneously.
+:::
