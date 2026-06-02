@@ -68,18 +68,18 @@ flowchart TD
     D --> E
     E --> F
 
-    style A fill:#2171B5,color:#fff,stroke:#1A5276,stroke-width:2px
-    style B fill:#2171B5,color:#fff,stroke:#1A5276,stroke-width:2px
-    style C fill:#2C3E50,color:#fff,stroke:#1A252F,stroke-width:2px
-    style D fill:#2C3E50,color:#fff,stroke:#1A252F,stroke-width:2px
-    style E fill:#C0392B,color:#fff,stroke:#922B21,stroke-width:2px
-    style F fill:#C0392B,color:#fff,stroke:#922B21,stroke-width:2px
-    style G fill:#1E8449,color:#fff,stroke:#145A32,stroke-width:2px
+    style A fill:#0B3D66,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style B fill:#0B3D66,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style C fill:#2C6E91,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style D fill:#2C6E91,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style E fill:#6B3E7A,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style F fill:#A8431E,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style G fill:#A8431E,color:#fff,stroke:#1A2A3A,stroke-width:2px
 
-    style P1 fill:#EBF5FB,stroke:#2171B5,stroke-width:2px,color:#2C3E50
-    style P2 fill:#EBEDEF,stroke:#2C3E50,stroke-width:2px,color:#2C3E50
-    style P3 fill:#FDEDEC,stroke:#C0392B,stroke-width:2px,color:#2C3E50
-    style P4 fill:#EAFAF1,stroke:#1E8449,stroke-width:2px,color:#2C3E50
+    style P1 fill:#E6EDF3,stroke:#0B3D66,stroke-width:2px,color:#1A2A3A
+    style P2 fill:#E5EEF3,stroke:#2C6E91,stroke-width:2px,color:#1A2A3A
+    style P3 fill:#EFEAF2,stroke:#6B3E7A,stroke-width:2px,color:#1A2A3A
+    style P4 fill:#F6E9E3,stroke:#A8431E,stroke-width:2px,color:#1A2A3A
 ```
 
 The course progresses from foundational regression models (Part I) through extensions and diagnostics (Parts II--III) to categorical outcomes and the unifying GLM framework (Part IV).

@@ -48,7 +48,7 @@ $secondary:   $gray-700;
 $body-bg:                 $paper;     // warm off-white page background
 $body-color:              $gray-800;  // ~13.6:1 on $paper -- primary reading text
 $link-color:              $slate;     // 4.9:1 -- AA for normal text
-$link-hover-color:        $gold;      // warm hover shift (decorative state)
+$link-hover-color:        $navy;      // darken-on-hover (gold failed AA 2.3:1 on paper; warm-amber option open)
 $link-decoration:         underline;
 $link-hover-decoration:   underline;
 
@@ -152,7 +152,7 @@ a {
 }
 
 div.sidebar-item-container .active {
-  color: $accent;
+  color: $warning;   // gold reads on the dark sidebar (slate $accent failed at 2.6:1)
   font-weight: 600;
 }
 
@@ -289,23 +289,23 @@ div.callout {
 }
 
 .callout-note {
-  border-left-color: $info;
-  background-color: rgba(155, 89, 182, 0.06);
+  border-left-color: $info;     // plum
+  background-color: rgba(107, 62, 122, 0.07);
 }
 
 .callout-tip {
-  border-left-color: $success;
-  background-color: rgba(39, 174, 96, 0.06);
+  border-left-color: $success;  // teal
+  background-color: rgba(62, 142, 138, 0.08);
 }
 
 .callout-warning {
-  border-left-color: $warning;
-  background-color: rgba(243, 156, 18, 0.06);
+  border-left-color: $warning;  // gold
+  background-color: rgba(201, 162, 39, 0.10);
 }
 
 .callout-important {
-  border-left-color: $secondary;
-  background-color: rgba(231, 76, 60, 0.06);
+  border-left-color: $danger;   // rust ($secondary is now a neutral gray, so use danger here)
+  background-color: rgba(168, 67, 30, 0.07);
 }
 
 // ============================================
