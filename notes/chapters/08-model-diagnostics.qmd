@@ -26,8 +26,9 @@ Not all assumption violations are equally serious. @tbl-ch8-consequences summari
 
 This chapter develops a systematic toolkit for detecting these violations. We begin with the different types of residuals --- the raw material for all diagnostic procedures --- and then address each assumption in turn. We close with the `check_model()` dashboard from the `performance` package, which provides a convenient one-stop diagnostic summary.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Distinguish among raw, semi-studentized, studentized, and studentized deleted residuals, and explain when each is appropriate

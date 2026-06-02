@@ -16,8 +16,9 @@ This chapter develops the diagnostic toolkit for logistic regression models. We 
 4. **Residual diagnostics** including binned residual plots and calibration plots
 5. **Influence diagnostics** using Cook's distance, DFBETAS, and influence bubble plots
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Explain why standard goodness-of-fit tests require grouped (non-sparse) data and identify when sparseness invalidates $p$-values

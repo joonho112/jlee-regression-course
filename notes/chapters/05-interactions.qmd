@@ -23,8 +23,9 @@ This chapter covers three types of interactions, organized by the nature of the 
 2. **Categorical $\times$ Categorical** (@sec-ch5-cat-cat): Does a group difference depend on the level of another categorical factor?
 3. **Continuous $\times$ Continuous** (@sec-ch5-cont-cont): Does the effect of one continuous variable change as another continuous variable increases?
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Explain why additive models are sometimes insufficient and articulate the concept of effect modification

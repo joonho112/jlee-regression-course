@@ -10,8 +10,9 @@ This question --- **how to make a fair comparison by statistically controlling f
 
 More broadly, this chapter introduces the **multiple linear regression** model, which can include any number of predictors --- both continuous and categorical. Along the way, we encounter some of the most important concepts in applied statistics: omitted variable bias, confounding, and collinearity.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Specify and interpret an ANCOVA model with a continuous covariate and a categorical factor
