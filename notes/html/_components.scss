@@ -152,3 +152,7 @@
 }
 .example { border-left-color: $teal; }
 .theorem-title, .proof-title { font-family: $headings-font-family; font-weight: 700; color: $navy; }
+
+// ---- Step 2.8: lightbox caption tint ----
+.gslide-description { font-size: 1.4em; }
+.gslide-title { color: $navy; }

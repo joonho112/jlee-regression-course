@@ -63,6 +63,7 @@ format:
       light: [cosmo, html/custom.scss]
       dark: [darkly, html/custom-dark.scss]
     css: ojs/interactive.css
+    lightbox: auto
     code-fold: false
     code-tools: true
     code-link: true
