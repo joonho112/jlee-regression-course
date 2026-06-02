@@ -13,6 +13,10 @@ website:
   description: "BER 640 - A regression approach with R for graduate students in education"
   site-url: "https://joonho112.github.io/jlee-regression-course"
 
+  image: "/files/img/og-card.png"
+  open-graph: true
+  twitter-card: true
+
   favicon: "/files/img/favicon-512.png"
 
   search: true
