@@ -1,16 +1,30 @@
 ---
-title: "{{< var course.number >}}: {{< var course.title >}}"
-subtitle: "{{< var course.subtitle >}}"
 toc: false
 sidebar: false
 page-layout: full
 ---
 
-::: {.lead}
-Welcome to **BER 640: Advanced Statistical Methods in Education**. This course provides a comprehensive treatment of regression analysis for graduate students in education, covering simple and multiple linear regression, ANOVA, logistic regression, and generalized linear models.
+::: {.hero}
+::: {.hero-inner}
+
+[BER 640 · Fall 2026]{.hero-eyebrow}
+
+# Advanced Statistical Methods in Education {.hero-title}
+
+[A Regression Approach with R]{.hero-subtitle}
+
+[A graduate-level, R-driven tour of regression analysis for education researchers — from the simple linear model through ANOVA and logistic regression to the unifying Generalized Linear Model.]{.hero-lead}
+
+::: {.hero-cta}
+[{{< fa file-lines >}} Syllabus](syllabus.qmd){.btn .btn-hero-primary role="button"}
+[{{< fa calendar-days >}} Schedule](schedule.qmd){.btn .btn-hero-secondary role="button"}
+[{{< fa book-open >}} Lecture Notes]({{< var books.lecture_notes >}}){.btn .btn-hero-outline target="_blank" role="button"}
 :::
 
----
+[Graduate · {{< var course.days >}} · {{< var course.dates >}} · {{< var university.name >}}]{.hero-meta}
+
+:::
+:::
 
 ::: {.grid .course-details}
 
