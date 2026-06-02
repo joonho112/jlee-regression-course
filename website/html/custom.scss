@@ -298,18 +298,33 @@ div.sidebar-item-container .active {
 // ============================================
 
 .course-details {
-  margin: 1.5rem 0;
-  padding: 1.5rem;
-  background-color: $gray-50;
-  border-radius: 0.4rem;
-  border-left: 4px solid $accent;
+  margin: 1.5rem 0 2.5rem;
+
+  // Each column is its own "at a glance" card
+  .g-col-4 {
+    height: 100%;
+    background-color: #fff;
+    border: 1px solid $gray-200;
+    border-top: 3px solid $accent;
+    border-radius: 0.45rem;
+    padding: 1.4rem 1.4rem 1.2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
+      transform: translateY(-2px);
+    }
+  }
 
   h3 {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: $primary;
     margin-top: 0;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid $gray-200;
   }
 
   ul {
@@ -318,16 +333,26 @@ div.sidebar-item-container .active {
     margin: 0;
 
     li {
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.6rem;
       color: $gray-700;
+      line-height: 1.45;
+
+      // colour the leading Font Awesome icon with the brand accent
+      > i,
+      > svg {
+        color: $accent;
+        margin-right: 0.15rem;
+      }
     }
   }
 
   a {
     color: $accent;
+    text-decoration: none;
 
     &:hover {
       color: $primary;
+      text-decoration: underline;
     }
   }
 }
