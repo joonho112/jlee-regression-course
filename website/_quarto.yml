@@ -23,7 +23,7 @@ website:
 
   navbar:
     pinned: true
-    background: "#2C3E50"
+    background: "#1A2A3A"   # $ink (Cividis Ink) — matches custom.scss token
     left:
       - text: "{{< fa house >}}"
         file: index.qmd
