@@ -18,4 +18,11 @@ $code-color: $gray-900;
 
 /*-- scss:rules --*/
 
-// (empty — component rules are added in Phase 1.5/1.6 and Phase 2)
+// ===== Step 1.5 — four-color callout legend re-tint (Cividis Ink, light) =====
+// Semantic legend (fixed): note=Theory, tip=Practical, warning=Pitfall, important=Key Takeaway.
+div.callout { margin: 1.4rem 0; border-radius: 0.3rem; }
+.callout-note      { border-left-color: $info !important;    background-color: rgba(107, 62, 122, 0.07); }  // plum
+.callout-tip       { border-left-color: $success !important; background-color: rgba(62, 142, 138, 0.08); }  // teal
+.callout-warning   { border-left-color: $warning !important; background-color: rgba(201, 162, 39, 0.10); }  // gold
+.callout-important { border-left-color: $danger !important;  background-color: rgba(168, 67, 30, 0.07);  }  // rust
+// NOTE: $secondary is a neutral grey in this system, so .callout-important must use $danger.

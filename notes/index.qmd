@@ -49,22 +49,22 @@ The full R code is displayed *expanded* (not folded), followed by a line-by-line
 
 ::: {.callout-note}
 ## Theoretical Background
-Blue boxes provide mathematical foundations and theoretical context.
+Plum boxes provide mathematical foundations and theoretical context.
 :::
 
 ::: {.callout-tip}
 ## Practical Insight
-Green boxes highlight useful tips and practical insights.
+Teal boxes highlight useful tips and practical insights.
 :::
 
 ::: {.callout-warning}
 ## Common Pitfall
-Yellow boxes warn about common mistakes and misinterpretations.
+Gold boxes warn about common mistakes and misinterpretations.
 :::
 
 ::: {.callout-important}
 ## Key Takeaway
-Red boxes summarize the most important points from each section.
+Rust boxes summarize the most important points from each section.
 :::
 
 ## Prerequisites

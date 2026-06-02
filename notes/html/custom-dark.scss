@@ -10,4 +10,9 @@
 
 /*-- scss:rules --*/
 
-// (dark-specific rules added in Phase 1.6 / Phase 2)
+// ===== Step 1.5 — four-color callout legend re-tint (dark) =====
+// Stronger tints + lighter edge colors so callouts read against the dark surface.
+.callout-note      { border-left-color: #9b6fae !important; background-color: rgba(146, 107, 160, 0.16); }  // plum (light)
+.callout-tip       { border-left-color: #54b0aa !important; background-color: rgba(78, 170, 165, 0.16);  }  // teal (light)
+.callout-warning   { border-left-color: $warning !important; background-color: rgba(201, 162, 39, 0.16);  }  // gold
+.callout-important { border-left-color: #c45a37 !important; background-color: rgba(196, 90, 55, 0.16);   }  // rust (light)
