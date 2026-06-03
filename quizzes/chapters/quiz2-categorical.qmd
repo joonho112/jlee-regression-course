@@ -1,0 +1,476 @@
+---
+title: "Quiz 2: Categorical Predictors"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Categorical Predictors  ·  **Available after:** Week 5  ·  **Source:** Lecture Notes, [Ch. 2 (ANCOVA)](../../notes/chapters/02-ancova.qmd) and [Ch. 3 (One-way ANOVA)](../../notes/chapters/03-one-way-anova.qmd).
+
+This quiz assesses analysis of covariance and one-way ANOVA: the ANCOVA model and "controlling for" a covariate, adjusted means, the parallel-slopes assumption, confounders vs mediators, collinearity, Type I vs Type III sums of squares, ANOVA as regression with dummy variables, the ANOVA table and $F$-test, multiple comparisons, and effect size ($\eta^2$). Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 15 |
+| Total points | 20 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 5 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 2. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — ANCOVA model structure {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 2]`**
+
+A researcher fits the ANCOVA model `gcse ~ lrt + school` to the two-school GCSE data, where `lrt` is a continuous intake-ability covariate and `school` is a two-level factor (Battersea vs Chelsea). What does each of the two predictor terms contribute to the model?
+
+A. `lrt` allows the two schools to have different slopes; `school` allows them to have different intercepts.
+
+B. `lrt` adds a common slope shared by both schools; `school` shifts one school's regression line vertically (a difference in intercepts).
+
+C. `lrt` adds a common slope shared by both schools; `school` allows the LRT slope to differ between schools.
+
+D. Both terms estimate intercept shifts; ANCOVA does not model the covariate's slope.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** In the additive model $y_i = \alpha + \beta_1 x_i + \beta_2 d_{Ci} + \epsilon_i$, the continuous covariate `lrt` contributes a single slope $\beta_1$ shared by both schools (parallel slopes), and the factor `school` contributes $\beta_2$, which raises or lowers Chelsea's line by a constant amount relative to Battersea — a difference in intercepts.
+- **Why not A:** Letting `lrt` have a different slope per school requires an `lrt × school` *interaction* term, which is not in the additive ANCOVA model. A describes the interaction model.
+- **Why not C:** A school-specific LRT slope is again an interaction effect; the `school` main effect shifts the intercept, it does not modify the LRT slope.
+- **Why not D:** ANCOVA explicitly models the covariate's slope $\beta_1$; treating the covariate as just another intercept shift ignores its continuous relationship with the outcome.
+- **Source:** Lecture Notes, Ch. 2 (ANCOVA), "The ANCOVA Model".
+
+:::
+
+### Question 2 — The meaning of "controlling for" {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 2]`**
+
+In the fitted model `gcse ~ lrt + school`, the Chelsea coefficient is the school difference "controlling for LRT." What does "controlling for LRT" actually mean here?
+
+A. Students were physically assigned so that both schools had identical LRT distributions before testing.
+
+B. LRT was removed from the dataset so it can no longer influence the outcome.
+
+C. The school difference is computed by comparing a Battersea and a Chelsea student *at the same LRT value*; it is a statistical operation, not a physical manipulation.
+
+D. The comparison automatically has a causal interpretation because LRT has been held constant.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** "Holding LRT constant" means we compare two students — one from each school — who share the same LRT value; the model predicts their GCSE scores differ by exactly $\hat{\beta}_2$ regardless of which common LRT value is chosen. This is a *statistical* adjustment within the regression, not a physical intervention.
+- **Why not A:** No one was assigned to balance LRT; the schools differ in intake ability. Controlling for LRT statistically adjusts for that imbalance — it does not pretend it was eliminated by design.
+- **Why not B:** LRT is not discarded; it remains in the model as a predictor. "Controlling for" a variable means including it, not deleting it.
+- **Why not D:** A causal reading requires that *all* confounders are accounted for. Statistical control of one covariate does not guarantee a causal interpretation.
+- **Source:** Lecture Notes, Ch. 2 (ANCOVA), "Concept Check: What Does 'Controlling For' Actually Mean?".
+
+:::
+
+### Question 3 — Computing an adjusted group mean {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 2]`**
+
+The fitted ANCOVA model is
+
+$$\widehat{\text{gcse}} = -1.6 + 0.55 \cdot \text{lrt} + 4.2 \cdot \mathbf{1}[\text{Chelsea}]$$
+
+The grand mean of `lrt` across both schools is $\bar{x}_{\cdot} = 2.0$. Compute the **LRT-adjusted mean GCSE for Chelsea** (the predicted GCSE for a Chelsea student evaluated at the grand-mean LRT). Round to one decimal place.
+
+Adjusted mean (Chelsea) = ________
+
+#### Answer & Rationale
+
+**Correct answer: 3.7** (accept 3.6 to 3.8)
+
+- **Computation:** The adjusted mean is $\hat{\mu}_g^{\text{adj}} = \hat{\alpha} + \hat{\beta}_1 \bar{x}_{\cdot} + \hat{\beta}_2 \cdot \mathbf{1}[g=\text{Chelsea}]$. For Chelsea: $-1.6 + 0.55(2.0) + 4.2 = -1.6 + 1.1 + 4.2 = 3.7$.
+- **Common errors:** Forgetting the Chelsea term gives the Battersea adjusted mean ($-1.6 + 1.1 = -0.5$); using a Chelsea-specific LRT mean instead of the *grand* mean defeats the "fair" comparison; omitting the slope term ($-1.6 + 4.2 = 2.6$) ignores the covariate adjustment.
+- **Source:** Lecture Notes, Ch. 2 (ANCOVA), "How Adjusted Means Are Computed".
+
+:::
+
+### Question 4 — Parallel-slopes assumption {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 2]`**
+
+**True or False:** The standard ANCOVA model assumes the covariate has the **same slope** in every group; a significant factor-by-covariate interaction would indicate this parallel-slopes assumption is violated, and the simple ANCOVA would no longer be appropriate.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A is correct:** ANCOVA fits one common covariate slope and lets the groups differ only in intercept (parallel lines). The assumption is checked by adding a covariate $\times$ factor interaction and testing it (equivalently, an $F$-test comparing the additive and interaction models). A *significant* interaction means the slopes differ across groups, so the constant "adjusted gap" of ANCOVA no longer holds and a non-parallel model is needed.
+- **Why "False" is wrong:** A common misconception is that ANCOVA assumes equal *intercepts* (no group difference) — but the group difference is exactly what ANCOVA estimates. The assumption is on the *slopes*. Another error is thinking a *non*-significant interaction violates the assumption; a non-significant interaction *supports* parallel slopes.
+- **Source:** Lecture Notes, Ch. 2 (ANCOVA), "Checking the Parallel Slopes Assumption".
+
+:::
+
+### Question 5 — Confounder vs mediator {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 2]`**
+
+A researcher wants the *total* effect of school on GCSE. Consider two extra variables: (i) **prior ability (LRT)** at age 11, which influences both which school a student attends and their later GCSE; and (ii) **teaching quality**, which schools differ on and which in turn raises GCSE (i.e., it lies on the causal path School → Teaching Quality → GCSE). Which variable should be included as a control?
+
+A. Control for teaching quality but not LRT.
+
+B. Control for LRT but not teaching quality.
+
+C. Control for both, since both are associated with GCSE.
+
+D. Control for neither; controlling for any third variable biases the school effect.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** LRT is a **confounder** — a common cause of both school selection and GCSE — so controlling for it removes a spurious association and is required. Teaching quality is a **mediator** — it lies on the causal pathway from school to GCSE — so controlling for it would remove part of the very effect we want to estimate. The rule: control for confounders (common causes), not mediators (consequences of the predictor).
+- **Why not A:** This reverses the rule — it controls the mediator (blocking the genuine effect) and omits the confounder (leaving spurious bias in place).
+- **Why not C:** Mere association with the outcome is not the criterion; mediators are associated with the outcome yet must not be controlled when the goal is the total effect.
+- **Why not D:** Confounders *must* be controlled; refusing to adjust for LRT leaves omitted-variable bias in the school estimate.
+- **Source:** Lecture Notes, Ch. 2 (ANCOVA), "Confounders vs Mediators".
+
+:::
+
+### Question 6 — Collinearity and standard errors {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 2]`**
+
+**True or False:** High collinearity between two predictors biases the OLS coefficient estimates toward zero, making the estimated effects systematically too small.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** Collinearity inflates the *standard errors* of the coefficients (the variance inflation factor measures exactly this), widening confidence intervals and making it hard to separate the predictors' unique contributions. It does **not** bias the coefficient estimates: in expectation they remain centered on the true values. The point estimates stay near the true $\beta$ even as the CIs blow up.
+- **Why "True" is wrong:** A frequent misconception conflates large standard errors / non-significant coefficients with bias. Collinearity is a *precision* (variance) problem, not a *bias* problem — the estimates are still unbiased, just imprecise. (Bias instead comes from *omitting* a relevant confounder.)
+- **Source:** Lecture Notes, Ch. 2 (ANCOVA), "The Effect of Collinearity".
+
+:::
+
+### Question 7 — Type I vs Type III sums of squares {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 2]`**
+
+In a multiple regression with two correlated predictors, a colleague notices that the sum of squares attributed to LRT changes when LRT is listed *before* vs *after* school in the model formula. Which statement correctly characterizes the two SS types?
+
+A. This is Type I (sequential) SS, which depends on entry order because each term is credited only with its contribution beyond the terms already entered; Type III (partial) SS tests each term's unique contribution and is order-independent.
+
+B. This is Type III SS, which depends on entry order; switching to Type I SS would make the result order-independent.
+
+C. Type I and Type III SS always give identical results regardless of design, so the changing value indicates a software error.
+
+D. Type III SS assigns all shared variance to whichever predictor is entered first; Type I SS ignores shared variance.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** Type I (sequential) SS adds predictors one at a time in the specified order, crediting each with only its *additional* contribution given the terms already in the model — so reordering the formula changes the individual SS. Type III (partial) SS credits each predictor with its *unique* contribution controlling for all others, so it is invariant to order. The order-dependent behavior described is the hallmark of Type I.
+- **Why not B:** The order dependence identifies Type I, not Type III; the description reverses the two.
+- **Why not C:** The two types coincide only in *balanced/orthogonal* designs; with correlated predictors they differ, so a changing value is expected, not an error.
+- **Why not D:** The "shared variance goes to the first-entered predictor" behavior belongs to *Type I*, and Type III tests only the unique portions — D swaps the labels.
+- **Source:** Lecture Notes, Ch. 2 (ANCOVA), "Type I vs Type III Sums of Squares".
+
+:::
+
+### Question 8 — One-way ANOVA = regression with dummies {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 3]`**
+
+A study compares math achievement across three instruction methods — lecture, discussion, and active learning. To represent this three-level factor in a regression model, how many dummy variables are needed, and why not encode the method as a single numeric variable (lecture = 1, discussion = 2, active = 3)?
+
+A. One dummy is enough; a single 0/1/2 numeric code captures all three groups efficiently.
+
+B. No dummies are needed; regression cannot handle categorical predictors.
+
+C. Three dummies are needed, one per group, including the reference group.
+
+D. Two dummies are needed (one fewer than the number of groups); a single 1/2/3 numeric code would wrongly impose an ordering and equal spacing on the methods.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** A factor with $k+1$ levels requires $k$ dummies; with three methods, $k=2$. One group is the reference (all dummies 0). Coding the methods as 1/2/3 and entering that single number would force a linear, equally-spaced ordering — implying the active-vs-discussion gap equals the discussion-vs-lecture gap and that the methods are ordered — an assumption the categories do not justify.
+- **Why not A:** One dummy can only distinguish two groups, and a 0/1/2 single code reintroduces the false-ordering problem.
+- **Why not B:** Regression handles categorical predictors precisely *by* creating dummy variables — that is what one-way ANOVA is.
+- **Why not C:** Using a dummy for *every* group plus an intercept produces perfect collinearity (the dummy-variable trap); one group must be the omitted reference.
+- **Source:** Lecture Notes, Ch. 3 (One-way ANOVA), "ANOVA as Regression with Dummy Variables".
+
+:::
+
+### Question 9 — Group mean from intercept + dummy {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 3]`**
+
+A one-way ANOVA `score ~ method` (reference = lecture) yields the following coefficients:
+
+| Term | Estimate |
+|:-----|---------:|
+| (Intercept) | 62.0 |
+| methodDiscussion | 5.5 |
+| methodActiveLearning | 11.0 |
+
+Compute the predicted mean post-test `score` for the **active-learning** group. Give the numeric value.
+
+Predicted mean (active learning) = ________
+
+#### Answer & Rationale
+
+**Correct answer: 73.0** (accept 72.9 to 73.1)
+
+- **Computation:** Under reference-group coding, a group's mean equals the intercept plus that group's dummy coefficient: $\mu_{\text{active}} = \hat{\alpha} + \hat{\beta}_{\text{ActiveLearning}} = 62.0 + 11.0 = 73.0$. The intercept (62.0) is the lecture/reference mean.
+- **Common errors:** Reporting 11.0 mistakes the *coefficient* (the difference from the reference) for the group mean. Adding the wrong dummy (62.0 + 5.5 = 67.5) gives the discussion mean. Summing all three terms (62.0 + 5.5 + 11.0 = 78.5) double-counts a dummy that does not apply to the active-learning group.
+- **Source:** Lecture Notes, Ch. 3 (One-way ANOVA), "Interpreting the Coefficients".
+
+:::
+
+### Question 10 — Matching ANOVA-table parts {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 3]`**
+
+Match each component of a one-way ANOVA table (left) to its definition (right). There are $k+1$ groups and $n$ observations.
+
+| Component | | Definition |
+|:----------|:--|:-----------|
+| 1. Between-group SS (MSS) | | W. The ratio MSS / MSE, compared to an $F$ distribution to test equality of group means |
+| 2. Between-group df | | X. The pooled within-group variance, MSE = SSE / (n − k − 1) |
+| 3. Within-group MS (MSE) | | Y. $\sum_j n_j(\bar{y}_j - \bar{y})^2$, the weighted spread of group means around the grand mean |
+| 4. $F$ statistic | | Z. The number of groups minus one, equal to $k$ |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → Y, 2 → Z, 3 → X, 4 → W**
+
+- **1 → Y:** Between-group SS (MSS) sums each group's squared deviation of its mean from the grand mean, weighted by group size $n_j$ — the formula $\sum_j n_j(\bar{y}_j-\bar{y})^2$.
+- **2 → Z:** Between-group degrees of freedom equal the number of groups minus one; with $k+1$ groups this is $k$.
+- **3 → X:** Within-group mean square is the pooled within-group variance, MSE = SSE / (n − k − 1), the denominator of the $F$ ratio.
+- **4 → W:** The $F$ statistic is MSS / MSE, referred to an $F(k, n-k-1)$ distribution to test $H_0$ that all group means are equal.
+- **Source:** Lecture Notes, Ch. 3 (One-way ANOVA), "The ANOVA Table".
+
+:::
+
+### Question 11 — Computing F from a partial ANOVA table {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 3]`**
+
+A one-way ANOVA on the `instruction` data (3 methods, $n = 93$) produced this partial table:
+
+| Source | SS | df | MS |
+|:-------|---:|---:|---:|
+| Between (method) | 240 | 2 | ? |
+| Within (residual) | 2700 | 90 | ? |
+
+Compute the $F$ statistic, $F = \text{MS}_{\text{between}} / \text{MS}_{\text{within}}$. Round to two decimal places.
+
+$F$ = ________
+
+#### Answer & Rationale
+
+**Correct answer: 4.00** (accept 3.95 to 4.05)
+
+- **Computation:** $\text{MS}_{\text{between}} = 240 / 2 = 120$; $\text{MS}_{\text{within}} = 2700 / 90 = 30$; $F = 120 / 30 = 4.00$, referred to $F(2, 90)$.
+- **Common errors:** Dividing the raw *sums of squares* ($240/2700 = 0.089$) skips the conversion to mean squares. Inverting the ratio ($\text{MS}_{\text{within}}/\text{MS}_{\text{between}} = 30/120 = 0.25$) puts within-group variance on top.
+- **Source:** Lecture Notes, Ch. 3 (One-way ANOVA), "The F-test".
+
+:::
+
+### Question 12 — What a significant omnibus F tells you {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 3]`**
+
+A one-way ANOVA comparing post-test `score` across three instructional methods gives $F(2, 90) = 6.4$, $p = 0.003$. Which interpretation is correct?
+
+A. All three methods differ significantly from one another.
+
+B. At least one method's mean differs from at least one other; the test does not identify which specific pairs differ.
+
+C. The method with the highest sample mean is significantly better than each of the other two.
+
+D. The methods explain a large proportion of variance in scores.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** The omnibus $F$-test evaluates $H_0: \mu_1 = \mu_2 = \mu_3$. Rejecting it means *at least one* group mean differs from at least one other — but it is silent about *which* pairs differ. Identifying specific differences requires follow-up pairwise comparisons (e.g., Tukey or Bonferroni-corrected).
+- **Why not A:** A significant omnibus $F$ does not imply every pair differs; one method could differ from the other two while those two are similar.
+- **Why not C:** The $F$-test does not single out the top group or test any specific pairwise contrast; that needs a post-hoc comparison.
+- **Why not D:** Significance ($p$-value) and effect size are distinct. A small $p$ can accompany a small $\eta^2$, especially with large samples; the $F$-test alone says nothing about the *proportion* of variance explained.
+- **Source:** Lecture Notes, Ch. 3 (One-way ANOVA), "The F-test".
+
+:::
+
+### Question 13 — The multiple-comparisons problem {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Answer · 2 pts · Applied · Notes Ch. 3]`**
+
+After a significant omnibus $F$, a researcher runs all pairwise comparisons among several instructional methods. **Select all that apply** regarding multiple comparisons and family-wise error.
+
+A. As the number of groups grows, the number of pairwise tests grows and the probability of at least one false positive (family-wise error rate) inflates well above 0.05 if no correction is applied.
+
+B. Tukey's HSD and the Bonferroni method are procedures designed to control the family-wise Type I error rate across the set of comparisons.
+
+C. The Bonferroni correction lowers the per-comparison significance threshold (e.g., to $\alpha / m$ for $m$ comparisons).
+
+D. Running each pairwise $t$-test at $\alpha = 0.05$ without correction keeps the family-wise error rate at exactly 0.05 no matter how many groups are compared.
+
+#### Answer & Rationale
+
+**Correct answers: A, B, C**
+
+- **Why A is correct:** With $k$ groups there are $\binom{k}{2}$ pairwise tests; the uncorrected family-wise error rate is $1 - (1-0.05)^m$, which climbs steeply (e.g., 0.14 for 3 comparisons, 0.54 for 15).
+- **Why B is correct:** Tukey's HSD and Bonferroni are exactly the family-wise-error-controlling procedures the notes recommend for exploratory pairwise comparisons.
+- **Why C is correct:** Bonferroni divides the target $\alpha$ by the number of comparisons $m$, tightening each per-comparison threshold to control the overall rate.
+- **Why not D:** This is the core misconception the chapter warns against — leaving each test at 0.05 *inflates* the family-wise rate as the number of comparisons grows; it does not hold the overall rate at 0.05.
+- **Source:** Lecture Notes, Ch. 3 (One-way ANOVA), "Correcting for Multiple Comparisons".
+
+:::
+
+### Question 14 — Planned vs post-hoc comparisons {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 3]`**
+
+**True or False:** A small number of **planned (confirmatory)** comparisons, specified from theory *before* looking at the data, generally do not require a multiple-comparisons correction, whereas **post-hoc (exploratory)** comparisons suggested *by* the data do require one.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A is correct:** When a few specific contrasts are pre-specified from theory, the family of tests is small and fixed in advance, so a correction is generally not needed (and these planned tests need not even be gated behind the omnibus $F$). When comparisons are chosen *after* seeing which groups look different, the effective number of implicit comparisons is large, inflating the family-wise error rate — so corrections (Bonferroni, Tukey, Scheffé) are required.
+- **Why "False" is wrong:** A common over-correction is to apply post-hoc adjustments indiscriminately to every comparison. The distinction is whether the hypotheses were specified *before* or *after* seeing the data.
+- **Source:** Lecture Notes, Ch. 3 (One-way ANOVA), "Exploratory vs Confirmatory Approaches".
+
+:::
+
+### Question 15 — Interpreting η² {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 3]`**
+
+A one-way ANOVA `score ~ method` reports $\eta^2 = 0.08$. Which interpretation is correct?
+
+A. Instructional method explains 8% of the total variance in post-test scores (in one-way ANOVA, $\eta^2 = R^2$).
+
+B. There is an 8% probability that the group means are equal.
+
+C. Method explains 8% of the variance, but $\eta^2$ is unrelated to $R^2$ and cannot be compared to it.
+
+D. The largest pairwise difference between methods is 0.08 score points.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** $\eta^2 = \text{MSS}/\text{TSS}$ is the proportion of total variance in the outcome explained by group membership — here 8%. In one-way ANOVA $\eta^2 = R^2$ exactly. By Cohen's benchmarks (.01 small, .06 medium, .14 large), 0.08 sits between the medium and large bands.
+- **Why not B:** $\eta^2$ is a variance-explained effect size, not a $p$-value or a probability that $H_0$ is true.
+- **Why not C:** In one-way ANOVA $\eta^2$ and $R^2$ are *identical*; they measure the same proportion of variance explained.
+- **Why not D:** $\eta^2$ is a proportion of variance, not a difference in score units; it says nothing directly about the magnitude of any single pairwise contrast.
+- **Source:** Lecture Notes, Ch. 3 (One-way ANOVA), "η² vs R²".
+
+:::
+
+## Coverage
+
+This quiz draws from Lecture Notes Ch. 2 (ANCOVA, 7 items) and Ch. 3 (One-way ANOVA, 8 items). The 15 items total **20 points** (Multiple Choice ×7, True/False ×3, Fill-in-the-Blank ×3, Matching ×1, Multiple Answer ×1) and span all three difficulty levels.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | ANCOVA model: covariate slope + factor intercept shift | Multiple Choice | Conceptual | 1 |
+| 2 | Meaning of "controlling for" | Multiple Choice | Conceptual | 1 |
+| 3 | Compute an adjusted group mean | Fill-in-the-Blank | Applied | 2 |
+| 4 | Parallel-slopes assumption | True/False | Challenge | 1 |
+| 5 | Confounder vs mediator | Multiple Choice | Challenge | 1 |
+| 6 | Collinearity inflates SE, not bias | True/False | Challenge | 1 |
+| 7 | Type I vs Type III sums of squares | Multiple Choice | Challenge | 1 |
+| 8 | One-way ANOVA = regression with $k-1$ dummies | Multiple Choice | Conceptual | 1 |
+| 9 | Group mean from intercept + dummy | Fill-in-the-Blank | Applied | 2 |
+| 10 | ANOVA-table parts ↔ definitions | Matching | Conceptual | 2 |
+| 11 | Compute $F$ = MS$_\text{b}$/MS$_\text{w}$ | Fill-in-the-Blank | Applied | 2 |
+| 12 | What a significant omnibus $F$ tells you | Multiple Choice | Conceptual | 1 |
+| 13 | Multiple comparisons & family-wise error | Multiple Answer | Applied | 2 |
+| 14 | Planned vs exploratory comparisons | True/False | Conceptual | 1 |
+| 15 | Interpreting $\eta^2$ | Multiple Choice | Applied | 1 |
+
+: Quiz 2 item map. {.striped}

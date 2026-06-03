@@ -1,0 +1,482 @@
+---
+title: "Quiz 1: Foundations of Regression"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Foundations of Regression  ·  **Available after:** Week 3  ·  **Source:** Lecture Notes, [Ch. 1 (Simple Linear Regression)](../../notes/chapters/01-simple-linear-regression.qmd).
+
+This quiz assesses the core ideas of simple linear regression: identifying the response and explanatory variables, interpreting the slope and intercept in context, ordinary least squares and its algebraic consequences, $R^2$ and its link to correlation, the model assumptions and their diagnostics, confidence vs prediction intervals, regression to the mean, and the dummy-variable / $t$-test connection. Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 15 |
+| Total points | 20 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 3 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 1. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — Response vs. explanatory variable {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 1]`**
+
+A school district wants to know whether a student's reading score at age 11 (the LRT intake test) can be used to predict that student's GCSE exam score at age 16. The analyst plans to fit a simple linear regression.
+
+In this study, which variable should be the **response** ($y$) and which should be the **explanatory** ($x$) variable?
+
+A. GCSE score is $x$; LRT score is $y$, because GCSE is measured first in the data file.
+
+B. LRT score is $x$; GCSE score is $y$, because the model predicts the later outcome from the earlier measure.
+
+C. Either variable can serve as $y$ because regression treats both variables symmetrically.
+
+D. Whichever variable has the larger standard deviation should be $y$.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** The response (dependent, outcome) variable is the one we want to predict or explain — here, GCSE performance at age 16. The explanatory (independent, predictor) variable is the one we predict *from* — here, the earlier LRT intake score. The model $\text{E}(y_i \mid x_i) = \alpha + \beta x_i$ treats GCSE as $y$ and LRT as $x$.
+- **Why not A:** It reverses the roles. The position of a column in the data file has nothing to do with which variable is the response; the research question (predict GCSE from LRT) determines the roles.
+- **Why not C:** Regression is *not* symmetric in $x$ and $y$ — OLS minimizes squared *vertical* (in-$y$) deviations, so regressing $y$ on $x$ generally gives a different line than regressing $x$ on $y$.
+- **Why not D:** The standard deviation of a variable is irrelevant to its role; that role is set by the substantive question, not by spread.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "The Simple Linear Regression Model".
+
+:::
+
+### Question 2 — Interpreting the slope in context {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 1]`**
+
+Using the `gcse` data (both `gcse` and `lrt` standardized to mean ≈ 0, SD ≈ 10), a simple regression of GCSE exam score on intake reading score (LRT) yields:
+
+| Term | Estimate |
+|:-----|---------:|
+| Intercept | 0.50 |
+| `lrt` (slope) | 0.55 |
+
+Which statement correctly interprets the **slope**?
+
+A. Students with an LRT score of 1 are predicted to have a GCSE score of 0.55.
+
+B. For each 1-point increase in LRT, the predicted GCSE score is higher by 0.55 points, on average.
+
+C. A 1-point increase in LRT causes GCSE to rise by 0.55 points.
+
+D. For each 1-point increase in LRT, the predicted GCSE score is higher by 0.55 standard deviations, on average.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** The slope is the expected change in the response per one-unit increase in the predictor: a 1-point rise in LRT is associated with a 0.55-point rise in predicted GCSE, on average. It names the variable (GCSE), direction (higher), magnitude (0.55), and units (points).
+- **Why not A:** This confuses a slope with a fitted value. At LRT = 1, $\hat{y} = 0.50 + 0.55(1) = 1.05$, not 0.55; the slope describes a *rate of change*, not a predicted score.
+- **Why not C:** This imposes a causal claim. The slope describes association, not causation; other factors may drive both, so "causes" is unjustified without a design that rules out confounders.
+- **Why not D:** The 0.55 is in raw GCSE *points* per LRT point, not standard deviations. The "per standard deviation" reading applies to the *standardized* coefficient (Pearson $r$), which is close to 0.55 here only because $s_x \approx s_y$.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Interpreting the Intercept and Slope".
+
+:::
+
+### Question 3 — Interpreting the intercept (and when it is meaningless) {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 1]`**
+
+For the Battersea school, GCSE is regressed on LRT and the fitted intercept is $a = 1.30$. In this subsample the **mean LRT is about 1.7** (so LRT = 0 lies *below* this school's average intake). What is the best interpretation of the intercept?
+
+A. It is the predicted change in GCSE for a one-unit increase in LRT.
+
+B. It is the predicted GCSE score for the average Battersea student.
+
+C. It is the predicted GCSE score for a student with an LRT score of 0 — but since LRT = 0 is below this school's average intake, it does not describe a typical Battersea student.
+
+D. It is meaningless and should always be removed from the model.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** The intercept $a$ is the expected value of $y$ when $x = 0$ — here, the predicted GCSE for a student with LRT = 0. Because the Battersea mean LRT is ≈ 1.7, LRT = 0 is below average for this school, so the intercept is a valid number but does not represent the school-average student.
+- **Why not A:** That describes the *slope*, not the intercept.
+- **Why not B:** The prediction for the *average* student uses $\bar{x} \approx 1.7$, not $x = 0$; the fitted line passes through $(\bar{x}, \bar{y})$, so $\hat{y}$ at $\bar{x}$ equals $\bar{y}$, not the intercept.
+- **Why not D:** The intercept is needed to define the line and generate predictions; it is not "always meaningless." It is of limited substantive interest only when $x = 0$ is far outside the observed range.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Interpreting the Intercept and Slope".
+
+:::
+
+### Question 4 — What OLS minimizes {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 1]`**
+
+**True or False:** Ordinary Least Squares (OLS) chooses the intercept and slope that minimize the sum of the **absolute** vertical distances between the observed points and the fitted line.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** OLS minimizes the **sum of squared** vertical residuals, $\text{SSE} = \sum_i [y_i - (a + b x_i)]^2$, not the sum of absolute residuals. Squaring penalizes large residuals disproportionately and yields a unique, closed-form solution at the minimum of a smooth, convex (bowl-shaped) SSE surface.
+- **Why "True" is wrong:** Minimizing absolute deviations defines a *different* estimator (least absolute deviations / median regression), which is more robust to outliers but is not OLS. Conflating "least squares" with "least absolute distance" is the targeted misconception.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "OLS Estimation".
+
+:::
+
+### Question 5 — Consequences of the OLS formulas {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Answer · 2 pts · Conceptual · Notes Ch. 1]`**
+
+For an OLS simple linear regression that includes an intercept, **select all** statements that are guaranteed to be true.
+
+A. The fitted regression line passes through the point $(\bar{x}, \bar{y})$.
+
+B. The residuals sum to zero: $\sum_{i=1}^{n} e_i = 0$.
+
+C. Every residual $e_i$ is individually equal to zero.
+
+D. The residuals are uncorrelated with the predictor: $\sum_{i=1}^{n} x_i e_i = 0$.
+
+E. The slope $b$ must be positive.
+
+#### Answer & Rationale
+
+**Correct answers: A, B, D**
+
+- **Why A, B, D are correct:** They are the standard consequences of the two OLS normal equations (for a model with an intercept), and they are three *distinct* properties — not restatements of one another. **A:** the fitted line passes through the point of means $(\bar{x}, \bar{y})$. **B:** the residuals sum to zero, $\sum e_i = 0$ (the first normal equation). **D:** the residuals are orthogonal to — uncorrelated with — the predictor, $\sum x_i e_i = 0$ (the second normal equation).
+- **Why not C:** Residuals summing to zero does *not* mean each residual is zero. Individual residuals are generally nonzero (points scatter around the line); only their *sum* (and mean) is zero.
+- **Why not E:** The sign of the slope is set by the data ($b = S_{xy}/S_{xx}$); it can be positive, negative, or zero. Nothing in OLS guarantees a positive slope.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Two Key Consequences of the OLS Formulas".
+
+:::
+
+### Question 6 — Computing R² from a variance decomposition {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 1]`**
+
+For a regression of GCSE on LRT, the analysis of variance gives the following sums of squares:
+
+| Component | Sum of Squares |
+|:----------|---------------:|
+| Total (TSS) | 8,000 |
+| Error / Residual (SSE) | 5,600 |
+
+Using $R^2 = 1 - \dfrac{\text{SSE}}{\text{TSS}}$, the coefficient of determination is $R^2 = $ ________ (report as a proportion, 2 decimals).
+
+#### Answer & Rationale
+
+**Correct answer: 0.30** (accept 0.29–0.31, or equivalently 30%)
+
+- **Computation:** $R^2 = 1 - \dfrac{\text{SSE}}{\text{TSS}} = 1 - \dfrac{5{,}600}{8{,}000} = 1 - 0.70 = 0.30$. Equivalently, the model sum of squares is $\text{MSS} = \text{TSS} - \text{SSE} = 2{,}400$, and $R^2 = \text{MSS}/\text{TSS} = 2{,}400/8{,}000 = 0.30$.
+- **Interpretation in context:** LRT explains about 30% of the variance in GCSE scores; the remaining 70% is unexplained.
+- **Common error to avoid:** Reporting $\text{SSE}/\text{TSS} = 0.70$ (the *unexplained* proportion) instead of $1 - \text{SSE}/\text{TSS}$.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "The $R^2$ Statistic".
+
+:::
+
+### Question 7 — R² = r² and the sign of the correlation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 1]`**
+
+In a simple linear regression of GCSE on LRT, the software reports $R^2 = 0.36$ and a **positive** estimated slope. What is the Pearson correlation $r$ between LRT and GCSE?
+
+A. $r = 0.60$
+
+B. $r = -0.60$
+
+C. $r = 0.36$
+
+D. $r = 0.13$
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** In simple linear regression, $R^2 = r^2$, so $|r| = \sqrt{0.36} = 0.60$. The Pearson correlation carries the same sign as the slope (both share the sign of $S_{xy}$). Since the slope is positive, $r = +0.60$.
+- **Why not B:** The magnitude $0.60$ is right, but the sign is wrong: a positive slope forces a positive $r$.
+- **Why not C:** This sets $r = R^2$. But $r = \sqrt{R^2}$, not $R^2$; $0.36$ is the squared correlation.
+- **Why not D:** This computes $0.36^2 = 0.13$, squaring when one should take the square root.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Pearson Correlation".
+
+:::
+
+### Question 8 — Matching the four assumptions to their meanings {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 1]`**
+
+Match each model assumption (left) to its correct meaning (right).
+
+| Assumption | | Meaning |
+|:-----------|---|:--------|
+| 1. Linearity / mean-zero errors | | W. The errors $\epsilon_i$ are normally distributed at each $x_i$ |
+| 2. Homoscedasticity | | X. $\text{E}(\epsilon_i \mid x_i) = 0$, so $\text{E}(y_i \mid x_i) = \alpha + \beta x_i$ |
+| 3. Independence | | Y. The error variance $\text{Var}(\epsilon_i \mid x_i) = \sigma^2$ is constant across $x$ |
+| 4. Normality | | Z. For different subjects $i \ne j$, $\epsilon_i$ and $\epsilon_j$ are independent |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → X, 2 → Y, 3 → Z, 4 → W**
+
+- **1 → X:** Linearity / mean-zero errors means $\text{E}(\epsilon_i \mid x_i) = 0$, which makes the regression function $\text{E}(y \mid x) = \alpha + \beta x$ correct and the OLS estimates unbiased.
+- **2 → Y:** Homoscedasticity is constant error variance $\sigma^2$ across all $x$; a "funnel" pattern in the residual plot signals a violation.
+- **3 → Z:** Independence means each subject's error carries no information about another's ($\epsilon_i \perp \epsilon_j$ for $i \ne j$).
+- **4 → W:** Normality of the errors gives the $t$- and $F$-tests exact sampling distributions (and can be relaxed in large samples via the CLT).
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Model Assumptions".
+
+:::
+
+### Question 9 — Diagnosing an assumption violation from a residual plot {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 1]`**
+
+After fitting GCSE on LRT, you examine the **residuals-vs-fitted** plot. The points form a clear **funnel**: residuals are tightly clustered near zero for low fitted values but fan out into a much wider band for high fitted values. The LOWESS curve through the residuals is essentially flat at zero. Which assumption is **most clearly violated**, and what is the practical consequence?
+
+A. Linearity is violated; the OLS slope estimate is biased.
+
+B. Constant variance (homoscedasticity) is violated; the standard errors and $p$-values are unreliable.
+
+C. Normality is violated; the point estimates of $\alpha$ and $\beta$ are no longer the least-squares solution.
+
+D. Independence is violated; the residuals must sum to a nonzero value.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** A funnel shape — residual spread changing systematically with the fitted values — is the signature of **heteroscedasticity** (non-constant variance). The *flat* LOWESS curve indicates linearity is fine; it is the *spread*, not the *mean*, that changes. Heteroscedasticity does not bias the slope/intercept, but it invalidates the usual standard errors, so $t$-tests, $p$-values, and confidence intervals become unreliable.
+- **Why not A:** Nonlinearity shows up as a *curved* LOWESS pattern in the mean of the residuals — here the curve is flat. Also, under heteroscedasticity the slope remains unbiased.
+- **Why not C:** Non-normality is read from the Q-Q plot, not a funnel. And OLS estimates remain the least-squares solution regardless of normality — normality only affects the exactness of test distributions.
+- **Why not D:** With an intercept, residuals *always* sum to zero by construction; a funnel does not change that, and it is not a test of independence.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Checking Each Assumption".
+
+:::
+
+### Question 10 — Confidence interval vs. prediction interval {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 1]`**
+
+At LRT = 10, you compute two intervals for GCSE: (i) a 95% interval for the *mean* GCSE of all students with LRT = 10, and (ii) a 95% interval for the GCSE of *one individual* student with LRT = 10. Which is wider, and why?
+
+A. The prediction interval (ii) is wider, but only because it uses a larger $t$ critical value (multiplier) than the confidence interval.
+
+B. The confidence interval (i) is wider, because estimating a population mean is intrinsically harder than predicting one observed individual.
+
+C. They are exactly the same width, because both are centered at the same fitted value $\hat{y}$ and use the same data.
+
+D. The prediction interval (ii) is wider, because it adds the residual variance $\sigma^2$ for an individual on top of the uncertainty in the estimated regression line.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** The confidence interval for the mean captures only uncertainty in estimating $\alpha$ and $\beta$ (the location of the line). The prediction interval for an individual adds the residual variance $\sigma^2$ — individual observations scatter around the line — so it is always wider.
+- **Why not A:** Both intervals use the same $t$ critical value (same confidence level, same df). The width difference comes from the *standard error* (the extra $\sigma^2$), not from a different multiplier.
+- **Why not B:** This reverses the logic. Predicting a single noisy individual is *harder* (wider) than pinning down the average.
+- **Why not C:** Sharing a center does not equalize widths; the PI carries the extra $\sigma^2$ term that the CI lacks.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Prediction Intervals".
+
+:::
+
+### Question 11 — Computing a fitted value ŷ {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 1]`**
+
+A regression of GCSE on LRT yields the prediction equation
+
+$$\hat{y} = 5 + 0.6\,x$$
+
+where $x$ is the LRT score. For a student with **LRT = 10**, the predicted (fitted) GCSE score $\hat{y}$ is ________.
+
+#### Answer & Rationale
+
+**Correct answer: 11** (accept 10.9–11.1)
+
+- **Computation:** $\hat{y} = 5 + 0.6 \times 10 = 5 + 6 = 11$ GCSE points.
+- **Common errors to avoid:** Reporting 6 (using only the slope term $0.6 \times 10$ and forgetting the intercept), or 65 (multiplying $5 + 0.6$ by 10). The fitted value combines the intercept and the slope-times-$x$ term, in that order.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "OLS Estimation".
+
+:::
+
+### Question 12 — Regression to the mean as an artifact {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 1]`**
+
+A district selects the **50 lowest-scoring** students on a fall reading test, enrolls them in tutoring, and finds their average score rises by 8 points by spring. The fall–spring correlation is well below 1. Before crediting the tutoring, which explanation must be ruled out?
+
+A. Regression to the mean: extreme low scorers tend to drift toward the average on a retest, even with no intervention.
+
+B. Regression to the mean guarantees the gain is entirely real, because the same students were measured twice.
+
+C. The gain proves the tutoring worked, since the average clearly increased from fall to spring.
+
+D. Regression to the mean only affects the *highest* scorers, so a group selected for low scores is immune to it.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** Whenever $|r| < 1$, a group selected for *extreme* scores on one measurement will, on a second measurement, tend to move *toward the mean* — a statistical artifact of imperfect correlation (measurement error, "bad day" effects). A group chosen for low fall scores will therefore tend to rise in spring with *no* treatment at all, so the 8-point gain cannot be attributed to tutoring without a control group.
+- **Why not B:** Regression to the mean is exactly the reason the apparent gain might *not* be real; it does not certify the effect. Re-measuring the same students is what *creates* the artifact.
+- **Why not C:** A simple pre–post increase in a selected extreme group is precisely the pattern regression to the mean produces by itself; an uncontrolled before/after comparison cannot establish causation.
+- **Why not D:** Regression to the mean is symmetric — it pulls *both* extreme-high and extreme-low groups toward the average. A low-selected group is fully subject to it.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Regression to the Mean".
+
+:::
+
+### Question 13 — A binary dummy's coefficient = difference in group means {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 1]`**
+
+Using two schools from the `gcse` data, you regress GCSE on a single dummy variable coded **Battersea = 0** (reference) and **Chelsea = 1**. The group mean GCSE scores are:
+
+| School | Code | Mean GCSE |
+|:-------|:-----|---------:|
+| Battersea | 0 | $-1.20$ |
+| Chelsea | 1 | $3.30$ |
+
+For the model $\hat{y} = a + b\,(\text{Chelsea dummy})$, the intercept $a$ equals the Battersea mean. Compute the dummy-variable slope coefficient $b$ (the Chelsea − Battersea difference). Report to two decimals.
+
+$b = $ ________
+
+#### Answer & Rationale
+
+**Correct answer: 4.50** (accept 4.4–4.6)
+
+- **Computation:** With a single 0/1 dummy, the intercept is the reference-group mean ($a = -1.20$, Battersea) and the slope is the difference in group means: $b = \text{mean}_{\text{Chelsea}} - \text{mean}_{\text{Battersea}} = 3.30 - (-1.20) = 4.50$ GCSE points. Chelsea students score 4.50 points higher than Battersea students, on average.
+- **Common error to avoid:** Reporting 3.30 (the Chelsea *mean*) or $-1.20$ (the Battersea mean / intercept). The requested quantity is the slope on the dummy, which equals Chelsea − Battersea.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Regression with a Dummy Variable".
+
+:::
+
+### Question 14 — Regression on a dummy ≡ two-sample t-test {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 1]`**
+
+**True or False:** Testing $H_0: \beta = 0$ for the slope in a regression of GCSE on a single Battersea/Chelsea dummy variable tests the **same** null hypothesis as a pooled (equal-variance) independent-samples $t$-test comparing the two schools' mean GCSE scores — and the two procedures satisfy $F = t^2$.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A (True) is correct:** Regression on a single binary dummy and the pooled independent-samples $t$-test test the *same* null hypothesis. In regression, $H_0: \beta = 0$ says the dummy coefficient (the Chelsea − Battersea mean difference) is zero; in the $t$-test, $H_0: \mu_1 = \mu_2$ says the two group means are equal. These are identical statements, they share the same assumptions (equal variance, normal errors, independence), and they yield identical $p$-values, with $F = t^2$.
+- **Why "False" is wrong:** A student might treat the $t$-test and regression as unrelated procedures. In fact the $t$-test is a *special case* of regression with one dummy predictor — a central unifying theme that extends to ANOVA and ANCOVA.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Equivalence with the Independent Samples $t$-test".
+
+:::
+
+### Question 15 — Association, not causation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 1]`**
+
+**True or False:** In the regression of GCSE on LRT (observational school data), the slope is positive and statistically significant ($p < .001$). This result, on its own, proves that raising a student's LRT score would *cause* their GCSE score to increase.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** A significant slope establishes a statistically reliable *association* between LRT and GCSE — that they co-vary — not a *causal* effect. With observational data, unmeasured confounders (motivation, home environment, school quality) could drive both variables, so intervening to raise LRT would not necessarily change GCSE. Causal claims require a design that rules out confounders, such as a randomized experiment.
+- **Why "True" is wrong:** Conflating statistical significance with causation is a core misconception. Significance speaks only to whether the association is distinguishable from zero (a sampling question); it says nothing about *why* the variables move together.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Association, Not Causation".
+
+:::
+
+## Coverage
+
+This quiz draws every item from Lecture Notes Ch. 1. The 15 items total **20 points** (Multiple Choice ×7, True/False ×3, Fill-in-the-Blank ×3, Matching ×1, Multiple Answer ×1) and span all three difficulty levels.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | Response vs explanatory variable | Multiple Choice | Conceptual | 1 |
+| 2 | Slope interpretation in context | Multiple Choice | Applied | 1 |
+| 3 | Intercept interpretation / extrapolation | Multiple Choice | Conceptual | 1 |
+| 4 | What OLS minimizes | True/False | Conceptual | 1 |
+| 5 | Consequences of OLS (line through means; residuals sum to 0) | Multiple Answer | Conceptual | 2 |
+| 6 | Compute $R^2$ from SSE/TSS | Fill-in-the-Blank | Applied | 2 |
+| 7 | $R^2 = r^2$; sign of $r$ | Multiple Choice | Applied | 1 |
+| 8 | Four assumptions ↔ meanings | Matching | Conceptual | 2 |
+| 9 | Diagnose heteroscedasticity from a residual plot | Multiple Choice | Challenge | 1 |
+| 10 | Confidence vs prediction interval | Multiple Choice | Conceptual | 1 |
+| 11 | Compute a fitted value $\hat{y}$ | Fill-in-the-Blank | Applied | 2 |
+| 12 | Regression to the mean as an artifact | Multiple Choice | Challenge | 1 |
+| 13 | Dummy coefficient = difference in group means | Fill-in-the-Blank | Applied | 2 |
+| 14 | Dummy regression ≡ two-sample $t$-test | True/False | Conceptual | 1 |
+| 15 | Association, not causation | True/False | Conceptual | 1 |
+
+: Quiz 1 item map. {.striped}

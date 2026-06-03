@@ -1,0 +1,210 @@
+---
+title: "Blackboard Setup Specification"
+---
+
+## Purpose
+
+This appendix is the **deployment-ready specification** for building the six BER 640 module quizzes in Blackboard. It collects everything OTIDE needs in one place: the question-type mapping, the per-quiz deployment settings, the release schedule, the numeric-answer (tolerance) policy, and a complete **answer-key summary** for every item. Each quiz's content (stems, options, rationale) lives in its chapter; this appendix is the configuration layer on top of it.
+
+::: {.callout-important}
+## Items flagged for instructor confirmation
+A few settings are **proposed defaults** (see the [Item-Writing Style Guide](style-guide.qmd)). Confirm before deployment: the **60-minute time limit**, the **answer-release timing** ("after the availability window closes"), and the **exact open/due calendar dates** (set from the official OTIDE Fall 2026 Course Schedule). Attempts (Unlimited), score handling (Highest), 6 quizzes, and 10% weight are fixed by the course's mastery design.
+:::
+
+## Question-type mapping
+
+Every item is one of six **auto-gradable** Blackboard question types, so quizzes score instantly and support unlimited attempts with no manual grading.
+
+| Book item type | Blackboard question type | Notes |
+|:---------------|:-------------------------|:------|
+| Multiple Choice | **Multiple Choice** | One correct answer. Enable answer-order randomization. |
+| Multiple Answer | **Multiple Answer** | "Select all that apply." Partial credit OFF (all-or-nothing) unless OTIDE prefers partial. |
+| True/False | **True/False** | — |
+| Matching | **Matching** | Enter each prompt → response pair. Enable order randomization. |
+| Fill-in-the-Blank (numeric) | **Calculated Numeric** (or Fill in the Blank, Number) | Set the keyed value + the tolerance from the table below. |
+| Fill-in-Multiple-Blanks | **Fill in Multiple Blanks** | One numeric blank per sub-answer, each with its own tolerance. |
+
+## Master settings table
+
+The same deployment settings apply to all six quizzes except the availability week.
+
+| Quiz | Module | Available after | Open ≈ (Fall 2026) | Items | Points | Time limit | Attempts | Score kept | Show correct answers |
+|:-----|:-------|:----------------|:-------------------|:-----:|:------:|:----------:|:--------:|:-----------|:---------------------|
+| Quiz 1 | Foundations of Regression | Week 3 | early Sep | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 2 | Categorical Predictors | Week 5 | mid Sep | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 3 | Interactions | Week 7 | early Oct | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 4 | Model Building & Diagnostics | Week 9 | mid Oct | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 5 | Logistic Regression | Week 11 | late Oct | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 6 | Logistic Diagnostics | Week 12 | early Nov | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
+
+: The "Open ≈" column is an approximate calendar guide only; the course runs Aug 19 – Dec 4, 2026, so the authoritative open/due dates come from the OTIDE Course Schedule (Camille sets the Grade Center dates). {.striped}
+
+::: {.callout-note}
+## Recommended Grade Center / feedback configuration
+- **Multiple attempts:** Unlimited; **score kept = Highest**.
+- **Per-attempt feedback:** show the **score** and **which questions were incorrect** after each submission — but **not** the correct answers, to preserve item integrity across unlimited retakes.
+- **Show correct answers + rationale:** only **after the availability window closes**.
+- **Question delivery:** randomize **question order** and **answer-option order** (neutralizes any answer-position pattern in the print source).
+- **Weight:** the 6 quizzes together count **10%** of the final grade.
+:::
+
+## Numeric-answer (tolerance) policy
+
+For every Fill-in-the-Blank / Fill-in-Multiple-Blanks item, configure Blackboard's numeric answer with the **keyed value and tolerance** below. Where the stem asks for a *proportion*, accept the decimal form (not the percentage); where it asks for a percent, accept the number without the `%` sign.
+
+| Quiz · Item | Keyed value | Accept range | Format note |
+|:------------|:-----------:|:-------------|:------------|
+| Q1 · 6 | 0.30 | 0.29 – 0.31 | proportion (also accept 30 if entered as a percent) |
+| Q1 · 11 | 11 | 10.9 – 11.1 | also accept 11.0 |
+| Q1 · 13 | 4.50 | 4.4 – 4.6 | also accept 4.5 |
+| Q2 · 3 | 3.7 | 3.6 – 3.8 | — |
+| Q2 · 9 | 73.0 | 72.9 – 73.1 | also accept 73 |
+| Q2 · 11 | 4.00 | 3.95 – 4.05 | also accept 4 |
+| Q3 · 5 | 11.68 | 11.6 – 11.8 | — |
+| Q3 · 6 | −1.10 | −1.15 – −1.05 | negative value |
+| Q3 · 9 (FIMB) | 2.50 / 0.30 / 11.78 / 0.54 | ±0.05 each | four numeric blanks |
+| Q4 · 3 | 3.0 | 3.0 – 3.1 | percent (exact 3.05 also acceptable) |
+| Q4 · 7 | 0.054 | 0.053 – 0.055 | — |
+| Q4 · 14 | 5.0 | 4.9 – 5.1 | also accept 5 |
+| Q5 · 4 | 4 | 3.9 – 4.1 | also accept 4.0 |
+| Q5 · 7 | 2.0 | 1.99 – 2.01 | — |
+| Q5 · 10 | 0.75 | 0.74 – 0.76 | proportion |
+| Q6 · 5 (FIMB) | 0.85 / 0.80 / 0.90 | ±0.01 each | three numeric blanks (proportions) |
+| Q6 · 14 | 3.0 | 2.95 – 3.05 | also accept 3 |
+
+## Answer-key summary
+
+Use these tables to verify the build and to spot-check Grade Center scoring. **Type** uses MC / MA / TF / MATCH / FIB / FIMB. (Question order and answer-option order are randomized at delivery, so the letters below refer to the source chapters, not necessarily what a student sees.)
+
+### Quiz 1 — Foundations (Week 3)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MC | B |
+| 2 | MC | B |
+| 3 | MC | C |
+| 4 | TF | False |
+| 5 | MA | A, B, D |
+| 6 | FIB | 0.30 |
+| 7 | MC | A |
+| 8 | MATCH | 1→X, 2→Y, 3→Z, 4→W |
+| 9 | MC | B |
+| 10 | MC | D |
+| 11 | FIB | 11 |
+| 12 | MC | A |
+| 13 | FIB | 4.50 |
+| 14 | TF | True |
+| 15 | TF | False |
+
+### Quiz 2 — Categorical Predictors (Week 5)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MC | B |
+| 2 | MC | C |
+| 3 | FIB | 3.7 |
+| 4 | TF | True |
+| 5 | MC | B |
+| 6 | TF | False |
+| 7 | MC | A |
+| 8 | MC | D |
+| 9 | FIB | 73.0 |
+| 10 | MATCH | 1→Y, 2→Z, 3→X, 4→W |
+| 11 | FIB | 4.00 |
+| 12 | MC | B |
+| 13 | MA | A, B, C |
+| 14 | TF | True |
+| 15 | MC | A |
+
+### Quiz 3 — Interactions (Week 7)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MC | A |
+| 2 | MATCH | 1→Y, 2→W, 3→X |
+| 3 | MC | B |
+| 4 | TF | False |
+| 5 | FIB | 11.68 |
+| 6 | FIB | −1.10 |
+| 7 | MC | C |
+| 8 | TF | True |
+| 9 | FIMB | 2.50 / 0.30 / 11.78 / 0.54 |
+| 10 | MC | D |
+| 11 | MC | A |
+| 12 | MC | C |
+| 13 | MC | B |
+| 14 | MA | A, B, D |
+| 15 | MC | D |
+
+### Quiz 4 — Model Building & Diagnostics (Week 9)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MC | A |
+| 2 | MATCH | 1→W, 2→X, 3→Y, 4→Z |
+| 3 | FIB | 3.0 |
+| 4 | MC | B |
+| 5 | TF | True |
+| 6 | MC | C |
+| 7 | FIB | 0.054 |
+| 8 | MC | D |
+| 9 | TF | False |
+| 10 | MATCH | 1→W, 2→X, 3→Y, 4→Z |
+| 11 | MC | A |
+| 12 | MC | B |
+| 13 | MC | C |
+| 14 | FIB | 5.0 |
+| 15 | MC | D |
+
+### Quiz 5 — Logistic Regression (Week 11)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MA | A, B, C |
+| 2 | MC | B |
+| 3 | MATCH | 1→X, 2→Y, 3→W |
+| 4 | FIB | 4 |
+| 5 | TF | False |
+| 6 | MC | A |
+| 7 | FIB | 2.0 |
+| 8 | MC | C |
+| 9 | TF | False |
+| 10 | FIB | 0.75 |
+| 11 | MC | D |
+| 12 | MC | B |
+| 13 | MC | C |
+| 14 | MC | A |
+| 15 | TF | True |
+
+### Quiz 6 — Logistic Diagnostics (Week 12)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MC | A |
+| 2 | TF | False |
+| 3 | MC | C |
+| 4 | MATCH | 1→W, 2→X, 3→Y, 4→Z |
+| 5 | FIMB | 0.85 / 0.80 / 0.90 |
+| 6 | MC | B |
+| 7 | TF | False |
+| 8 | MC | D |
+| 9 | MC | B |
+| 10 | MA | A, B, C |
+| 11 | MC | A |
+| 12 | MC | C |
+| 13 | MATCH | 1→Y, 2→Z, 3→W, 4→X |
+| 14 | FIB | 3.0 |
+| 15 | TF | True |
+
+## Mastery grading scale
+
+Each quiz is scored out of **20 points** and converted to a percentage; the Grade Center keeps the **highest** percentage across a student's unlimited attempts. The mastery bands (per the course [syllabus](../../website/assignment/quizzes.qmd)) are:
+
+| Score | Criteria |
+|:------|:---------|
+| Full credit | 80% or higher (≥ 16 / 20) |
+| Partial credit | 60–79% (12–15 / 20) |
+| Minimal credit | Below 60% (< 12 / 20) |
+| No credit | Quiz not attempted |
+
+The six quizzes together contribute **10%** of the final course grade.

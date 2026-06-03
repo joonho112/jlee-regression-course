@@ -1,0 +1,74 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "BER 640 Module Quizzes"
+  subtitle: "Questions, Answer Keys & Blackboard Setup"
+  author: "JoonHo Lee"
+  date: "2026"
+  date-format: "YYYY"
+  site-url: https://joonho112.github.io/jlee-regression-course/quizzes/
+  repo-url: https://github.com/joonho112/jlee-regression-course
+  repo-subdir: quizzes
+  repo-actions: [edit, issue]
+  search: true
+  reader-mode: true
+
+  sidebar:
+    style: floating
+    collapse-level: 2
+
+  chapters:
+    - index.qmd
+    - part: "Module Quizzes"
+      chapters:
+        - chapters/quiz1-foundations.qmd
+        - chapters/quiz2-categorical.qmd
+        - chapters/quiz3-interactions.qmd
+        - chapters/quiz4-building-diagnostics.qmd
+        - chapters/quiz5-logistic.qmd
+        - chapters/quiz6-logistic-diagnostics.qmd
+    - part: "Instructor Reference"
+      chapters:
+        - appendices/style-guide.qmd
+        - appendices/blueprints.qmd
+        - appendices/blackboard-setup.qmd
+    - references.qmd
+
+  page-navigation: true
+  back-to-top-navigation: true
+
+bibliography: references.bib
+csl: apa.csl
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    code-fold: true
+    code-tools: true
+    code-link: true
+    code-line-numbers: true
+    highlight-style: github
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    fig-width: 8
+    fig-height: 5
+    fig-dpi: 300
+    fig-align: center
+    df-print: kable
+
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+
+crossref:
+  fig-prefix: "Figure"
+  tbl-prefix: "Table"
+  eq-prefix: "Eq."
+  sec-prefix: "Section"

@@ -1,0 +1,465 @@
+---
+title: "Quiz 5: Logistic Regression"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Logistic Regression  ·  **Available after:** Week 11  ·  **Source:** Lecture Notes, [Ch. 9 (Simple Logistic Regression)](../../notes/chapters/09-simple-logistic-regression.qmd) and [Ch. 10 (Multiple Logistic Regression)](../../notes/chapters/10-multiple-logistic-regression.qmd).
+
+This quiz assesses logistic regression: why the linear probability model fails, the logistic function and the probability/odds/log-odds scales, coefficients and odds ratios, predicted probabilities and average marginal effects, adjusted odds ratios, Simpson's paradox, and Wald vs likelihood-ratio inference. A central focus is the distinction between an **odds ratio** and a **probability (risk) ratio**. Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 15 |
+| Total points | 20 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 11 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 5. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — Why the linear probability model fails {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Answer · 2 pts · Conceptual · Notes Ch. 9]`**
+
+A researcher fits an ordinary least squares model `survived ~ age` to the Titanic data, treating the 0/1 survival indicator as if it were continuous and reading the fitted values as probabilities. **Select all that apply** — which of the following are genuine problems with this linear probability model?
+
+A. The model can produce fitted "probabilities" below 0 or above 1, which are impossible values.
+
+B. The error variance is not constant: for a binary outcome $\text{Var}(y_i) = \pi_i(1-\pi_i)$ depends on the mean, violating homoscedasticity.
+
+C. Forcing a straight line onto a probability implies a constant per-year effect, even though a probability should level off as it approaches 0 and 1.
+
+D. The model cannot even be estimated, because least squares requires a normally distributed outcome and returns an error for a 0/1 variable.
+
+#### Answer & Rationale
+
+**Correct answers: A, B, C**
+
+- **Why A is correct:** A straight line is unbounded, so for extreme ages the fitted value crosses below 0 or above 1 — values that cannot be probabilities.
+- **Why B is correct:** For a Bernoulli outcome the variance $\pi_i(1-\pi_i)$ is mechanically tied to the mean, so it cannot be constant across observations — a direct violation of OLS homoscedasticity.
+- **Why C is correct:** Probabilities should approach 0 and 1 asymptotically (an S-shape), not change at a constant rate; a linear relationship across the whole range is implausible.
+- **Why not D:** This is the misconception. OLS runs without error on a 0/1 outcome — that is precisely the trap. The LPM is computable; it is just statistically inappropriate (normality concerns the *errors* and affects inference, not whether the model can be fit).
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "The Linear Probability Model and Its Problems".
+
+:::
+
+### Question 2 — The logistic function {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 9]`**
+
+In logistic regression the linear predictor $\eta = \alpha + \beta x$ ranges over all real numbers, but a probability must lie in $(0,1)$. The model passes $\eta$ through the logistic function $f(\eta) = \dfrac{1}{1 + e^{-\eta}}$. What is the purpose of this transformation?
+
+A. It makes the relationship between $x$ and the probability exactly linear.
+
+B. It maps any value in $(-\infty, +\infty)$ onto $(0, 1)$ via a monotone S-shaped curve, so the fitted value is always a valid probability.
+
+C. It forces the residuals of the model to be normally distributed.
+
+D. It removes the need to estimate an intercept term, since the curve always passes through the origin.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** The logistic (sigmoid) function takes any real number and returns a value strictly between 0 and 1, approaching 0 as $\eta \to -\infty$ and 1 as $\eta \to +\infty$ and passing through 0.5 at $\eta = 0$. This is exactly what lets the output be read as a probability.
+- **Why not A:** The opposite is true — the transformation makes the relationship between $x$ and the *probability* nonlinear (S-shaped). The model is linear on the *log-odds* scale, not the probability scale.
+- **Why not C:** The logistic function has nothing to do with residual normality; logistic regression does not assume normal residuals.
+- **Why not D:** The curve passes through $(0, 0.5)$, not the origin, and the intercept $\alpha$ is still estimated — it shifts the curve horizontally.
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "The Logistic Function as a Solution".
+
+:::
+
+### Question 3 — Matching the three scales {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 9]`**
+
+Match each scale for expressing the chance of a binary event (left) to its correct range and "even-chance" reference value (right).
+
+| Scale | | Range / even-chance reference |
+|:------|:--|:------------------------------|
+| 1. Probability, $\pi$ | | Y. Ranges over $[0, +\infty)$; equals 1 when the event is as likely as not |
+| 2. Odds, $\pi/(1-\pi)$ | | W. Ranges over $(-\infty, +\infty)$; equals 0 when the event is as likely as not — the scale on which the model is linear |
+| 3. Log-odds (logit), $\log[\pi/(1-\pi)]$ | | X. Bounded on $[0, 1]$; equals 0.5 when the event is as likely as not |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → X, 2 → Y, 3 → W**
+
+- **1 → X:** Probability is bounded in $[0, 1]$, with 0.5 marking an even chance.
+- **2 → Y:** Odds are the ratio of successes to failures, bounded below by 0 with no upper bound; odds $= 1$ corresponds to $\pi = 0.5$.
+- **3 → W:** The log-odds (logit) is unbounded in both directions and symmetric around 0 — which is exactly why it is the outcome of the linear model, $\text{logit}(\pi) = \alpha + \beta x$.
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "The Three Scales".
+
+:::
+
+### Question 4 — Converting among the scales {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 9]`**
+
+A model estimates that the probability a passenger survives is $\pi = 0.80$. Compute the **odds** of survival. Give your answer as a single number.
+
+Odds = ________
+
+#### Answer & Rationale
+
+**Correct answer: 4** (accept 4.0; equivalently "4 to 1")
+
+- **Computation:** $\text{odds} = \dfrac{\pi}{1-\pi} = \dfrac{0.80}{1 - 0.80} = \dfrac{0.80}{0.20} = 4$. We expect 4 survivors for every 1 non-survivor — "4 to 1 in favor."
+- **Common error:** Reporting 0.80 (the probability itself) or 0.20 ($1-\pi$). Odds divide the success probability by the *failure* probability, not by the total.
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "Conversion Formulas".
+
+:::
+
+### Question 5 — Linear on the logit scale, fit by MLE {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 9]`**
+
+**True or False:** A logistic regression of Titanic survival is linear on the log-odds (logit) scale, and its coefficients are estimated by **ordinary least squares**, exactly as in linear regression.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** The first half is right — the model $\text{logit}(\pi_i) = \alpha + \beta x_i$ is linear on the logit scale. But the coefficients are estimated by **maximum likelihood (MLE)**, not OLS. MLE finds the parameters that make the observed 0/1 data most probable; there is no closed-form solution, an iterative algorithm (e.g., Fisher scoring) is used, and inference relies on $z$-tests rather than $t$-tests.
+- **Why "True" is wrong:** Students often assume that because the model is "linear" on some scale, OLS must apply. OLS minimizes squared residuals for a continuous outcome; it is not used to fit logistic regression.
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "OLS vs MLE".
+
+:::
+
+### Question 6 — What the coefficients mean {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 9]`**
+
+A logistic regression of Titanic survival on `sex` (1 = female, 0 = male) returns the coefficient for `sex` as $b = +2.42$ on the model's natural scale. What does this raw coefficient of $+2.42$ directly represent?
+
+A. The change in the **log-odds** of survival when moving from male to female; its positive sign means females have higher odds of survival.
+
+B. The change in the **probability** of survival when moving from male to female.
+
+C. The **odds ratio** comparing females to males.
+
+D. The number of additional female survivors per male survivor.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** Logistic regression coefficients live on the **log-odds** scale. $b$ is the change in log-odds for a one-unit change in the predictor (here, male → female). A positive $b$ means the log-odds — and therefore the odds and probability — of survival are higher for females.
+- **Why not B:** The raw coefficient is not a probability change; the effect on probability is nonlinear and depends on the baseline (that is the marginal-effect question).
+- **Why not C:** The odds ratio is $e^{b} = e^{2.42} \approx 11.3$, the *exponentiated* coefficient. The raw $b$ is the log-odds difference.
+- **Why not D:** Coefficients are not counts of people; they are differences in log-odds.
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "What the Parameters Mean".
+
+:::
+
+### Question 7 — Computing an odds ratio from a coefficient {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 9]`**
+
+A logistic regression predicting Titanic survival reports a coefficient of $b = 0.693$ (recall $\ln 2 \approx 0.693$) for a binary predictor. Compute the **odds ratio** associated with this coefficient, $e^{b}$. Give your answer as a single number.
+
+Odds ratio = ________
+
+#### Answer & Rationale
+
+**Correct answer: 2.0** (accept 1.99–2.01)
+
+- **Computation:** $\text{OR} = e^{b} = e^{0.693} = e^{\ln 2} = 2.0$. A one-unit increase in the predictor **multiplies the odds of survival by 2** (the odds double).
+- **Common error:** Reporting $b = 0.693$ as the OR forgets to exponentiate; the raw coefficient is on the log-odds scale. Another error is computing $2 \times 0.693 = 1.386$ — the conversion is exponentiation, not doubling.
+- **Interpretation note:** "the odds double" does **not** mean "the probability doubles" (see Q9).
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "Exponentiated Coefficients".
+
+:::
+
+### Question 8 — The odds ratio as a ratio of group odds {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 9]`**
+
+In the NELS:88 `disc` data, a logistic regression predicts whether a student was sent to the office from a single dummy predictor, `male` (1 = male, 0 = female). From the model, the **odds** of being sent to the office are:
+
+| Group | Odds |
+|:------|-----:|
+| Male ($x = 1$) | 0.90 |
+| Female ($x = 0$) | 0.30 |
+
+What odds ratio $e^{\beta}$ does the model report for males vs females?
+
+A. 0.60 — the difference in the two groups' odds, $0.90 - 0.30$.
+
+B. 1.20 — the two groups' odds combined.
+
+C. 3.00 — the ratio of the two groups' odds, $0.90 / 0.30$.
+
+D. 0.33 — the odds for females relative to males, $0.30 / 0.90$.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** For a single dummy predictor, the exponentiated coefficient equals the ratio of the two groups' odds: $\text{OR} = \dfrac{\text{odds}_{\text{male}}}{\text{odds}_{\text{female}}} = \dfrac{0.90}{0.30} = 3.0$. The odds of an office referral are three times as high for males.
+- **Why not A:** An odds ratio is a *ratio*, not a difference of odds.
+- **Why not B:** Combining (adding) the odds does not correspond to any meaningful quantity; the OR is a quotient.
+- **Why not D:** This inverts the ratio, giving the OR for females vs males. The question asks for males relative to females.
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "Computing the Odds Ratio Manually".
+
+:::
+
+### Question 9 — An odds ratio is not a probability ratio {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 9]`**
+
+**True or False:** On the Titanic, women survived at probability 0.727 and men at 0.191, giving an odds ratio (female vs male) of about 11.3. Because the odds ratio is 11.3, it is correct to say that women were about **11.3 times as likely to survive** as men.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** "11.3 times as likely" is a statement about *probability* (relative risk), but 11.3 is the **odds ratio**, not the probability ratio. The actual probability ratio is $0.727 / 0.191 \approx 3.8$: women were about 3.8 times as *likely* to survive, while their *odds* were 11.3 times higher.
+- **Why they diverge here:** The odds ratio approximates the probability ratio (relative risk) **only when the outcome is rare** in both groups (roughly $\pi < 0.10$). Titanic survival is common (38% overall), so the OR substantially overstates the relative risk.
+- **The misconception tested:** Equating "odds ratio" with "times more likely" is one of the most common errors in applied research. An OR is a ratio of *odds*, not of probabilities.
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "Odds Ratios Are NOT Probability Ratios!".
+
+:::
+
+### Question 10 — Predicted probability from the model {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 9]`**
+
+For a particular Titanic passenger, a fitted logistic model gives a linear predictor (log-odds) of $\eta = 1.0986$ (note $\ln 3 \approx 1.0986$). Using $\pi = \dfrac{1}{1 + e^{-\eta}}$, compute this passenger's **predicted probability** of survival. Give your answer as a single number.
+
+$\pi$ = ________
+
+#### Answer & Rationale
+
+**Correct answer: 0.75** (accept 0.74–0.76)
+
+- **Computation:** With $\eta = \ln 3$, the odds are $e^{\eta} = 3$, so $\pi = \dfrac{\text{odds}}{1+\text{odds}} = \dfrac{3}{1+3} = \dfrac{3}{4} = 0.75$. Equivalently, $\pi = 1/(1 + e^{-\ln 3}) = 1/(1 + 1/3) = 3/4$.
+- **Common error:** Reporting 1.0986 or 3 (stopping at the log-odds or odds scale instead of converting all the way to probability), or 0.25 (computing $1-\pi$).
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "Predicted Probabilities from the Model".
+
+:::
+
+### Question 11 — Interpreting an average marginal effect {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 9]`**
+
+For the Titanic sex model, the odds ratio for female vs male is about 11.3, but the **average marginal effect (AME)** of sex on survival is about $+0.54$. Which statement best interprets the AME and explains why it differs from the odds ratio?
+
+A. The AME of 0.54 means females have 54% higher odds of survival than males.
+
+B. The AME and the odds ratio should be equal; a difference of this size indicates the model was misspecified.
+
+C. The AME of 0.54 means the model correctly classifies 54% of passengers.
+
+D. On average, being female rather than male is associated with about a 54-percentage-point higher probability of survival; the AME is on the probability scale, while the OR is a multiplicative effect on the odds.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** The AME averages the change in *predicted probability* across observations — here, being female is associated with roughly a 54-percentage-point increase in survival probability. It differs from the OR because they live on different scales: the AME is an additive effect on the probability scale, whereas the OR (11.3) is a multiplicative effect on the odds scale. They answer different questions and should not match.
+- **Why not A:** 0.54 is a change in probability (about 54 percentage points), not "54% higher odds" (that would be an odds ratio).
+- **Why not B:** There is no expectation that AME and OR coincide; they are different, equally valid summaries. A mismatch is normal, not evidence of misspecification.
+- **Why not C:** The AME is not a classification accuracy; it is a marginal effect on predicted probability.
+- **Source:** Lecture Notes, Ch. 9 (Simple Logistic Regression), "Computing Average Marginal Effects".
+
+:::
+
+### Question 12 — Adjusted odds ratios {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 10]`**
+
+The Berkeley admissions model is `admitted ~ male + engineering`. The exponentiated `male` coefficient, $e^{\beta_{\text{male}}}$, is the **adjusted odds ratio** for sex. What does "adjusted" mean here?
+
+A. The odds ratio has been rescaled so that it lies between 0 and 1.
+
+B. The odds ratio for males vs females is estimated **holding department (engineering) constant** — it isolates the sex effect from the department effect.
+
+C. The odds ratio has been corrected for measurement error in the admission variable.
+
+D. The odds ratio for males vs females, **ignoring** which department they applied to.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** In a multiple logistic regression, each coefficient carries a "controlling for the other predictors" interpretation. $e^{\beta_{\text{male}}}$ is the odds ratio for sex *within levels of department* — it isolates the sex effect while holding department fixed, the logistic analogue of an ANCOVA-adjusted effect.
+- **Why not A:** Adjustment has nothing to do with rescaling into [0, 1]; odds ratios remain on $(0, \infty)$.
+- **Why not C:** "Adjusted" refers to controlling for a confounder (department), not correcting for measurement error.
+- **Why not D:** Ignoring department gives the *unadjusted* odds ratio (about 3.25), which is exactly what the adjusted model (≈ 1.1) corrects.
+- **Source:** Lecture Notes, Ch. 10 (Multiple Logistic Regression), "Adjusted Odds Ratios".
+
+:::
+
+### Question 13 — Simpson's paradox as omitted-variable bias {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 10]`**
+
+At Berkeley, the **unadjusted** odds ratio for male admission is about 3.25 (apparent male advantage), but after **controlling for department** the adjusted odds ratio falls to about 1.1, and within each department women are admitted at rates equal to or above men. Which statement best explains this reversal?
+
+A. A coding error in the dummy variables that disappears once the data are cleaned.
+
+B. Evidence that sex and department interact, so a product term `male × engineering` is required to fit the data.
+
+C. Omitted-variable bias (Simpson's paradox): department confounds the sex–admission association, so omitting it biases the unadjusted sex effect.
+
+D. Proof that the adjusted model is wrong, since a real effect cannot shrink so dramatically when a control is added.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** Simpson's paradox here is omitted-variable bias applied to a binary outcome. Department satisfies both OVB conditions: (1) it affects the outcome (Engineering admits at a much higher rate than Psychology), and (2) it is associated with the predictor of interest (women applied disproportionately to the harder-to-enter department). Omitting it produces a biased sex effect; including it removes the bias and the apparent male advantage largely vanishes.
+- **Why not A:** The reversal is a genuine confounding phenomenon in correctly coded data, not a miscoding artifact.
+- **Why not B:** Simpson's paradox is about confounding (a main-effect control), not interaction; it is resolved by *adding department as a covariate*, not a product term.
+- **Why not D:** A large shrinkage when a confounder is added is the expected, correct behavior — it is the whole point of adjustment.
+- **Source:** Lecture Notes, Ch. 10 (Multiple Logistic Regression), "Simpson's Paradox = OVB for Logistic Regression".
+
+:::
+
+### Question 14 — Wald test versus likelihood-ratio test {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 10]`**
+
+A researcher fitting a Titanic logistic model has a small number of events and a coefficient that is large in magnitude. They want the most reliable test of whether that predictor belongs in the model. Which statement about the **Wald** versus the **likelihood-ratio (LR)** test is correct?
+
+A. The LR test, $G^2 = 2(\ell_{\text{full}} - \ell_{\text{reduced}})$, compares two nested models and is generally more reliable in small samples or when a coefficient is large; the Wald test, $z = b/\text{SE}$, uses only the full model and can be unreliable in those situations.
+
+B. The Wald and LR tests always give identical $p$-values, so the choice never matters.
+
+C. The Wald test requires fitting two nested models, while the LR test requires only one.
+
+D. The LR test uses a standard normal distribution, while the Wald test uses a chi-squared distribution.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** The LR test compares the log-likelihoods of a full and a reduced (nested) model, $G^2 = 2(\ell_{\text{full}} - \ell_{\text{reduced}})$, referred to a chi-squared distribution. It is generally more reliable in small samples and when a coefficient is large in magnitude (where the Wald test can behave poorly). The Wald test, $z = b/\text{SE}$, needs only the full model and is the default in software output.
+- **Why not B:** The two tests are only asymptotically equivalent; in finite samples their $p$-values can differ, which is exactly why the choice matters.
+- **Why not C:** This reverses them: the **LR** test needs two models (full and reduced); the **Wald** test needs only one.
+- **Why not D:** This swaps the distributions: the Wald statistic is referred to the standard normal, the LR statistic to chi-squared.
+- **Source:** Lecture Notes, Ch. 10 (Multiple Logistic Regression), "Wald vs Likelihood Ratio: When to Use Which?".
+
+:::
+
+### Question 15 — Why confidence intervals for odds ratios are asymmetric {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 10]`**
+
+**True or False:** A 95% confidence interval for an odds ratio, computed as $\exp(b \pm 1.96 \cdot \text{SE})$, is generally **asymmetric** around the point estimate $e^b$ (the point estimate is not the arithmetic midpoint of the two limits), because a symmetric interval on the log-odds scale becomes asymmetric once it is exponentiated.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A (True) is correct:** The interval $b \pm 1.96 \cdot \text{SE}$ is symmetric on the **log-odds** scale, but exponentiating is a *nonlinear* transformation. The endpoints $\exp(b - 1.96\,\text{SE})$ and $\exp(b + 1.96\,\text{SE})$ are therefore **not** equidistant from $\exp(b)$ — the OR interval is asymmetric, with the point estimate closer to the lower limit.
+- **Why this is appropriate:** Odds ratios are bounded below by 0 with no upper bound, and on a ratio scale an OR of 2 (doubling) and 0.5 (halving) are equal-magnitude effects. The asymmetric interval respects that geometry.
+- **The misconception tested:** Expecting $e^b$ to sit at the midpoint of its CI, as it would for an OLS coefficient. The symmetry holds only on the log scale, not after back-transforming.
+- **Source:** Lecture Notes, Ch. 10 (Multiple Logistic Regression), "Why Asymmetric Confidence Intervals?".
+
+:::
+
+## Coverage
+
+This quiz draws from Lecture Notes Ch. 9 (Simple Logistic, 11 items) and Ch. 10 (Multiple Logistic, 4 items). The 15 items total **20 points** (Multiple Choice ×7, True/False ×3, Fill-in-the-Blank ×3, Matching ×1, Multiple Answer ×1) and span all three difficulty levels.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | Why the linear probability model fails | Multiple Answer | Conceptual | 2 |
+| 2 | The logistic function maps to (0,1) | Multiple Choice | Conceptual | 1 |
+| 3 | Three scales (probability/odds/log-odds) | Matching | Conceptual | 2 |
+| 4 | Convert probability → odds | Fill-in-the-Blank | Applied | 2 |
+| 5 | Linear on logit; fit by MLE | True/False | Conceptual | 1 |
+| 6 | Coefficients on the log-odds scale | Multiple Choice | Conceptual | 1 |
+| 7 | Odds ratio = $e^\beta$ | Fill-in-the-Blank | Applied | 2 |
+| 8 | Dummy OR = ratio of group odds | Multiple Choice | Applied | 1 |
+| 9 | Odds ratio ≠ probability ratio | True/False | Challenge | 1 |
+| 10 | Predicted probability from $\eta$ | Fill-in-the-Blank | Applied | 2 |
+| 11 | Average marginal effect | Multiple Choice | Applied | 1 |
+| 12 | Adjusted odds ratio | Multiple Choice | Conceptual | 1 |
+| 13 | Simpson's paradox = OVB | Multiple Choice | Challenge | 1 |
+| 14 | Wald vs likelihood-ratio test | Multiple Choice | Challenge | 1 |
+| 15 | Asymmetric CI for an odds ratio | True/False | Challenge | 1 |
+
+: Quiz 5 item map. {.striped}

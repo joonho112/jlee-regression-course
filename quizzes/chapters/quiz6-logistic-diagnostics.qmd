@@ -1,0 +1,478 @@
+---
+title: "Quiz 6: Logistic Diagnostics"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Logistic Diagnostics  ·  **Available after:** Week 12  ·  **Source:** Lecture Notes, [Ch. 11 (Logistic Regression Diagnostics)](../../notes/chapters/11-logistic-diagnostics.qmd), [Ch. 12 (Latent Response Models and GLMs)](../../notes/chapters/12-latent-response-glm.qmd), and [Ch. 13 (Ordinal Models)](../../notes/chapters/13-ordinal-models.qmd).
+
+This quiz assesses logistic regression diagnostics: goodness-of-fit tests and the sparseness problem, pseudo-$R^2$ measures, the classification table (accuracy/sensitivity/specificity), Cohen's $\kappa$, classification vs inference, residual and calibration plots, influence diagnostics, plus the latent-variable / GLM framework and the proportional-odds (ordinal) model. Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 15 |
+| Total points | 20 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 12 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 6. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — Goodness-of-fit tests require grouped data {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 11]`**
+
+A researcher fits a logistic regression to the `penalty` data using two binary predictors, `def_bl` (defendant Black) and `vic_bl` (victim Black). She reports a Pearson $X^2$ and a deviance $G^2$ goodness-of-fit statistic, each referred to a $\chi^2$ distribution. What feature of this analysis makes those $p$-values trustworthy?
+
+A. The two binary predictors collapse the 674 cases into only four covariate patterns, each with a large count, so the $\chi^2$ approximation holds.
+
+B. The sample size of 674 is large, which alone guarantees that $X^2$ and $G^2$ follow a $\chi^2$ distribution.
+
+C. The outcome is coded 0/1 rather than as a factor.
+
+D. The two statistics are numerically close, which confirms the model fits.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** $X^2$ and $G^2$ compare observed and expected counts *across covariate patterns*. Their $\chi^2$ reference distribution is valid only when the grouped table is non-sparse (expected cell counts $\geq 5$). Two binary predictors yield $J = 4$ patterns, each containing many of the 674 cases, so the approximation is sound.
+- **Why not B:** A large *total* $n$ does not help if it is split across thousands of patterns; with a continuous predictor $n = 674$ could give ≈674 unique patterns, each with $n_j = 1$. It is the small number of patterns relative to $n$ that matters.
+- **Why not C:** The 0/1-vs-factor coding of the response is a storage detail, not a sparseness condition.
+- **Why not D:** $X^2$ and $G^2$ are usually close but not equal, and equality would not "confirm fit"; both must be small relative to their degrees of freedom.
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "Goodness of Fit Tests".
+
+:::
+
+### Question 2 — Sparseness with a continuous predictor {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 11]`**
+
+**True or False:** For `survived ~ age` fit to the `titanic` data (with `age` continuous, so nearly every passenger has a unique covariate pattern), the Pearson $X^2$ and deviance $G^2$ statistics still follow a $\chi^2$ distribution, so their reported goodness-of-fit $p$-values can be interpreted normally.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** When a continuous predictor makes the number of covariate patterns $J$ approach $n$, most cells have $n_j = 1$ and the expected counts fall far below 5. The $\chi^2$ approximation for $X^2$ and $G^2$ then completely breaks down, and the resulting $p$-values are meaningless. The notes direct you to skip these tests (or use a grouped alternative like Hosmer–Lemeshow) with continuous predictors.
+- **Why "True" is wrong:** The ability to *compute* a statistic is not the same as the statistic *following its reference distribution*. Believing large $n$ rescues the test is the core sparseness misconception.
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "The Sparseness Problem".
+
+:::
+
+### Question 3 — Naming and interpreting pseudo-R² {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 11]`**
+
+A colleague reports that her `penalty` logistic model has "$R^2 = 0.28$." What is the single most important problem with this report, and what would 0.28 indicate if it were McFadden's $R^2$?
+
+A. The value is far too low to publish; a McFadden $R^2$ below 0.5 indicates an inadequate model.
+
+B. There is no problem; for logistic regression every pseudo-$R^2$ measure returns the same value, so naming it is optional.
+
+C. She failed to name *which* pseudo-$R^2$ it is; if it were McFadden's, a value in the 0.2–0.4 range would indicate an excellent-fitting model.
+
+D. The report is meaningless because a pseudo-$R^2$ must be read exactly like the linear-regression $R^2$ (proportion of variance explained), so 0.2–0.4 is weak.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** A bare "$R^2 = 0.28$" is ambiguous because logistic regression has several distinct pseudo-$R^2$ measures on different scales, so you must name the measure. For *McFadden's* specifically, values between 0.2 and 0.4 are considered excellent — so 0.28 would signal a strong model.
+- **Why not A:** McFadden values rarely approach 0.5; "below 0.5 = inadequate" misreads the scale.
+- **Why not B:** The measures (McFadden, Cox–Snell, Nagelkerke, Tjur, …) generally return *different* values; that is exactly why the name is required.
+- **Why not D:** McFadden's $R^2$ is a proportional reduction in *deviance*, not variance, and is not on the linear-$R^2$ scale; 0.2–0.4 reflects strong fit, not weak.
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "Which Pseudo R² Should I Report?".
+
+:::
+
+### Question 4 — Matching pseudo-R² measures to their properties {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Challenge · Notes Ch. 11]`**
+
+Match each pseudo-$R^2$ measure (left) to its distinguishing property (right).
+
+| Measure | | Distinguishing property |
+|:--------|:--|:------------------------|
+| 1. McFadden's $R^2$ | | Y. Rescales another measure so its theoretical maximum is exactly 1 |
+| 2. Cox–Snell $R^2$ | | W. The proportional reduction in deviance, $(D_0 - D_1)/D_0$; tied to the likelihood ratio |
+| 3. Nagelkerke $R^2$ | | Z. The difference in mean predicted probability between the $y=1$ and $y=0$ groups; needs no likelihood |
+| 4. Tjur's $R^2$ | | X. Based on the likelihood ratio, but its maximum is strictly less than 1 — a conceptual nuisance |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → W, 2 → X, 3 → Y, 4 → Z**
+
+- **1 → W (McFadden):** $(D_0 - D_1)/D_0$, the proportional reduction in deviance, directly tied to the likelihood ratio.
+- **2 → X (Cox–Snell):** built on the likelihood ratio, $1 - (L_0/L_1)^{2/n}$, but its maximum is below 1 — the conceptual nuisance.
+- **3 → Y (Nagelkerke):** the adjusted Cox–Snell, rescaling the maximum up to 1.
+- **4 → Z (Tjur):** the coefficient of discrimination, $\bar{\hat\pi}_1 - \bar{\hat\pi}_0$, requiring only mean predicted probabilities (no likelihood).
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "Six Common Pseudo R² Measures".
+
+:::
+
+### Question 5 — Accuracy, sensitivity, and specificity {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 11]`**
+
+A `titanic` survival model is classified at the 0.5 cutoff (event = survived). The resulting classification table ($n = 200$) is:
+
+|  | Observed survived ($y=1$) | Observed died ($y=0$) |
+|:---|:---:|:---:|
+| Predicted survived ($\hat{y}=1$) | TP = 80 | FP = 10 |
+| Predicted died ($\hat{y}=0$) | FN = 20 | TN = 90 |
+
+Compute, as proportions rounded to two decimals:
+
+- **[blank 1]** Overall accuracy = ________
+- **[blank 2]** Sensitivity (true positive rate) = ________
+- **[blank 3]** Specificity (true negative rate) = ________
+
+#### Answer & Rationale
+
+**Correct answers: [blank 1] = 0.85, [blank 2] = 0.80, [blank 3] = 0.90** (accept ±0.01 each)
+
+- **Computation:** Total $n = 200$.
+  - Accuracy $= (TP+TN)/n = (80+90)/200 = 170/200 = 0.85$.
+  - Sensitivity $= TP/(TP+FN) = 80/(80+20) = 80/100 = 0.80$.
+  - Specificity $= TN/(TN+FP) = 90/(90+10) = 90/100 = 0.90$.
+- **Common error:** Dividing TP by its *row* total (TP + FP = 90) gives 0.89 — that is *precision* (PPV), not sensitivity. Sensitivity conditions on actual positives (the $y=1$ column); specificity on actual negatives (the $y=0$ column).
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "The Classification Table".
+
+:::
+
+### Question 6 — Cohen's kappa adjusts for chance {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 11]`**
+
+In the `penalty` model the death penalty is rare, so at the 0.5 cutoff the classifier predicts "no death" for nearly everyone, giving high overall accuracy ($P_o$) but Cohen's $\kappa = \frac{P_o - P_e}{1 - P_e} \approx 0$. What does the near-zero $\kappa$ reveal that raw accuracy conceals?
+
+A. The model's coefficients (odds ratios) are not statistically significant.
+
+B. After subtracting the agreement expected by chance ($P_e$) from the marginals, the model classifies no better than predicting the modal category.
+
+C. The model is overfit, because $\kappa$ measures the gap between training and test accuracy.
+
+D. Sensitivity equals specificity, which forces $\kappa$ to zero.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** $\kappa$ subtracts the chance agreement $P_e$ (expected from the marginals) from the observed agreement $P_o$ and rescales. When the model always predicts the modal class it adds no information beyond the base rate, so $P_o \approx P_e$ and $\kappa \approx 0$. The high raw accuracy was an artifact of class imbalance.
+- **Why not A:** $\kappa$ concerns classification agreement, not coefficient significance; a model can have $\kappa \approx 0$ yet highly significant odds ratios.
+- **Why not C:** $\kappa$ is not a train/test generalization measure; it adjusts a single classification table for chance.
+- **Why not D:** Equality of sensitivity and specificity does not force $\kappa = 0$; the near-zero value comes from uninformative predictions relative to the marginals.
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "Cohen's Kappa".
+
+:::
+
+### Question 7 — Classification accuracy is not inferential validity {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 11]`**
+
+**True or False:** A logistic model estimates a large, highly significant odds ratio for victim race, but its classification accuracy at the 0.5 cutoff barely exceeds the base rate and its $\kappa$ is near 0. Because the model classifies poorly, its odds ratio and likelihood-ratio test for that predictor must be regarded as invalid.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** Classification accuracy and inferential validity answer different questions. A model can have weak predictive classification (because the event is rare and the 0.5 cutoff favors the modal class) while still producing valid, well-estimated odds ratios and likelihood-ratio tests for the effects of interest. For an inference-focused study (testing racial bias), low accuracy and low $\kappa$ are not grounds to discard the effect estimates.
+- **Why "True" is wrong:** Equating low classification performance with invalid inference is the misconception the chapter warns against; odds ratios and LR tests — not classification accuracy — are the relevant evidence for an inferential goal.
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "Classification vs. Inference".
+
+:::
+
+### Question 8 — Pearson/deviance residuals and the binned plot {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 11]`**
+
+For the `titanic` model `survived ~ sex + age + pclass` with continuous `age`, an ordinary plot of Pearson (or deviance) residuals against the linear predictor shows two uninformative bands. The analyst switches to a **binned residual plot** (averaging raw residuals within bins of the fitted linear predictor, with $\pm 2\,\text{SE}$ bounds). Why does the binned plot help, and what pattern signals misfit?
+
+A. Binning removes the influential observations, so any remaining points are by definition well-fit.
+
+B. Binning converts the residuals into a normal Q-Q plot, so any point above zero indicates misfit.
+
+C. The plot is only valid for categorical predictors, because continuous predictors produce no residuals.
+
+D. Averaging raw residuals within bins smooths the two-band discreteness; a U-shape or points outside the $\pm 2\,\text{SE}$ bands then signals misfit.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** With a binary outcome each fitted value yields only two raw residuals, so the residual plot forms two bands. Averaging within bins of the linear predictor produces a near-continuous mean residual comparable to a $\pm 2\,\text{SE}$ envelope; systematic curvature (a U-shape) or many bins outside the bands flags misfit. It is the logistic analogue of the residual-vs-fitted plot.
+- **Why not A:** Binning *averages* residuals; it does not delete influential cases (those are assessed with Cook's distance / DFBETAS).
+- **Why not B:** No Q-Q normality plot is involved, and points above zero are expected — only points *outside* the SE bands are concerning.
+- **Why not C:** The binned plot exists precisely *for* continuous predictors, where the raw two-band plot is unreadable.
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "Binned Residual Plot".
+
+:::
+
+### Question 9 — Calibration vs. discrimination {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 11]`**
+
+A `titanic` model's calibration plot (observed survival rate vs. mean predicted probability across deciles) shows points drifting systematically *below* the 45-degree line, even though the model separates survivors from non-survivors fairly well (good AUC). What does this pattern indicate?
+
+A. Good calibration but poor discrimination: the model ranks cases poorly even though its probabilities are accurate.
+
+B. Good discrimination but poor calibration: the model orders cases well, but its predicted probabilities are systematically too high (it over-predicts survival).
+
+C. The model is perfectly calibrated; any point off the diagonal merely reflects sampling error and is never interpretable.
+
+D. A violation of the proportional-odds assumption, which the calibration plot is designed to test.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** Discrimination (AUC) measures how well the model *ranks* events above non-events; calibration measures whether predicted probabilities *match* observed rates (the 45-degree line). Points *below* the diagonal mean observed rate < predicted probability, i.e., the model over-predicts. A model can discriminate well yet be miscalibrated; the two properties are distinct.
+- **Why not A:** The premise reverses the concepts — good AUC *is* good discrimination, and departure from the diagonal *is* miscalibration.
+- **Why not C:** A *systematic* drift across deciles is a calibration signal, not random noise.
+- **Why not D:** Proportional odds is an *ordinal*-model assumption (Ch. 13); the calibration plot is a binary-model diagnostic and tests nothing about proportional odds.
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "Calibration Plot".
+
+:::
+
+### Question 10 — Influence diagnostics for logistic regression {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Answer · 2 pts · Applied · Notes Ch. 11]`**
+
+For the `penalty` logistic model, you want to detect observations that disproportionately affect the estimated effect of race. **Select all that apply** — which statements about influence diagnostics are correct?
+
+A. Cook's distance for a GLM is $D_i = \dfrac{r_i^{(P)2}\, h_{ii}}{p\,(1 - h_{ii})^2}$, combining the Pearson residual, the hat value $h_{ii}$, and the number of parameters $p$.
+
+B. A common screening threshold for Cook's distance is $4/n$.
+
+C. DFBETAS measures the influence of observation $i$ on each *individual* coefficient $\hat\beta_k$, with a common threshold of $2/\sqrt{n}$.
+
+D. An observation flagged as influential must always be deleted before reporting the final model.
+
+#### Answer & Rationale
+
+**Correct answers: A, B, C**
+
+- **Why A is correct:** This is the logistic-regression Cook's distance formula, built from the squared Pearson residual, the hat value, and $p$.
+- **Why B is correct:** $4/n$ is the standard rule-of-thumb cutoff for flagging large Cook's distances for inspection.
+- **Why C is correct:** DFBETAS is coefficient-specific — it gauges each case's influence on each individual $\hat\beta_k$ — with the conventional cutoff $2/\sqrt{n}$.
+- **Why not D:** Flagging is diagnostic, not a deletion rule. The recommended action is to *inspect* the case and check whether removing it meaningfully changes the odds ratios; automatic deletion without a substantive reason is a misuse.
+- **Source:** Lecture Notes, Ch. 11 (Logistic Regression Diagnostics), "Influence Diagnostics: DFBETAS and Cook's Distance".
+
+:::
+
+### Question 11 — The latent-variable formulation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 12]`**
+
+The latent-variable formulation of a binary outcome posits an unobserved continuous propensity $y_i^* = \alpha + \mathbf{x}_i'\boldsymbol\beta + \varepsilon_i$, with $y_i = 1$ if $y_i^* > 0$ and $y_i = 0$ otherwise. Within this formulation, which choice determines whether the model is **logit** or **probit**?
+
+A. The distribution assumed for the latent error term $\varepsilon_i$ — a standard logistic error gives the logit model; a standard normal error gives the probit model.
+
+B. The numerical value of the threshold, which is 0 for logit and 1 for probit.
+
+C. Whether the predictors $\mathbf{x}$ are continuous (logit) or categorical (probit).
+
+D. Whether an intercept $\alpha$ is included in the linear predictor.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** $P(y_i = 1) = P(\varepsilon_i > -\eta_i) = F(\eta_i)$, where $F$ is the CDF of $\varepsilon_i$. A standard *logistic* error CDF yields the logit model; a standard *normal* error CDF yields the probit model. The error distribution is the sole determinant.
+- **Why not B:** The threshold is conventionally 0 for both; shifting it merely re-absorbs into the intercept and does not switch the link.
+- **Why not C:** Predictor type (continuous vs categorical) is unrelated to the logit/probit choice; either model can use either kind of predictor.
+- **Why not D:** Both models include an intercept; its presence does not distinguish them.
+- **Source:** Lecture Notes, Ch. 12 (Latent Response Models and GLMs), "The Latent Variable Formulation".
+
+:::
+
+### Question 12 — Logit vs. probit: the 1.7 scaling {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 12]`**
+
+Two models are fit to the `titanic` data. The probit coefficient for `sex` is $\hat\beta_{\text{probit}} = 1.40$. Using the rule of thumb $\hat\beta_{\text{logit}} \approx 1.7 \times \hat\beta_{\text{probit}}$, what is the approximate logit coefficient, and what should we expect of the two models' predicted probabilities?
+
+A. About $0.82$ (dividing by 1.7), and the predicted probabilities should differ sharply.
+
+B. About $2.38$, but the predicted probabilities should diverge widely because the coefficients differ.
+
+C. About $2.38$ (multiplying by 1.7), and the two models' predicted probabilities should be nearly identical, differing by at most 1–2 percentage points.
+
+D. About $1.40$ (identical), because logit and probit coefficients are on the same scale.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** $1.7 \times 1.40 = 2.38$. The factor rescales the coefficient because the logistic distribution has a larger variance ($\pi^2/3$) than the standard normal. Once rescaled, the two CDFs nearly coincide, so the *predicted probabilities* differ by at most 1–2 percentage points — the models are practically interchangeable.
+- **Why not A:** $0.82 = 1.40/1.7$ inverts the rule (that converts logit → probit); and probabilities do not differ sharply.
+- **Why not B:** The arithmetic (2.38) is right, but the conclusion is wrong — the larger logit coefficient compensates exactly for the larger logistic variance, leaving predicted probabilities essentially unchanged.
+- **Why not D:** Logit and probit coefficients are *not* equal; the logit values are about 1.7× larger. It is the predicted probabilities, not the coefficients, that coincide.
+- **Source:** Lecture Notes, Ch. 12 (Latent Response Models and GLMs), "The 1.7 Rule of Thumb".
+
+:::
+
+### Question 13 — The components of a GLM {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 12]`**
+
+Match each generalized-linear-model component or instance (left) to its correct description (right).
+
+| Component / instance | | Description |
+|:---------------------|:--|:-----------|
+| 1. Random component | | W. The monotonic function $g(\mu_i) = \eta_i$ connecting the mean of $y$ to the linear predictor |
+| 2. Systematic component | | Y. The probability distribution assumed for the response $y$ (e.g., normal, binomial) |
+| 3. Link function | | X. A GLM with a binomial random component and a logit link |
+| 4. Logistic regression | | Z. The linear predictor $\eta_i = \alpha + \beta_1 x_{1i} + \beta_2 x_{2i} + \cdots$ |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → Y, 2 → Z, 3 → W, 4 → X**
+
+- **1 → Y (random component):** the distributional family assumed for $y$ (normal → linear regression; binomial → logistic/probit).
+- **2 → Z (systematic component):** the linear predictor $\eta_i = \alpha + \beta_1 x_{1i} + \cdots$, identical in form across all GLMs.
+- **3 → W (link function):** the monotonic $g(\mu_i) = \eta_i$ bridging the mean of $y$ to the linear predictor.
+- **4 → X (logistic regression):** the GLM instance with a binomial random component and a logit link.
+- **Source:** Lecture Notes, Ch. 12 (Latent Response Models and GLMs), "The Three Components of a GLM".
+
+:::
+
+### Question 14 — A cumulative odds ratio in the proportional-odds model {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 13]`**
+
+A cumulative-logit (proportional-odds) model is fit to the `grades` data, where the outcome is the ordinal essay grade (1 = Poor … 4 = Excellent). The model is parameterized so that $\exp(\hat\beta)$ is the odds ratio for being in a *higher* versus *lower* category per one-unit increase in the predictor. For `wordlength`, the estimated coefficient is $\hat\beta = \ln 3 \approx 1.0986$.
+
+Compute the **cumulative odds ratio** for a one-unit increase in `wordlength`. Give a single number.
+
+Cumulative OR = ________
+
+#### Answer & Rationale
+
+**Correct answer: 3.0** (accept 2.95–3.05)
+
+- **Computation:** The cumulative odds ratio is $\exp(\hat\beta) = \exp(\ln 3) = 3.0$. A one-unit increase in `wordlength` *triples* the odds of being in a higher grade category, and — by the proportional-odds assumption — this same OR holds at every cut-point ("Fair-or-better vs Poor," "Good-or-better vs Fair-or-worse," "Excellent vs the rest").
+- **Common error:** Reporting 1.0986 (the log-odds coefficient $\hat\beta$ itself) instead of exponentiating, or 3.30 ($3 \times 1.0986$).
+- **Source:** Lecture Notes, Ch. 13 (Ordinal Models), "The Cumulative Logit Model".
+
+:::
+
+### Question 15 — The proportional-odds assumption {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 13]`**
+
+**True or False:** In a proportional-odds (cumulative-logit) model fit to the `satisfaction` data (ordinal satisfaction; predictors `gender` and `income`), the proportional-odds assumption requires that the coefficient for `income` be the *same* at every cut-point of the scale, so a single cumulative odds ratio summarizes its effect regardless of where the scale is dichotomized.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A (True) is correct:** The proportional-odds assumption is exactly this: the *same* regression coefficients $\boldsymbol\beta$ apply at every cut-point, with only the threshold parameters $\kappa_s$ differing. Consequently the cumulative odds ratio $\exp(\hat\beta_{\text{income}})$ is constant across all dichotomizations, so one OR per predictor cleanly summarizes the effect.
+- **Why "False" is wrong:** Allowing a *different* coefficient at each cut-point would *violate* proportional odds (corresponding to a partial-proportional-odds or multinomial model). The shared-coefficient constraint is what makes a single OR interpretable.
+- **Source:** Lecture Notes, Ch. 13 (Ordinal Models), "The Proportional Odds Assumption".
+
+:::
+
+## Coverage
+
+This quiz draws from Lecture Notes Ch. 11 (Logistic Diagnostics, 10 items), Ch. 12 (Latent/GLM, 3 items), and Ch. 13 (Ordinal, 2 items). The 15 items total **20 points** (Multiple Choice ×7, True/False ×3, Matching ×2, Fill-in-Multiple-Blanks ×1, Multiple Answer ×1, Fill-in-the-Blank ×1) and span all three difficulty levels.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | GOF tests need grouped, non-sparse data | Multiple Choice | Conceptual | 1 |
+| 2 | Sparseness invalidates GOF | True/False | Challenge | 1 |
+| 3 | Naming a pseudo-$R^2$; McFadden bands | Multiple Choice | Conceptual | 1 |
+| 4 | Pseudo-$R^2$ measures ↔ properties | Matching | Challenge | 2 |
+| 5 | Accuracy / sensitivity / specificity | Fill-in-Multiple-Blanks | Applied | 2 |
+| 6 | Cohen's $\kappa$ adjusts for chance | Multiple Choice | Conceptual | 1 |
+| 7 | Classification ≠ inference | True/False | Conceptual | 1 |
+| 8 | Binned residual plot | Multiple Choice | Challenge | 1 |
+| 9 | Calibration vs discrimination | Multiple Choice | Challenge | 1 |
+| 10 | Influence diagnostics (Cook's D, DFBETAS) | Multiple Answer | Applied | 2 |
+| 11 | Latent-variable formulation | Multiple Choice | Conceptual | 1 |
+| 12 | Logit vs probit (1.7 rule) | Multiple Choice | Applied | 1 |
+| 13 | GLM components | Matching | Conceptual | 2 |
+| 14 | Cumulative odds ratio | Fill-in-the-Blank | Applied | 2 |
+| 15 | Proportional-odds assumption | True/False | Challenge | 1 |
+
+: Quiz 6 item map. {.striped}
