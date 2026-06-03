@@ -13,7 +13,11 @@ website:
   description: "BER 640 - A regression approach with R for graduate students in education"
   site-url: "https://joonho112.github.io/jlee-regression-course"
 
-  # favicon: "/files/img/icon-512.png"  # TODO: add favicon image
+  image: "/files/img/og-card.png"
+  open-graph: true
+  twitter-card: true
+
+  favicon: "/files/img/favicon-512.png"
 
   search: true
   page-navigation: true
@@ -23,7 +27,10 @@ website:
 
   navbar:
     pinned: true
-    background: "#2C3E50"
+    background: "#1A2A3A"   # $ink (Cividis Ink) — matches custom.scss token
+    logo: "files/img/favicon-192.png"
+    logo-alt: "BER 640 regression hex logo"
+    title: "BER 640"        # short navbar brand; website:title keeps the full SEO/OG title
     left:
       - text: "{{< fa house >}}"
         file: index.qmd

@@ -1,1 +1,7 @@
 page-layout: article
+
+# Use the date-banner title-metadata partial on all assignment pages
+format:
+  html:
+    template-partials:
+      - ../html/title-metadata.html

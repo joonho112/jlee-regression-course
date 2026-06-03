@@ -1,16 +1,30 @@
 ---
-title: "{{< var course.number >}}: {{< var course.title >}}"
-subtitle: "{{< var course.subtitle >}}"
 toc: false
 sidebar: false
 page-layout: full
 ---
 
-::: {.lead}
-Welcome to **BER 640: Advanced Statistical Methods in Education**. This course provides a comprehensive treatment of regression analysis for graduate students in education, covering simple and multiple linear regression, ANOVA, logistic regression, and generalized linear models.
+::: {.hero}
+::: {.hero-inner}
+
+[BER 640 · Fall 2026]{.hero-eyebrow}
+
+# Advanced Statistical Methods in Education {.hero-title}
+
+[A Regression Approach with R]{.hero-subtitle}
+
+[A graduate-level, R-driven tour of regression analysis for education researchers — from the simple linear model through ANOVA and logistic regression to the unifying Generalized Linear Model.]{.hero-lead}
+
+::: {.hero-cta}
+[{{< fa file-lines >}} Syllabus](syllabus.qmd){.btn .btn-hero-primary role="button"}
+[{{< fa calendar-days >}} Schedule](schedule.qmd){.btn .btn-hero-secondary role="button"}
+[{{< fa book-open >}} Lecture Notes]({{< var books.lecture_notes >}}){.btn .btn-hero-outline target="_blank" role="button"}
 :::
 
----
+[Graduate · {{< var course.days >}} · {{< var course.dates >}} · {{< var university.name >}}]{.hero-meta}
+
+:::
+:::
 
 ::: {.grid .course-details}
 
@@ -47,6 +61,8 @@ This course adopts a **"specific to general"** pedagogical approach, beginning w
 
 ### Learning Arc
 
+::: {.learning-arc-panel}
+
 ```{mermaid}
 %%| fig-width: 9
 %%| fig-alt: "Course learning arc diagram showing four parts: Part I Foundations (SLR, ANCOVA/ANOVA), Part II Extensions (Multiple Regression, Interactions), Part III Model Quality (Diagnostics), Part IV Beyond Linear (Logistic Regression, GLM/Ordinal). Arrows show the progressive flow from simple to complex models."
@@ -68,19 +84,21 @@ flowchart TD
     D --> E
     E --> F
 
-    style A fill:#2171B5,color:#fff,stroke:#1A5276,stroke-width:2px
-    style B fill:#2171B5,color:#fff,stroke:#1A5276,stroke-width:2px
-    style C fill:#2C3E50,color:#fff,stroke:#1A252F,stroke-width:2px
-    style D fill:#2C3E50,color:#fff,stroke:#1A252F,stroke-width:2px
-    style E fill:#C0392B,color:#fff,stroke:#922B21,stroke-width:2px
-    style F fill:#C0392B,color:#fff,stroke:#922B21,stroke-width:2px
-    style G fill:#1E8449,color:#fff,stroke:#145A32,stroke-width:2px
+    style A fill:#0B3D66,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style B fill:#0B3D66,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style C fill:#2C6E91,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style D fill:#2C6E91,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style E fill:#6B3E7A,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style F fill:#A8431E,color:#fff,stroke:#1A2A3A,stroke-width:2px
+    style G fill:#A8431E,color:#fff,stroke:#1A2A3A,stroke-width:2px
 
-    style P1 fill:#EBF5FB,stroke:#2171B5,stroke-width:2px,color:#2C3E50
-    style P2 fill:#EBEDEF,stroke:#2C3E50,stroke-width:2px,color:#2C3E50
-    style P3 fill:#FDEDEC,stroke:#C0392B,stroke-width:2px,color:#2C3E50
-    style P4 fill:#EAFAF1,stroke:#1E8449,stroke-width:2px,color:#2C3E50
+    style P1 fill:#E6EDF3,stroke:#0B3D66,stroke-width:2px,color:#1A2A3A
+    style P2 fill:#E5EEF3,stroke:#2C6E91,stroke-width:2px,color:#1A2A3A
+    style P3 fill:#EFEAF2,stroke:#6B3E7A,stroke-width:2px,color:#1A2A3A
+    style P4 fill:#F6E9E3,stroke:#A8431E,stroke-width:2px,color:#1A2A3A
 ```
+
+:::
 
 The course progresses from foundational regression models (Part I) through extensions and diagnostics (Parts II--III) to categorical outcomes and the unifying GLM framework (Part IV).
 
@@ -103,3 +121,10 @@ All course materials are open-access and published on GitHub Pages:
 | [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | Hands-on R tutorials for each topic (12 labs) |
 | [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines and examples for the two course projects |
 | [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package with 24 curated datasets |
+
+::: {.cta-secondary}
+[New to the course? Start here.]{.cta-secondary-title}
+
+[{{< fa download >}} Set up R & RStudio](resource/r-setup.qmd){.btn .btn-primary role="button"}
+[{{< fa play >}} Begin with Week 1](content/01-content.qmd){.btn .btn-outline-primary role="button"}
+:::

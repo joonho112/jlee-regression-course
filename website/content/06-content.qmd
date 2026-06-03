@@ -1,5 +1,6 @@
 ---
 title: "Week 6: Multiple Regression (Continuous Predictors)"
+date: "2026-09-21"
 ---
 
 ## Overview

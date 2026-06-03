@@ -1,17 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,300;0,400;0,600;0,700;1,400;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Libre+Franklin:wght@400;500;600;700&display=swap');
 
 /*-- scss:defaults --*/
 
-// BER 640 Color Palette (WCAG AA compliant for text on white)
-$primary:     #2C3E50;
-$secondary:   #C0392B;  // darkened from #E74C3C (4.6:1 contrast)
-$accent:      #2171B5;  // darkened from #3498DB (4.8:1 contrast)
-$success:     #1E8449;  // darkened from #27AE60 (4.6:1 contrast)
-$warning:     #D68910;  // darkened from #F39C12 (3.3:1, large text only)
-$info:        #7D3C98;  // darkened from #9B59B6 (5.5:1 contrast)
-$danger:      #C0392B;
+// =====================================================================
+// "Cividis Ink" palette — colorblind-safe named-color token architecture
+// =====================================================================
+// Cool ramp inspired by viridisLite::cividis() (blue->gold, perceptually
+// uniform, colorblind-safe), hand-tuned into WCAG-aware inks, plus two warm
+// accents cividis lacks -- $rust (danger) and $plum (note/info) -- so every
+// semantic role stays distinguishable for deuteranopia/protanopia viewers.
+// Contrast ratios stated against white (#fff) unless noted.
 
-// Extended neutral palette
+// --- Layer 1: named tokens (define FIRST, then map onto Bootstrap roles) ---
+$ink:    #1A2A3A;   // near-black blue ink  -- 14.7:1, body/heading text
+$navy:   #0B3D66;   // deep cividis blue    -- 10.0:1, primary
+$slate:  #2C6E91;   // mid cividis blue     --  4.9:1, links/accent (AA text)
+$teal:   #3E8E8A;   // desaturated teal     --  3.4:1, large-text/UI only
+$gold:   #C9A227;   // warm cividis gold    --  2.4:1, large-text/UI only
+$rust:   #A8431E;   // warm danger accent   --  5.6:1, danger (AA text)
+$plum:   #6B3E7A;   // warm violet accent   --  6.6:1, info/note (AA text)
+$paper:  #FBFAF7;   // warm off-white       -- page background
+
+// --- Neutral gray ramp (defined before role mapping so roles can reference it) ---
 $gray-50:     #f9fafb;
 $gray-100:    #f3f4f6;
 $gray-200:    #e5e7eb;
@@ -23,19 +33,31 @@ $gray-700:    #374151;
 $gray-800:    #1f2937;
 $gray-900:    #111827;
 
+// --- Layer 2: Bootstrap role mapping (named tokens -> semantic roles) ---
+$primary:     $navy;    // headings, table headers, primary buttons
+$accent:      $slate;   // heavily reused: links, borders, sidebar active
+$success:     $teal;    // tip callouts / decorative UI
+$warning:     $gold;    // gold; large-text / UI accents only, never body text
+$info:        $plum;    // note callouts, informational accents
+$danger:      $rust;    // error/danger states
+// $secondary kept neutral (muted structure) since $danger=$rust already
+// carries the warm "alarm" role; avoids two competing emphasis colors.
+$secondary:   $gray-700;
+
 // Bootstrap overrides
-$body-color:              $gray-800;
-$link-color:              $accent;
-$link-hover-color:        $primary;
+$body-bg:                 $paper;     // warm off-white page background
+$body-color:              $gray-800;  // ~13.6:1 on $paper -- primary reading text
+$link-color:              $slate;     // 4.9:1 -- AA for normal text
+$link-hover-color:        $navy;      // darken-on-hover (gold failed AA 2.3:1 on paper; warm-amber option open)
 $link-decoration:         underline;
 $link-hover-decoration:   underline;
 
 // Typography
-$font-family-sans-serif:  'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-family-sans-serif:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 $font-size-base:          1.05rem;
 
-$headings-font-family:    $font-family-sans-serif;
-$headings-font-weight:    600;
+$headings-font-family:    'Libre Franklin', 'Inter', -apple-system, sans-serif;
+$headings-font-weight:    700;
 $headings-line-height:    1.3;
 
 $h1-font-size:            2.4rem;
@@ -51,6 +73,7 @@ $sidebar-font-size:       1rem;
 $sidebar-font-size-section: 0.9rem;
 
 // Code
+$font-family-monospace:   'Fira Code', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
 $code-bg:                 $gray-100;
 $code-color:              $gray-900;
 
@@ -101,22 +124,36 @@ a {
 
 .navbar-brand {
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+
+  img {
+    max-height: 38px;
+    width: auto;
+    margin-right: 0.5rem;
+  }
 }
 
-.navbar-dark .navbar-nav {
+// Navbar uses Bootstrap 5.3 `data-bs-theme="dark"` (NOT the legacy .navbar-dark
+// class), so scope to .navbar to actually hit the dark navbar's links.
+.navbar .navbar-nav {
   .nav-link {
     color: rgba(255, 255, 255, 0.85) !important;
-    transition: color 0.2s ease;
+    transition: color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: inset 0 -3px 0 transparent;   // reserve space so hover/active don't shift
 
     &:hover {
       color: #fff !important;
+      box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.35);
     }
   }
 
+  // current section: gold label + gold "you are here" underline
   .active > .nav-link,
   .nav-link.active {
     color: $warning !important;
     font-weight: 600;
+    box-shadow: inset 0 -3px 0 $warning;
   }
 }
 
@@ -129,9 +166,147 @@ a {
   line-height: 1.4;
 }
 
+// brighten docked-sidebar links on hover (dark bg)
+.sidebar-navigation .sidebar-link {
+  transition: color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
 div.sidebar-item-container .active {
-  color: $accent;
+  color: $warning;   // gold reads on the dark sidebar (slate $accent failed at 2.6:1)
   font-weight: 600;
+  box-shadow: inset 3px 0 0 $warning;   // gold "you are here" bar (no layout shift)
+}
+
+// ============================================
+// Homepage - Hero band
+// ============================================
+// Contained full-width band (NOT 100vw) on purpose: a viewport-width hero
+// risks a horizontal scrollbar and, via the usual body{overflow-x:hidden}
+// workaround, would break position:sticky TOCs on the content pages. With
+// page-layout:full the content column already spans most of the viewport.
+
+.hero {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: -1.5rem 0 2.5rem;                 // tuck flush under the navbar accent border
+  background: linear-gradient(135deg, $ink 0%, $navy 100%);
+  color: $paper;
+  border-bottom: 3px solid $gold;
+  border-radius: 0 0 0.5rem 0.5rem;
+  overflow: hidden;                         // keep the gradient inside the rounded corners
+}
+
+.hero-inner {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(2.75rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 3rem);
+  text-align: left;
+}
+
+.hero-eyebrow {
+  display: inline-block;
+  font-family: $headings-font-family;       // Libre Franklin
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: $gold;                             // large/UI use of gold -> AA-safe
+  margin-bottom: 1rem;
+}
+
+.hero-title {
+  color: $paper;                            // override global h1 { color: $primary }
+  font-family: $headings-font-family;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 5.2vw, 3.4rem);
+  line-height: 1.13;
+  letter-spacing: -0.01em;
+  border-bottom: none;                      // cancel any inherited heading rule
+  margin: 0 0 0.5rem;
+  overflow-wrap: break-word;                // never let a long word overflow the band
+}
+
+.hero-subtitle {
+  display: block;
+  font-family: $headings-font-family;
+  font-weight: 500;
+  font-size: 1.25rem;
+  color: rgba($paper, 0.85);
+  margin-bottom: 1.25rem;
+}
+
+.hero-lead {
+  display: block;
+  max-width: 60ch;
+  font-size: 1.2rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: rgba($paper, 0.92);
+  margin-bottom: 1.75rem;
+}
+
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+// Dark-band CTA buttons (kept separate from light-page .btn-primary/.btn-secondary)
+.btn-hero-primary {
+  background-color: $gold;
+  border-color: $gold;
+  color: $ink;                              // ink on gold ~6:1 -> AA normal text
+  font-weight: 700;
+
+  &:hover {
+    background-color: #b18e1f;              // gold darkened ~7%
+    border-color: #b18e1f;
+    color: $ink;
+  }
+}
+
+.btn-hero-secondary {
+  background-color: rgba($paper, 0.12);
+  border: 1px solid rgba($paper, 0.45);
+  color: $paper;
+
+  &:hover {
+    background-color: rgba($paper, 0.22);
+    color: $paper;
+  }
+}
+
+.btn-hero-outline {
+  background-color: transparent;
+  border: 1px solid rgba($paper, 0.55);
+  color: $paper;
+
+  &:hover {
+    background-color: rgba($paper, 0.12);
+    color: $paper;
+  }
+}
+
+.hero-meta {
+  display: block;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: rgba($paper, 0.70);                // ~6:1 on navy -> AA
 }
 
 // ============================================
@@ -139,18 +314,33 @@ div.sidebar-item-container .active {
 // ============================================
 
 .course-details {
-  margin: 1.5rem 0;
-  padding: 1.5rem;
-  background-color: $gray-50;
-  border-radius: 0.4rem;
-  border-left: 4px solid $accent;
+  margin: 1.5rem 0 2.5rem;
+
+  // Each column is its own "at a glance" card
+  .g-col-4 {
+    height: 100%;
+    background-color: #fff;
+    border: 1px solid $gray-200;
+    border-top: 3px solid $accent;
+    border-radius: 0.45rem;
+    padding: 1.4rem 1.4rem 1.2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
+      transform: translateY(-2px);
+    }
+  }
 
   h3 {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: $primary;
     margin-top: 0;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid $gray-200;
   }
 
   ul {
@@ -159,17 +349,91 @@ div.sidebar-item-container .active {
     margin: 0;
 
     li {
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.6rem;
       color: $gray-700;
+      line-height: 1.45;
+
+      // colour the leading Font Awesome icon with the brand accent
+      > i,
+      > svg {
+        color: $accent;
+        margin-right: 0.15rem;
+      }
     }
   }
 
   a {
     color: $accent;
+    text-decoration: none;
 
     &:hover {
       color: $primary;
+      text-decoration: underline;
     }
+  }
+}
+
+// ============================================
+// Homepage - Learning Arc / roadmap panel
+// ============================================
+
+.learning-arc-panel {
+  margin: 1.5rem auto 2rem;
+  padding: 1.5rem 1.25rem;
+  max-width: 480px;   // hug the narrow top-down diagram (was 720 -> empty gutters)
+  background-color: #fff;
+  border: 1px solid $gray-200;
+  border-top: 3px solid $accent;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  text-align: center;
+
+  // centre the rendered mermaid diagram and keep it responsive
+  svg,
+  .mermaid {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+// ============================================
+// Content date banner (title-metadata.html partial)
+// ============================================
+
+.date-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.4rem 0 1rem;
+  padding: 0.35rem 0.9rem;
+  background-color: rgba($slate, 0.12);
+  color: $navy;                       // dark text on a light slate tint -> strong AA
+  border-radius: 2rem;
+  font-family: $headings-font-family; // Libre Franklin
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.date-banner-icon {
+  color: $slate;
+  flex-shrink: 0;
+  position: relative;
+  top: -0.5px;
+}
+
+.date-banner-text {
+  line-height: 1;
+}
+
+// Brand the leading list icons on the docked content/assignment/resource pages
+// (scoped to body.nav-sidebar so the homepage's own lists are unaffected).
+body.nav-sidebar main.content {
+  li > i,
+  li > svg:first-child {
+    color: $slate;
   }
 }
 
@@ -185,6 +449,95 @@ div.sidebar-item-container .active {
     padding-bottom: 0.75rem;
     border-bottom: 4px solid $accent;
   }
+}
+
+// Small term/modality caption above the schedule
+.schedule-meta {
+  font-size: 0.9rem;
+  color: $gray-600;
+  margin: -0.25rem 0 1rem;
+
+  i { color: $slate; margin-right: 0.2rem; }
+}
+
+// Compact icon legend ("How to read")
+.schedule-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.6rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0.7rem 1rem;
+  background-color: $gray-50;
+  border: 1px solid $gray-200;
+  border-left: 4px solid $accent;
+  border-radius: 0.4rem;
+  font-size: 0.92rem;
+  color: $gray-700;
+
+  i { color: $slate; margin-right: 0.2rem; }
+}
+
+.schedule-legend-title {
+  font-weight: 700;
+  color: $primary;
+  margin-right: 0.3rem;
+}
+
+// Horizontal scroll wrapper for the data-driven schedule table on small screens
+.schedule-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1rem 0 2rem;
+  border: 1px solid $gray-200;
+  border-radius: 0.5rem;
+}
+
+.schedule-table {
+  width: 100%;
+  min-width: 720px;           // forces horizontal scroll < this width
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+
+  thead th {
+    background-color: $primary;   // navy header
+    color: #fff;
+    font-weight: 600;
+    padding: 0.6rem 0.75rem;
+    white-space: nowrap;
+    border: none;
+    i { margin-right: 0.25rem; opacity: 0.9; }
+  }
+
+  tbody td {
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid $gray-200;
+    vertical-align: top;
+  }
+
+  // module group-header row
+  .sched-group th {
+    background-color: rgba($slate, 0.12);
+    color: $primary;
+    font-family: $headings-font-family;
+    font-weight: 700;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 2px solid $accent;
+  }
+
+  tbody tr:not(.sched-group):hover td {
+    background-color: $gray-50;
+  }
+
+  .sched-week { text-align: center; width: 3rem; }
+  .sched-date { white-space: nowrap; width: 5.5rem; }
+  td.sched-week { font-weight: 600; color: $gray-700; }
+  td.sched-date { color: $gray-600; }
+  .sched-topic a { font-weight: 600; }
+  .sched-empty { color: $gray-300; }
 }
 
 .table thead {
@@ -267,23 +620,23 @@ div.callout {
 }
 
 .callout-note {
-  border-left-color: $info;
-  background-color: rgba(155, 89, 182, 0.06);
+  border-left-color: $info;     // plum
+  background-color: rgba(107, 62, 122, 0.07);
 }
 
 .callout-tip {
-  border-left-color: $success;
-  background-color: rgba(39, 174, 96, 0.06);
+  border-left-color: $success;  // teal
+  background-color: rgba(62, 142, 138, 0.08);
 }
 
 .callout-warning {
-  border-left-color: $warning;
-  background-color: rgba(243, 156, 18, 0.06);
+  border-left-color: $warning;  // gold
+  background-color: rgba(201, 162, 39, 0.10);
 }
 
 .callout-important {
-  border-left-color: $secondary;
-  background-color: rgba(231, 76, 60, 0.06);
+  border-left-color: $danger;   // rust ($secondary is now a neutral gray, so use danger here)
+  background-color: rgba(168, 67, 30, 0.07);
 }
 
 // ============================================
@@ -307,6 +660,19 @@ blockquote {
   border-top: 3px solid $accent;
   font-size: 0.9rem;
   color: $gray-600;
+  padding-top: 1.3rem;
+  padding-bottom: 1.3rem;
+  line-height: 1.6;
+
+  a {
+    color: $slate;
+    text-decoration: none;
+
+    &:hover {
+      color: $primary;
+      text-decoration: underline;
+    }
+  }
 }
 
 .nav-footer-center {
@@ -326,6 +692,18 @@ blockquote {
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   }
+
+  // Keyboard focus ring (navy on the light page; AAA on white)
+  &:focus-visible {
+    outline: 2px solid $primary;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+// On the dark hero band a navy ring is invisible -> use gold
+.hero-cta .btn:focus-visible {
+  outline-color: $gold;
 }
 
 .btn-primary {
@@ -340,6 +718,40 @@ blockquote {
 }
 
 // ============================================
+// Homepage - secondary "Start here" CTA
+// ============================================
+
+.cta-secondary {
+  margin: 2.75rem 0 1rem;
+  padding: 1.75rem;
+  background-color: $gray-50;
+  border: 1px solid $gray-200;
+  border-left: 4px solid $accent;
+  border-radius: 0.5rem;
+  text-align: center;
+
+  p:first-child {
+    margin-top: 0;
+  }
+
+  .cta-secondary-title {
+    display: block;
+    font-family: $headings-font-family;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: $primary;
+    margin-bottom: 1rem;
+  }
+
+  .btn {
+    margin: 0.3rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+// ============================================
 // Responsive
 // ============================================
 
@@ -348,8 +760,24 @@ blockquote {
   h2 { font-size: 1.6rem; }
   h3 { font-size: 1.3rem; }
 
+  .hero-inner { padding: 2.25rem 1.25rem 2.5rem; }
+  .hero-title { font-size: clamp(1.55rem, 6.5vw, 2rem); }
+  .hero-subtitle { font-size: 1.1rem; }
+  .hero-lead { font-size: 1.05rem; }
+  .hero-cta {
+    flex-direction: column;
+    align-items: stretch;
+
+    .btn { justify-content: center; }
+  }
+
   .course-details {
     padding: 1rem;
+    grid-template-columns: 1fr;   // stack the 3 info cards; g-col-4 stays 3-wide otherwise -> 3rd card clipped
+
+    .g-col-4 {
+      grid-column: 1 / -1;
+    }
   }
 
   pre.sourceCode {
