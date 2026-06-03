@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 600" preserveAspectRatio="xMidYMid meet" role="img" aria-label="BER 640 — regression in R: ordinary-least-squares scatter and fitted line in a hexagon">
+  <title>BER 640 — Advanced Statistical Methods in Education</title>
+
+  <defs>
+    <!-- pointy-top regular hexagon: center (260,300), circumradius 270 -->
+    <clipPath id="hexClip">
+      <path d="M260 30 L493.82 165 L493.82 435 L260 570 L26.18 435 L26.18 165 Z"/>
+    </clipPath>
+    <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B3D66"/>
+      <stop offset="1" stop-color="#1A2A3A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- soft drop shadow (offset hex peeking below the body) -->
+  <path d="M260 42 L493.82 177 L493.82 447 L260 582 L26.18 447 L26.18 177 Z"
+        fill="#0B1722" opacity="0.25"/>
+
+  <!-- hexagon body -->
+  <path d="M260 30 L493.82 165 L493.82 435 L260 570 L26.18 435 L26.18 165 Z"
+        fill="url(#bodyGrad)"/>
+
+  <!-- ===== interior plot (clipped to the hex) ===== -->
+  <g clip-path="url(#hexClip)">
+
+    <!-- faint coordinate axes -> "this is a regression plot" -->
+    <g stroke="#2C6E91" stroke-width="3" opacity="0.42" stroke-linecap="round">
+      <line x1="112" y1="322" x2="408" y2="322"/>
+      <line x1="112" y1="322" x2="112" y2="130"/>
+    </g>
+
+    <!-- residual drop-lines: the squared vertical gaps OLS minimises -->
+    <g stroke="#A8431E" stroke-width="4" stroke-linecap="round" opacity="0.85">
+      <line x1="152" y1="320" x2="152" y2="294.5"/>
+      <line x1="200" y1="250" x2="200" y2="266.5"/>
+      <line x1="250" y1="255" x2="250" y2="237.4"/>
+      <line x1="300" y1="192" x2="300" y2="208.3"/>
+      <line x1="350" y1="193" x2="350" y2="179.1"/>
+      <line x1="392" y1="140" x2="392" y2="154.7"/>
+    </g>
+
+    <!-- fitted OLS line (gold hero stroke, positive slope) -->
+    <line x1="122" y1="312" x2="400" y2="150"
+          stroke="#C9A227" stroke-width="9" stroke-linecap="round"/>
+
+    <!-- data points: deliberately off the line so residuals read -->
+    <g fill="#FBFAF7" stroke="#1A2A3A" stroke-width="2">
+      <circle cx="152" cy="320" r="11"/>
+      <circle cx="200" cy="250" r="11"/>
+      <circle cx="250" cy="255" r="11"/>
+      <circle cx="300" cy="192" r="11"/>
+      <circle cx="350" cy="193" r="11"/>
+      <circle cx="392" cy="140" r="11"/>
+    </g>
+
+  </g>
+
+  <!-- hex rim (drawn last for a crisp gold edge) -->
+  <path d="M260 30 L493.82 165 L493.82 435 L260 570 L26.18 435 L26.18 165 Z"
+        fill="none" stroke="#C9A227" stroke-width="14"
+        stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- wordmark -->
+  <text x="260" y="416" text-anchor="middle"
+        font-family="'Libre Franklin', 'Inter', sans-serif"
+        font-size="54" font-weight="800" letter-spacing="2"
+        fill="#FBFAF7">BER 640</text>
+
+  <!-- tagline -->
+  <text x="260" y="450" text-anchor="middle"
+        font-family="'Libre Franklin', 'Inter', sans-serif"
+        font-size="16" font-weight="600" letter-spacing="4"
+        fill="#C9A227">REGRESSION · R</text>
+</svg>

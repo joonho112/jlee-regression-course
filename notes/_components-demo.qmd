@@ -1,0 +1,133 @@
+---
+title: "Cividis Ink — Pedagogical Component Library"
+subtitle: "Scratch demo (not part of the book; validates Phase 2 components in light + dark)"
+author: "JoonHo Lee"
+format:
+  html:
+    theme:
+      light: [cosmo, html/custom.scss]
+      dark: [darkly, html/custom-dark.scss]
+    css: ojs/interactive.css
+    toc: true
+    toc-depth: 2
+    number-sections: false
+    embed-resources: false
+---
+
+This page exercises every component in the taxonomy so each can be validated in **light and dark** before any chapter uses it. It is named `_components-demo.qmd` so Quarto excludes it from the book.
+
+## `.objectives` — chapter-opening advance organizer
+
+::: {.objectives}
+#### What you'll be able to do
+
+- Fit a simple linear regression with `lm()` and read its coefficient table.
+- Interpret the slope and intercept in substantive education-research units.
+- Quantify fit with $R^2$ and the residual standard error.
+
+::: {.ladder}
+**Where this sits on the GLM ladder:** the base rung — a Normal outcome with an *identity* link. Every later model generalizes it.
+:::
+
+::: {.meta}
+Prerequisites: BER 540 intro statistics · Data: the `star` study from `regdatasets`.
+:::
+:::
+
+## `.worked-example` — numbered box that wraps the 3-tab panel
+
+::: {.worked-example}
+::: {.wex-header}
+[Example 1.2]{.wex-tag} — Does a smaller class raise first-grade reading scores?
+:::
+
+::: {.panel-tabset}
+### Output
+A coefficient table goes here; read it before revealing the interpretation.
+
+### Output Interpretation
+- **Slope (13.1):** small classes score ~13 points higher on average.
+
+### Code Explanation
+```r
+m1 <- lm(read ~ small, data = star)
+```
+:::
+:::
+
+## `.your-turn` — guided practice with collapsible solution
+
+::: {.your-turn}
+[✎ Your turn]{.yt-title} [R]{.badge-r}
+
+Refit the model adding `aide`. **Before** running it, predict whether the `small` coefficient grows, shrinks, or stays about the same.
+
+<details><summary>Show answer</summary>
+It stays about the same (≈ 13 points): randomized assignment makes `small` and `aide` nearly uncorrelated.
+</details>
+:::
+
+## `.summary` — chapter-closing recap card
+
+::: {.summary}
+### Chapter summary
+
+::: {.summary-grid}
+::: {}
+##### Key takeaways
+- OLS minimizes the sum of squared residuals.
+- Slope = expected change in $y$ per unit of $x$.
+:::
+::: {}
+##### New notation & terms
+- $\hat\beta_1$ — fitted slope; $e_i$ — residual
+:::
+:::
+
+::: {.glm}
+**This model as a GLM:** Normal outcome · *identity* link · constant variance.
+:::
+:::
+
+## Supporting boxes
+
+::: {.interpretation}
+A one-unit increase in prior score predicts a 0.6-point increase in the outcome, holding covariates fixed.
+:::
+
+::: {.assumption-check}
+Check linearity, constant variance, and normal residuals before trusting the slope.
+:::
+
+::: {.pitfall}
+Reading a slope causally from observational data ignores confounding.
+:::
+
+::: {.pronunciation}
+$\beta$ is "BAY-tuh"; $\hat{y}$ is "y-hat".
+:::
+
+## `.exercises` — styled exercise container
+
+::: {.exercises}
+### Exercises
+
+1. Using `regdatasets::star`, fit reading score on the small-class indicator and report the slope with its 95% CI. [warm-up]{.chip .easy}
+   a. State the interpretation of the intercept in plain language.
+   b. Re-express the slope in standard-deviation units.
+2. Explain why, with randomized class assignment, the simple-regression slope equals a two-sample mean difference. [core]{.chip .med}
+:::
+
+## Definition / Theorem / Example environments
+
+::: {#def-residual}
+## Residual
+The **residual** $e_i = y_i - \hat{y}_i$ is the part of observation $i$'s outcome the model does not explain.
+:::
+
+::: {#thm-blue}
+## Gauss–Markov
+Under the standard linear-model assumptions, the OLS estimator is the Best Linear Unbiased Estimator (BLUE).
+:::
+
+Later chapters back-reference @def-residual and @thm-blue.

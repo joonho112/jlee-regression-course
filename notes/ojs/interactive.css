@@ -1,22 +1,22 @@
 /* ==========================================================================
    BER 640 — OJS Interactive App Styles
    Quarto Book: cosmo (light) / darkly (dark)
-   Color palette: primary=#2C3E50  secondary=#E74C3C  accent=#3498DB
-                  success=#27AE60  warning=#F39C12    info=#9B59B6
+   Color palette (Cividis Ink): primary=#0B3D66 secondary=#A8431E accent=#2C6E91
+                  success=#3E8E8A  warning=#C9A227    info=#6B3E7A
    ========================================================================== */
 
 /* ---------- CSS Custom Properties ---------- */
 :root {
-  --ber-primary: #2C3E50;
-  --ber-secondary: #E74C3C;
-  --ber-accent: #3498DB;
-  --ber-success: #27AE60;
-  --ber-warning: #F39C12;
-  --ber-info: #9B59B6;
+  --ber-primary: #0B3D66;   /* navy */
+  --ber-secondary: #A8431E; /* rust */
+  --ber-accent: #2C6E91;    /* slate */
+  --ber-success: #3E8E8A;   /* teal */
+  --ber-warning: #C9A227;   /* gold */
+  --ber-info: #6B3E7A;      /* plum */
 
-  --ojs-bg: #ffffff;
+  --ojs-bg: #FBFAF7;
   --ojs-bg-subtle: #f8f9fa;
-  --ojs-text: #2C3E50;
+  --ojs-text: #1f2937;
   --ojs-text-muted: #6c757d;
   --ojs-border: #dee2e6;
   --ojs-input-bg: #ffffff;
@@ -28,7 +28,7 @@
 }
 
 [data-bs-theme="dark"] {
-  --ojs-bg: #222222;
+  --ojs-bg: #111827;
   --ojs-bg-subtle: #2b2b2b;
   --ojs-text: #e0e0e0;
   --ojs-text-muted: #adb5bd;

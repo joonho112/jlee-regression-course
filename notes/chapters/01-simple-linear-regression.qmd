@@ -10,8 +10,9 @@ Simple linear regression provides the foundation for all the models we will enco
 
 This chapter follows a "specific to general" approach: we start with a concrete example from education, build the mathematical model, learn how to estimate and interpret it, and then explore important extensions including prediction intervals, regression to the mean, and the connection between regression and the $t$-test.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Specify and interpret a simple linear regression model

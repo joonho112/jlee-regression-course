@@ -21,8 +21,9 @@ This chapter takes a clear position: **the confirmatory approach should be your 
 
 Before we can discuss either approach, however, we need a fundamental building block: a method for comparing two regression models to determine whether additional predictors provide a meaningful improvement. That is where we begin.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Explain the difference between confirmatory (theory-driven) and exploratory (data-driven) approaches to model building

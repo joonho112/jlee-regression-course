@@ -16,8 +16,9 @@ These **ordinal** variables share a critical feature: the categories have a mean
 
 This chapter extends the latent variable framework from @sec-ch12 to ordinal outcomes with $S > 2$ categories. The key idea is elegant: instead of a single threshold dividing the latent continuum into two regions, we use **multiple thresholds** to carve it into $S$ ordered regions.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Explain why treating ordinal outcomes as continuous (in linear regression) or as unordered categories (in multinomial logistic regression) is inappropriate

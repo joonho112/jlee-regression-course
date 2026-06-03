@@ -6,8 +6,9 @@
 
 In @sec-ch2, we introduced multiple regression with a continuous covariate and a categorical predictor (ANCOVA). In this chapter, we focus on models with **two or more continuous predictors**. This setting introduces important concepts including partial regression (added variable) plots, standardized coefficients, and the sign reversal phenomenon --- a striking case of omitted variable bias where the direction of an effect flips after controlling for another variable.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Fit and interpret a multiple regression model with multiple continuous predictors

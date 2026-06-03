@@ -20,8 +20,9 @@ This chapter makes a key insight explicit: **ANOVA is regression**. The $F$-test
 When $k = 1$ (two groups), the ANOVA $F$-statistic equals $t^2$, and the $p$-values are identical. One-way ANOVA is the natural generalization of the two-sample $t$-test.
 :::
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Specify a one-way ANOVA model using dummy variables

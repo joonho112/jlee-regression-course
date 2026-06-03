@@ -11,8 +11,9 @@ The reason is familiar: **confounding**. When we estimate the effect of one pred
 
 This chapter extends the logistic regression model to include multiple predictors. We will see that the core mechanics --- the logit link, maximum likelihood estimation, odds ratios, predicted probabilities --- all carry forward from @sec-ch9. What changes is our ability to estimate **adjusted** effects, controlling for confounders, and to build richer models that capture the joint influence of several variables on a binary outcome.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Explain Simpson's paradox as an instance of omitted variable bias in the logistic regression context

@@ -9,8 +9,9 @@ In @sec-ch9 and @sec-ch10, we introduced logistic regression as a tool for model
 
 This chapter answers that question from two complementary perspectives. First, we develop the **latent variable formulation**, which shows that the logit and probit models arise from assuming an unobserved continuous variable underlies the binary response. Second, we introduce the **generalized linear model (GLM) framework**, which unifies logistic regression, probit regression, and ordinary linear regression under a single theoretical umbrella. Together, these ideas connect everything we have studied from @sec-ch1 through @sec-ch10.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Explain the latent variable formulation of binary regression and show how it gives rise to both the logit and probit models

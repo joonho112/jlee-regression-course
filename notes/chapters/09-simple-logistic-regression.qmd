@@ -18,8 +18,9 @@ These **dichotomous response variables** are coded as $y_i = 1$ (the event occur
 
 Logistic regression represents a genuine paradigm shift. The core ideas of regression --- specifying a model, estimating parameters, interpreting coefficients, making predictions --- all carry forward, but the mechanics change in important ways. We move from OLS to maximum likelihood estimation, from $R^2$ to odds ratios, and from additive effects on the mean to multiplicative effects on the odds. Understanding these differences is the central goal of this chapter.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Explain why linear regression is inappropriate for binary outcomes and describe the specific problems it creates

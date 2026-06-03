@@ -8,8 +8,9 @@ The linearity assumption is one of the most important --- and most frequently vi
 
 This chapter introduces several tools for modeling nonlinear relationships within the linear regression framework: LOWESS curves for detection, log transformations, polynomial regression, and piecewise models. Crucially, all of these approaches remain "linear" models --- they are linear in the *parameters*, even when the relationship between $x$ and $y$ is curved.
 
-::: {.callout-note}
-## Learning Objectives
+::: {.objectives}
+[Learning Objectives]{.obj-title}
+
 After completing this chapter, you will be able to:
 
 1. Use LOWESS curves to detect nonlinearity in bivariate relationships

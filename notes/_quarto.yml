@@ -16,6 +16,12 @@ book:
   repo-actions: [edit, issue]
   search: true
   reader-mode: true
+  cover-image: images/hex-logo.svg
+  favicon: images/hex-glyph.svg
+  page-footer:
+    left: "BER 640 · Advanced Statistical Methods in Education"
+    center: "© 2026 JoonHo Lee · licensed CC BY 4.0"
+    right: "Built with [Quarto](https://quarto.org)"
 
   sidebar:
     style: floating
@@ -60,9 +66,10 @@ csl: apa.csl
 format:
   html:
     theme:
-      light: cosmo
-      dark: darkly
+      light: [cosmo, html/custom.scss]
+      dark: [darkly, html/custom-dark.scss]
     css: ojs/interactive.css
+    lightbox: auto
     code-fold: false
     code-tools: true
     code-link: true
