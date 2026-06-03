@@ -436,7 +436,7 @@ viewof int_beta3 = Inputs.range([-1.5, 1.5], {
 
 // Fixed coefficients from the actual model (only β₃ is interactive)
 int_alpha = 2.50
-int_beta1 = 0.56
+int_beta1 = 0.30
 int_beta2 = 9.28
 
 // Derived school-specific parameters
