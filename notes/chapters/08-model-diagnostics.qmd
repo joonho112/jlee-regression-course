@@ -1753,8 +1753,8 @@ where $R_1^2$ is from regressing $x_1$ on all other predictors.
 
 | VIF | Interpretation |
 |:----|:---------------|
-| < 4 | Acceptable |
-| 4–10 | Moderate concern |
+| < 5 | Acceptable |
+| 5–10 | Moderate concern |
 | ≥ 10 | Serious — estimates unreliable |
 
 ::: {.panel-tabset}
@@ -1774,7 +1774,7 @@ check_collinearity(diag_model)
 #| code-fold: true
 #| code-summary: "Show R Code"
 ```
-Each row shows the VIF and tolerance for one predictor. All VIF values below 4 indicate that collinearity is not inflating standard errors to a concerning degree. If any predictor has VIF above 10, its coefficient estimate is unreliable --- the data do not contain enough independent information to distinguish its effect from the effects of correlated predictors. In that case, consider the remedies listed below (selecting, combining, or transforming predictors).
+Each row shows the VIF and tolerance for one predictor. All VIF values below 5 indicate that collinearity is not inflating standard errors to a concerning degree. If any predictor has VIF above 10, its coefficient estimate is unreliable --- the data do not contain enough independent information to distinguish its effect from the effects of correlated predictors. In that case, consider the remedies listed below (selecting, combining, or transforming predictors).
 
 ### Code Explanation
 ```{r}
@@ -1782,8 +1782,8 @@ Each row shows the VIF and tolerance for one predictor. All VIF values below 4 i
 #| eval: false
 ```
 - `check_collinearity()` from the `performance` package computes VIF and tolerance ($1/\text{VIF}$) for each predictor, along with interpretive labels (low, moderate, high)
-- VIF $\geq 4$ means the standard error is at least doubled compared to what it would be if the predictor were uncorrelated with all others
-- Tolerance below 0.25 is the equivalent flag (tolerance = $1/\text{VIF}$)
+- VIF $\geq 5$ means the standard error is inflated by more than a factor of two ($\sqrt{5} \approx 2.2$) compared to what it would be if the predictor were uncorrelated with all others
+- Tolerance below 0.20 is the equivalent flag (tolerance = $1/\text{VIF}$)
 - For models with interaction terms or polynomial predictors (see @sec-ch5 and @sec-ch6), high VIF is expected and not necessarily problematic --- centering predictors before creating the interaction or polynomial can reduce it substantially
 
 
@@ -1919,7 +1919,7 @@ Use this table as a quick reference when diagnostics reveal an assumption violat
 | **Homoscedasticity** | Funnel shape in residuals-vs-fitted plot; Breusch-Pagan test is significant | Use HC3 robust standard errors (`vcovHC()`); or transform the outcome |
 | **Normality** | Q-Q plot departs from diagonal; Shapiro-Wilk test is significant | Apply transformation ladder (log, sqrt, inverse); in large samples, rely on CLT |
 | **Independence** (clustering) | Design knowledge (e.g., students nested in schools); cluster-robust SE ratios >> 1 | Use cluster-robust SEs (`vcovCL()`); or fit a multilevel model |
-| **Collinearity** | VIF $\geq$ 4 (moderate) or $\geq$ 10 (serious) | Select, combine, or center predictors; drop redundant variables |
+| **Collinearity** | VIF $\geq$ 5 (moderate) or $\geq$ 10 (serious) | Select, combine, or center predictors; drop redundant variables |
 | **Influential observations** | Cook's $D > 4(k+1)/n$; DFBETAS $> 2/\sqrt{n}$ | Investigate (errors? wrong population?); conduct sensitivity analysis; do **not** delete automatically |
 
 **Decision sequence:** (1) Check linearity first --- if violated, fix the functional form before assessing other assumptions. (2) Check variance and normality on the corrected model. (3) Apply robust SEs if heteroscedasticity remains. (4) Report sensitivity analyses for influential observations.
@@ -1937,7 +1937,7 @@ Use this table as a quick reference when diagnostics reveal an assumption violat
 4. **Q-Q plot** diagnoses normality; the **transformation ladder** (log, sqrt, inverse) provides remedies
 5. **`check_model()`** from `performance` is a one-stop diagnostic dashboard covering all major assumptions
 6. **DFBETAS** (per-coefficient) and **Cook's distance** (overall) identify influential observations — conduct sensitivity analysis rather than automatic deletion
-7. **VIF** detects collinearity: ≥ 4 is moderate, ≥ 10 is serious — remedies include selecting, combining, or transforming predictors
+7. **VIF** detects collinearity: ≥ 5 is moderate, ≥ 10 is serious — remedies include selecting, combining, or transforming predictors
 8. **Robust SEs** via the sandwich estimator correct inference under heteroscedasticity without transformations
 9. **Cluster-robust SEs** handle nested data (students in schools) — need ≥ 40 clusters
 10. **Looking ahead**: Logistic regression diagnostics (@sec-ch11) use different tools (deviance residuals, Hosmer-Lemeshow) but the same diagnostic logic
@@ -1964,7 +1964,7 @@ model_ex <- lm(mathach ~ ses + minority + female + sector, data = hsb_sub)
 check_model(model_ex)
 ```
 
-**Interpretation:** Examine each panel in sequence. The residuals-vs-fitted panel should show random scatter (linearity OK) and constant spread (homoscedasticity OK). The Q-Q plot should show points near the diagonal (normality OK). VIF values below 4 indicate acceptable collinearity. If any panel shows concern, refer to @sec-ch8-decision-guide for recommended remedies.
+**Interpretation:** Examine each panel in sequence. The residuals-vs-fitted panel should show random scatter (linearity OK) and constant spread (homoscedasticity OK). The Q-Q plot should show points near the diagonal (normality OK). VIF values below 5 indicate acceptable collinearity. If any panel shows concern, refer to @sec-ch8-decision-guide for recommended remedies.
 :::
 
 ::: {.callout-caution collapse="true"}
