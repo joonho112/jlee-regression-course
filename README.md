@@ -1,6 +1,6 @@
 # BER 640: Advanced Statistical Methods in Education
 
-> The complete course materials for an asynchronous online graduate course in applied regression with R at the University of Alabama — lecture notes, hands-on R labs, homework solutions, a final-project guide, a course website, and a companion data package, all built and published from one place to a **single website**.
+> The complete course materials for an asynchronous online graduate course in applied regression with R at the University of Alabama — lecture notes, hands-on R labs, homework solutions, module quizzes, a final-project guide, a course website, and a companion data package, all built and published from one place to a **single website**.
 
 [![Content: CC BY-NC-SA 4.0](https://img.shields.io/badge/Content-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Code: MIT](https://img.shields.io/badge/Code-MIT-green.svg)](https://opensource.org/licenses/MIT)
@@ -15,7 +15,7 @@
 
 **BER 640: Advanced Statistical Methods in Education** is a 3-credit, fully online (asynchronous) graduate course at the **University of Alabama**. It teaches applied regression analysis with R — from simple linear regression through generalized linear models — for students in education and the social sciences.
 
-This repository is the **single source for the entire course**. It brings together the lecture notes, R labs, homework solutions, the final-project guide, the course website, and the companion data package, and builds and publishes them together to one website.
+This repository is the **single source for the entire course**. It brings together the lecture notes, R labs, homework solutions, module quizzes, the final-project guide, the course website, and the companion data package, and builds and publishes them together to one website.
 
 The course was developed with the support of the University of Alabama's **Office of Teaching Innovation and Digital Education (OTIDE)** and is first offered in **Fall 2026**. This repository is its living source: I maintain it for ongoing online delivery at UA and revise it each time the course runs.
 
