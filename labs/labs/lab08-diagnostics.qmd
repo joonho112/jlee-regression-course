@@ -439,8 +439,8 @@ car::vif(model)
 | VIF Range | Interpretation |
 |-----------|----------------|
 | 1 | No collinearity |
-| 1--4 | Low to moderate; generally acceptable |
-| 4--10 | Moderate; worth monitoring |
+| 1--5 | Low to moderate; generally acceptable |
+| 5--10 | Moderate; worth monitoring |
 | > 10 | Severe; coefficients are unreliable |
 
 For factors with multiple levels, `vif()` reports a **Generalized VIF (GVIF)**. The column $\text{GVIF}^{1/(2 \cdot df)}$ puts it on a comparable scale --- apply the same thresholds to its square.
@@ -481,7 +481,7 @@ Every regression analysis should include these checks:
 
 4. **Outliers** --- Studentized deleted residuals with $|t| > 3$. Investigate, do not automatically delete.
 
-5. **Collinearity** --- VIF for each predictor. VIF > 10 is a serious problem; VIF > 4 deserves caution.
+5. **Collinearity** --- VIF for each predictor. VIF > 10 is a serious problem; VIF > 5 deserves caution.
 :::
 
 ::: {.callout-tip}

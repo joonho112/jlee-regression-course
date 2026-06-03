@@ -362,7 +362,7 @@ car::avPlots(model_lm)
 car::vif(model_lm)
 ```
 
-> All VIF values are well below 4. Math and reading are correlated, but not enough to cause any problems. No collinearity concerns.
+> All VIF values are well below 5. Math and reading are correlated, but not enough to cause any problems. No collinearity concerns.
 
 ### Diagnostic 5: Outliers
 
@@ -383,7 +383,7 @@ Every linear regression analysis should check:
 1. **Normality** --- histogram + QQ plot of studentized deleted residuals
 2. **Constant variance** --- residuals vs. fitted values plot
 3. **Linearity** --- added-variable plots (or residual vs. each predictor)
-4. **Collinearity** --- VIF (worry if > 10, monitor if > 4)
+4. **Collinearity** --- VIF (worry if > 10, monitor if > 5)
 5. **Outliers** --- $|\text{rstudent}| > 3$
 :::
 
