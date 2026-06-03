@@ -33,14 +33,17 @@ theme_set(
     )
 )
 
-# --- Color palette ---
+# --- Color palette: "Cividis Ink" (course brand) ---
+# Values migrated to the Cividis Ink palette; the KEY names are unchanged so every
+# chapter that references ber640_colors / ber640_palette / ber640_fill keeps working
+# with zero edits (Decision 4: migrate values only, names stable).
 ber640_colors <- c(
-  primary   = "#2C3E50",
-  secondary = "#E74C3C",
-  accent    = "#3498DB",
-  success   = "#27AE60",
-  warning   = "#F39C12",
-  info      = "#9B59B6"
+  primary   = "#0B3D66",  # navy
+  secondary = "#A8431E",  # rust
+  accent    = "#2C6E91",  # slate
+  success   = "#3E8E8A",  # teal
+  warning   = "#C9A227",  # gold
+  info      = "#6B3E7A"   # plum
 )
 
 ber640_palette <- scale_color_manual(values = unname(ber640_colors[1:4]))
@@ -58,4 +61,12 @@ reg_table <- function(model, ...) {
   gtsummary::tbl_regression(model, ...) |>
     bold_labels() |>
     bold_p(t = 0.05)
+}
+
+# Key-terms / notation glossary table (adapts IMS make_terms_table() to a
+# term + symbol + meaning layout). Pass a tibble/data.frame; renders as a
+# Bootstrap .table so it inherits the book's table house style + .notation styling.
+# Usage in a chapter:  make_key_terms(tibble::tribble(~Term, ~Symbol, ~Meaning, ...))
+make_key_terms <- function(df) {
+  knitr::kable(df, col.names = tools::toTitleCase(names(df)))
 }

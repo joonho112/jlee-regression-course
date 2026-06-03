@@ -1,0 +1,79 @@
+// =====================================================================
+// BER 640 — "Cividis Ink" palette + "Pairing B" typography (brand tokens)
+// =====================================================================
+// Book-owned copy of the course brand tokens. The single-source-of-truth
+// target is one shared partial used by BOTH the course website and this book;
+// during this redesign the book carries its own verbatim copy because a
+// parallel website session holds website/html/custom.scss, so the website-side
+// @import refactor is deferred (reconcile when both branches merge).
+// Values mirror website/html/custom.scss (Cividis Ink, colorblind-safe
+// blue->gold + ink + warm danger). Contrast ratios stated against white.
+//
+// HARD overrides (no !default) so the brand always beats the cosmo/darkly base.
+
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Libre+Franklin:wght@400;500;600;700&display=swap');
+
+// --- Layer 1: named tokens (define FIRST, then map onto Bootstrap roles) ---
+$ink:    #1A2A3A;   // near-black blue ink  -- 14.7:1, body/heading text
+$navy:   #0B3D66;   // deep cividis blue    -- 10.0:1, primary
+$slate:  #2C6E91;   // mid cividis blue     --  4.9:1, links/accent (AA text)
+$teal:   #3E8E8A;   // desaturated teal     --  3.4:1, large-text/UI only
+$gold:   #C9A227;   // warm cividis gold    --  2.4:1, large-text/UI only
+$rust:   #A8431E;   // warm danger accent   --  5.6:1, danger (AA text)
+$plum:   #6B3E7A;   // warm violet accent   --  6.6:1, info/note (AA text)
+$paper:  #FBFAF7;   // warm off-white       -- page background
+
+// --- Neutral gray ramp (defined before role mapping so roles can reference it) ---
+$gray-50:     #f9fafb;
+$gray-100:    #f3f4f6;
+$gray-200:    #e5e7eb;
+$gray-300:    #d1d5db;
+$gray-400:    #9ca3af;
+$gray-500:    #6b7280;
+$gray-600:    #4b5563;
+$gray-700:    #374151;
+$gray-800:    #1f2937;
+$gray-900:    #111827;
+
+// --- Layer 2: Bootstrap role mapping (named tokens -> semantic roles) ---
+$primary:     $navy;    // headings, table headers, primary buttons
+$accent:      $slate;   // heavily reused: links, borders, sidebar active
+$success:     $teal;    // tip callouts / decorative UI
+$warning:     $gold;    // gold; large-text / UI accents only, never body text
+$info:        $plum;    // note callouts, informational accents
+$danger:      $rust;    // error/danger states
+// $secondary kept neutral (muted structure) since $danger=$rust already
+// carries the warm "alarm" role; avoids two competing emphasis colors.
+$secondary:   $gray-700;
+
+// Link colors (theme-agnostic; dark-mode contrast refined at the a11y step 4.5)
+$link-color:              $slate;     // 4.9:1 on paper -- AA for normal text
+$link-hover-color:        $navy;
+$link-decoration:         underline;
+$link-hover-decoration:   underline;
+// NOTE: surface vars ($body-bg, $body-color, $code-bg, $code-color) are LIGHT-specific and
+// live in custom.scss (the light theme layer) ONLY -- never here -- so the dark theme (darkly)
+// keeps its own dark surfaces. Setting them here would force a light background into dark mode.
+
+// Typography (Pairing B)
+$font-family-sans-serif:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-size-base:          1.05rem;
+
+$headings-font-family:    'Libre Franklin', 'Inter', -apple-system, sans-serif;
+$headings-font-weight:    700;
+$headings-line-height:    1.3;
+
+$h1-font-size:            2.4rem;
+$h2-font-size:            1.9rem;
+$h3-font-size:            1.5rem;
+$h4-font-size:            1.25rem;
+$h5-font-size:            1.1rem;
+$h6-font-size:            0.95rem;
+
+// Sidebar / TOC
+$toc-font-size:           0.95rem;
+$sidebar-font-size:       1rem;
+$sidebar-font-size-section: 0.9rem;
+
+// Code font (the surface vars $code-bg/$code-color are light-specific -> custom.scss)
+$font-family-monospace:   'Fira Code', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
