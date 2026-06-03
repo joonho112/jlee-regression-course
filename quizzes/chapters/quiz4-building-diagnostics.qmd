@@ -1,0 +1,474 @@
+---
+title: "Quiz 4: Model Building & Diagnostics"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Model Building & Diagnostics  ·  **Available after:** Week 9  ·  **Source:** Lecture Notes, [Ch. 6 (Nonlinear Relationships)](../../notes/chapters/06-nonlinear-relationships.qmd), [Ch. 7 (Model Building)](../../notes/chapters/07-model-building.qmd), and [Ch. 8 (Model Diagnostics)](../../notes/chapters/08-model-diagnostics.qmd).
+
+This quiz assesses nonlinear modeling (LOWESS, log transforms, polynomials), model building (nested $F$-tests, $\Delta R^2$, the $R^2$-always-rises problem, stepwise/GIGO), and residual diagnostics (residual types, residual-vs-fitted and Q-Q plots, leverage vs influence, VIF, heteroscedasticity). Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 15 |
+| Total points | 20 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 9 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 4. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — LOWESS for detecting nonlinearity {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 6]`**
+
+A researcher plans to model `crime_rate` as a function of `poverty` in the `crime` data. Before fitting any parametric model, she overlays a **LOWESS** smoother and a straight OLS line on the scatterplot. What is the primary diagnostic purpose of the LOWESS curve at this stage?
+
+A. To judge whether the linearity assumption is reasonable: LOWESS fits a smooth curve without assuming a functional form, so a substantial departure from the straight line flags curvature the linear model would miss.
+
+B. To estimate the regression coefficients more precisely than OLS by down-weighting outliers.
+
+C. To formally test the null hypothesis that the slope of `poverty` equals zero.
+
+D. To remove heteroscedasticity from the residuals before the model is fit.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** LOWESS (locally weighted scatterplot smoothing) fits a smooth curve *without assuming a functional form*, so it serves as a model-free **detection** tool. If the smoother bends away from the straight line, the linearity assumption is in doubt and a transformation, polynomial, or piecewise model should be considered.
+- **Why not B:** LOWESS is a diagnostic smoother, not an estimator of the linear model's coefficients; it produces no reportable slope and is not a robust-estimation method.
+- **Why not C:** LOWESS yields no coefficient and no hypothesis test; significance for `poverty` comes from the fitted regression, not the smoother.
+- **Why not D:** LOWESS addresses *functional form* (linearity), not the constant-variance assumption; it neither detects nor removes heteroscedasticity.
+- **Source:** Lecture Notes, Ch. 6 (Nonlinear Relationships), "Detecting Nonlinearity with LOWESS".
+
+:::
+
+### Question 2 — Matching log specifications to interpretations {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Applied · Notes Ch. 6]`**
+
+Using the `gcse` data, match each log-linear specification (left) to the correct interpretation of its slope $\beta$ (right).
+
+| Specification | | Interpretation of $\beta$ |
+|:--------------|:--|:--------------------------|
+| 1. Log-level: $\log(y) = \alpha + \beta x$ | | Y. A 1% increase in $x$ is associated with an approximate $\beta$% change in $y$ (an elasticity) |
+| 2. Level-log: $y = \alpha + \beta \log(x)$ | | W. A 1-unit increase in $x$ is associated with an approximate $100\beta$% change in $y$ |
+| 3. Log-log: $\log(y) = \alpha + \beta \log(x)$ | | Z. A 1-unit increase in $x$ is associated with a $\beta$-unit change in $y$ |
+| 4. Level-level: $y = \alpha + \beta x$ | | X. A 1% increase in $x$ is associated with an approximate $\beta/100$-unit change in $y$ |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → W, 2 → X, 3 → Y, 4 → Z**
+
+- **1 → W (log-level):** logging the *outcome* puts $\beta$ in percent-of-$y$ terms per 1-unit change in $x$ ($\approx 100\beta$%).
+- **2 → X (level-log):** logging the *predictor* gives a $\beta/100$-unit change in $y$ per 1% change in $x$.
+- **3 → Y (log-log):** logging both makes $\beta$ an *elasticity* — a % change in $y$ per % change in $x$.
+- **4 → Z (level-level):** the untransformed slope, a $\beta$-unit change in $y$ per 1-unit change in $x$.
+- **Rule:** $\log(y) \Rightarrow$ think in percent for $y$; $\log(x) \Rightarrow$ think in percent for $x$; both logged $\Rightarrow$ elasticity.
+- **Source:** Lecture Notes, Ch. 6 (Nonlinear Relationships), "Log Interpretation Rules".
+
+:::
+
+### Question 3 — Interpreting a log-level slope as a percent change {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 6]`**
+
+A log-level model is fit to the `crime` data:
+
+$$\log(\text{crime\_rate}) = \alpha + 0.030 \cdot \text{poverty}$$
+
+Using the **approximation** $100 \cdot \beta\%$, a 1-percentage-point increase in `poverty` is associated with an approximate ________ % change in `crime_rate`. (Give a number.)
+
+#### Answer & Rationale
+
+**Correct answer: 3.0** (accept 3.0–3.1; the exact value $100(e^{0.030}-1) = 3.05\%$ is also acceptable)
+
+- **Computation:** For a log-level (log-outcome) model, the approximate percent change in $y$ per 1-unit increase in $x$ is $100 \cdot \beta\% = 100 \times 0.030 = 3.0\%$.
+- **Why not other values:** Reporting 0.30% divides by 100 instead of multiplying (the level-log rule); 30% is off by a factor of ten; 0.030% reports $\beta$ itself without the $\times 100$ conversion.
+- **Source:** Lecture Notes, Ch. 6 (Nonlinear Relationships), "Log Transformations".
+
+:::
+
+### Question 4 — Polynomials and extrapolation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 6]`**
+
+A cubic polynomial model of `crime_rate` on `metro` fits the observed `crime` data well across the observed range (`metro` from about 25% to 95%). A policy analyst wants to predict `crime_rate` for a hypothetical region at `metro` = 110%. What is the best statistical advice?
+
+A. Cubic models are guaranteed monotonic outside the data range, so the extrapolated prediction is safe to report.
+
+B. Do not extrapolate: polynomial models can behave wildly outside the observed range, so a prediction at `metro` = 110% (beyond the data) is untrustworthy.
+
+C. Because the in-sample $R^2$ is high, predictions at `metro` = 110% will be at least as accurate as in-sample predictions.
+
+D. Refit the model with a higher-degree polynomial; more flexible polynomials extrapolate more reliably.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** Polynomials fit well *within* the observed range but can curve sharply and produce absurd values just beyond it. A region at `metro` = 110% is outside the observed 25–95% range (and beyond a logically possible percentage), so the prediction is untrustworthy. The chapter's explicit rule: **never extrapolate with polynomial models**.
+- **Why not A:** Cubics are not guaranteed monotonic; they have an inflection point and can swing sharply outside the data range.
+- **Why not C:** A high in-sample $R^2$ describes fit *within* the observed range and gives no guarantee about out-of-range predictions.
+- **Why not D:** Higher-degree polynomials are *more* flexible and therefore *more* prone to extreme out-of-range behavior, not less.
+- **Source:** Lecture Notes, Ch. 6 (Nonlinear Relationships), "Polynomial Extrapolation".
+
+:::
+
+### Question 5 — Centering before a polynomial {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 6]`**
+
+**True or False:** In a quadratic model $y = \alpha + \beta_1 x + \beta_2 x^2$, you should center $x$ before forming the squared term, and $\beta_1$ should **not** be read on its own as "the effect of $x$," because the instantaneous effect $\partial y / \partial x = \beta_1 + 2\beta_2 x$ depends on the value of $x$.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A is correct:** Both claims are right. Centering $x$ before forming $x^2$ reduces the strong correlation between the linear and quadratic terms and makes $\beta_1$ the slope *at the mean of $x$* (rather than at the often-meaningless point $x = 0$). And because the marginal effect is $\beta_1 + 2\beta_2 x$, which changes across the range of $x$, $\beta_1$ and $\beta_2$ must not be interpreted in isolation.
+- **Why "False" is wrong:** Students often center correctly but then mistakenly treat $\beta_1$ as a single constant "effect of $x$." The slope varies continuously with $x$; describing it requires marginal effects at specific values.
+- **Source:** Lecture Notes, Ch. 6 (Nonlinear Relationships), "Center Before Polynomial Regression".
+
+:::
+
+### Question 6 — The incremental F-test requires nesting {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 7]`**
+
+Using `nels_data`, a student wants to compare two regression models with the incremental (nested-model) $F$-test:
+
+- **Model A:** `achievement ~ ses + female`
+- **Model B:** `achievement ~ minority + school_size`
+
+Can the incremental $F$-test validly compare Model A and Model B, and why?
+
+A. Yes — any two models fit to the same outcome can be compared with the incremental $F$-test as long as they differ in their number of predictors.
+
+B. Yes — because both models have the same number of predictors (two each), the $F$-test compares them directly.
+
+C. No — the incremental $F$-test requires the models to be *nested* (every predictor in the reduced model must also appear in the complete model); these share no nesting, so use AIC/BIC for non-nested comparisons.
+
+D. No — the incremental $F$-test only works when both models contain exactly the same predictors.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** The incremental $F$-test is built on the *extra sum of squares* from adding predictors to a model that already contains the others, so the reduced model must be nested within the complete model. Models A and B contain disjoint predictor sets, so neither is nested in the other; the test does not apply. For non-nested comparisons, information criteria (AIC, BIC) are appropriate.
+- **Why not A:** The test is *not* applicable to arbitrary models — nesting is required, not merely a difference in size.
+- **Why not B:** Equal predictor counts do not create nesting; the reduced set must be a subset of the complete set.
+- **Why not D:** If the models contained *exactly* the same predictors there would be nothing to test. Nesting means the reduced set is a *proper subset* of the complete set.
+- **Source:** Lecture Notes, Ch. 7 (Model Building), "The Incremental F-Test".
+
+:::
+
+### Question 7 — Computing ΔR² {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 7]`**
+
+Two nested models are fit to the same students in `nels_data`:
+
+| Model | Predictors | $R^2$ |
+|:------|:-----------|:-----:|
+| Reduced | `ses` | 0.180 |
+| Complete | `ses + female + minority` | 0.234 |
+
+Compute $\Delta R^2$ (the change in $R^2$ from the reduced to the complete model). Round to three decimals.
+
+#### Answer & Rationale
+
+**Correct answer: 0.054** (accept 0.053–0.055)
+
+- **Computation:** $\Delta R^2 = R^2_{\text{complete}} - R^2_{\text{reduced}} = 0.234 - 0.180 = 0.054$. The two added predictors explain about 5.4% of additional variance in achievement.
+- **Why not other values:** 0.234 forgets to subtract the reduced $R^2$; 0.414 *adds* the two values (it is a difference, not a sum). Because $R^2$ never decreases when predictors are added to a nested model, $\Delta R^2$ here is non-negative. (A nonzero $\Delta R^2$ is not by itself a significance test — that needs the incremental $F$-test.)
+- **Source:** Lecture Notes, Ch. 7 (Model Building), "Computing ΔR²".
+
+:::
+
+### Question 8 — Why R² always increases {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 7]`**
+
+A colleague adds a completely irrelevant predictor (a random ID number) to a regression on `nels_data` and is surprised that $R^2$ goes *up* slightly. Which statement correctly explains this and gives the right remedy for comparing models of different sizes?
+
+A. $R^2$ increasing means the ID number is a genuinely useful predictor and should be retained.
+
+B. $R^2$ should have *decreased*; an increase indicates a coding error, because irrelevant predictors always lower $R^2$.
+
+C. Adjusted $R^2$ has the same problem as $R^2$ and also always increases, so neither is useful for model comparison.
+
+D. Adding any predictor can only increase (or leave unchanged) raw $R^2$ — even pure noise; use a complexity-penalized criterion instead.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** By the mathematics of least squares, adding *any* predictor cannot decrease $R^2$ — it (weakly) increases regardless of whether the predictor is related to the outcome. This makes raw $R^2$ a biased basis for comparing models of different sizes. Adjusted $R^2$ penalizes the number of predictors (and *can* fall), AIC/BIC trade fit against complexity, and the incremental $F$-test gives the formal test.
+- **Why not A:** A tiny mechanical rise in $R^2$ is the *expected* consequence of adding any variable, not evidence of usefulness.
+- **Why not B:** Irrelevant predictors do not lower raw $R^2$; it never decreases when predictors are added. No coding error is implied.
+- **Why not C:** Unlike raw $R^2$, **adjusted $R^2$ penalizes complexity and can decrease** when a predictor adds more noise than signal — which is exactly why it is useful.
+- **Source:** Lecture Notes, Ch. 7 (Model Building), "R² Always Increases with More Predictors".
+
+:::
+
+### Question 9 — Stepwise selection finds structure in noise (GIGO) {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 7]`**
+
+**True or False:** A simulation that runs stepwise selection on a pool of 20 candidate predictors that are **pure noise** (none truly related to the outcome) will almost always return an empty, intercept-only model, because there is no real signal for the algorithm to find.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** This is the chapter's "garbage in, garbage out" demonstration. Even when every predictor is pure noise, stepwise selection routinely retains one or more "significant" predictors, because searching among many candidates and keeping whatever clears a threshold capitalizes on chance. The algorithm is *designed* to find patterns and will find them whether or not they are real.
+- **Why "True" is wrong:** It assumes the absence of true signal guarantees nothing is selected, ignoring the inflated false-positive rate from many comparisons — exactly why automatic selection is unsuitable for confirmatory research.
+- **Source:** Lecture Notes, Ch. 7 (Model Building), "GIGO: Finding Structure in Pure Noise".
+
+:::
+
+### Question 10 — Matching residual types to definitions {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 8]`**
+
+For an `hsb_sub` math-achievement model, match each residual type (left) to its definition (right). Let $e_i$ = raw residual, $h_{ii}$ = leverage, $\hat{\sigma} = \sqrt{\text{MSE}}$, and $s_{(i)}$ = residual SD from the fit that *excludes* observation $i$.
+
+| Residual type | | Definition |
+|:--------------|:--|:-----------|
+| 1. Raw | | Y. $e_i / (\hat{\sigma}\sqrt{1 - h_{ii}})$ — divides by the leverage-adjusted SD |
+| 2. Semi-studentized | | Z. $e_i^{(d)} / (s_{(i)}\sqrt{1 - h_{ii}})$ — leave-one-out SD; follows a $t$, best for outlier testing |
+| 3. Studentized (internal) | | W. $e_i = y_i - \hat{y}_i$ — the plain observed-minus-predicted difference |
+| 4. Studentized-deleted | | X. $e_i / \hat{\sigma}$ — divides by the overall residual SD only, ignoring leverage |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → W, 2 → X, 3 → Y, 4 → Z**
+
+- **1 → W (raw):** $e_i = y_i - \hat{y}_i$; its variance is not constant across observations.
+- **2 → X (semi-studentized):** divides by $\hat{\sigma} = \sqrt{\text{MSE}}$ only, so it ignores each point's leverage.
+- **3 → Y (studentized, internal):** divides by the leverage-adjusted SD $\hat{\sigma}\sqrt{1 - h_{ii}}$, giving approximately unit variance.
+- **4 → Z (studentized-deleted):** uses the leave-one-out variance $s_{(i)}$; it follows a $t$-distribution and is the best choice for formal outlier testing.
+- **Key distinction:** semi-studentized ignores leverage; studentized adds the $\sqrt{1-h_{ii}}$ correction; studentized-deleted additionally uses the leave-one-out SD.
+- **Source:** Lecture Notes, Ch. 8 (Model Diagnostics), "Types of Residuals".
+
+:::
+
+### Question 11 — Diagnosing a violation from the residual plot {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 8]`**
+
+For an `hsb_sub` model, the residuals-vs-fitted plot shows a LOWESS curve through the residuals that is clearly **U-shaped** (residuals mostly negative in the middle of the range and positive at both ends), while the vertical spread of the points stays roughly **constant**. Which regression assumption is most clearly violated?
+
+A. Nonlinearity — the curved LOWESS pattern shows the mean structure is mis-specified.
+
+B. Heteroscedasticity — the error variance is non-constant.
+
+C. Non-normality of the residuals.
+
+D. Non-independence of the residuals.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** A *curved* (U-shaped) LOWESS line through the residuals signals that the model's **mean structure** is wrong — typically a missing nonlinear term (e.g., a quadratic). A *flat* LOWESS would indicate the functional form is adequate. Because the spread here is constant, the variance assumption is fine; it is the *mean*, not the *spread*, that misbehaves. The remedy is to add a polynomial term or transform a predictor.
+- **Why not B:** Heteroscedasticity shows up as a *funnel/fan* in the spread, not as curvature in the LOWESS; here the spread is constant.
+- **Why not C:** Non-normality is diagnosed from the **Q-Q plot**, not from curvature in the residual-vs-fitted plot.
+- **Why not D:** A residual-plot curve is not a signature of dependence; independence violations are not visible this way.
+- **Source:** Lecture Notes, Ch. 8 (Model Diagnostics), "Reading the Residual Plot: A Visual Guide".
+
+:::
+
+### Question 12 — Reading a Q-Q plot {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 8]`**
+
+A normal Q-Q plot of the studentized residuals from an `hsb_sub` model shows points that track the reference line through the middle, but the **right tail curves upward, above the line**, while the left tail sits close to the line. What does this pattern indicate, and what remedy fits?
+
+A. Light tails — fewer extreme values than a normal distribution; no remedy is needed.
+
+B. Positive (right) skew — the largest residuals are more extreme than normal; a $\sqrt{y}$ or $\log(y)$ transformation of the outcome may help.
+
+C. Heavy tails on both sides — an S-shape indicating a $t$-like distribution.
+
+D. Perfect normality — minor tail wiggle is always ignorable, so no departure is present.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** When only the **right** tail curves *above* the reference line (and the left tail stays near it), the largest observed residuals exceed what a normal predicts — the classic signature of **positive (right) skew**. Remedies pull in the long right tail: $\sqrt{y}$ (mild) or $\log(y)$ (moderate).
+- **Why not A:** Light tails produce a reverse-S — *both* tails fall *below* the line — not a single upward-curving right tail.
+- **Why not C:** Heavy tails produce an S-shape with the right tail above *and* the left tail below the line; here only the right tail departs, so it is skew.
+- **Why not D:** A systematic one-sided departure across a whole tail is a real skew signal, not the negligible finite-sample wiggle seen under true normality.
+- **Source:** Lecture Notes, Ch. 8 (Model Diagnostics), "Reading Q-Q Plots: A Quick Reference".
+
+:::
+
+### Question 13 — Leverage vs. influence (Cook's distance) {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 8]`**
+
+In a regression on the `crime` data, one state has an **unusual value of `single_parent`** (high leverage), but it falls almost exactly on the regression surface — its studentized residual is near zero. According to Cook's distance, is this observation influential?
+
+A. Yes — any high-leverage observation is automatically influential and should be removed.
+
+B. Yes — a near-zero residual guarantees a large Cook's distance because the formula divides by the residual.
+
+C. No — influence requires high leverage **and** a large residual, so a high-leverage point that fits the model well is not influential.
+
+D. It cannot be determined without first deleting the observation and refitting the model many times.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** Cook's distance can be written $D_i = \dfrac{(e_i^*)^2}{k+1}\cdot\dfrac{h_{ii}}{1-h_{ii}}$, which is large only when an observation has **both** a large studentized residual *and* high leverage. A high-leverage state that lies on the regression surface has $e_i^* \approx 0$, so $D_i \approx 0$: it is **not** influential. Leverage ≠ influence.
+- **Why not A:** High leverage means *unusual predictor values*, not necessarily influence. A high-leverage point that fits well is not pulling the line.
+- **Why not B:** The residual appears in the **numerator** of Cook's distance, so a near-zero residual makes $D_i$ *small*, not large.
+- **Why not D:** Cook's distance can be computed from a single fit via the hat matrix; refitting $n$ times is unnecessary.
+- **Source:** Lecture Notes, Ch. 8 (Model Diagnostics), "Cook's Distance".
+
+:::
+
+### Question 14 — Computing VIF {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 8]`**
+
+In a model on the `crime` data, you regress the predictor `single_parent` on all the *other* predictors and obtain $R^2_j = 0.80$. The variance inflation factor for `single_parent` is $\text{VIF}_j = \dfrac{1}{1 - R^2_j}$. Compute the VIF. Give the numeric value.
+
+#### Answer & Rationale
+
+**Correct answer: 5.0** (accept 4.9–5.1)
+
+- **Computation:** $\text{VIF}_j = \dfrac{1}{1 - R^2_j} = \dfrac{1}{1 - 0.80} = \dfrac{1}{0.20} = 5.0$. The standard error of the `single_parent` coefficient is therefore inflated by a factor of $\sqrt{5} \approx 2.2$ relative to the no-collinearity case — a moderate level of multicollinearity by common rules of thumb (VIF above ~5 warrants attention; VIF ≥ 10 is serious).
+- **Why not other values:** Reporting 1.25 plugs $0.20$ into $1/(1-R^2_j)$ where $R^2_j = 0.80$ belongs; reporting 0.80 just restates $R^2_j$ (VIF is the reciprocal of $1 - R^2_j$, not $R^2_j$).
+- **Source:** Lecture Notes, Ch. 8 (Model Diagnostics), "Variance Inflation Factor (VIF)".
+
+:::
+
+### Question 15 — Heteroscedasticity and robust standard errors {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 8]`**
+
+A Breusch-Pagan test on a `crime` model is significant ($p < .05$), indicating heteroscedasticity. Your collaborator worries that "all the coefficient estimates are now biased and the whole model is invalid." What is the statistically correct response?
+
+A. The collaborator is right: heteroscedasticity biases the coefficients, so the estimated effects can no longer be trusted.
+
+B. Re-fit with a polynomial term, because heteroscedasticity is a sign of missing curvature.
+
+C. Heteroscedasticity is harmless; significant Breusch-Pagan results can be ignored because OLS handles non-constant variance automatically.
+
+D. The collaborator is wrong: OLS coefficients stay unbiased — only the usual standard errors are invalid, so use robust (HC) standard errors.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** Under heteroscedasticity the OLS coefficient estimates remain **unbiased** — the model still recovers the average relationship. What breaks is *inference*: the usual SE formulas assume constant variance, so SEs, CIs, and $p$-values are wrong (OLS often understates SEs where variance is high). HC (e.g., HC3) robust standard errors fix the inference *without* changing the point estimates.
+- **Why not A:** Heteroscedasticity does **not** bias the coefficients — only inference is affected. (Bias instead comes from a linearity violation.)
+- **Why not B:** A polynomial term addresses *nonlinearity* (curvature in the mean), a different violation; it does not correct non-constant variance.
+- **Why not C:** It is not harmless: the usual SEs and $p$-values are invalid, so inference can be wrong. OLS does not automatically correct for it.
+- **Source:** Lecture Notes, Ch. 8 (Model Diagnostics), "Heteroscedasticity: Coefficients Are Fine, Inference Is Not".
+
+:::
+
+## Coverage
+
+This quiz draws evenly from Lecture Notes Ch. 6 (Nonlinear, 5 items), Ch. 7 (Model Building, 4 items), and Ch. 8 (Diagnostics, 6 items). The 15 items total **20 points** (Multiple Choice ×8, True/False ×2, Fill-in-the-Blank ×3, Matching ×2) and span all three difficulty levels.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | LOWESS detects nonlinearity | Multiple Choice | Conceptual | 1 |
+| 2 | Log-form interpretations | Matching | Applied | 2 |
+| 3 | Log-level slope → % change | Fill-in-the-Blank | Applied | 2 |
+| 4 | Polynomial extrapolation | Multiple Choice | Challenge | 1 |
+| 5 | Center before a polynomial | True/False | Conceptual | 1 |
+| 6 | Nested $F$-test requires nesting | Multiple Choice | Conceptual | 1 |
+| 7 | Compute $\Delta R^2$ | Fill-in-the-Blank | Applied | 2 |
+| 8 | $R^2$ always increases | Multiple Choice | Conceptual | 1 |
+| 9 | Stepwise / GIGO | True/False | Challenge | 1 |
+| 10 | Residual types | Matching | Conceptual | 2 |
+| 11 | Diagnose nonlinearity (residual plot) | Multiple Choice | Challenge | 1 |
+| 12 | Read a Q-Q plot | Multiple Choice | Applied | 1 |
+| 13 | Leverage ≠ influence | Multiple Choice | Challenge | 1 |
+| 14 | Compute VIF | Fill-in-the-Blank | Applied | 2 |
+| 15 | Heteroscedasticity → robust SE | Multiple Choice | Challenge | 1 |
+
+: Quiz 4 item map. {.striped}

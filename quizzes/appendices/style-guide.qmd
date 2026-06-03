@@ -1,0 +1,425 @@
+---
+title: "Item-Writing Style Guide"
+---
+
+## Purpose
+
+This appendix is the **single contract** that every module quiz in this book follows. It standardizes how all **six module quizzes** are written so the chapters read as one consistent assessment instrument, and so any item can be authored, reviewed, revised, or deployed without re-deciding format each time.
+
+Concretely, this guide fixes:
+
+- the **two-tab question format** — a *Question* tab and an *Answer & Rationale* tab inside a `panel-tabset`;
+- the **metadata tag** that opens every Question tab (type · points · difficulty · source);
+- the **point values** by item type and the per-quiz point total;
+- the **difficulty tags** (`Conceptual`, `Applied`, `Challenge`);
+- the **source citations** back to the [Lecture Notes](../notes/), down to the nearest section; and
+- the **master Blackboard deployment settings** shared across all six quizzes.
+
+The quizzes themselves are **mastery-based, open-book, unlimited-attempts, and auto-graded**. Every rule below follows from those four properties: items must be auto-gradable in Blackboard, they must reward reasoning rather than lookup, and because students may retake a quiz without limit, each item is a **diagnostic checkpoint** rather than a one-shot, high-stakes question.
+
+::: {.callout-note}
+## Relationship to the Preface
+The [Preface](../index.qmd) introduces the panel-tabset, the callout colors, the difficulty tags, the question-type menu, and the mastery scale for the *reader*. **This appendix is the operational specification** of those same conventions for the *author* — it gives the exact markup, the metadata grammar, the point rules, and the deployment table. The per-quiz **Content Blueprints** appendix assigns concept slots to item types; the **Blackboard Setup** appendix records the final, deployment-ready configuration. Where this guide states a *default*, the Blackboard Setup appendix may record a confirmed override.
+:::
+
+## Design Principles
+
+These principles govern *what* a good item looks like, independent of its Blackboard type. Their pedagogy is borrowed from the *Introduction to Modern Statistics (IMS)* and *OpenIntro* tradition — read real output, interpret in context, build difficulty in steps — while every item stays original to this course.
+
+1. **Conceptual emphasis, interpreted in context.** Items test *meaning* and the correct reading of statistical output, not mechanical arithmetic. Any item that asks for the interpretation of a **coefficient, slope, or odds ratio** must require an answer that states the **variable**, the **direction** of the association, the **magnitude**, and the **units** — framed as the *predicted* (or *expected*) change in the outcome per one-unit change in the predictor. "The slope is 4" is never the target; "each additional hour studied is associated with a **4-point increase** in *predicted test score*" is.
+
+2. **Distractors are documented misconceptions.** Every wrong option is built from a **real, documented misconception**, drawn wherever possible from the Lecture Notes **"Common Pitfall"** callouts (e.g., reading an odds ratio of 1.5 as "50% more likely" on the probability scale, confusing a slope with a group mean, conflating a slope with $R^2$, or treating a main effect as unconditional when an interaction is present). Because each distractor maps to a known error, the option a student picks is **diagnostic** — it reveals which misconception to revisit. Never pad an item with a throwaway option no informed student would consider.
+
+3. **One objective, one unambiguous answer.** Each item targets **exactly one learning objective** — never bundle two ideas into one stem; split them into two items. Single-select types (Multiple Choice, True/False) must have a **single, unambiguous correct answer**; for Multiple Answer, the *set* of correct options must be unambiguous. Options must be **parallel** in grammar, length, and specificity and **mutually exclusive** in meaning, so no two can both be defended. **Avoid "all of the above" and "none of the above"** — they reward elimination strategy over understanding and weaken each option's diagnostic value.
+
+4. **Open-book by design.** Because the quizzes are **open-book and open-notes** with unlimited attempts, do **not** test the recall of a definition a student can look up in seconds. Test **reasoning and application**: apply a definition to output, choose the correct interpretation, reason about an assumption, decide which technique fits a scenario. A well-formed open-book item is one a student cannot answer just by finding the matching sentence in the notes.
+
+5. **Static-output rule.** Present any regression tables, model output, or numeric results as **typed, static markdown** — a hand-written pipe table or an inline number — **not** as a live R chunk. This book ships **without a committed `_freeze` cache**, so a live R chunk would force `quarto render` to actually execute the full package stack (`regdatasets`, `easystats`, and friends) in CI, where it can fail. Type the coefficient table; write the $R^2$ as text. Reserve **live R only for an essential figure** that cannot be supplied as a static image (e.g., a residual-vs-fitted plot the item asks the student to read) — and when you do, render it once and **commit its freeze** so CI never re-executes it. Rule of thumb: if it is a table or a number, type it; if it is a plot you truly need rendered, freeze it.
+
+6. **Originality.** **Never copy a question verbatim** from IMS, OpenIntro, Agresti, or any other source. Emulate their *style* only — reading real output, interpreting in context, stepwise difficulty, residual-plot judgment — and write **fresh items** from this course's own Lecture Notes (its examples, notation, and Key Takeaways) and the [`regdatasets`](../regdatasets/) datasets. This protects against copyright issues and keeps every item aligned to what this course actually taught.
+
+7. **Stepwise difficulty.** Within each quiz, order and tag items so difficulty rises from definition/reading (`Conceptual`) through calculation and output-reading (`Applied`) to assumption-checking, diagnosis, and synthesis (`Challenge`). Interpretation items generally precede the calculation items that depend on them.
+
+8. **Self-contained stems.** A student should be able to answer from the stem alone, without flipping to another item. If output is needed, include it in the stem (statically), and define any non-obvious symbol the first time it appears.
+
+::: {.callout-warning}
+## Common Pitfall (for authors)
+The fastest way to write a *bad* distractor is to invent a wrong number. The fastest way to write a *good* one is to open the relevant **Common Pitfall** box in the Lecture Notes and turn the documented mistake into an option. Mine the notes first.
+:::
+
+## The Six Auto-Gradable Blackboard Item Types
+
+All quizzes use **only** these six types, because all six are **auto-gradable** in Blackboard — they score instantly and support unlimited attempts with no manual grading. For each type: a one-line use case and a ready-to-paste example built from the [canonical question block](#the-canonical-question-block).
+
+::: {.callout-note}
+## How to read the examples
+Every fenced code block in this guide is **literal copy-paste qmd source**, shown verbatim rather than rendered. Drop one into a quiz chapter, replace the placeholder content, and it renders as a finished two-tab item with no further markup.
+:::
+
+### Multiple Choice
+
+*Use case:* the default for a single-best-answer interpretation question with one defensible key and three or four plausible, misconception-based distractors.
+
+```
+### Question 1 — Slope interpretation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 1]`**
+
+A regression of test score on hours studied yields $\hat{y} = 50 + 4x$.
+Which statement best interprets the slope?
+
+A. Students who study score 4 points on average.
+B. Each additional hour studied is associated with a 4-point increase
+   in *predicted* test score.
+C. The model explains 4% of the variance in scores.
+D. A student who studies 0 hours is predicted to score 4.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** the slope is the predicted change in the
+  outcome per one-unit increase in the predictor — +4 points per
+  additional hour, with variable, direction, magnitude, and units.
+- **Why not A:** confuses the slope with a group mean.
+- **Why not C:** conflates the slope with $R^2$.
+- **Why not D:** describes the intercept, not the slope.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression),
+  "Interpreting the slope".
+
+:::
+```
+
+### Multiple Answer (select-all)
+
+*Use case:* "select **all** that apply" — when several statements are independently true or false and you want to test whether a student endorses *each* correct one and rejects *each* incorrect one. **List every correct option** in the key.
+
+```
+### Question 2 — Properties of OLS residuals {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Answer · 2 pts · Conceptual · Notes Ch. 1]`**
+
+In a simple linear regression fit by ordinary least squares, which of
+the following are *always* true? **Select all that apply.**
+
+A. The residuals sum to zero.
+B. The residuals are uncorrelated with the predictor.
+C. The sum of squared residuals is minimized.
+D. The residuals are always normally distributed.
+E. The fitted line passes through $(\bar{x}, \bar{y})$.
+
+#### Answer & Rationale
+
+**Correct answers: A, B, C, E**
+
+- **Why A, B, C, E are correct:** these are algebraic consequences of
+  the OLS normal equations and hold for *every* fitted line.
+- **Why not D:** normality is a modeling *assumption* about the errors
+  used for inference, not a guaranteed property of the residuals.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression),
+  "Least-squares properties".
+
+:::
+```
+
+### True/False
+
+*Use case:* a single, sharply stated claim — ideally one that flips a common misconception into a testable sentence.
+
+```
+### Question 3 — R-squared and prediction {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 2]`**
+
+**True or False:** A high $R^2$ guarantees that the regression model
+will make accurate predictions for new observations.
+
+A. True
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B is correct:** $R^2$ measures variance explained *in the
+  sample used to fit the model*; a high in-sample $R^2$ can coexist
+  with poor out-of-sample prediction (overfitting).
+- **Why not A:** treats an in-sample fit statistic as a guarantee of
+  generalization — a documented misconception.
+- **Source:** Lecture Notes, Ch. 2 (Model Fit), "Interpreting $R^2$".
+
+:::
+```
+
+### Matching
+
+*Use case:* pair members of two short, parallel sets — a statistic with its interpretation, or a term with its definition. Present **both columns** and give the **complete correct pairing** in the key.
+
+```
+### Question 4 — Statistics and their interpretations {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 2]`**
+
+Match each regression statistic (left) with its correct
+interpretation (right).
+
+| Prompt                    | Response                                              |
+|:--------------------------|:------------------------------------------------------|
+| 1. Slope coefficient      | A. Proportion of outcome variance explained.          |
+| 2. $R^2$                  | B. Predicted change in the outcome per one-unit $x$.  |
+| 3. Residual standard error| C. Predicted outcome when all predictors equal zero.  |
+| 4. Intercept              | D. Typical prediction error, in the outcome's units.  |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → B, 2 → A, 3 → D, 4 → C**
+
+- **1 → B:** the slope is the predicted change in $y$ per one-unit
+  increase in $x$.
+- **2 → A:** $R^2$ is the share of outcome variance the model explains.
+- **3 → D:** the residual standard error summarizes typical prediction
+  error in the outcome's units.
+- **4 → C:** the intercept is the predicted outcome when every
+  predictor is zero.
+- **Source:** Lecture Notes, Ch. 2 (Model Fit),
+  "Reading the regression summary".
+
+:::
+```
+
+### Fill-in-the-Blank (numeric with tolerance)
+
+*Use case:* a single computed value — a predicted value, an odds ratio, an $R^2$, a $t$-statistic. **Always** key the numeric answer **and an acceptable tolerance** so rounding does not penalize a correct method.
+
+```
+### Question 5 — Predicted value {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 1]`**
+
+A regression of test score on hours studied yields $\hat{y} = 50 + 4x$.
+What is the predicted test score for a student who studies **6 hours**?
+Enter a number.
+
+#### Answer & Rationale
+
+**Correct answer: 74** (accept **73.5–74.5**, tolerance $\pm 0.5$)
+
+- **Why 74:** $\hat{y} = 50 + 4(6) = 74$.
+- **Tolerance:** the $\pm 0.5$ window absorbs intermediate rounding
+  without admitting a wrong method.
+- **Common error:** answering `54` (forgetting to multiply by $x$) or
+  `24` (dropping the intercept) — both fall outside the window.
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression),
+  "Prediction from the fitted line".
+
+:::
+```
+
+::: {.callout-tip}
+## Setting the numeric tolerance
+Key the **exact** computed value, then set a tolerance just wide enough to absorb sensible rounding (commonly the last reported decimal place, e.g. $\pm 0.01$ to $\pm 0.5$ depending on scale) but **narrow enough that a common wrong method falls outside it**. State both the keyed value and the accepted window in the Answer tab so the Blackboard Setup appendix can transcribe them directly.
+:::
+
+### Fill-in-Multiple-Blanks
+
+*Use case:* score several short responses inside one stem independently — for example, completing an interpretation sentence where each blank checks a distinct piece (direction, magnitude, units).
+
+```
+### Question 6 — Completing an interpretation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 9]`**
+
+A logistic regression of admission on GPA gives a coefficient whose
+odds ratio is **2.0**. Complete the interpretation: "Holding other
+predictors fixed, each one-point increase in GPA multiplies the odds
+of admission by **[blank1]**, i.e., the odds **[blank2]**
+(increase/decrease)."
+
+#### Answer & Rationale
+
+**Correct answers:** `[blank1]` = 2 (accept 2.0) · `[blank2]` = increase
+
+- **`[blank1]`:** an odds ratio of 2.0 multiplies the odds by 2 per
+  one-unit increase in GPA.
+- **`[blank2]`:** because the odds ratio exceeds 1, the odds *increase*.
+- **Common error:** reading OR = 2.0 as "the probability doubles" — the
+  multiplier applies to the *odds*, not the probability.
+- **Source:** Lecture Notes, Ch. 9 (Logistic Regression),
+  "Odds ratios".
+
+:::
+```
+
+::: {.callout-note}
+## All six are auto-gradable
+Multiple Choice, Multiple Answer, True/False, Matching, Fill-in-the-Blank, and Fill-in-Multiple-Blanks all score automatically in Blackboard. Do **not** introduce essay, short-answer, or other manually graded types — they break the unlimited-attempts, instant-feedback model the quizzes depend on. A true short-answer prompt is recast as a numeric or multiple-blanks item so it can be keyed.
+:::
+
+## The Canonical Question Block
+
+**Every question**, regardless of type, is authored as an **unnumbered H3 heading** followed by a **two-tab `panel-tabset`**. Use exactly this skeleton:
+
+```
+### Question 1 — Slope interpretation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 1]`**
+
+<stem, with any output shown as a static markdown table>
+
+A. <option>
+B. <option>
+C. <option>
+D. <option>
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** ...
+- **Why not A / C / D:** ...
+- **Source:** Lecture Notes, Ch. 1 (Simple Linear Regression), "Interpreting the slope".
+
+:::
+```
+
+### Anatomy of the block
+
+- **Heading.** `### Question N — <topic> {.unnumbered}`. The H3 makes each item a navigable node in the sidebar; `{.unnumbered}` is **required** so question headings do not collide with the book's automatic section numbering. `N` runs consecutively within the quiz; `<topic>` is a 2–5 word label of what the item assesses, set off from `Question N` by an em dash ( — ).
+
+- **The two tabs.** Open `::: {.panel-tabset}`, then exactly two H4 tabs — `#### Question` and `#### Answer & Rationale`, **in that order** — and close with `:::`. The tab **names are fixed**: do not rename, reorder, or add a third tab. (The H4 level keeps the tab labels out of the chapter's heading numbering while the H3 question headings remain the navigable units.)
+
+- **The metadata tag.** The Question tab's **first line** is a **bold inline-code** tag:
+
+  ``**`[Type · Points · Difficulty · Notes Ch. N]`**``
+
+  Fields are separated by a middle dot with spaces ( · ), and the whole tag is wrapped in backticks (monospace) and bolded:
+
+  - **Type** — one of `Multiple Choice`, `Multiple Answer`, `True/False`, `Matching`, `Fill-in-the-Blank`, `Fill-in-Multiple-Blanks`.
+  - **Points** — `1 pt` or `2 pts` (see [Points & Difficulty](#points-difficulty)).
+  - **Difficulty** — one of `Conceptual`, `Applied`, `Challenge`.
+  - **Notes Ch. N** — the source chapter number; it must match the chapter named in the Source line.
+
+- **The stem.** After the tag, write the stem. **Any output, table, or numbers must appear as a static markdown table or inline numbers — never as live R** (see the static-output rule). Use `$...$` for inline math and standard pipe syntax for tables.
+
+- **The options.** Label options **A/B/C/D** (use as many as the item needs, typically three to five), one per line. True/False uses `A. True` / `B. False`. Matching presents two columns (Prompt / Response) instead of A–D options. Numeric Fill-in-the-Blank asks for a number and has no lettered options.
+
+- **The Answer tab — fixed order.** The Answer & Rationale tab **always**:
+
+  1. states the **correct answer first**, in bold;
+  2. gives one bullet for **why the key is correct**;
+  3. gives **one bullet per distractor** explaining why it is wrong (naming the misconception it encodes); and
+  4. ends with a **Source** line citing the Lecture Notes chapter and nearest section (see [Source Citations](#source-citations)).
+
+  The bold first line takes the type-appropriate form: `**Correct answer: X**` (single-select), `**Correct answers: X, Y, Z**` (Multiple Answer), `**Correct pairing: 1 → B, 2 → C, …**` (Matching), or `**Correct answer: <value>** (accept <window>, tolerance ±t)` (numeric).
+
+### Type-specific keying rules
+
+- **Multiple Choice / True/False:** exactly one correct letter; every other option gets a why-not bullet.
+- **Multiple Answer:** list **all** correct options in the key; explain why the selected set is correct and why each unselected option is wrong.
+- **Matching:** present both columns in the Question tab; give the **complete correct pairing** (every prompt → response) in the key, with a one-line justification per pair.
+- **Fill-in-the-Blank (numeric):** give the **keyed numeric answer and an acceptable tolerance** (state both the keyed value and the accepted window); name at least one wrong method the tolerance excludes.
+- **Fill-in-Multiple-Blanks:** key **each blank** separately and list acceptable variants per blank.
+
+::: {.callout-important}
+## Two tabs, in this order, every time
+`#### Question` then `#### Answer & Rationale`. The Question tab is exactly what the student sees in Blackboard; the Answer tab is the instructor key. Never merge them, reorder them, or add a third tab.
+:::
+
+## Points & Difficulty {#points-difficulty}
+
+### Point values
+
+| Item type | Points |
+|:----------|:------:|
+| Multiple Choice | **1 pt** |
+| True/False | **1 pt** |
+| Multiple Answer | **2 pts** |
+| Matching | **2 pts** |
+| Fill-in-the-Blank (numeric) | **2 pts** |
+| Fill-in-Multiple-Blanks | **2 pts** |
+
+The two single-response types (Multiple Choice, True/False) are worth **1 point**; the types that require assembling a set, a pairing, or a computed value (Multiple Answer, Matching, Fill-in-the-Blank, Fill-in-Multiple-Blanks) are worth **2 points**, reflecting their higher cognitive load. Each quiz totals **≈ 20 points**, and the **mastery percentage is computed from that total**. Mix 1-point and 2-point items to land near 20; the exact composition matters less than hitting the ~20-point target consistently across quizzes. (The mastery scale, per the [Preface](../index.qmd): Full ≥ 80%, Partial 60–79%, Minimal < 60%.)
+
+### Difficulty tags
+
+| Tag | Definition |
+|:----|:-----------|
+| `Conceptual` | Tests understanding and interpretation — definitions, assumptions, and the meaning of a result. |
+| `Applied` | Requires reading static R output or working a short calculation to reach and interpret a result. |
+| `Challenge` | Goes beyond routine application — combines techniques or reasons critically about assumptions and diagnostics. |
+
+Aim for a spread across all three within each quiz, weighted toward `Conceptual` and `Applied`, with a smaller number of `Challenge` items, and order items so difficulty generally rises through the chapter.
+
+## Source Citations {#source-citations}
+
+**Every Answer & Rationale tab must cite the Lecture Notes** so any item can be traced to where it was taught. Cite the **chapter and the nearest section**, in this form:
+
+> **Source:** Lecture Notes, Ch. 9 (Logistic Regression), "Interpreting odds ratios".
+
+That is: `Ch. N` + the chapter title in parentheses + the quoted section or heading the item draws on. Cite the **most specific heading** under which the tested idea is taught — not just the chapter. The chapter number must match the `Notes Ch. N` field in the item's metadata tag. When an item draws on a labeled callout, name it (e.g., `"Common Pitfall: odds ratios are not probability ratios"`), since those callouts are the documented source of the distractors. For computational review, the Answer tab may additionally point to the matching [R Lab Book](../labs/) chapter, but the **Lecture Notes citation is required**.
+
+This convention lets any reviewer trace each item to where its concept was taught: it confirms alignment with the course content, locates the exact passage to consult when revising, and makes coverage gaps visible when the items are audited against the notes.
+
+## Master Blackboard Settings
+
+These are the **shared deployment defaults for all six quizzes**. Each row is one quiz.
+
+| Quiz | Available after | Time limit | Attempts | Score recorded | Target item count | Target points | Show correct answers |
+|:-----|:---------------:|:----------:|:--------:|:--------------:|:-----------------:|:-------------:|:--------------------:|
+| Quiz 1 — Foundations | Week 3 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
+| Quiz 2 — Categorical Predictors | Week 5 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
+| Quiz 3 — Interactions | Week 7 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
+| Quiz 4 — Model Building & Diagnostics | Week 9 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
+| Quiz 5 — Logistic Regression | Week 11 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
+| Quiz 6 — Logistic Diagnostics | Week 12 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
+
+::: {.callout-note}
+## Notes on the settings table
+- **Exact item counts and point totals** for each quiz are finalized in the [Blackboard Setup](blackboard-setup.qmd) appendix; the **Target** columns above are design targets, not committed figures.
+- **Attempts (Unlimited)** and **Score recorded (Highest)** are confirmed, fixed properties of the mastery model, as are the **availability weeks**.
+- The **60-minute time limit** and the **answer-release timing** (showing correct answers only after the availability window closes) are **proposed defaults awaiting instructor confirmation**; adjust here and in the Blackboard Setup appendix once confirmed.
+:::
+
+## Authoring Checklist
+
+Run through this checklist for **every** new question, end to end, before considering it done:
+
+1. **Pick the slot.** Choose exactly one target concept and learning objective, located in a specific Lecture Notes chapter and section, and the item type from the quiz's blueprint.
+2. **Write the heading.** `### Question N — <topic> {.unnumbered}`.
+3. **Open the tabset.** `::: {.panel-tabset}` with `#### Question` then `#### Answer & Rationale`.
+4. **Set the metadata tag.** ``**`[Type · Points · Difficulty · Notes Ch. N]`**`` as the Question tab's first line; confirm the points match the type and the chapter matches the source.
+5. **Write the stem** — self-contained, conceptual, interpret-in-context — with any output as a **static markdown table or inline numbers** (no live R).
+6. **Write the options** (A/B/C/D, the two Matching columns, or the numeric prompt), keeping them parallel and mutually exclusive; **no "all/none of the above."**
+7. **Build distractors from documented misconceptions** (Lecture Notes "Common Pitfall" callouts) — one diagnostic error per wrong option.
+8. **Key the answer.** Lead with the bold correct answer in the type-appropriate form, add the why-correct bullet, a why-not bullet per distractor, and — for numeric items — the keyed value and tolerance.
+9. **Cite the source.** `**Source:** Lecture Notes, Ch. N (<Title>), "<nearest section>".`
+10. **Self-check:** single unambiguous answer (single-select)? one objective? open-book-appropriate (not pure recall)? interpretation states variable/direction/magnitude/units? points keep the quiz near ~20? original (not copied from IMS/OpenIntro/Agresti)?
+11. **Render** with the markdown engine and confirm both tabs display correctly, the heading is `{.unnumbered}`, no live R was introduced, and any essential figure has a committed freeze.

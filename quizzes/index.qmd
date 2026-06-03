@@ -1,0 +1,143 @@
+# Preface {.unnumbered}
+
+This companion volume collects all **6 module quizzes** for **BER 640: Advanced Statistical Methods in Education**, along with their complete answer keys and the Blackboard configuration needed to deploy them. For each quiz it presents the item set exactly as students encounter it, paired with a full rationale for every question, the point values, and the deployment settings. It is the instructor-facing authoring artifact behind the auto-graded quizzes and serves as the single source of truth for the quiz content, scoring, and design.
+
+The module quizzes are built around a **mastery-based, open-book** philosophy. Rather than functioning as high-stakes, one-shot assessments, they are low-stakes checkpoints that let students confirm their grasp of each module's key ideas. Students may retake each quiz as many times as needed, and only the highest score is recorded. The questions therefore aim to diagnose understanding and guide review, not to penalize early mistakes.
+
+## How to Use This Book
+
+### Panel Tabsets
+
+Each question is presented in a **panel-tabset** format with two tabs:
+
+::: {.panel-tabset}
+### Question
+The question exactly as students see it in Blackboard, including the item type, the stem, and all answer options. Read this tab first to experience the question from the student's perspective before consulting the key.
+
+### Answer & Rationale
+The instructor key for the question. It identifies the correct answer (or answers), explains **why each distractor is wrong**, lists the **point value**, cites the **source** in the Lecture Notes that the question draws on, and assigns a **difficulty tag**. Use this tab to author, review, or revise the item.
+:::
+
+::: {.callout-tip}
+## Suggested Workflow
+1. Read the **Question** tab to confirm the stem and options are clear and unambiguous.
+2. Open the **Answer & Rationale** tab to verify the keyed answer, the distractor explanations, and the points.
+3. Follow the **source citation** to the relevant Lecture Notes chapter to confirm the question is aligned with what students were taught.
+:::
+
+### Blackboard Settings Table
+
+Each quiz chapter opens with a **Blackboard settings table** that documents exactly how the quiz is deployed in the course shell. Reproducing these settings here keeps the authored content and the live Blackboard deployment in sync, so the book can be used to rebuild or audit a quiz at any time.
+
+| Setting | Description |
+|:--------|:------------|
+| Number of questions | Total items in the quiz. |
+| Total points | Sum of all question point values. |
+| Time limit | Time allowed per attempt (if any). |
+| Attempts | Number of attempts permitted (unlimited for all module quizzes). |
+| Score recorded | Which attempt's score is kept in the Grade Center (highest score). |
+| Availability | The week after which the quiz unlocks for students. |
+| Question delivery | Randomization of question order and answer-option order, where applicable. |
+| Feedback | What students see after submission (score and per-question correctness). |
+
+## Quiz Overview
+
+The six quizzes map one-to-one onto the course's lecture modules and become available to students after the listed week, once the corresponding lecture and lab material is complete.
+
+| Quiz | Module | Topics | Available After |
+|:-----|:-------|:-------|:----------------|
+| Quiz 1 | Foundations of Regression | Simple regression, OLS, dummy variables | Week 3 |
+| Quiz 2 | Categorical Predictors | ANCOVA, one-way ANOVA, multiple comparisons | Week 5 |
+| Quiz 3 | Interactions | Interaction effects, two-way ANOVA, simple slopes | Week 7 |
+| Quiz 4 | Model Building & Diagnostics | Nonlinear relationships, model selection, residual diagnostics | Week 9 |
+| Quiz 5 | Logistic Regression | Odds ratios, predicted probabilities, Simpson's Paradox | Week 11 |
+| Quiz 6 | Logistic Diagnostics | Goodness of fit, classification, pseudo-$R^2$ | Week 12 |
+
+## Question Types
+
+Every item is written to be **auto-gradable** in Blackboard, so that quizzes score instantly and support unlimited attempts without manual grading. The quizzes draw on six question types:
+
+| Type | Description |
+|:-----|:------------|
+| Multiple Choice | One correct answer among several options. |
+| Multiple Answer | One or more correct answers that students must select in combination. |
+| True/False | A single statement judged true or false. |
+| Matching | Pair each prompt with its correct response (e.g., terms to definitions, statistics to interpretations). |
+| Fill-in-the-Blank (numeric) | A computed numeric value, checked against a keyed answer within a defined tolerance. |
+| Fill-in-Multiple-Blanks | Several short responses within one stem, each scored independently. |
+
+::: {.callout-note}
+## Conceptual, Open-Book Items
+Across all types, questions emphasize **conceptual understanding** and the correct interpretation of statistical output rather than mechanical computation. Because the quizzes are **open-book** and **open-notes**, items reward students who can read, reason about, and apply the course material rather than memorize it.
+:::
+
+## Difficulty Tags
+
+Each question is tagged with one of three difficulty levels:
+
+| Tag | Description |
+|:----|:------------|
+| `Conceptual` | Focuses on understanding and interpreting statistical concepts. Tests definitions, assumptions, and the meaning of results. |
+| `Applied` | Requires reading R output or working through a short calculation to analyze data and interpret results. |
+| `Challenge` | Extends beyond routine applications. May involve combining multiple techniques or thinking critically about assumptions. |
+
+## Callout Boxes
+
+::: {.callout-note}
+## Theoretical Background
+Blue boxes provide mathematical foundations and theoretical context relevant to the question.
+:::
+
+::: {.callout-tip}
+## Practical Insight
+Green boxes highlight useful tips, alternative framings, or practical insights for authoring or interpreting an item.
+:::
+
+::: {.callout-warning}
+## Common Pitfall
+Yellow boxes warn about common mistakes students make on each question, which often motivate the distractors.
+:::
+
+::: {.callout-important}
+## Key Takeaway
+Red boxes summarize the most important statistical lesson each question is designed to assess.
+:::
+
+## Grading (Mastery)
+
+Quizzes count toward **10% of the final grade** and are scored on a mastery scale:
+
+| Score | Criteria |
+|:------|:---------|
+| Full credit | 80% or higher on the quiz |
+| Partial credit | 60--79% on the quiz |
+| Minimal credit | Below 60% on the quiz |
+| No credit | Quiz not attempted |
+
+Students may take each quiz an **unlimited** number of times, and the **highest score** across all attempts is recorded in the Grade Center. There is no penalty for multiple attempts; the first attempt is best used as a self-assessment that identifies areas for review, and students are encouraged to retake each quiz until they reach mastery.
+
+## Cross-References to Course Materials
+
+Every question's **Answer & Rationale** tab cites the chapter in the [Lecture Notes](../notes/) that the item draws on, so that content can be traced directly to where it was taught. For computational review, students should also consult the [R Lab Book](../labs/). The quizzes align with the Lecture Notes as follows:
+
+| Quiz | Lecture Notes coverage |
+|:-----|:-----------------------|
+| Quiz 1 | Foundations of regression: simple linear regression, OLS estimation, and dummy variables. |
+| Quiz 2 | Categorical predictors: one-way ANOVA, ANCOVA, and multiple comparisons. |
+| Quiz 3 | Interactions: interaction effects, two-way ANOVA, and simple slopes. |
+| Quiz 4 | Model building and diagnostics: nonlinear relationships, model selection, and residual diagnostics. |
+| Quiz 5 | Logistic regression: odds ratios, predicted probabilities, and Simpson's Paradox. |
+| Quiz 6 | Logistic diagnostics: goodness of fit, classification, and pseudo-$R^2$. |
+
+To review the underlying concepts before authoring, revising, or answering a question, follow the link to the relevant chapter in the [Lecture Notes](../notes/) book.
+
+## Acknowledgments
+
+This project was supported by the Online Teaching Innovation and Digital Education (OTIDE) initiative at the University of Alabama. The datasets referenced throughout are available via the [`regdatasets`](../regdatasets/) R package.
+
+If you have questions, suggestions, or notice errors, please reach out at [jlee296@ua.edu](mailto:jlee296@ua.edu).
+
+::: {.callout-note}
+## Citation
+Lee, J. (2026). *BER 640 Module Quizzes*. University of Alabama. Available at: [https://joonho112.github.io/jlee-regression-course/quizzes/](https://joonho112.github.io/jlee-regression-course/quizzes/)
+:::

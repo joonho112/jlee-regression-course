@@ -45,6 +45,7 @@ jobs:
           quarto render notes
           quarto render labs
           quarto render homework
+          quarto render quizzes
           quarto render project
 
       - name: Fetch prebuilt regdatasets pkgdown site

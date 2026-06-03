@@ -1,0 +1,494 @@
+---
+title: "Quiz 3: Interactions"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Interactions  ·  **Available after:** Week 7  ·  **Source:** Lecture Notes, [Ch. 4 (Continuous Predictors)](../../notes/chapters/04-continuous-predictors.qmd) and [Ch. 5 (Interactions)](../../notes/chapters/05-interactions.qmd).
+
+This quiz assesses interaction (moderation) effects: the meaning of effect modification, the three interaction types, reading a difference of differences, how main effects become conditional, deriving group-specific equations and conditional slopes, centering, the symmetry of interactions, two-way ANOVA and Type II/III sums of squares, plus standardized coefficients, partial-regression plots, and sign reversal from Ch. 4. Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 15 |
+| Total points | 20 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 7 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 3. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — What an interaction means {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 5]`**
+
+In a study of exam performance, researchers find that the effect of hours studied on the final score is large for students with low prior knowledge but nearly flat for students with high prior knowledge. In the language of Chapter 5, what role does *prior knowledge* play?
+
+A. It is an effect modifier (moderator), because the effect of hours studied on the score depends on its level.
+
+B. It is a confounder, because it is correlated with both hours studied and the final score.
+
+C. It is a suppressor, because controlling for it strengthens the hours-studied effect.
+
+D. It is a mediator, because it transmits the effect of hours studied to the score.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** When the effect of one predictor on the outcome *depends on the value of another* predictor, the second predictor is an **effect modifier** or **moderator**, and the two predictors interact. Here the hours-studied effect changes across levels of prior knowledge — exactly effect modification.
+- **Why not B:** A confounder is associated with both predictor and outcome and *biases* the estimate; it does not, by definition, change the *size* of an effect across its own levels. The scenario describes a changing effect, not bias.
+- **Why not C:** A suppressor changes the magnitude of another coefficient when added, but the defining feature here is that the effect varies *with the level of* prior knowledge — moderation, not suppression.
+- **Why not D:** A mediator lies on the causal pathway between predictor and outcome (X → M → Y). Prior knowledge is not a consequence of studying that then causes the score; it conditions the study effect.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "Effect Modifiers and Moderators".
+
+:::
+
+### Question 2 — Matching interaction types to examples {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 5]`**
+
+Match each research question (left) to the type of interaction it represents (right). Each type is used at most once; one right-column option is a distractor.
+
+| # | Research question |
+|:--|:------------------|
+| 1 | Does the slope relating prior achievement (LRT) to GCSE differ between Battersea and Chelsea schools? |
+| 2 | Does the male–female salary gap among faculty differ across Assistant, Associate, and Full ranks? |
+| 3 | Does the slope relating education to crime rate change as a county's urbanization increases? |
+
+| | Interaction type |
+|:--|:-----------------|
+| W | Categorical × Categorical |
+| X | Continuous × Continuous |
+| Y | Continuous × Categorical |
+| Z | Categorical × Quadratic |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → Y, 2 → W, 3 → X**
+
+- **1 → Y (Continuous × Categorical):** LRT is continuous and school is a two-level factor; the interaction lets the LRT *slope* differ by school (non-parallel lines).
+- **2 → W (Categorical × Categorical):** Gender (2 levels) and rank (3 levels) are both categorical; the interaction asks whether a *group difference* (the gender gap) depends on the level of the other factor.
+- **3 → X (Continuous × Continuous):** Education and urbanization are both continuous; the *slope* of one changes continuously as the other increases.
+- **Distractor Z (Categorical × Quadratic):** Not one of the three interaction types; a quadratic term is a variable interacted with *itself*, a separate idea from a cross-variable interaction.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "Continuous by Categorical / Categorical by Categorical / Continuous by Continuous Interaction".
+
+:::
+
+### Question 3 — Interaction as a difference of differences {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 5]`**
+
+A `salary ~ gender * rank` model on the `faculty` data (references = Female, Assistant) yields the predicted cell means below (the Assistant and Full ranks are shown; the Associate rank is omitted here for brevity).
+
+| Gender | Assistant | Full |
+|:-------|----------:|-----:|
+| Female | \$62,000 | \$88,000 |
+| Male   | \$66,000 | \$103,000 |
+
+Reading the interaction as a **difference of differences**, how much *larger* is the male–female gap among Full professors than among Assistant professors?
+
+A. \$4,000
+
+B. \$11,000
+
+C. \$15,000
+
+D. \$37,000
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** The gender gap (Male − Female) is $66{,}000 - 62{,}000 = \$4{,}000$ among Assistants and $103{,}000 - 88{,}000 = \$15{,}000$ among Full professors. The interaction is the *difference of these differences*: $15{,}000 - 4{,}000 = \$11{,}000$ — exactly how much the gender gap at Full exceeds the gap at Assistant ($\beta_5$).
+- **Why not A:** \$4,000 is the gender gap *at Assistant only* (the conditional `male` main effect $\beta_1$), not the difference of differences.
+- **Why not C:** \$15,000 is the gender gap *at Full only*, a single conditional gap rather than the change in the gap.
+- **Why not D:** \$37,000 is the Full − Assistant jump *among males* ($103{,}000 - 66{,}000$); it mixes the rank effect with gender instead of differencing the two gender gaps.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "Interpreting the Cell Means".
+
+:::
+
+### Question 4 — Main effects become conditional {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 5]`**
+
+**True or False:** In the model `gcse ~ lrt * school` (Battersea = reference), the coefficient on `school` (Chelsea vs Battersea) estimates the *average* GCSE advantage of Chelsea over Battersea across the full range of LRT scores.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** Once the `lrt:school` product is in the model, the `school` coefficient ($\beta_2$) is the Chelsea − Battersea difference **only when LRT = 0**, not an average across LRT values. With the interaction present, the school difference is $\beta_2 + \beta_3 \cdot \text{LRT}$ — it varies with LRT. Adding an interaction turns *all* lower-order ("main effect") coefficients into *conditional* effects evaluated where the other variable equals zero.
+- **Why "True" is wrong:** Students often carry over the additive-model interpretation, where the `school` coefficient *is* a constant adjusted difference. That holds only in the parallel-lines ANCOVA model, not in the interaction model.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "Adding an Interaction Changes the Meaning of ALL Coefficients!".
+
+:::
+
+### Question 5 — The school gap as a function of LRT {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 5]`**
+
+For the `gcse` data, the interaction model `gcse ~ lrt * school` (Battersea = reference) yields:
+
+| Term | Estimate |
+|:-----|---------:|
+| (Intercept) | 2.50 |
+| lrt | 0.30 |
+| schoolChelsea | 9.28 |
+| lrt:schoolChelsea | 0.24 |
+
+Using these coefficients, what is the predicted **Chelsea − Battersea GCSE gap at LRT = 10**? The school gap is $\beta_2 + \beta_3 \cdot \text{lrt}$. Enter a number rounded to two decimals.
+
+#### Answer & Rationale
+
+**Correct answer: 11.68** (accept 11.6–11.8)
+
+- **Computation:** With an interaction, the school difference is *not* constant — it is $\beta_2 + \beta_3 \cdot \text{lrt} = 9.28 + 0.24 \times 10 = 9.28 + 2.40 = 11.68$ GCSE points at LRT = 10.
+- **Common error:** Reporting 9.28 (the gap only at LRT = 0, i.e., the `schoolChelsea` coefficient) ignores that the gap grows by $\beta_3 = 0.24$ per LRT point once an interaction is present.
+- **Source note:** the slope for Chelsea ($\beta_1 + \beta_3$) is derived in Question 9; this item instead probes the *between-school gap* as a function of LRT.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "Deriving Group-Specific Equations".
+
+:::
+
+### Question 6 — Conditional (simple) slope at a chosen moderator value {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 5]`**
+
+For the `crime` data, a continuous × continuous model is fitted as
+
+$$\widehat{\text{crime}} = \beta_0 - 0.30\,(\text{education}) + 0.85\,(\text{urbanization}) - 0.020\,(\text{education} \times \text{urbanization})$$
+
+The conditional slope of education equals $\beta_{\text{edu}} + \beta_3 \times \text{urbanization}$. At an urbanization level of **40%**, the estimated slope of education on the crime rate is ________.
+
+#### Answer & Rationale
+
+**Correct answer: −1.10** (accept −1.05 to −1.15)
+
+- **Computation:** Conditional slope $= -0.30 + (-0.020)(40) = -0.30 - 0.80 = -1.10$.
+- **Interpretation:** At 40% urbanization, each additional percentage point of education is associated with a 1.10-unit *decrease* in the crime rate. Because $\beta_3$ is negative, education becomes *more* protective (a steeper negative slope) as urbanization rises.
+- **Common errors:** Reporting −0.30 uses only the main-effect coefficient (the slope when urbanization = 0); forgetting the sign of $\beta_3$ gives +0.50; multiplying without adding the base slope gives −0.80.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "Probing the Interaction: Conditional Slopes".
+
+:::
+
+### Question 7 — Why centering makes lower-order coefficients interpretable {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 5]`**
+
+A researcher fits `crime_rate ~ education * urbanization` on the raw (uncentered) `crime` data, where urbanization ranges from about 30% to 99%. They are puzzled that the `education` coefficient is hard to interpret. Why does **mean-centering** both predictors before forming the product term fix this problem?
+
+A. Centering removes the correlation between the two predictors, eliminating multicollinearity entirely.
+
+B. Centering changes the value of the interaction coefficient $\beta_3$ so it now reflects an average effect.
+
+C. After centering, the `education` coefficient becomes the education effect *at the mean level of urbanization*, an observed and meaningful value, rather than at urbanization = 0.
+
+D. Centering forces the intercept to equal zero, which makes the slopes directly comparable.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** In the uncentered model, the `education` coefficient is the education effect *when urbanization = 0* — a value outside the observed range (30–99%) and therefore meaningless. Centering shifts the zero point to the sample mean, so the coefficient becomes the education effect *at the average level of urbanization*, a realistic and interpretable quantity.
+- **Why not A:** Centering does not change the *correlation* between the substantive predictors and does not eliminate multicollinearity between them. (It can reduce the spurious correlation between a predictor and its own product term — a different point.)
+- **Why not B:** The interaction coefficient $\beta_3$ is *unchanged* by centering — it is the rate at which one slope changes per unit of the other, invariant to shifting the variables' location. Only the lower-order coefficients change.
+- **Why not D:** Centering does shift the intercept, but that is not why the slope becomes interpretable; the key is *at which moderator value* the conditional effect is evaluated.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "Centering Is Essential".
+
+:::
+
+### Question 8 — The symmetry of interactions {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 5]`**
+
+**True or False:** Because the product term $x \times z$ is symmetric, the single interaction coefficient $\beta_3$ supports two equivalent readings — "the effect of $x$ depends on $z$" and "the effect of $z$ depends on $x$" — so stating that $x$ moderates $z$ is statistically equivalent to stating that $z$ moderates $x$.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A is correct:** The interaction is symmetric. Grouping the model one way gives a slope on $x$ that depends on $z$; grouping it the other way gives a slope on $z$ that depends on $x$. Both describe the *same* non-additivity, so $\beta_3$ has two equivalent interpretations and the choice of "moderator" is a matter of the research question, not the math.
+- **Why "False" is wrong:** Treating moderation as one-directional — as if only one variable can be the moderator — misreads the algebra. There is a single product term and a single coefficient; which variable is called the moderator is interchangeable.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "The Symmetry of Interactions".
+
+:::
+
+### Question 9 — Completing a continuous × categorical interpretation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 5]`**
+
+For the `gcse` interaction model (Battersea = reference):
+
+$$\widehat{\text{gcse}} = 2.50 + 0.30\,(\text{lrt}) + 9.28\,(\text{Chelsea}) + 0.24\,(\text{lrt} \times \text{Chelsea})$$
+
+Complete the two group-specific regression lines.
+
+- The intercept of the **Battersea** line is [blank1]; its slope is [blank2].
+- The intercept of the **Chelsea** line is [blank3]; its slope is [blank4].
+
+#### Answer & Rationale
+
+**Correct answers:** [blank1] = **2.50**, [blank2] = **0.30**, [blank3] = **11.78**, [blank4] = **0.54**
+
+- **[blank1] = 2.50, [blank2] = 0.30:** the reference-group intercept ($\alpha$) and slope ($\beta_1$) are read directly — they belong to Battersea.
+- **[blank3] = 11.78:** Chelsea intercept $= \alpha + \beta_2 = 2.50 + 9.28 = 11.78$.
+- **[blank4] = 0.54:** Chelsea slope $= \beta_1 + \beta_3 = 0.30 + 0.24 = 0.54$.
+- **Common error:** Using 9.28 as the Chelsea intercept (that is the *difference* $\beta_2$, not the intercept) or 0.24 as the Chelsea slope (the *slope difference* $\beta_3$). The reference values are read directly; the Chelsea values require adding the corresponding dummy/interaction term.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "Interpretation of Each Coefficient".
+
+:::
+
+### Question 10 — What the overall interaction test tells you {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 5]`**
+
+For the `faculty` data, an $F$-test compares the additive model `salary ~ gender + rank` against the interaction model `salary ~ gender * rank`, jointly testing $\beta_4 = \beta_5 = 0$ (the two `gender:rank` terms). If this $F$-test is statistically significant, what is the correct conclusion?
+
+A. Male faculty earn significantly more than female faculty, averaged across all ranks.
+
+B. Salary differs significantly across the three academic ranks.
+
+C. Both gender and rank each have a significant main effect on salary.
+
+D. The gender salary gap is *not constant* across ranks — it differs by at least one rank.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** The two interaction coefficients capture how the gender gap *differs* at Associate and Full ranks relative to Assistant. A significant joint test ($H_0: \beta_4 = \beta_5 = 0$ rejected) means these are not all zero — the gender gap is *not the same at every rank*.
+- **Why not A:** That is a claim about the gender *main effect* (an average gap), a different test. The interaction concerns whether the gap *varies* across ranks, not its overall direction.
+- **Why not B:** That describes the *rank* main effect (does salary rise with rank), a separate question from whether the gender gap depends on rank.
+- **Why not C:** A significant interaction does not imply either main effect is significant; main-effect tests are separate, and in the presence of an interaction they are conditional effects anyway.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "Testing the Overall Interaction".
+
+:::
+
+### Question 11 — Type II vs Type III sums of squares {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 5]`**
+
+A two-factor model with factors $A$ and $B$ and their interaction $A\times B$ is fit to **unbalanced** data (e.g., the `faculty` gender × rank model). Which statement correctly distinguishes Type II from Type III sums of squares for the main effect of $A$?
+
+A. Type III tests $A$ controlling for $B$ **and** the $A\times B$ interaction; Type II tests $A$ controlling for $B$ but **not** the interaction; the test of $A\times B$ is identical under both.
+
+B. Type II tests $A$ controlling for the interaction; Type III ignores the interaction entirely; the test of $A\times B$ differs between them.
+
+C. Type II and Type III always give identical results, even with unbalanced data, because both control for the interaction.
+
+D. Type III tests the interaction controlling for the main effects, whereas Type II tests the interaction controlling for nothing.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** Type III main-effect SS for $A$ is $\text{SS}(A \mid B, A{\times}B)$ — controlling for the other main effect *and* the interaction. Type II main-effect SS for $A$ is $\text{SS}(A \mid B)$ — controlling for the other main effect but *not* the interaction. Crucially, the *interaction* test is $\text{SS}(A{\times}B \mid A, B)$ under **both** types, so the $A\times B$ row is identical. In balanced data all types coincide; with unbalanced data Type II and Type III main-effect tests can diverge.
+- **Why not B:** This reverses the two types — Type III (not Type II) controls for the interaction; and the $A\times B$ test is the *same*, not different.
+- **Why not C:** They are identical only in *balanced* designs; the question stipulates unbalanced data, where the types differ because the predictors are no longer orthogonal.
+- **Why not D:** Both types test the interaction controlling for both main effects; neither tests $A\times B$ "controlling for nothing."
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "What Each Type Tests".
+
+:::
+
+### Question 12 — Interpreting a standardized (beta) coefficient {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 4]`**
+
+After refitting the `crime` model with all variables standardized, urbanization has a standardized coefficient of $\beta^* = 0.74$. Which interpretation is correct?
+
+A. A one-percentage-point increase in urbanization is associated with a 0.74-unit increase in the crime rate, holding education constant.
+
+B. Urbanization explains 74% of the variance in the crime rate.
+
+C. A one-standard-deviation increase in urbanization is associated with a 0.74-standard-deviation increase in the crime rate, holding education constant.
+
+D. Urbanization is 0.74 times as important as education in every sample.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** A standardized coefficient expresses both variables in standard-deviation units: for a one-SD increase in the predictor, the expected change in the outcome is $\beta^*$ SDs, holding other predictors constant. Standardizing is useful precisely for comparing predictors measured on different scales (within a sample).
+- **Why not A:** That is the *unstandardized* (raw-units) interpretation; standardized coefficients are not in original percentage-point units.
+- **Why not B:** A coefficient is not a proportion of variance explained ($R^2$, or a squared semi-partial correlation, measures that); 0.74 is not 74% of variance.
+- **Why not D:** Standardized coefficients are *sample-specific* (they depend on each predictor's sample SD) and should not be treated as fixed importance ratios that hold across samples.
+- **Source:** Lecture Notes, Ch. 4 (Continuous Predictors), "Standardized Coefficients".
+
+:::
+
+### Question 13 — What a partial-regression (added-variable) plot shows {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 4]`**
+
+A partial-regression (added-variable) plot for education in the `crime` model is built by (1) regressing crime rate on urbanization and saving the residuals, (2) regressing education on urbanization and saving the residuals, and (3) plotting the first set of residuals against the second. What does the *slope* of the line in this plot equal?
+
+A. The zero-order (bivariate) correlation between education and the crime rate.
+
+B. The partial regression coefficient for education from the multiple regression `crime_rate ~ education + urbanization`.
+
+C. The urbanization coefficient from the multiple regression model.
+
+D. The proportion of crime-rate variance uniquely explained by education.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** By construction, the added-variable plot residualizes both the outcome and the focal predictor on the *other* predictors. The slope of the residual-versus-residual regression equals exactly the focal predictor's **partial coefficient** in the full model — here, the `education` coefficient from `crime_rate ~ education + urbanization`. This is the geometric meaning of "the effect of education controlling for urbanization."
+- **Why not A:** The bivariate (zero-order) relationship is the *un-residualized* scatter; it ignores urbanization and (for the crime data) even has the opposite sign — the very sign reversal the plot reveals.
+- **Why not C:** The urbanization coefficient comes from urbanization's *own* added-variable plot, a different panel.
+- **Why not D:** A unique-variance proportion is a squared semi-partial correlation ($sr^2$), not a regression slope.
+- **Source:** Lecture Notes, Ch. 4 (Continuous Predictors), "Partial Regression Plots".
+
+:::
+
+### Question 14 — Sign reversal as omitted-variable bias {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Answer · 2 pts · Challenge · Notes Ch. 4]`**
+
+In the `crime` data, the education coefficient is **positive** in the bivariate model `crime_rate ~ education` but flips to **negative** after adding urbanization. Per the omitted-variable-bias framework, **select all that apply** that correctly explain this sign reversal.
+
+A. Urbanization is positively associated with both education and the crime rate, making it a confounder of the education–crime relationship.
+
+B. The positive omitted-variable bias from leaving out urbanization was large enough to overwhelm and reverse education's true negative partial effect.
+
+C. The OVB identity $b_{\text{bivariate}} = b_{\text{partial}} + \delta\gamma$ holds only approximately, so the reversal reflects estimation noise rather than systematic bias.
+
+D. The bias term is the product of the auxiliary slope $\delta$ (urbanization on education) and the urbanization coefficient $\gamma$; both are positive, so the bias is positive.
+
+#### Answer & Rationale
+
+**Correct answers: A, B, D**
+
+- **Why A is correct:** Urbanization is positively correlated with both education *and* crime — the textbook confounder structure (a backdoor path Education ← Urbanization → Crime) that produces a spurious positive bivariate association.
+- **Why B is correct:** Education's true partial effect is negative, but the *positive* bias from omitting urbanization exceeds it in magnitude, flipping the observed bivariate sign to positive.
+- **Why D is correct:** The bias term is $\delta \times \gamma$, with $\delta > 0$ (more-educated counties are more urban) and $\gamma > 0$ (more-urban counties have more crime); the product is positive, pushing the bivariate estimate above the true negative partial value.
+- **Why not C:** For OLS the identity $b_{\text{bivariate}} = b_{\text{partial}} + \delta\gamma$ is an *exact algebraic identity*, not an approximation; the reversal is systematic confounding bias, not random noise.
+- **Source:** Lecture Notes, Ch. 4 (Continuous Predictors), "The Sign Reversal Phenomenon".
+
+:::
+
+### Question 15 — Reading a conditional effect off an interaction plot {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 5]`**
+
+For the `gcse` data, the school difference (Chelsea − Battersea) is $\beta_2 + \beta_3 \cdot \text{LRT} = 9.28 + 0.24 \cdot \text{LRT}$, where the slope difference is $\beta_3 = 0.24 > 0$. On the plot of the two school regression lines, as LRT increases, what happens to the vertical gap between the Chelsea and Battersea lines, and what does it mean?
+
+A. The gap stays constant, because the two lines are parallel — the school difference does not depend on LRT.
+
+B. The gap widens, but this reflects only the intercept difference $\beta_2$ and has nothing to do with the slopes.
+
+C. The gap narrows and the lines cross, so Battersea overtakes Chelsea at high LRT.
+
+D. The gap widens as LRT increases, so Chelsea's advantage over Battersea grows for students with higher prior achievement.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** The school gap is $9.28 + 0.24 \cdot \text{LRT}$, an *increasing* function of LRT because $\beta_3 = 0.24 > 0$. Chelsea's slope (0.54) exceeds Battersea's (0.30), so the lines *diverge* and the vertical gap widens — Chelsea's advantage grows for higher-achieving students.
+- **Why not A:** Parallel lines (constant gap) correspond to $\beta_3 = 0$, the ANCOVA model. A nonzero, positive $\beta_3$ means the lines are not parallel.
+- **Why not B:** The widening is driven precisely by the *slope difference* ($\beta_3$): the gap changes with LRT *because* the slopes differ. Attributing it to the intercept term $\beta_2$ misreads the source of the divergence.
+- **Why not C:** A narrowing/crossing gap would require $\beta_3 < 0$ (Chelsea's line flatter). With $\beta_3 > 0$ the lines diverge in Chelsea's favor, so Battersea does not overtake Chelsea.
+- **Source:** Lecture Notes, Ch. 5 (Interactions), "The School Difference Depends on LRT".
+
+:::
+
+## Coverage
+
+This quiz draws from Lecture Notes Ch. 4 (Continuous Predictors, 3 items) and Ch. 5 (Interactions, 12 items). The 15 items total **20 points** (Multiple Choice ×8, True/False ×2, Fill-in-the-Blank ×2, Matching ×1, Fill-in-Multiple-Blanks ×1, Multiple Answer ×1) and span all three difficulty levels.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | Effect modifier / moderator | Multiple Choice | Conceptual | 1 |
+| 2 | Three interaction types | Matching | Conceptual | 2 |
+| 3 | Interaction as difference of differences | Multiple Choice | Applied | 1 |
+| 4 | Main effects become conditional | True/False | Challenge | 1 |
+| 5 | School gap at a given LRT | Fill-in-the-Blank | Applied | 2 |
+| 6 | Conditional (simple) slope | Fill-in-the-Blank | Applied | 2 |
+| 7 | Centering for interpretability | Multiple Choice | Challenge | 1 |
+| 8 | Symmetry of interactions | True/False | Conceptual | 1 |
+| 9 | Group-specific equation (both lines) | Fill-in-Multiple-Blanks | Applied | 2 |
+| 10 | Overall interaction test | Multiple Choice | Conceptual | 1 |
+| 11 | Type II vs Type III SS | Multiple Choice | Challenge | 1 |
+| 12 | Standardized coefficient | Multiple Choice | Conceptual | 1 |
+| 13 | Partial-regression plot | Multiple Choice | Conceptual | 1 |
+| 14 | Sign reversal / OVB | Multiple Answer | Challenge | 2 |
+| 15 | Reading an interaction plot | Multiple Choice | Applied | 1 |
+
+: Quiz 3 item map. {.striped}

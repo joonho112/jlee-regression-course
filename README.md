@@ -25,7 +25,7 @@ The course was developed with the support of the University of Alabama's **Offic
 
 ## The deliverables
 
-The course is made of six parts. Five are Quarto projects consolidated into this repository as subfolders — the course website publishes to the site root and the four books to subpaths; the sixth (`regdatasets`) stays its own installable R package, with its documentation embedded in the published site.
+The course is made of seven parts. Six are Quarto projects consolidated into this repository as subfolders — the course website publishes to the site root and the five books to subpaths; the seventh (`regdatasets`) stays its own installable R package, with its documentation embedded in the published site.
 
 | # | Deliverable | What it is | Standalone site | Path in this site |
 |:--|:------------|:-----------|:-------------|:-------------|
@@ -35,6 +35,7 @@ The course is made of six parts. Five are Quarto projects consolidated into this
 | 4 | **Final Project Guide** | Step-by-step guide with fully worked linear and logistic regression project examples | [regression-project-guide](https://joonho112.github.io/regression-project-guide/) | `/project` |
 | 5 | **Course Website** | Syllabus, 15-week schedule, weekly module pages, assignment pages, and resources | [regression-course-website](https://joonho112.github.io/regression-course-website/) | `/` (site root / hub) |
 | 6 | **`regdatasets`** | An R data package bundling 24 curated teaching datasets | [github.com/joonho112/regdatasets](https://github.com/joonho112/regdatasets) | `/regdatasets` (embedded pkgdown site) |
+| 7 | **Module Quizzes** *(instructor-facing)* | 6 auto-gradable Blackboard quizzes (90 items) with answer keys & deployment settings | — (in this repo) | `/quizzes` |
 
 ---
 
@@ -83,6 +84,7 @@ jlee-regression-course/
 ├── notes/        # Lecture Notes (Quarto)         → /notes
 ├── labs/         # R Lab Book (Quarto)            → /labs
 ├── homework/     # Homework Solutions (Quarto)    → /homework
+├── quizzes/      # Module Quizzes (Quarto)        → /quizzes
 ├── project/      # Final Project Guide (Quarto)   → /project
 ├── scripts/
 │   └── assemble.sh      # Collect rendered projects into _site/
@@ -97,7 +99,7 @@ jlee-regression-course/
 
 Each book commits its `_freeze/` cache (the stored results of its R computations), so the site rebuilds without re-executing R. The course website is the **site root** — there is no separate landing page. `regdatasets` is **not** a subfolder here: it is built from its [own repository](https://github.com/joonho112/regdatasets) and its pkgdown site is slotted in at `/regdatasets`.
 
-After the build, every output is collected into a single `_site/` tree that mirrors the published URL structure: the course website at the root, plus `/notes`, `/labs`, `/homework`, `/project`, and `/regdatasets`.
+After the build, every output is collected into a single `_site/` tree that mirrors the published URL structure: the course website at the root, plus `/notes`, `/labs`, `/homework`, `/quizzes`, `/project`, and `/regdatasets`.
 
 ### How it builds and deploys
 
@@ -105,9 +107,9 @@ The pipeline is a two-stage process: **render**, then **assemble**.
 
 > **Why two stages.** A Quarto *website* render **cleans its output directory** before writing. If several projects rendered straight into one shared directory, each render would wipe the previous project's output. The safe pattern is therefore: render each project into its own output directory, then **copy** those outputs into `_site/` in a separate assemble step.
 
-1. **Render** each Quarto project. The four books reuse their committed `_freeze/` caches, so this does **not** re-execute R; the course website contains no executable code.
+1. **Render** each Quarto project. The four R-bearing books reuse their committed `_freeze/` caches, so this does **not** re-execute R; the course website and the quizzes book contain no executable code.
 2. **Build** the `regdatasets` pkgdown site from [its own repository](https://github.com/joonho112/regdatasets).
-3. **Assemble** the outputs into one `_site/` tree (`scripts/assemble.sh`): course website → root, the four books → their subpaths, `regdatasets` → `/regdatasets`.
+3. **Assemble** the outputs into one `_site/` tree (`scripts/assemble.sh`): course website → root, the five books → their subpaths, `regdatasets` → `/regdatasets`.
 4. **Deploy** the assembled `_site/` to GitHub Pages.
 
 A **GitHub Actions** workflow ([`.github/workflows/publish.yml`](.github/workflows/publish.yml), triggered on push to `main`, with the Pages *Source* set to **GitHub Actions**) runs the four steps and publishes via `actions/upload-pages-artifact` + `actions/deploy-pages` — no manually maintained `gh-pages` branch, and the assembled `_site/` stays git-ignored. Because each book's `_freeze/` is committed, the build is fast, deterministic, and never needs to re-run R. The design intent is simple: **one push to `main` = a full rebuild and redeploy of the entire course.**
@@ -128,6 +130,7 @@ quarto render website
 quarto render notes
 quarto render labs
 quarto render homework
+quarto render quizzes
 quarto render project
 
 # 2. Assemble everything into a single _site/ tree.

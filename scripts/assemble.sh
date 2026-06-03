@@ -11,6 +11,7 @@
 #   _site/notes         -> Lecture Notes
 #   _site/labs          -> R Lab Book
 #   _site/homework      -> Homework Solutions
+#   _site/quizzes       -> Module Quizzes (questions, keys & Blackboard setup)
 #   _site/project       -> Final Project Guide
 #   _site/regdatasets   -> regdatasets pkgdown site (built from its own repo)
 #
@@ -26,7 +27,7 @@ mkdir -p "$SITE"
 cp -R "$ROOT/website/_site/." "$SITE/"
 
 # Books -> subpaths
-for map in "notes/_book:notes" "labs/_book:labs" "homework/_book:homework" "project/_book:project"; do
+for map in "notes/_book:notes" "labs/_book:labs" "homework/_book:homework" "quizzes/_book:quizzes" "project/_book:project"; do
   src="$ROOT/${map%%:*}"
   dst="$SITE/${map##*:}"
   mkdir -p "$dst"
