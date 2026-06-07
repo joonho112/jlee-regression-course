@@ -92,8 +92,8 @@ summary(m1)
 # Factor variable (equivalent to: regress gcse i.school)
 m2 <- lm(gcse ~ factor(school), data = gcse)
 
-# Interaction (equivalent to: regress gcse c.lrt##i.girl)
-m3 <- lm(gcse ~ lrt * factor(girl), data = gcse)
+# Interaction (equivalent to: regress gcse c.lrt##i.gender)
+m3 <- lm(gcse ~ lrt * factor(gender), data = gcse)
 
 # Tidy output with confidence intervals
 parameters::model_parameters(m3)
@@ -134,7 +134,7 @@ parameters::model_parameters(m3)
 ### R Code
 ```r
 # Fit model
-m <- lm(gcse ~ lrt * factor(girl), data = gcse)
+m <- lm(gcse ~ lrt * factor(gender), data = gcse)
 
 # Predicted values and residuals (equivalent to: predict yhat; predict r, resid)
 gcse$yhat  <- predict(m)
@@ -143,11 +143,11 @@ gcse$resid <- residuals(m)
 # Average marginal effects (equivalent to: margins, dydx(*))
 marginaleffects::avg_slopes(m)
 
-# Adjusted predictions by group (equivalent to: margins girl)
-marginaleffects::avg_predictions(m, by = "girl")
+# Adjusted predictions by group (equivalent to: margins gender)
+marginaleffects::avg_predictions(m, by = "gender")
 
 # Plot predictions (equivalent to: marginsplot)
-marginaleffects::plot_predictions(m, condition = c("lrt", "girl"))
+marginaleffects::plot_predictions(m, condition = c("lrt", "gender"))
 ```
 
 ### Code Explanation
@@ -157,7 +157,7 @@ marginaleffects::plot_predictions(m, condition = c("lrt", "girl"))
 
 ### Output Interpretation
 - `avg_slopes()` returns a data frame with one row per predictor, showing the average marginal effect, standard error, z-statistic, p-value, and confidence interval
-- `avg_predictions(m, by = "girl")` returns adjusted predicted means for each level of `girl`, equivalent to Stata's `margins girl`
+- `avg_predictions(m, by = "gender")` returns adjusted predicted means for each level of `gender`, equivalent to Stata's `margins gender`
 - `plot_predictions()` produces a ggplot object that can be further customized with standard ggplot2 functions
 :::
 

@@ -77,11 +77,12 @@ The table below shows which datasets are used in each chapter, so you can quickl
 
 | Variable | Type | Description |
 |:---------|:-----|:------------|
-| `school` | Factor | School identifier |
-| `student` | Integer | Student identifier |
-| `girl` | Factor | Gender (0 = boy, 1 = girl) |
+| `school` | Integer | School identifier (1–65) |
+| `student` | Integer | Student identifier within school |
 | `gcse` | Numeric | Standardized GCSE exam score (mean = 0, SD $\approx$ 10) |
 | `lrt` | Numeric | Standardized London Reading Test score at intake (mean = 0, SD $\approx$ 10) |
+| `gender` | Integer | Gender indicator (0 = boy, 1 = girl); about 60% coded 1 |
+| `pred` | Numeric | Predicted GCSE score from a fitted regression model |
 
 ::: {.panel-tabset}
 ### R Code
@@ -97,9 +98,10 @@ glimpse(gcse)
 - `glimpse()`: Displays variable names, types, and first few values
 
 ### Output Interpretation
-- 4,059 rows (students) and 5 columns --- a manageable size for learning regression
-- `school` and `girl` are stored as factors, ready for use as categorical predictors in `lm()`
+- 4,059 rows (students) and 6 columns --- a manageable size for learning regression
+- `school` and `student` are integer identifiers, and `gender` is a 0/1 integer indicator; wrap `school` (or `gender`) in `factor()` when you want it treated as a categorical predictor in `lm()`
 - `gcse` and `lrt` are continuous numeric scores, both standardized around zero
+- `pred` holds pre-computed predicted GCSE values, included for reference
 :::
 
 ::: {.callout-note}

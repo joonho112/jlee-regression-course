@@ -3,6 +3,7 @@ title: "Schedule"
 sidebar: false
 toc: false
 page-layout: full
+code-copy: false
 ---
 
 ::: {.schedule-page}
@@ -45,7 +46,10 @@ fmtDate = function (d) {
   const p = d.split("-");
   return months[(+p[1]) - 1] + " " + (+p[2]);
 }
-cell = (v) => (!v || v === "--") ? html`<span class="sched-empty">·</span>` : v
+isEmpty = (v) => (!v || v === "--")
+cell = (v, label) => isEmpty(v)
+  ? html`<span class="sched-empty" aria-hidden="true">·</span><span class="visually-hidden">No ${label} scheduled</span>`
+  : v
 pad2 = (n) => String(n).padStart(2, "0")
 ```
 
@@ -64,25 +68,42 @@ scheduleTable = {
   for (const d of sched) {
     if (d.module !== cur) {
       cur = d.module;
-      body.push(html`<tr class="sched-group"><th colspan="${3 + comps.length}">${modNames[cur] ?? cur}</th></tr>`);
+      body.push(html`<tr class="sched-group"><th scope="rowgroup" colspan="${3 + comps.length}">${modNames[cur] ?? cur}</th></tr>`);
     }
     body.push(html`<tr>
-      <td class="sched-week">${d.week}</td>
+      <th scope="row" class="sched-week">${d.week}</th>
       <td class="sched-date">${fmtDate(d.date)}</td>
       <td class="sched-topic"><a href="content/${pad2(d.week)}-content.html">${d.title}</a></td>
-      ${comps.map((c) => html`<td class="sched-${c.key}">${cell(d[c.key])}</td>`)}
+      ${comps.map((c) => html`<td class="sched-${c.key}">${cell(d[c.key], c.label)}</td>`)}
     </tr>`);
   }
   const table = html`<table class="schedule-table table">
+    <caption class="visually-hidden">BER 640 weekly schedule with dates, topics, lectures, labs, homework, projects, and quizzes.</caption>
     <thead><tr>
-      <th class="sched-week">Wk</th>
-      <th class="sched-date">Date</th>
-      <th class="sched-topic">Topic</th>
-      ${comps.map((c) => html`<th><i class="fa-solid fa-${c.icon}"></i> ${c.label}</th>`)}
+      <th scope="col" class="sched-week">Wk</th>
+      <th scope="col" class="sched-date">Date</th>
+      <th scope="col" class="sched-topic">Topic</th>
+      ${comps.map((c) => html`<th scope="col"><i class="fa-solid fa-${c.icon}" aria-hidden="true"></i> ${c.label}</th>`)}
     </tr></thead>
     <tbody>${body}</tbody>
   </table>`;
-  return html`<div class="schedule-scroll">${table}</div>`;
+  const cards = html`<div class="schedule-cards" role="list" aria-label="BER 640 weekly schedule">
+    ${sched.map((d) => html`<article class="schedule-card" role="listitem">
+      <div class="schedule-card-top">
+        <span class="schedule-card-week">Week ${d.week}</span>
+        <span class="schedule-card-date">${fmtDate(d.date)}</span>
+      </div>
+      <h3><a href="content/${pad2(d.week)}-content.html">${d.title}</a></h3>
+      <p class="schedule-card-module">${modNames[d.module] ?? d.module}</p>
+      <dl class="schedule-card-items">
+        ${comps.filter((c) => !isEmpty(d[c.key])).map((c) => html`<div>
+          <dt><i class="fa-solid fa-${c.icon}" aria-hidden="true"></i>${c.label}</dt>
+          <dd>${d[c.key]}</dd>
+        </div>`)}
+      </dl>
+    </article>`)}
+  </div>`;
+  return html`<div class="schedule-scroll">${table}</div>${cards}`;
 }
 ```
 

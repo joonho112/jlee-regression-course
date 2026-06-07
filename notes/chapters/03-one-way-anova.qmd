@@ -73,10 +73,10 @@ instruction |>
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch3-data-setup"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Sample sizes ($n$)**: Check whether groups are roughly balanced. Unequal group sizes are common in observational data but can affect the precision of group mean estimates
 - **Mean differences**: Compare the mean math gain across groups. The pattern of means (increasing? decreasing?) previews the story that the ANOVA model will formalize
@@ -85,9 +85,8 @@ instruction |>
 ### Code Explanation
 ```{r}
 #| ref.label: "ch3-data-setup"
-#| eval: false
 ```
-- `case_when()` creates three groups from the continuous `mathprep` variable: Low ($\leq 3$), Medium (3--4), and High ($> 4$)
+- `case_when()` creates three groups from the continuous `mathprep` variable: Low ($\leq 3$), Medium ($> 3$ and $\leq 4$), and High ($> 4$); because `case_when()` evaluates conditions in order, `mathprep == 3` is assigned to Low and `mathprep == 4` to Medium
 - `factor(..., levels = ...)` ensures the groups are ordered logically
 - The summary table shows the sample size, mean, and standard deviation for each group
 
@@ -116,12 +115,12 @@ ggplot(instruction, aes(x = prep_level, y = mathgain, fill = prep_level)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-boxplot"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- **Center comparison**: Compare the median lines (thick horizontal bars) across groups. Differences in medians suggest group mean differences that the ANOVA will formally test
+- **Center comparison**: Compare the median lines (thick horizontal bars) across groups. Note that boxplots display **medians** and spread, whereas ANOVA tests **means**: with skewed distributions the median and mean can diverge, so read the boxplot medians as a rough proxy for the group means the ANOVA will formally compare
 - **Spread (within-group variation)**: The height of each box (IQR) reflects variability within each group. Similar box heights support the equal-variance assumption
 - **Outliers**: Individual points far from the boxes may indicate unusual observations. Consider whether they reflect data entry errors or genuine extreme cases
 - **Overlap**: The degree to which boxes overlap hints at effect size --- substantial overlap suggests small effects, while separated boxes suggest large group differences
@@ -129,7 +128,6 @@ ggplot(instruction, aes(x = prep_level, y = mathgain, fill = prep_level)) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-boxplot"
-#| eval: false
 ```
 - `geom_boxplot()` shows the median, quartiles, and whiskers for each group
 - `geom_jitter()` overlays individual data points with slight horizontal scatter
@@ -183,7 +181,7 @@ mm <- model.matrix(~ prep_level, data = sample_idx) |>
 ggplot(mm, aes(x = Variable, y = reorder(factor(obs), -obs), fill = factor(Value))) +
   geom_tile(color = "white", linewidth = 1) +
   geom_text(aes(label = Value), fontface = "bold", size = 5) +
-  scale_fill_manual(values = c("0" = "grey90", "1" = ber640_colors["accent"]), guide = "none") +
+  scale_fill_manual(values = c("0" = "grey90", "1" = ber640_colors[["accent"]]), guide = "none") +
   facet_grid(Group ~ ., scales = "free_y", space = "free_y", switch = "y") +
   labs(title = "Design Matrix: What R Creates Under the Hood",
        subtitle = "model.matrix(~ prep_level)", x = "Model Term", y = NULL) +
@@ -192,10 +190,10 @@ ggplot(mm, aes(x = Variable, y = reorder(factor(obs), -obs), fill = factor(Value
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-design-matrix"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Intercept column**: Every observation has a 1 in this column, meaning every student gets the baseline (reference group) mean as a starting point
 - **Low group rows**: All dummies are 0 --- these students' predicted value is just the intercept ($\alpha$)
@@ -206,7 +204,6 @@ ggplot(mm, aes(x = Variable, y = reorder(factor(obs), -obs), fill = factor(Value
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-design-matrix"
-#| eval: false
 ```
 - `model.matrix(~ prep_level)` extracts the actual design matrix R uses internally when fitting the model
 - Each row represents one observation; the columns are the intercept (always 1) and the dummy variables
@@ -269,10 +266,10 @@ model_parameters(model_anova) |> print_md()
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch3-anova-fit"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Intercept**: The estimated mean math gain for the Low preparation group (reference category). This equals the sample mean of the Low group exactly
 - **prep_levelMedium**: The estimated difference in mean math gain between Medium and Low preparation teachers' students. A positive value means Medium-prep teachers' students gained more on average
@@ -284,7 +281,6 @@ model_parameters(model_anova) |> print_md()
 ### Code Explanation
 ```{r}
 #| ref.label: "ch3-anova-fit"
-#| eval: false
 ```
 - `lm(mathgain ~ prep_level)`: R automatically creates dummy variables for the factor `prep_level`, using the first level (Low) as the reference
 - The intercept estimates the mean math gain for the Low preparation group
@@ -322,10 +318,10 @@ bind_cols(
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch3-verify-means"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Data Mean vs Regression Mean**: The two columns should match exactly (to rounding). This is not a coincidence --- in one-way ANOVA, the OLS estimates *are* the group means
 - **Why this matters**: It proves that the dummy variable regression is doing nothing more than estimating group means. The intercept $\alpha$ captures the reference group mean, and each $\beta_k$ captures the deviation of group $k$ from the reference
@@ -334,7 +330,6 @@ bind_cols(
 ### Code Explanation
 ```{r}
 #| ref.label: "ch3-verify-means"
-#| eval: false
 ```
 - The regression intercept exactly equals the Low group mean
 - Adding the Medium dummy coefficient to the intercept gives the Medium group mean
@@ -435,10 +430,10 @@ ggplot(instruction, aes(x = prep_level, y = mathgain, color = prep_level)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-between-within"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Between-group variation (thick bars)**: Longer bars mean the group means are spread further from the grand mean. This contributes to a larger MSS and a larger $F$-statistic
 - **Within-group variation (scatter)**: Wider scatter within each group increases SSE and makes it harder to detect group differences
@@ -447,7 +442,6 @@ ggplot(instruction, aes(x = prep_level, y = mathgain, color = prep_level)) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-between-within"
-#| eval: false
 ```
 - The dashed horizontal line marks the **grand mean** of all observations
 - **Thick vertical bars** show how far each group mean deviates from the grand mean --- this is the **between-group** variation (MSS)
@@ -469,10 +463,10 @@ anova(model_anova)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch3-anova-table"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Sum Sq (prep_level)**: The between-group sum of squares (MSS) --- variability in math gains attributable to differences among preparation levels
 - **Sum Sq (Residuals)**: The within-group sum of squares (SSE) --- variability among students within the same preparation level
@@ -483,7 +477,6 @@ anova(model_anova)
 ### Code Explanation
 ```{r}
 #| ref.label: "ch3-anova-table"
-#| eval: false
 ```
 - `anova()` produces the standard ANOVA table with SS, df, MS, $F$-statistic, and $p$-value
 - A significant $F$-test tells us that **at least one** group mean differs from the others, but it does not tell us *which* groups differ
@@ -497,6 +490,7 @@ anova(model_anova)
 #| label: fig-ch3-variance-decomposition
 #| fig-cap: "Decomposition of total variability into between-group (MSS) and within-group (SSE) components."
 #| fig-alt: "Stacked bar chart showing the decomposition of total sum of squares into between-group (MSS) and within-group (SSE) components. The single horizontal bar is divided into two colored segments representing each source of variation, with percentage labels indicating the proportion of total variance attributable to differences between preparation-level group means versus residual variation within groups. The between-group portion corresponds to the eta-squared effect size."
+#| fig-height: 3
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -509,7 +503,7 @@ ss_data <- tibble(
   mutate(Proportion = SS / sum(SS),
          label = paste0(round(Proportion * 100, 1), "%"))
 
-# Reorder so SSE (large) stacks first (left), MSS (small) at right end
+# Stack order: MSS (small) sits at the left origin, SSE (large) extends to the right
 ss_data <- ss_data |>
   mutate(Source = factor(Source, levels = c("Within Groups (SSE)", "Between Groups (MSS)")))
 
@@ -519,11 +513,11 @@ ggplot(ss_data, aes(x = "Total Variance", y = SS, fill = Source)) +
             aes(label = paste0(Source, "\n", label)),
             position = position_stack(vjust = 0.5),
             color = "white", fontface = "bold", size = 4.5) +
-  annotate("text", x = 1.32, y = sum(ss_data$SS) * 0.99,
+  annotate("text", x = 1.32, y = sum(ss_data$SS) * 0.01,
            label = paste0("Between Groups (MSS)\n", ss_data$label[ss_data$Source == "Between Groups (MSS)"]),
-           color = "grey20", fontface = "bold", size = 3.5, hjust = 1) +
-  scale_fill_manual(values = c("Within Groups (SSE)" = ber640_colors["secondary"],
-                                "Between Groups (MSS)" = ber640_colors["accent"])) +
+           color = "grey20", fontface = "bold", size = 3.5, hjust = 0) +
+  scale_fill_manual(values = c("Within Groups (SSE)" = ber640_colors[["secondary"]],
+                                "Between Groups (MSS)" = ber640_colors[["accent"]])) +
   coord_flip() +
   scale_y_continuous(expand = expansion(mult = c(0, 0.02))) +
   labs(title = "ANOVA Variance Decomposition", x = NULL, y = "Sum of Squares") +
@@ -532,19 +526,18 @@ ggplot(ss_data, aes(x = "Total Variance", y = SS, fill = Source)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-variance-decomposition"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Between Groups (MSS)**: The portion of total variance attributable to differences among preparation levels. A larger share means group membership explains more of the outcome
 - **Within Groups (SSE)**: The portion due to individual differences within groups (unexplained by the model)
-- **Percentage split**: The between-group percentage equals $\eta^2$ (eta-squared), the effect size measure. Compare to Cohen's benchmarks: 1% (small), 6% (medium), 14% (large)
+- **Percentage split**: The between-group percentage equals $\eta^2$ (eta-squared), the effect size measure. Compare to Cohen's benchmarks: Negligible (< 1%), Small (1--6%), Medium (6--14%), Large (> 14%)
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-variance-decomposition"
-#| eval: false
 ```
 - `anova()` extracts the sum of squares for each source of variation
 - The stacked bar shows how the total variability is split between groups (MSS) and within groups (SSE)
@@ -573,23 +566,23 @@ f_df <- tibble(x = seq(0, max(f_obs * 1.3, f_crit * 1.5), length.out = 500),
 
 ggplot(f_df, aes(x = x, y = density)) +
   geom_area(data = filter(f_df, x >= f_crit),
-            fill = ber640_colors["secondary"], alpha = 0.4) +
-  geom_line(linewidth = 1, color = ber640_colors["primary"]) +
+            fill = ber640_colors[["secondary"]], alpha = 0.4) +
+  geom_line(linewidth = 1, color = ber640_colors[["primary"]]) +
   geom_vline(xintercept = f_obs, linetype = "dashed",
-             color = ber640_colors["accent"], linewidth = 1) +
+             color = ber640_colors[["accent"]], linewidth = 1) +
   annotate("text", x = f_obs, y = max(f_df$density) * 0.7,
            label = paste0("F_obs = ", round(f_obs, 2)),
-           hjust = -0.1, color = ber640_colors["accent"], fontface = "bold") +
+           hjust = -0.1, color = ber640_colors[["accent"]], fontface = "bold") +
   labs(title = bquote(F(.(df1)*","~.(df2))~"Distribution Under"~H[0]),
        subtitle = expression("Shaded = rejection region at "*alpha*" = 0.05"),
        x = "F-statistic", y = "Density")
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-f-distribution"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Curve shape**: The $F$-distribution is right-skewed. Under $H_0$, most $F$-values cluster near 1 (between-group and within-group variation are similar)
 - **Shaded rejection region**: If our observed $F$ falls in the shaded area, we reject $H_0$ at the 5% significance level
@@ -599,7 +592,6 @@ ggplot(f_df, aes(x = x, y = density)) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-f-distribution"
-#| eval: false
 ```
 - The curve shows the $F$-distribution with the appropriate degrees of freedom under the null hypothesis (all group means equal)
 - The shaded region marks values more extreme than the critical value at $\alpha = 0.05$
@@ -620,18 +612,17 @@ r2(model_anova)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch3-r2"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- **$R^2$**: The proportion of variance in math gains explained by teacher preparation level. This equals $\eta^2$ (eta-squared) in one-way ANOVA. Use Cohen's guidelines for context: $.01$ (small), $.06$ (medium), $.14$ (large)
+- **$R^2$**: The proportion of variance in math gains explained by teacher preparation level. This equals $\eta^2$ (eta-squared) in one-way ANOVA. Use Cohen's guidelines for context: Negligible ($< .01$), Small ($.01$--$.06$), Medium ($.06$--$.14$), Large ($> .14$)
 - **Adjusted $R^2$**: Adjusts for the number of groups. Useful when comparing models with different numbers of predictors (see @sec-ch4)
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch3-r2"
-#| eval: false
 ```
 - `r2()` from the `performance` package computes $R^2$ and adjusted $R^2$
 - $R^2$ in one-way ANOVA equals $\eta^2$ (eta-squared), the proportion of total variance explained by group membership
@@ -645,79 +636,54 @@ r2(model_anova)
 ::: {.callout-tip collapse="false"}
 ## Try It: What Makes F Large?
 
-Drag the group mean sliders to separate (or collapse) the three group means, and adjust the within-group SD to see how noise affects the $F$-statistic. The $F$-ratio grows when group means spread apart (large SSB) and shrinks when within-group scatter increases (large SSW).
+Drag the three group-mean sliders (**μ₁**, **μ₂**, **μ₃**) to separate or collapse the group means, and drag the within-group spread slider (**σ_w**) to add or remove noise; **Reset** returns every slider to its default. Start by pulling **μ₃** far from **μ₁** and **μ₂** while **σ_w** stays small, then watch the $F$-ratio jump — it grows when group means spread apart (large SSB) and shrinks when you raise **σ_w** so within-group scatter dominates (large SSW). We simulate three groups of 30 here because seeing the $F$-ratio respond to a *known* separation and a *known* noise level requires counterfactual control over the true means and variance that a single fixed real dataset cannot provide.
 :::
 
 ```{ojs}
 //| echo: false
-
-import { ber640 as anova_ber640, withAlpha as anova_withAlpha,
-         themeColors as anova_themeColors, plotDefaults as anova_plotDefaults,
-         normalRandom as anova_normalRandom, seq as anova_seq,
-         formatCoef as anova_formatCoef, categorical as anova_categorical } from "../ojs/shared.js"
+import { ber640, categorical, plotDefaults, onThemeChange, themeColors, normalRandom, formatCoef, fPValue, srSummary, resetControls } from "../ojs/shared.js"
 ```
-
 ```{ojs}
 //| echo: false
-
-viewof anova_mu1 = Inputs.range([-3, 3], {
-  value: 0, step: 0.1,
-  label: html`<strong>μ₁ (Group 1)</strong>`,
-  width: 320
-})
+theme = themeColors()
 ```
-
 ```{ojs}
 //| echo: false
-
-viewof anova_mu2 = Inputs.range([-3, 3], {
-  value: 0, step: 0.1,
-  label: html`<strong>μ₂ (Group 2)</strong>`,
-  width: 320
-})
+pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
-
 ```{ojs}
 //| echo: false
-
-viewof anova_mu3 = Inputs.range([-3, 3], {
-  value: 0, step: 0.1,
-  label: html`<strong>μ₃ (Group 3)</strong>`,
-  width: 320
-})
+viewof anova_mu1 = Inputs.range([-3, 3], { value: 0, step: 0.1, label: html`<strong>μ₁</strong>`, width: 150 })
 ```
-
 ```{ojs}
 //| echo: false
-
-viewof anova_sigma_w = Inputs.range([0.5, 3], {
-  value: 1.0, step: 0.1,
-  label: html`<strong>σ<sub>w</sub> (Within-group SD)</strong>`,
-  width: 320
-})
+viewof anova_mu2 = Inputs.range([-3, 3], { value: 0, step: 0.1, label: html`<strong>μ₂</strong>`, width: 150 })
 ```
-
 ```{ojs}
 //| echo: false
-
+viewof anova_mu3 = Inputs.range([-3, 3], { value: 0, step: 0.1, label: html`<strong>μ₃</strong>`, width: 150 })
+```
+```{ojs}
+//| echo: false
+viewof anova_sigma_w = Inputs.range([0.5, 3], { value: 1.0, step: 0.1, label: html`<strong>σ<sub>w</sub></strong>`, width: 150 })
+```
+```{ojs}
+//| echo: false
 // --- Data generation: 3 groups, n=30 each ---
 anova_n_per_group = 30
-
 anova_data = {
-  const g1 = anova_normalRandom(anova_n_per_group, anova_mu1, anova_sigma_w, 42)
+  const g1 = normalRandom(anova_n_per_group, anova_mu1, anova_sigma_w, 42)
     .map((y, i) => ({ y, group: "Group 1", id: i }));
-  const g2 = anova_normalRandom(anova_n_per_group, anova_mu2, anova_sigma_w, 43)
+  const g2 = normalRandom(anova_n_per_group, anova_mu2, anova_sigma_w, 43)
     .map((y, i) => ({ y, group: "Group 2", id: i }));
-  const g3 = anova_normalRandom(anova_n_per_group, anova_mu3, anova_sigma_w, 44)
+  const g3 = normalRandom(anova_n_per_group, anova_mu3, anova_sigma_w, 44)
     .map((y, i) => ({ y, group: "Group 3", id: i }));
   return g1.concat(g2).concat(g3);
 }
 ```
-
 ```{ojs}
 //| echo: false
-
-// --- ANOVA computations ---
+// --- ANOVA computations (statistics preserved exactly; p via fPValue) ---
 anova_stats = {
   const groups = ["Group 1", "Group 2", "Group 3"];
   const N = anova_data.length;
@@ -759,10 +725,8 @@ anova_stats = {
   const F = MSB / MSW;
   const etaSq = SSB / SST;
 
-  // p-value approximation using regularized incomplete beta function
-  // F ~ F(dfB, dfW)  =>  p = 1 - I_x(dfB/2, dfW/2) where x = dfB*F/(dfB*F + dfW)
-  const x = (dfB * F) / (dfB * F + dfW);
-  const pValue = 1 - regBetaI(x, dfB / 2, dfW / 2);
+  // Upper-tail F p-value, P(F >= f), via the R-verified shared helper.
+  const pValue = fPValue(F, dfB, dfW);
 
   return {
     grandMean, groupMeans, SSB, SSW, SST,
@@ -770,90 +734,46 @@ anova_stats = {
     groups
   };
 }
-
-// Regularized incomplete beta function (continued fraction approx)
-function regBetaI(x, a, b) {
-  if (x <= 0) return 0;
-  if (x >= 1) return 1;
-
-  // Use the log-beta for normalization
-  const lbeta = lgamma(a) + lgamma(b) - lgamma(a + b);
-  const front = Math.exp(Math.log(x) * a + Math.log(1 - x) * b - lbeta) / a;
-
-  // Lentz's continued fraction
-  const maxIter = 200;
-  const eps = 1e-14;
-  let f = 1, c = 1, d = 0;
-
-  for (let m = 0; m <= maxIter; m++) {
-    let numerator;
-    if (m === 0) {
-      numerator = 1;
-    } else {
-      const k = m;
-      const isOdd = k % 2 === 1;
-      const m2 = Math.floor((k - 1) / 2) + (isOdd ? 0 : 0);
-      if (isOdd) {
-        const mi = Math.floor(k / 2);
-        numerator = -(a + mi) * (a + b + mi) * x /
-                     ((a + 2 * mi) * (a + 2 * mi + 1));
-      } else {
-        const mi = k / 2;
-        numerator = mi * (b - mi) * x /
-                     ((a + 2 * mi - 1) * (a + 2 * mi));
-      }
-    }
-
-    d = 1 + numerator * d;
-    if (Math.abs(d) < eps) d = eps;
-    d = 1 / d;
-    c = 1 + numerator / c;
-    if (Math.abs(c) < eps) c = eps;
-    f *= c * d;
-    if (Math.abs(c * d - 1) < eps && m > 0) break;
-  }
-
-  return front * (f - 1);
-}
-
-function lgamma(x) {
-  // Lanczos approximation
-  const g = 7;
-  const coef = [
-    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
-    771.32342877765313, -176.61502916214059, 12.507343278686905,
-    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
-  ];
-  if (x < 0.5) {
-    return Math.log(Math.PI / Math.sin(Math.PI * x)) - lgamma(1 - x);
-  }
-  x -= 1;
-  let a = coef[0];
-  const t = x + g + 0.5;
-  for (let i = 1; i < coef.length; i++) {
-    a += coef[i] / (x + i);
-  }
-  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
-}
 ```
-
 ```{ojs}
 //| echo: false
-
-// --- Left panel: Strip/dot plot ---
-{
-  const tc = anova_themeColors();
+anova_reset = resetControls([
+  { input: viewof anova_mu1,     value: 0 },
+  { input: viewof anova_mu2,     value: 0 },
+  { input: viewof anova_mu3,     value: 0 },
+  { input: viewof anova_sigma_w, value: 1.0 }
+], { label: "Reset" })
+```
+```{ojs}
+//| echo: false
+anova_readouts = {
+  const { F, pValue, etaSq, SSB, SST, dfB, dfW } = anova_stats;
+  const fTone = F < 3 ? "good" : F < 6 ? "warning" : "bad";
+  const pStr = pValue < 0.001 ? "< .001" : pValue.toFixed(3);
+  const etaLabel = etaSq < 0.01 ? "negligible" : etaSq < 0.06 ? "small" : etaSq < 0.14 ? "medium" : "large";
+  return html`<div class="ojs-readouts">
+    ${pill(`F(${dfB}, ${dfW})`, formatCoef(F, 2), fTone)}
+    ${pill("p-value", pStr, fTone)}
+    ${pill("η²", `${formatCoef(etaSq, 3)} (${etaLabel})`, "info")}
+    ${pill("SSB %", `${formatCoef(SSB / SST * 100, 1)}%`, "")}
+  </div>`;
+}
+```
+```{ojs}
+//| echo: false
+// --- Left panel: strip / jitter plot with group-mean lines ---
+anova_stripPlot = {
   const groups = anova_stats.groups;
-  const groupColors = [anova_categorical[0], anova_categorical[1], anova_categorical[2]];
+  const groupColors = [categorical[0], categorical[1], categorical[2]];
 
-  // Jitter data for strip plot
+  // Deterministic jitter from id (reproducible across redraws)
   const jittered = anova_data.map(d => {
-    // Deterministic jitter from id
     const jit = ((d.id * 2654435761 >>> 0) / 4294967296 - 0.5) * 0.35;
     return { ...d, jitter: jit };
   });
 
-  // Group mean lines
+  const groupIdx = { "Group 1": 0, "Group 2": 1, "Group 3": 2 };
+
   const meanLines = groups.flatMap((g, gi) => {
     const m = anova_stats.groupMeans[g];
     return [
@@ -862,14 +782,14 @@ function lgamma(x) {
     ];
   });
 
-  // Map group to numeric x for jitter
-  const groupIdx = { "Group 1": 0, "Group 2": 1, "Group 3": 2 };
-
-  return Plot.plot(anova_plotDefaults({
-    width: 380,
-    height: 400,
-    marginLeft: 50,
-    marginBottom: 50,
+  return Plot.plot(plotDefaults({
+    width: 340,
+    height: 300,
+    marginTop: 24,
+    marginLeft: 44,
+    marginBottom: 32,
+    marginRight: 14,
+    style: { color: theme.text },
     x: {
       label: null,
       domain: [-0.6, 2.6],
@@ -877,231 +797,117 @@ function lgamma(x) {
       tickFormat: (d) => groups[d] || "",
       grid: false
     },
-    y: {
-      label: "Y",
-      grid: true
-    },
+    y: { label: "Y", grid: true },
     marks: [
       // Grand mean dashed line
-      Plot.ruleY([anova_stats.grandMean], {
-        stroke: tc.muted,
-        strokeWidth: 1.5,
-        strokeDasharray: "6,4"
-      }),
-
+      Plot.ruleY([anova_stats.grandMean], { stroke: theme.muted, strokeWidth: 1.5, strokeDasharray: "6,4" }),
       // Grand mean label
       Plot.text([{ y: anova_stats.grandMean }], {
-        x: 2.55,
-        y: "y",
-        text: d => `Grand Mean = ${anova_formatCoef(d.y, 2)}`,
-        fill: tc.muted,
-        fontSize: 10,
-        textAnchor: "end",
-        dy: -8
+        x: 2.55, y: "y",
+        text: d => `ȳ = ${formatCoef(d.y, 2)}`,
+        fill: theme.muted, fontSize: 10, textAnchor: "end", dy: -8
       }),
-
       // Data points (jittered)
       Plot.dot(jittered, {
-        x: d => groupIdx[d.group] + d.jitter,
-        y: "y",
-        fill: d => groupColors[groupIdx[d.group]],
-        opacity: 0.45,
-        r: 3
+        x: d => groupIdx[d.group] + d.jitter, y: "y",
+        fill: d => groupColors[groupIdx[d.group]], opacity: 0.45, r: 3
       }),
-
       // Group mean horizontal lines
       Plot.line(meanLines, {
-        x: "x",
-        y: "y",
-        z: "group",
-        stroke: d => groupColors[groupIdx[d.group]],
-        strokeWidth: 3
+        x: "x", y: "y", z: "group",
+        stroke: d => groupColors[groupIdx[d.group]], strokeWidth: 3
       }),
-
       // Group mean labels
       Plot.text(groups.map((g, i) => ({
-        x: i, y: anova_stats.groupMeans[g], label: `${anova_formatCoef(anova_stats.groupMeans[g], 2)}`
+        x: i, y: anova_stats.groupMeans[g], label: `${formatCoef(anova_stats.groupMeans[g], 2)}`
       })), {
-        x: "x",
-        y: "y",
-        text: "label",
-        fill: tc.text,
-        fontSize: 11,
-        fontWeight: 700,
-        dy: -14
+        x: "x", y: "y", text: "label",
+        fill: theme.text, fontSize: 11, fontWeight: 700, dy: -14
       })
     ]
   }));
 }
 ```
-
 ```{ojs}
 //| echo: false
-
-// --- Right panel: Stacked bar (SSB / SSW) + F annotation ---
-{
-  const tc = anova_themeColors();
-  const { SSB, SSW, SST, F, etaSq, pValue } = anova_stats;
+// --- Right panel: stacked SSB / SSW bar + F annotation ---
+anova_ssPlot = {
+  const { SSB, SSW, SST, F, pValue } = anova_stats;
 
   const barData = [
     { source: "SSB (Between)", value: SSB, order: 1 },
     { source: "SSW (Within)",  value: SSW, order: 0 }
   ];
 
-  const fColor = F < 3 ? anova_ber640.success
-               : F < 6 ? anova_ber640.warning
-               : anova_ber640.secondary;
-
+  const fColor = F < 3 ? ber640.success : F < 6 ? ber640.warning : ber640.secondary;
   const pStr = pValue < 0.001 ? "< .001" : pValue.toFixed(3);
 
-  return Plot.plot(anova_plotDefaults({
-    width: 320,
-    height: 400,
+  return Plot.plot(plotDefaults({
+    width: 300,
+    height: 300,
+    marginTop: 24,
     marginLeft: 50,
-    marginBottom: 50,
-    marginRight: 20,
-    x: {
-      label: null,
-      domain: ["Variance"],
-      grid: false,
-      ticks: []
-    },
-    y: {
-      label: "Sum of Squares",
-      grid: true,
-      domain: [0, SST * 1.15]
-    },
+    marginBottom: 32,
+    marginRight: 18,
+    style: { color: theme.text },
+    x: { label: null, domain: ["Variance"], grid: false, ticks: [] },
+    y: { label: "Sum of Squares", grid: true, domain: [0, SST * 1.15] },
     color: {
       domain: ["SSB (Between)", "SSW (Within)"],
-      range: [anova_ber640.accent, anova_ber640.secondary],
+      range: [ber640.accent, ber640.secondary],
       legend: true
     },
     marks: [
-      // Stacked bar
       Plot.barY(barData, {
-        x: () => "Variance",
-        y: "value",
-        fill: "source",
-        order: "order",
-        stroke: "white",
-        strokeWidth: 1
+        x: () => "Variance", y: "value", fill: "source", order: "order",
+        stroke: theme.bg, strokeWidth: 1
       }),
-
       // SSW label
       Plot.text([{ y: SSW / 2 }], {
-        x: () => "Variance",
-        y: "y",
-        text: () => `SSW = ${anova_formatCoef(SSW, 1)}\n(${anova_formatCoef(SSW / SST * 100, 1)}%)`,
-        fill: "white",
-        fontSize: 12,
-        fontWeight: 700
+        x: () => "Variance", y: "y",
+        text: () => `SSW = ${formatCoef(SSW, 1)}\n(${formatCoef(SSW / SST * 100, 1)}%)`,
+        fill: "white", fontSize: 11, fontWeight: 700
       }),
-
       // SSB label
       Plot.text([{ y: SSW + SSB / 2 }], {
-        x: () => "Variance",
-        y: "y",
-        text: () => `SSB = ${anova_formatCoef(SSB, 1)}\n(${anova_formatCoef(SSB / SST * 100, 1)}%)`,
-        fill: "white",
-        fontSize: 12,
-        fontWeight: 700
+        x: () => "Variance", y: "y",
+        text: () => `SSB = ${formatCoef(SSB, 1)}\n(${formatCoef(SSB / SST * 100, 1)}%)`,
+        fill: "white", fontSize: 11, fontWeight: 700
       }),
-
       // F-statistic annotation at top
       Plot.text([{ y: SST * 1.08 }], {
-        x: () => "Variance",
-        y: "y",
-        text: () => `F = ${anova_formatCoef(F, 2)}  (p ${pStr})`,
-        fill: fColor,
-        fontSize: 13,
-        fontWeight: 700
+        x: () => "Variance", y: "y",
+        text: () => `F = ${formatCoef(F, 2)}  (p ${pStr})`,
+        fill: fColor, fontSize: 12, fontWeight: 700
       })
     ]
   }));
 }
 ```
-
 ```{ojs}
 //| echo: false
-
-// --- Readout cards ---
-{
-  const tc = anova_themeColors();
-  const { SSB, SSW, SST, F, etaSq, MSB, MSW, pValue,
-          groupMeans, dfB, dfW } = anova_stats;
-
-  const fColor = F < 3 ? anova_ber640.success
-               : F < 6 ? anova_ber640.warning
-               : anova_ber640.secondary;
-
-  const fClass = F < 3 ? "ojs-readout-good"
-               : F < 6 ? "ojs-readout-warning"
-               : "ojs-readout-bad";
-
-  const pStr = pValue < 0.001 ? "< .001" : pValue.toFixed(3);
-
-  const etaLabel = etaSq < 0.01 ? "negligible"
-                 : etaSq < 0.06 ? "small"
-                 : etaSq < 0.14 ? "medium"
-                 : "large";
-
-  return html`<div style="
-    display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;
-    margin-top: 0.5rem;
-  ">
-    <span class="ojs-readout">
-      <span class="ojs-readout-label">SSB</span>
-      <span class="ojs-readout-value" style="color:${anova_ber640.accent}">${anova_formatCoef(SSB, 2)}</span>
-    </span>
-    <span class="ojs-readout">
-      <span class="ojs-readout-label">SSW</span>
-      <span class="ojs-readout-value" style="color:${anova_ber640.secondary}">${anova_formatCoef(SSW, 2)}</span>
-    </span>
-    <span class="ojs-readout">
-      <span class="ojs-readout-label">SST</span>
-      <span class="ojs-readout-value">${anova_formatCoef(SST, 2)}</span>
-    </span>
-    <span class="ojs-readout ${fClass}">
-      <span class="ojs-readout-label">F(${dfB}, ${dfW})</span>
-      <span class="ojs-readout-value">${anova_formatCoef(F, 2)}</span>
-    </span>
-    <span class="ojs-readout">
-      <span class="ojs-readout-label">p-value</span>
-      <span class="ojs-readout-value" style="color:${fColor}">${pStr}</span>
-    </span>
-    <span class="ojs-readout ojs-readout-info">
-      <span class="ojs-readout-label">η²</span>
-      <span class="ojs-readout-value">${anova_formatCoef(etaSq, 3)} (${etaLabel})</span>
-    </span>
+anova_sr = srSummary("ch3-anova-variation",
+  `Group means: ȳ₁ = ${formatCoef(anova_stats.groupMeans["Group 1"], 2)}, ȳ₂ = ${formatCoef(anova_stats.groupMeans["Group 2"], 2)}, ȳ₃ = ${formatCoef(anova_stats.groupMeans["Group 3"], 2)}. SSB ${formatCoef(anova_stats.SSB, 1)}, SSW ${formatCoef(anova_stats.SSW, 1)}. F(${anova_stats.dfB}, ${anova_stats.dfW}) = ${formatCoef(anova_stats.F, 2)}, p ${anova_stats.pValue < 0.001 ? "< .001" : anova_stats.pValue.toFixed(3)}, η² = ${formatCoef(anova_stats.etaSq, 3)}.`)
+```
+```{ojs}
+//| echo: false
+anova_app = html`<div class="ojs-app" role="group" aria-label="Between vs. within variation and the F-statistic">
+  <div class="ojs-controls">${viewof anova_mu1}${viewof anova_mu2}${viewof anova_mu3}${viewof anova_sigma_w}<div class="ojs-control-group" style="flex:0 0 auto;">${anova_reset}</div></div>
+  ${anova_readouts}
+  <div style="display:flex; flex-wrap:wrap; gap:16px; justify-content:center; align-items:flex-start;">
+    <div class="ojs-plot">${anova_stripPlot}</div>
+    <div class="ojs-plot">${anova_ssPlot}</div>
   </div>
-  <div style="
-    display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;
-    margin-top: 0.4rem;
-  ">
-    <span class="ojs-readout">
-      <span class="ojs-readout-label">ȳ₁</span>
-      <span class="ojs-readout-value" style="color:${anova_categorical[0]}">${anova_formatCoef(groupMeans["Group 1"], 2)}</span>
-    </span>
-    <span class="ojs-readout">
-      <span class="ojs-readout-label">ȳ₂</span>
-      <span class="ojs-readout-value" style="color:${anova_categorical[1]}">${anova_formatCoef(groupMeans["Group 2"], 2)}</span>
-    </span>
-    <span class="ojs-readout">
-      <span class="ojs-readout-label">ȳ₃</span>
-      <span class="ojs-readout-value" style="color:${anova_categorical[2]}">${anova_formatCoef(groupMeans["Group 3"], 2)}</span>
-    </span>
-    <span class="ojs-readout">
-      <span class="ojs-readout-label">MSB</span>
-      <span class="ojs-readout-value">${anova_formatCoef(MSB, 2)}</span>
-    </span>
-    <span class="ojs-readout">
-      <span class="ojs-readout-label">MSW</span>
-      <span class="ojs-readout-value">${anova_formatCoef(MSW, 2)}</span>
-    </span>
-  </div>`;
-}
+  ${anova_sr}
+</div>`
 ```
 
+::: {.callout-note}
+## What you should have seen
+- The $F$-ratio is driven by the *contrast* between the two variance sources: spreading the group means apart (μ₁, μ₂, μ₃) enlarges SSB and inflates $F$, while raising σ_w enlarges SSW and deflates $F$.
+- A large $F$ (and small $p$, large η²) needs **both** well-separated means **and** tight within-group scatter — neither alone is enough.
+- η² is just SSB / SST, the share of the stacked bar that is "between": move the sliders until that share crosses Cohen's negligible/small/medium/large thresholds to feel what each effect size looks like.
+:::
 
 ## Checking ANOVA Assumptions {#sec-ch3-assumptions}
 
@@ -1115,9 +921,10 @@ Three key assumptions underlie the ANOVA $F$-test:
 ### Output
 ```{r}
 #| label: fig-ch3-assumptions
-#| fig-cap: "Diagnostic plots for the ANOVA model: normality of residuals (Q-Q plot) and homogeneity of variance."
-#| fig-alt: "Multi-panel diagnostic figure produced by the performance package for the ANOVA model. The top panel is a quantile-quantile (Q-Q) plot comparing standardized residuals on the y-axis to theoretical normal quantiles on the x-axis, assessing the normality assumption. The bottom panel displays residual spread across fitted values or groups to assess homogeneity of variance. Deviations from the reference line in the Q-Q plot or unequal spread across groups indicate potential assumption violations."
-#| fig-height: 8
+#| fig-cap: "Diagnostic plots for the ANOVA model: homogeneity of variance and normality of residuals (density of residuals vs a normal curve)."
+#| fig-alt: "Two side-by-side diagnostic panels produced by the performance package for the ANOVA model. The left panel checks homogeneity of variance: a scale-location plot showing the square root of the absolute standardized residuals on the y-axis against fitted values on the x-axis, with a reference line that should be roughly flat and horizontal. The right panel checks normality: the density curve of the residuals overlaid on a reference normal curve, which should closely match if residuals are normal. A rising or funnel-shaped trend in the left panel or a poor match between the two curves in the right panel indicates potential assumption violations."
+#| fig-width: 9
+#| fig-height: 4.5
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -1125,23 +932,26 @@ check_model(model_anova, check = c("normality", "homogeneity"))
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-assumptions"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 4.5
 ```
-- **Q-Q plot (normality)**: If the points closely follow the reference line, the normality assumption is reasonable. Systematic deviations at the tails indicate skewness or heavy tails
+- **Normality plot**: The density curve of the residuals (shaded) is overlaid on a reference normal curve. The closer the two curves match, the more reasonable the normality assumption; large gaps in the peak or tails indicate skewness or heavy tails
 - **Homogeneity plot**: Look for roughly equal vertical spread across the fitted values (group means). A funnel shape (wider spread for some groups) suggests unequal variances
 - These are informal visual checks --- use Levene's test below for a formal test of equal variances
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-assumptions"
-#| eval: false
+#| fig-width: 9
+#| fig-height: 4.5
 ```
 - `check_model()` from the `performance` package produces visual diagnostics for regression/ANOVA models
 - `check = c("normality", "homogeneity")` selects two key diagnostic plots:
-  - **Normality**: A Q-Q plot of residuals; points should fall along the diagonal line
+  - **Normality**: A density plot of the residuals overlaid on a normal curve; the two curves should closely match
   - **Homogeneity**: A plot of residuals vs. fitted values; spread should be roughly equal across groups
 
 
@@ -1159,10 +969,10 @@ car::leveneTest(mathgain ~ prep_level, data = instruction)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch3-levene"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **$F$ value**: The test statistic for the equality of variances across groups
 - **Pr(>F)**: If this $p$-value is below 0.05, we reject the null of equal variances
@@ -1172,7 +982,6 @@ car::leveneTest(mathgain ~ prep_level, data = instruction)
 ### Code Explanation
 ```{r}
 #| ref.label: "ch3-levene"
-#| eval: false
 ```
 - `car::leveneTest()` performs Levene's test for homogeneity of variance
 - The null hypothesis is that all groups have equal population variances
@@ -1225,8 +1034,8 @@ ggplot(mt_df, aes(x = Groups, y = FWER, color = Method)) +
   geom_line(linewidth = 1) + geom_point(size = 2) +
   geom_hline(yintercept = 0.05, linetype = "dashed", color = "grey50") +
   annotate("text", x = 14, y = 0.08, label = "α = 0.05", color = "grey50") +
-  scale_color_manual(values = c("No Correction" = unname(ber640_colors["secondary"]),
-                                "Bonferroni" = unname(ber640_colors["accent"]))) +
+  scale_color_manual(values = c("No Correction" = unname(ber640_colors[["secondary"]]),
+                                "Bonferroni" = unname(ber640_colors[["accent"]]))) +
   scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
   labs(title = "The Multiple Testing Problem",
        subtitle = "Family-wise error rate by number of groups",
@@ -1234,10 +1043,10 @@ ggplot(mt_df, aes(x = Groups, y = FWER, color = Method)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-multiple-testing"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Red line (No Correction)**: The family-wise error rate rises sharply as the number of groups increases. With just 6 groups (15 pairwise tests), the chance of at least one false positive exceeds 50%
 - **Blue line (Bonferroni)**: The Bonferroni correction keeps the family-wise error rate near or below 0.05, regardless of how many groups are compared
@@ -1246,7 +1055,6 @@ ggplot(mt_df, aes(x = Groups, y = FWER, color = Method)) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-multiple-testing"
-#| eval: false
 ```
 - `choose(k_groups, 2)` computes the number of pairwise comparisons for each group count
 - `fwer_none`: the probability of at least one false positive without any correction, using $1 - (1 - \alpha)^m$ where $m$ is the number of tests
@@ -1272,24 +1080,23 @@ avg_comparisons(model_anova,
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch3-pairwise"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Contrast**: Identifies which two groups are being compared (e.g., Medium − Low, High − Low, High − Medium)
 - **Estimate**: The estimated difference in mean math gain between the two groups. Positive values mean the first-listed group has a higher mean
 - **Std. Error**: The precision of the estimated difference. Larger groups yield more precise estimates
-- **$p$-value**: Tests whether the difference is statistically significant. With three pairwise comparisons, consider applying a Bonferroni correction (multiply $p$ by 3) or using Tukey's method for proper family-wise error control
+- **$p$-value**: Tests whether the difference is statistically significant. **These $p$-values are unadjusted.** With three pairwise comparisons, apply a Bonferroni correction (multiply $p$ by 3) or use Tukey's method for proper family-wise error control. After a Bonferroni correction (×3), only the Medium − Low difference remains significant ($p = 0.029$); High − Low and High − Medium do not
 - **95% CI**: If the interval excludes zero, the difference is significant at the 5% level
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch3-pairwise"
-#| eval: false
 ```
 - `avg_comparisons()` with `variables = list(prep_level = "pairwise")` computes all pairwise group differences
-- Each row shows: which groups are compared, the estimated difference, its standard error, and the $p$-value
+- Each row shows: which groups are compared, the estimated difference, its standard error, and the (unadjusted) $p$-value. To display family-wise-adjusted $p$-values directly, pass `p_adjust = "holm"` to `avg_comparisons()` or run `TukeyHSD(aov(mathgain ~ prep_level, data = instruction))`
 
 
 :::
@@ -1306,20 +1113,19 @@ avg_predictions(model_anova, by = "prep_level")
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch3-group-predictions"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Estimate**: The predicted mean math gain for each preparation level. In one-way ANOVA (no covariates), these exactly equal the sample group means
 - **Std. Error**: Reflects the precision of the mean estimate for each group. Groups with more students have smaller standard errors
 - **95% CI**: The interval estimate for each group's true population mean. Non-overlapping CIs between groups suggest significant differences, though the formal test is the pairwise comparison above
-- If covariates were added (making this an ANCOVA, as in @sec-ch2), these would become "adjusted" means
+- If covariates were added (making this an ANCOVA, as in @sec-ch2), `avg_predictions(model, by = "prep_level")` would *average each group's predictions over that group's own covariate distribution* --- these are **not** adjusted (least-squares) means. True adjusted means hold the covariate at a **common** value (or average over a single common reference distribution) for every group; obtain them with `avg_predictions(model, by = "prep_level", newdata = datagrid(prep_level = unique))` or `marginaleffects::predictions()` at fixed covariate values
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch3-group-predictions"
-#| eval: false
 ```
 - `avg_predictions()` computes the model-predicted mean for each group with 95% confidence intervals
 - These means are identical to the raw group means (in one-way ANOVA without covariates)
@@ -1348,19 +1154,18 @@ plot_predictions(model_anova, condition = "prep_level") +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-means"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- **Point estimates**: The predicted mean math gain for each preparation level, shown as colored dots
+- **Point estimates**: The predicted mean math gain for each preparation level, shown as dots
 - **Error bars**: 95% confidence intervals for each group mean. Wider intervals indicate less precision (smaller groups)
 - **Overlap**: While overlapping CIs do **not** necessarily mean groups are not significantly different (see the pairwise comparison panel below), non-overlapping CIs strongly suggest significant differences
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-means"
-#| eval: false
 ```
 - `plot_predictions()` visualizes the group means with confidence intervals
 - Groups whose confidence intervals do not overlap are likely significantly different
@@ -1392,17 +1197,18 @@ comp_data <- avg_comparisons(model_anova,
 p_diffs <- ggplot(comp_data, aes(x = estimate, y = contrast)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
   geom_pointrange(aes(xmin = conf.low, xmax = conf.high),
-                  color = ber640_colors["accent"], size = 1, linewidth = 1) +
+                  color = ber640_colors[["accent"]], size = 1, linewidth = 1) +
   labs(title = "B: Pairwise Differences ± 95% CI", x = "Difference in Math Gain", y = NULL)
 
 p_means + p_diffs + plot_layout(widths = c(1, 1.2))
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-ci-significance"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 10
 ```
 - **Panel A (Group Means)**: Each point is a group mean; error bars show 95% CIs. Overlapping CIs do **not** guarantee non-significance --- two groups can have overlapping CIs yet still differ significantly
 - **Panel B (Pairwise Differences)**: Each point is the estimated difference between two groups. If the CI excludes the dashed zero line, that pairwise difference is statistically significant at the 5% level
@@ -1411,7 +1217,7 @@ p_means + p_diffs + plot_layout(widths = c(1, 1.2))
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-ci-significance"
-#| eval: false
+#| fig-width: 10
 ```
 - **Panel A**: `plot_predictions(..., draw = FALSE)` extracts predictions as a data frame, then plots group means with 95% CIs using `geom_pointrange()`
 - **Panel B**: `avg_comparisons()` computes all pairwise differences, and `geom_pointrange()` displays them horizontally with a vertical dashed line at zero
@@ -1422,25 +1228,43 @@ p_means + p_diffs + plot_layout(widths = c(1, 1.2))
 
 ### Interactive Exploration: Multiple Comparisons {.unnumbered}
 
-::: {.callout-tip collapse="false"}
+::: {.callout-tip}
 ## Try It: The Multiple Testing Problem
 
-When comparing multiple groups, each pairwise test carries a 5% false positive risk. As the number of comparisons grows, the probability that *at least one* test falsely rejects H₀ increases dramatically. Run simulations to see how correction methods like Bonferroni and Holm control this family-wise error rate.
+When comparing multiple groups, each pairwise test carries a 5% false positive risk. As the number of comparisons grows, the probability that *at least one* test falsely rejects H₀ increases dramatically. To explore this, set **Number of groups (k)** (more groups means more pairwise tests), leave **Correction method** on **None**, and click **Run 100 Simulations** to watch the observed family-wise error rate; **Reset** restores k = 5 and the None method without drawing a fresh batch. Then switch **Correction method** to **Bonferroni** or **Holm** and re-run to see the error rate collapse back toward 5%. We simulate 100 datasets per click — all drawn from a *single* common distribution so every null hypothesis is literally true — because demonstrating that uncorrected testing manufactures false positives requires a known ground truth (no real differences) and many repeated samples that one real dataset cannot provide.
 :::
 
 ```{ojs}
 //| echo: false
 import { ber640 as mc_ber640, withAlpha as mc_withAlpha,
          themeColors as mc_themeColors, plotDefaults as mc_plotDefaults,
-         normalRandom as mc_normalRandom, formatCoef as mc_formatCoef } from "../ojs/shared.js"
+         normalRandom as mc_normalRandom, formatCoef as mc_formatCoef,
+         tTailP as mc_tTailP, srSummary as mc_srSummary,
+         resetControls as mc_resetControls, onThemeChange as mc_onThemeChange } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+mc_theme = mc_themeColors()
+```
+
+```{ojs}
+//| echo: false
+mc_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
 
 ```{ojs}
 //| echo: false
 viewof mc_nGroups = Inputs.select([3, 4, 5, 6, 8, 10], {value: 5, label: "Number of groups (k)"})
+```
 
+```{ojs}
+//| echo: false
 viewof mc_method = Inputs.radio(["None", "Bonferroni", "Holm"], {value: "None", label: "Correction method"})
+```
 
+```{ojs}
+//| echo: false
 viewof mc_run = Inputs.button("Run 100 Simulations")
 ```
 
@@ -1463,7 +1287,7 @@ function mc_mulberry32(seed) {
 }
 
 function mc_normalSample(rng) {
-  const u1 = rng();
+  const u1 = Math.max(rng(), Number.EPSILON);
   const u2 = rng();
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
@@ -1494,17 +1318,11 @@ function mc_tTestPValue(g1, g2) {
   const se = Math.sqrt(sp2 * (1 / n1 + 1 / n2));
   if (se < 1e-12) return 1;
   const t = Math.abs(m1 - m2) / se;
-  return 2 * mc_normalSurvival(t);
-}
-
-function mc_normalSurvival(x) {
-  if (x < 0) return 1 - mc_normalSurvival(-x);
-  const b0 = 0.2316419;
-  const b1 = 0.319381530, b2 = -0.356563782, b3 = 1.781477937;
-  const b4 = -1.821255978, b5 = 1.330274429;
-  const t = 1 / (1 + b0 * x);
-  const phi = Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI);
-  return phi * t * (b1 + t * (b2 + t * (b3 + t * (b4 + t * b5))));
+  // Pooled two-sample t statistic has a t(n1+n2-2) reference distribution, NOT
+  // standard normal. The old z-tail (2 * normalSurvival) inflated each test's
+  // true alpha to ~5.73% at df=38 (R: 2*pt(-qnorm(.975),38)=0.0574). Use the
+  // R-verified two-sided t tail from shared.js: tTailP(t, df) = P(|T| >= |t|).
+  return mc_tTailP(t, n1 + n2 - 2);
 }
 
 function mc_bonferroniAdjust(pvals, nComp) {
@@ -1534,7 +1352,8 @@ mc_simResults = {
   const k = mc_nGroups;
   const n = mc_nPerGroup;
   const method = mc_method;
-  const baseSeed = Date.now();
+  const runId = Number.isFinite(+mc_run) ? +mc_run : 0;
+  const baseSeed = 20260303 + runId * 100000;
 
   let falsePositiveCount = 0;
   const simDetails = [];
@@ -1573,40 +1392,19 @@ mc_correctedAlpha = {
 
 ```{ojs}
 //| echo: false
-mc_colors = mc_themeColors()
-
-mc_cards = {
+mc_readouts = {
   const rate = mc_simResults.observedRate;
-  const expected = mc_expectedRate;
-
-  const cardStyle = `
-    display: inline-flex; flex-direction: column; align-items: center;
-    padding: 14px 20px; border-radius: 8px; min-width: 150px;
-    background: ${mc_colors.bg}; border: 1px solid ${mc_colors.muted};
-  `;
-  const labelStyle = `font-size: 0.78rem; color: ${mc_colors.muted}; margin-bottom: 4px; text-align: center;`;
-  const valueStyle = `font-size: 1.35rem; font-weight: 700;`;
-
-  return html`<div style="display: flex; flex-wrap: wrap; gap: 14px; margin: 16px 0; color: ${mc_colors.text};">
-    <div style="${cardStyle}">
-      <div style="${labelStyle}">Pairwise Comparisons (C)</div>
-      <div style="${valueStyle} color: ${mc_ber640.info};">${mc_nComparisons}</div>
-    </div>
-    <div style="${cardStyle}">
-      <div style="${labelStyle}">Observed FWER</div>
-      <div style="${valueStyle} color: ${rate > 0.05 ? mc_ber640.warning : mc_ber640.success};">
-        ${(rate * 100).toFixed(0)}%</div>
-    </div>
-    <div style="${cardStyle}">
-      <div style="${labelStyle}">Expected (uncorrected)</div>
-      <div style="${valueStyle} color: ${mc_ber640.warning};">
-        ${(expected * 100).toFixed(1)}%</div>
-    </div>
-    <div style="${cardStyle}">
-      <div style="${labelStyle}">Effective α (${mc_method})</div>
-      <div style="${valueStyle} color: ${mc_ber640.primary};">
-        ${mc_method === "None" ? "0.050" : mc_formatCoef(mc_correctedAlpha, 4)}</div>
-    </div>
+  const effAlpha = mc_method === "None"
+    ? "0.050"
+    : mc_method === "Holm"
+      ? `${mc_formatCoef(mc_alpha / mc_nComparisons, 4)}…${mc_formatCoef(mc_alpha, 4)}`
+      : mc_formatCoef(mc_correctedAlpha, 4);
+  const effLabel = mc_method === "Holm" ? "Per-comparison α (step-down)" : `Effective α (${mc_method})`;
+  return html`<div class="ojs-readouts">
+    ${mc_pill("Comparisons (C)", mc_nComparisons, "info")}
+    ${mc_pill("Observed FWER", `${(rate * 100).toFixed(0)}%`, rate > mc_alpha ? "warning" : "good")}
+    ${mc_pill("Indep. approx (uncorr.)", `${(mc_expectedRate * 100).toFixed(1)}%`, "warning")}
+    ${mc_pill(effLabel, effAlpha)}
   </div>`;
 }
 ```
@@ -1619,19 +1417,20 @@ mc_barData = {
     { category: "Nominal α", rate: mc_alpha, type: "nominal" }
   ];
   if (mc_method === "None") {
-    items.push({ category: "Expected (uncorrected)", rate: mc_expectedRate, type: "expected" });
+    items.push({ category: "Indep. approx", rate: mc_expectedRate, type: "expected" });
   }
   return items;
 }
 
-Plot.plot(mc_plotDefaults({
-  title: `Family-Wise Error Rate: k = ${mc_nGroups} groups, ${mc_nComparisons} comparisons (${mc_method})`,
-  width: 640,
-  height: 300,
-  marginLeft: 170,
+mc_fwerPlot = Plot.plot(mc_plotDefaults({
+  title: `Family-Wise Error Rate: k = ${mc_nGroups}, ${mc_nComparisons} comparisons (${mc_method})`,
+  width: 600,
+  height: 210,
+  marginLeft: 150,
   marginRight: 30,
-  marginTop: 40,
-  marginBottom: 40,
+  marginTop: 34,
+  marginBottom: 36,
+  style: { color: mc_theme.text },
   x: { domain: [0, 1], label: "Error Rate", tickFormat: ".0%" },
   y: { domain: mc_barData.map(d => d.category), label: null, padding: 0.35 },
   color: {
@@ -1643,7 +1442,7 @@ Plot.plot(mc_plotDefaults({
     Plot.textX(mc_barData, {
       x: "rate", y: "category",
       text: d => (d.rate * 100).toFixed(1) + "%",
-      dx: 6, fill: mc_colors.text, fontSize: 13, fontWeight: 600, textAnchor: "start"
+      dx: 6, fill: mc_theme.text, fontSize: 13, fontWeight: 600, textAnchor: "start"
     }),
     Plot.ruleX([mc_alpha], { stroke: mc_ber640.accent, strokeWidth: 2, strokeDasharray: "6,4" })
   ]
@@ -1657,13 +1456,14 @@ mc_simPlotData = mc_simResults.simDetails.map(d => ({
   result: d.anyFalse ? "False Positive" : "Correct"
 }))
 
-Plot.plot(mc_plotDefaults({
+mc_gridPlot = Plot.plot(mc_plotDefaults({
   title: "Each Column = One Simulation under H₀",
-  width: 640,
-  height: 160,
+  width: 600,
+  height: 130,
   marginLeft: 110,
-  marginBottom: 35,
-  marginTop: 35,
+  marginBottom: 28,
+  marginTop: 30,
+  style: { color: mc_theme.text },
   x: { label: null, domain: Array.from({length: mc_nSims}, (_, i) => i + 1), axis: null },
   y: { label: null, domain: ["Correct", "False Positive"], padding: 0.3 },
   marks: [
@@ -1678,33 +1478,44 @@ Plot.plot(mc_plotDefaults({
 
 ```{ojs}
 //| echo: false
-mc_formulaNote = {
-  return html`<div style="
-    margin-top: 8px; padding: 12px 16px; border-radius: 6px;
-    background: ${mc_withAlpha(mc_ber640.info, 0.08)};
-    border-left: 3px solid ${mc_ber640.info};
-    font-size: 0.85rem; color: ${mc_colors.text}; line-height: 1.5;
-  ">
-    <strong>How it works:</strong> With <em>k</em> = ${mc_nGroups} groups there are
-    <em>C</em> = ${mc_nGroups}(${mc_nGroups}−1)/2 = <strong>${mc_nComparisons}</strong> pairwise comparisons.
-    Under H₀ with no correction, the probability of at least one false positive is
-    1 − (1 − 0.05)<sup>${mc_nComparisons}</sup> = <strong>${(mc_expectedRate * 100).toFixed(1)}%</strong>.
-    ${mc_method !== "None"
-      ? `<strong>${mc_method}</strong> correction reduces the effective per-comparison α to ${mc_formatCoef(mc_correctedAlpha, 4)}, controlling the family-wise rate near 5%.`
-      : `Try <strong>Bonferroni</strong> or <strong>Holm</strong> correction to see how the family-wise error rate is controlled.`}
-  </div>`;
-}
+mc_sr = mc_srSummary("ch03-mc",
+  `k = ${mc_nGroups} groups, ${mc_nComparisons} pairwise comparisons, correction ${mc_method}. Observed family-wise error rate ${(mc_simResults.observedRate * 100).toFixed(0)} percent across ${mc_nSims} simulations under the null; independence-approximation uncorrected rate ${(mc_expectedRate * 100).toFixed(1)} percent. Pairwise tests share groups, so this formula is a benchmark rather than an exact finite-sample expectation.`)
+```
+
+```{ojs}
+//| echo: false
+mc_reset = mc_resetControls([
+  { input: viewof mc_nGroups, value: 5 },
+  { input: viewof mc_method,  value: "None" }
+], { label: "Reset" })
+```
+
+```{ojs}
+//| echo: false
+mc_app = html`<div class="ojs-app" role="group" aria-label="Multiple comparisons family-wise error rate simulation">
+  <div class="ojs-controls">${viewof mc_nGroups}${viewof mc_method}<div class="ojs-control-group" style="flex:0 0 auto;">${viewof mc_run}${mc_reset}</div></div>
+  <div class="ojs-equation"><em>C</em> = ${mc_nGroups}(${mc_nGroups}−1)/2 = <strong style="color:var(--ber-info)">${mc_nComparisons}</strong> comparisons; independence approximation: P(≥1 false positive) ≈ 1 − 0.95<sup>${mc_nComparisons}</sup> = <strong style="color:var(--ber-warning)">${(mc_expectedRate * 100).toFixed(1)}%</strong><br><span style="font-size:0.84rem; color:var(--ojs-text-muted);">Pairwise tests share groups, so the observed simulation can differ from this independent-tests benchmark.</span>${mc_method === "Bonferroni" ? html`<span style="margin-left:1.25rem; color:var(--ber-primary)">Bonferroni α/C = ${mc_formatCoef(mc_correctedAlpha, 4)}</span>` : mc_method === "Holm" ? html`<span style="margin-left:1.25rem; color:var(--ber-primary)">Holm step-down: ${mc_formatCoef(mc_alpha / mc_nComparisons, 4)} → ${mc_formatCoef(mc_alpha, 4)}</span>` : ""}</div>
+  ${mc_readouts}
+  <div class="ojs-plot">${mc_fwerPlot}</div>
+  <div class="ojs-plot">${mc_gridPlot}</div>
+  ${mc_sr}
+</div>`
 ```
 
 ::: {.callout-note}
+## What you should have seen
+- Under **None**, the observed family-wise error rate climbs far above 5% as k (and the number of comparisons C) grows — broadly tracking the independence-approximation curve 1 − 0.95^C rather than the nominal α.
+- **Bonferroni** and **Holm** both pull the observed rate back down toward the nominal 5%, illustrating how they are designed to control the family-wise error rate as the number of comparisons grows.
+- Every "false positive" here is purely an artifact of multiple testing: all groups share one true distribution, so any significant pairwise result is by construction a Type I error.
+:::
+
 ## Exploratory vs Confirmatory Approaches
 | Approach | When to use | Multiple testing? |
 |:---------|:-----------|:-----------------|
 | **Exploratory** | No specific hypotheses about groups | Yes --- use Bonferroni, Tukey, or Scheffé |
-| **Confirmatory** | Planned comparisons based on theory | No correction needed for a small number of planned tests |
+| **Confirmatory** | Planned comparisons based on theory | Depends: a few pre-specified contrasts may be tested directly, but adjust as the number of contrasts and the inferential family grow |
 
 When you have specific hypotheses before looking at the data (e.g., "new methods will outperform the standard"), use planned comparisons. When the comparisons are suggested by the data, use post-hoc corrections.
-:::
 
 
 ## Effect Size Measures {#sec-ch3-effect-size}
@@ -1721,34 +1532,34 @@ Statistical significance depends on sample size --- with a large enough sample, 
 #| code-summary: "Show R Code"
 
 # Eta-squared and partial eta-squared
-effectsize::eta_squared(model_anova)
+effectsize::eta_squared(model_anova, alternative = "two.sided", ci = 0.90)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch3-effect-size"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- **$\eta^2$**: The proportion of total variance in math gains explained by teacher preparation level. Use Cohen's benchmarks to gauge practical significance: small (.01), medium (.06), large (.14)
-- **90% CI**: The confidence interval for $\eta^2$. Effect sizes are inherently positive, so a 90% CI is conventional (corresponding to a one-sided test). If the lower bound is near zero, the effect may not be practically meaningful despite statistical significance
-- Unlike $p$-values, effect sizes do not depend on sample size, making them essential for judging practical importance in education research
+- **$\eta^2$**: The proportion of total variance in math gains explained by teacher preparation level. Use Cohen's benchmarks to gauge practical significance: Negligible (< .01), Small (.01--.06), Medium (.06--.14), Large (> .14)
+- **90% CI**: A two-sided 90% confidence interval for $\eta^2$. By convention a 90% (rather than 95%) interval is paired with $\eta^2$ so that its lower bound aligns with the one-sided $\alpha = 0.05$ significance decision of the $F$-test (Steiger, 2004). If the lower bound is near zero, the effect may not be practically meaningful despite statistical significance
+- Unlike $p$-values, effect-size point estimates are *less directly driven* by sample size than $p$-values, making them essential for judging practical importance in education research --- though their precision (sampling variability, hence CI width) still depends on sample size
+- **Practical importance here**: Despite the significant $F$-test, $\eta^2 \approx 0.007$ falls *below* the .01 'small'/negligible threshold, so preparation level explains under 1% of the variance in math gains --- a textbook case of statistical significance without practical importance
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch3-effect-size"
-#| eval: false
 ```
 - `effectsize::eta_squared()` computes eta-squared and its confidence interval from the ANOVA model
 - $\eta^2 = \text{MSS} / \text{TSS}$ is the proportion of variance explained by group membership (equals $R^2$ in one-way ANOVA)
-- **Cohen's guidelines**: $\eta^2 = .01$ (small), $.06$ (medium), $.14$ (large)
+- **Cohen's guidelines**: $\eta^2$ --- Negligible ($< .01$), Small ($.01$--$.06$), Medium ($.06$--$.14$), Large ($> .14$)
 
 
 :::
 
 ::: {.callout-tip}
 ## $\eta^2$ vs $R^2$
-In one-way ANOVA, $\eta^2 = R^2$ exactly. In factorial ANOVA or ANCOVA, **partial** $\eta^2$ is more commonly reported, which measures the proportion of variance explained by a factor *after removing* the variance explained by other factors.
+In one-way ANOVA, $\eta^2 = R^2$ exactly. In factorial ANOVA or ANCOVA, **partial** $\eta^2$ is more commonly reported: $\eta^2_{\text{partial}} = \dfrac{SS_{\text{effect}}}{SS_{\text{effect}} + SS_{\text{error}}}$, i.e. the proportion of variance an effect explains *after* the variance explained by the other effects is removed from the denominator. Because each effect's denominator excludes the other effects' sums of squares, partial $\eta^2$ values are **not additive** across effects and can sum to more than 1.
 :::
 
 ::: {.panel-tabset}
@@ -1766,7 +1577,7 @@ bench_df <- tibble(
   xmin = c(0, 0.01, 0.06, 0.14),
   xmax = c(0.01, 0.06, 0.14, 0.25),
   label = c("Negligible", "Small", "Medium", "Large"),
-  fill = c("grey85", ber640_colors["warning"], ber640_colors["accent"], ber640_colors["success"])
+  fill = c("grey85", ber640_colors[["warning"]], ber640_colors[["accent"]], ber640_colors[["success"]])
 )
 
 ggplot(bench_df) +
@@ -1775,22 +1586,22 @@ ggplot(bench_df) +
   geom_text(aes(x = (xmin + xmax) / 2, y = 0.5, label = label),
             fontface = "bold", size = 4.5) +
   geom_point(data = tibble(x = eta_val, y = 0.5), aes(x = x, y = y),
-             shape = 18, size = 6, color = ber640_colors["secondary"]) +
+             shape = 18, size = 6, color = ber640_colors[["secondary"]]) +
   annotate("text", x = eta_val, y = 0.15,
            label = paste0("η² = ", round(eta_val, 3)),
-           fontface = "bold", color = ber640_colors["secondary"]) +
+           fontface = "bold", color = ber640_colors[["secondary"]]) +
   scale_fill_identity() +
-  scale_x_continuous(breaks = c(0, 0.01, 0.06, 0.14, 0.25)) +
+  scale_x_continuous(breaks = c(0.01, 0.06, 0.14, 0.25)) +
   coord_cartesian(xlim = c(0, 0.25)) +
   labs(title = "Effect Size Benchmarks: Eta-Squared", x = expression(η^2), y = NULL) +
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), panel.grid = element_blank())
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch3-effect-guide"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Benchmark bands**: The colored regions represent Cohen's (1988) conventional thresholds for $\eta^2$: Negligible (< .01), Small (.01--.06), Medium (.06--.14), Large (> .14)
 - **Diamond marker**: Shows where the observed $\eta^2$ from the ANOVA model falls. This provides immediate visual context for whether the effect is practically meaningful
@@ -1799,7 +1610,6 @@ ggplot(bench_df) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch3-effect-guide"
-#| eval: false
 ```
 - `effectsize::eta_squared()` extracts the observed $\eta^2$ from the model to place the diamond marker
 - `geom_rect()` draws colored bands for each benchmark category (Negligible, Small, Medium, Large) based on Cohen's (1988) guidelines
@@ -1832,7 +1642,7 @@ where $\sqrt{MSE}$ is the pooled within-group SD from the ANOVA table.
 2. The **intercept** is the reference group mean; each **dummy coefficient** is the difference between that group and the reference group
 3. The **$F$-test** tests whether *any* group means differ ($H_0$: all means are equal)
 4. **Post-hoc pairwise comparisons** require correction for multiple testing (e.g., Tukey, Bonferroni) when the comparisons are exploratory
-5. **Planned comparisons** based on theory do not require correction and should not be preceded by the overall $F$-test
+5. **Planned comparisons** based on theory can often be tested directly without first passing the omnibus $F$-test; whether they need multiplicity correction depends on the number of contrasts and the inferential family (a single a-priori contrast typically needs none; several do)
 6. **Effect sizes** ($\eta^2$, Cohen's $d$) complement $p$-values by quantifying practical importance
 7. The progression: $t$-test (2 groups) $\rightarrow$ one-way ANOVA (3+ groups) $\rightarrow$ ANCOVA (groups + covariates) --- all are special cases of the general linear model
 :::

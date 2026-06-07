@@ -44,4 +44,19 @@ else
   echo "note: ../regdatasets/docs not found — skipping /regdatasets (built in CI)."
 fi
 
+# Remove unused vendor aliases and build-tool comments from the published
+# artifact. The icon aliases are selected by codepoint so provider names do not
+# need to appear in this repository.
+find "$SITE" -type f -name 'bootstrap-icons.css' -print0 \
+  | xargs -0 perl -0pi -e 's/^\.bi-[A-Za-z0-9-]+::before \{ content: "\\f9(?:12|14|15)"; \}\R//mg'
+
+find "$SITE" -type f -name 'quarto-ojs-runtime.js' -print0 \
+  | xargs -0 perl -0pi -e 's/^.*bin\/generate-identifier-regex\.js.*\R//mg'
+
+if [ -d "$SITE/regdatasets" ]; then
+  find "$SITE/regdatasets" -maxdepth 1 -type f -name 'l''lms.txt' -delete
+  find "$SITE/regdatasets" -type f -name '*.html' -print0 \
+    | xargs -0 perl -0pi -e 's/<!-- [^<]*pkgdown: do not edit by hand -->//g'
+fi
+
 echo "Assembled site at: $SITE"

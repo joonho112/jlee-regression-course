@@ -53,10 +53,10 @@ crime_df |>
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch4-data-setup"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Correlation between education and crime**: A positive value seems to suggest that more education is associated with *more* crime. This counterintuitive finding will be explained by the sign reversal phenomenon (see @sec-ch4-sign-reversal)
 - **Correlation between urbanization and crime**: A positive value indicates that more urbanized counties have higher crime rates
@@ -65,7 +65,6 @@ crime_df |>
 ### Code Explanation
 ```{r}
 #| ref.label: "ch4-data-setup"
-#| eval: false
 ```
 - The `crime` dataset has variables `c` (crime rate), `hs` (% high school graduates), and `u` (% urban population)
 - `correlation() |> summary() |> print_md()` produces a formatted correlation matrix
@@ -89,10 +88,10 @@ GGally::ggpairs(
   crime_df |> select(crime_rate, high_school, urbanization),
   lower = list(continuous = GGally::wrap("smooth",
     method = "lm", formula = y ~ x,
-    color = ber640_colors["accent"], fill = ber640_colors["accent"],
+    color = ber640_colors[["accent"]], fill = ber640_colors[["accent"]],
     alpha = 0.2, linewidth = 1.2)),
   diag = list(continuous = GGally::wrap("densityDiag",
-    fill = ber640_colors["primary"], alpha = 0.4)),
+    fill = ber640_colors[["primary"]], alpha = 0.4)),
   upper = list(continuous = GGally::wrap("cor", size = 5)),
   columnLabels = c("Crime Rate", "High School %", "Urbanization %")
 ) +
@@ -102,10 +101,12 @@ GGally::ggpairs(
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch4-scatter-matrix"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 8
+#| fig-height: 8
 ```
 - **Education--Crime (positive $r$)**: The scatter plot and correlation coefficient both show a positive bivariate association between education and crime. This counterintuitive finding is the sign reversal we will investigate
 - **Urbanization--Crime (positive $r$)**: Urbanization is positively associated with crime, which makes substantive sense --- urban areas tend to have higher crime rates
@@ -115,14 +116,15 @@ GGally::ggpairs(
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch4-scatter-matrix"
-#| eval: false
+#| fig-width: 8
+#| fig-height: 8
 ```
 - `GGally::ggpairs()` creates a comprehensive scatter plot matrix with three components:
   - **Lower triangle**: Scatter plots with linear regression lines (`geom_smooth(method = "lm")`)
   - **Diagonal**: Density plots showing the distribution of each variable
   - **Upper triangle**: Pearson correlation coefficients
 - `columnLabels` provides readable axis labels
-- All visual elements use `ber640_colors` for consistency
+- Points and density plots use `ber640_colors`; GGally renders the lower-triangle smoothing lines in its default black
 
 
 :::
@@ -149,20 +151,19 @@ model_parameters(model_multi) |> print_md()
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch4-model-fit"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Bivariate model (education only)**: The positive `high_school` coefficient suggests each additional percentage point of high school graduates is associated with *higher* crime. This is misleading due to the omitted confounder (urbanization)
-- **Multiple regression model**: After controlling for urbanization, the `high_school` coefficient becomes **negative** --- more education is associated with *lower* crime, as we would intuitively expect
+- **Multiple regression model**: After controlling for urbanization, the `high_school` coefficient becomes **negative** --- the adjusted association points toward *lower* crime, as we would intuitively expect, though here it is not statistically significant ($p = 0.22$, not significant); the substantive point is that the misleading positive bivariate sign disappears once urbanization is controlled
 - **Urbanization coefficient**: The positive and significant coefficient confirms that urbanization is a strong predictor of crime, and its omission from the bivariate model caused the sign reversal
 - This demonstrates why multiple regression is essential: the bivariate relationship can be completely misleading when confounders are present (see @sec-ch2-ovb for the OVB formula)
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch4-model-fit"
-#| eval: false
 ```
 - The bivariate model shows a **positive** association between education and crime
 - The multiple regression model, controlling for urbanization, reveals a **negative** association
@@ -190,20 +191,19 @@ bind_rows(
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "tbl-ch4-compare"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Sign change**: The education coefficient flips from positive (bivariate) to negative (adjusted). This is the hallmark of **omitted variable bias** strong enough to reverse an effect
-- **Standard error**: Compare the standard errors across models --- the adjusted model typically has smaller standard errors for the education coefficient because adding urbanization explains substantial outcome variance
+- **Standard error**: Adding a correlated predictor can *increase* the focal coefficient's standard error; here the education SE rises from 0.35 (bivariate) to 0.47 (adjusted) because education and urbanization are strongly correlated ($r = 0.79$, i.e. collinearity), even though adding urbanization reduces residual variance
 - **Statistical significance**: The education coefficient may change in significance between models. A variable that appears significant in a bivariate model may become non-significant (or vice versa) once confounders are controlled
-- **Practical implication**: Relying on the bivariate model would lead to the wrong policy conclusion (e.g., reducing education to lower crime). The adjusted model tells the correct story
+- **Practical implication**: Relying on the bivariate model would lead to the wrong policy conclusion (e.g., reducing education to lower crime). After controlling for urbanization the adjusted (model-adjusted) association is negative but *not statistically significant* ($p = 0.22$); the key point is that the misleading positive bivariate association disappears once urbanization is controlled, not that education significantly lowers crime --- a causal reading would require the no-unmeasured-confounding assumption of the DAG posited in @sec-ch4-sign-reversal
 
 ### Code Explanation
 ```{r}
 #| ref.label: "tbl-ch4-compare"
-#| eval: false
 ```
 - `tidy_model()` extracts coefficient estimates, standard errors, and p-values from each model
 - `bind_rows()` stacks the bivariate and adjusted results, then `filter(term == "high_school")` isolates the education coefficient for comparison
@@ -218,7 +218,7 @@ bind_rows(
 ```{r}
 #| label: fig-ch4-coef-compare
 #| fig-cap: "Dot-and-whisker plot comparing the education coefficient from the bivariate model (ignoring urbanization) vs. the adjusted model (controlling for urbanization). The sign reversal is clearly visible."
-#| fig-alt: "Dot-and-whisker plot with coefficient estimates on the x-axis and predictor terms on the y-axis, comparing the bivariate and adjusted multiple regression models. Each point represents a coefficient estimate with a horizontal line spanning the 95 percent confidence interval. The education coefficient is positive in the bivariate model but reverses to negative in the adjusted model that controls for urbanization, clearly illustrating Simpson's paradox and the impact of omitted variable bias."
+#| fig-alt: "Dot-and-whisker plot with coefficient estimates on the x-axis and predictor terms on the y-axis, comparing the bivariate and adjusted multiple regression models. Each point represents a coefficient estimate with a horizontal line spanning the 95 percent confidence interval. The education coefficient is positive in the bivariate model but reverses to negative in the adjusted model that controls for urbanization, clearly illustrating sign reversal driven by omitted variable bias."
 #| fig-width: 7
 #| fig-height: 4
 #| code-fold: true
@@ -237,8 +237,8 @@ ggplot(coef_compare, aes(x = estimate, y = model, color = model)) +
   geom_errorbarh(aes(xmin = conf.low, xmax = conf.high),
                  height = 0.15, linewidth = 1) +
   geom_point(size = 4) +
-  scale_color_manual(values = c("Bivariate" = ber640_colors["secondary"],
-                                "Adjusted"  = ber640_colors["success"])) +
+  scale_color_manual(values = c("Bivariate" = ber640_colors[["secondary"]],
+                                "Adjusted"  = ber640_colors[["success"]])) +
   labs(
     x = "Coefficient Estimate (with 95% CI)",
     y = NULL,
@@ -248,25 +248,28 @@ ggplot(coef_compare, aes(x = estimate, y = model, color = model)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch4-coef-compare"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
 ```
-- **Bivariate coefficient (red)**: The positive estimate with its CI above zero suggests education increases crime --- a misleading conclusion due to omitted variable bias
-- **Adjusted coefficient (green)**: After controlling for urbanization, the coefficient shifts to negative, indicating education is associated with *lower* crime
+- **Bivariate coefficient (rust)**: The positive estimate with its CI above zero suggests education increases crime --- a misleading conclusion due to omitted variable bias
+- **Adjusted coefficient (teal)**: After controlling for urbanization, the coefficient shifts to negative, indicating education is associated with *lower* crime
 - **Confidence intervals**: If the CIs of the two estimates do not overlap, this provides informal evidence that the confounding bias is substantial
 - **Zero reference line**: The dashed line at zero separates positive from negative effects. The bivariate estimate falls on one side, the adjusted on the other --- a visual signature of sign reversal
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch4-coef-compare"
-#| eval: false
+#| fig-width: 7
+#| fig-height: 4
 ```
 - `tidy_model()` extracts coefficients with confidence intervals from each model; `bind_rows()` stacks them
 - `geom_errorbarh()` draws the 95% confidence intervals as horizontal bars
 - `geom_vline(xintercept = 0)` marks zero --- the line where the coefficient would indicate no effect
-- The **red** point/bar is the bivariate (unadjusted) estimate; the **green** point/bar is the adjusted estimate
+- The **rust** point/bar is the bivariate (unadjusted) estimate; the **teal** point/bar is the adjusted estimate
 - The sign reversal is immediately visible: one CI is entirely above zero, the other is entirely below (or crosses zero)
 
 
@@ -301,9 +304,9 @@ resid_x_hs <- residuals(lm(high_school ~ urbanization, data = crime_df))
 partial_hs_df <- tibble(resid_x = resid_x_hs, resid_y = resid_y_hs)
 
 p_hs <- ggplot(partial_hs_df, aes(x = resid_x, y = resid_y)) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6, size = 2) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6, size = 2) +
   geom_smooth(method = "lm", formula = y ~ x,
-              color = ber640_colors["success"], se = TRUE, alpha = 0.15) +
+              color = ber640_colors[["success"]], se = TRUE, alpha = 0.15) +
   labs(
     title = "Partial Plot: High School",
     subtitle = paste("Slope =", round(coef(lm(resid_y ~ resid_x,
@@ -319,9 +322,9 @@ resid_x_urb <- residuals(lm(urbanization ~ high_school, data = crime_df))
 partial_urb_df <- tibble(resid_x = resid_x_urb, resid_y = resid_y_urb)
 
 p_urb <- ggplot(partial_urb_df, aes(x = resid_x, y = resid_y)) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6, size = 2) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6, size = 2) +
   geom_smooth(method = "lm", formula = y ~ x,
-              color = ber640_colors["secondary"], se = TRUE, alpha = 0.15) +
+              color = ber640_colors[["secondary"]], se = TRUE, alpha = 0.15) +
   labs(
     title = "Partial Plot: Urbanization",
     subtitle = paste("Slope =", round(coef(lm(resid_y ~ resid_x,
@@ -334,10 +337,12 @@ p_hs + p_urb
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch4-partial-manual"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 10
+#| fig-height: 5
 ```
 - **Left panel (High School)**: The negative slope confirms that after removing the effect of urbanization from both variables, education is associated with *lower* crime. The slope matches the `high_school` coefficient in `model_multi`
 - **Right panel (Urbanization)**: The positive slope confirms that after removing the effect of education, urbanization is associated with *higher* crime. The slope matches the `urbanization` coefficient in `model_multi`
@@ -347,7 +352,8 @@ p_hs + p_urb
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch4-partial-manual"
-#| eval: false
+#| fig-width: 10
+#| fig-height: 5
 ```
 - Each partial regression plot is constructed in three steps:
   1. Regress the **outcome** ($y$) on all predictors *except* $x_j$ and save residuals: $e_{y \cdot \text{others}}$
@@ -362,15 +368,25 @@ p_hs + p_urb
 
 ### Interactive Exploration: Added Variable Plot Builder {.unnumbered}
 
-::: {.callout-tip collapse="true"}
+::: {.callout-tip}
 ## Try It: See What "Controlling For" Means Geometrically
 
-Select a focal predictor and toggle between the raw scatter plot and the added variable plot. The added variable plot shows residuals vs residuals — the slope in this plot equals the multiple regression coefficient for the focal predictor.
+Use the **Focal predictor** dropdown to pick X₁, X₂, or X₃, then flip the **Show added variable plot** toggle. Start by leaving the toggle off to read the raw `Y vs focal` scatter, then turn it on to switch to the added variable plot, which shows residuals vs residuals — the slope in this plot equals the multiple regression coefficient for the focal predictor (the readout pills confirm the AVP slope matches the multiple-regression coefficient). We simulate the data here because demonstrating that the AVP slope *exactly* reproduces the multiple-regression coefficient requires a known set of correlated predictors and a controlled error term that one fixed real dataset cannot supply on demand.
 :::
 
 ```{ojs}
 //| echo: false
-import { ber640 as avp_ber640, plotDefaults as avp_plotDefaults, themeColors as avp_themeColors, olsRegression as avp_olsRegression, seq as avp_seq, formatCoef as avp_formatCoef, withAlpha as avp_withAlpha, categorical as avp_categorical } from "../ojs/shared.js"
+import { ber640 as avp_ber640, plotDefaults as avp_plotDefaults, themeColors as avp_themeColors, olsRegression as avp_olsRegression, seq as avp_seq, formatCoef as avp_formatCoef, withAlpha as avp_withAlpha, categorical as avp_categorical, srSummary as avp_srSummary, resetControls as avp_resetControls, onThemeChange as avp_onThemeChange } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+avp_theme = avp_themeColors()
+```
+
+```{ojs}
+//| echo: false
+avp_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
 
 ```{ojs}
@@ -472,12 +488,18 @@ avp_multipleRegression = {
 }
 
 avp_fullModel = avp_multipleRegression(avp_data, "y", ["x1", "x2", "x3"])
+```
 
+```{ojs}
+//| echo: false
 viewof avp_focalPredictor = Inputs.select(
   ["x1", "x2", "x3"],
   { label: "Focal predictor", format: d => d === "x1" ? "X₁" : d === "x2" ? "X₂" : "X₃" }
 )
+```
 
+```{ojs}
+//| echo: false
 viewof avp_showAVP = Inputs.toggle({ label: "Show added variable plot", value: false })
 ```
 
@@ -518,22 +540,45 @@ avp_residX = {
 avp_avpData = avp_data.map((d, i) => ({ eX: avp_residX[i], eY: avp_residY[i], id: d.id }))
 
 avp_avpReg = avp_olsRegression(avp_avpData, "eX", "eY")
+
+avp_isMatch = Math.abs(avp_avpReg.slope - avp_multipleCoef) < 0.005
 ```
 
 ```{ojs}
 //| echo: false
+avp_reset = avp_resetControls([
+  { input: viewof avp_focalPredictor, value: "x1" },
+  { input: viewof avp_showAVP, value: false }
+], { label: "Reset" })
+```
 
+```{ojs}
+//| echo: false
+avp_readouts = html`<div class="ojs-readouts">
+  ${avp_pill(`Bivariate (Y ~ ${avp_focalLabel})`, avp_formatCoef(avp_bivariateReg.slope), "info")}
+  ${avp_pill(`Multiple reg (${avp_focalLabel})`, avp_formatCoef(avp_multipleCoef), "warning")}
+  ${avp_pill("AVP slope (residuals)", avp_formatCoef(avp_avpReg.slope), avp_isMatch ? "good" : "")}
+  ${avp_pill("AVP = Multiple?", avp_isMatch ? "Match ✓" : "—", avp_isMatch ? "good" : "info")}
+</div>`
+```
+
+```{ojs}
+//| echo: false
 avp_scatterPlot = {
   if (!avp_showAVP) {
     const xExtent = d3.extent(avp_data, d => d[avp_focalPredictor]);
     const xPad = (xExtent[1] - xExtent[0]) * 0.05;
     const lineX = [xExtent[0] - xPad, xExtent[1] + xPad];
     const lineY = lineX.map(x => avp_bivariateReg.intercept + avp_bivariateReg.slope * x);
+    const lineData = lineX.map((x, i) => ({ x, y: lineY[i] })).filter(d => Number.isFinite(d.x) && Number.isFinite(d.y));
+    const lineLabel = lineData.length ? [lineData[lineData.length - 1]] : [];
 
     return Plot.plot(avp_plotDefaults({
       title: `Raw: Y vs ${avp_focalLabel}`,
-      width: 480,
-      height: 400,
+      width: 330,
+      height: 300,
+      marginTop: 30, marginBottom: 40, marginLeft: 48, marginRight: 16,
+      style: { color: avp_theme.text },
       x: { label: avp_focalLabel },
       y: { label: "Y" },
       marks: [
@@ -543,11 +588,11 @@ avp_scatterPlot = {
           r: 4, stroke: avp_ber640.primary, strokeOpacity: 0.8
         }),
         Plot.line(
-          lineX.map((x, i) => ({ x, y: lineY[i] })),
+          lineData,
           { x: "x", y: "y", stroke: avp_ber640.accent, strokeWidth: 2.5 }
         ),
         Plot.text(
-          [{ x: lineX[1], y: lineY[1] }],
+          lineLabel,
           { x: "x", y: "y", text: [`slope = ${avp_formatCoef(avp_bivariateReg.slope)}`],
             dx: -8, dy: -12, fill: avp_ber640.accent, fontWeight: 600, fontSize: 12 }
         )
@@ -558,11 +603,15 @@ avp_scatterPlot = {
     const xPad = (xExtent[1] - xExtent[0]) * 0.05;
     const lineX = [xExtent[0] - xPad, xExtent[1] + xPad];
     const lineY = lineX.map(x => avp_avpReg.intercept + avp_avpReg.slope * x);
+    const lineData = lineX.map((x, i) => ({ x, y: lineY[i] })).filter(d => Number.isFinite(d.x) && Number.isFinite(d.y));
+    const lineLabel = lineData.length ? [lineData[lineData.length - 1]] : [];
 
     return Plot.plot(avp_plotDefaults({
-      title: `Added Variable: e(Y|${avp_otherLabels.join(",")}) vs e(${avp_focalLabel}|${avp_otherLabels.join(",")})`,
-      width: 480,
-      height: 400,
+      title: `Added Variable: e(Y) vs e(${avp_focalLabel})`,
+      width: 330,
+      height: 300,
+      marginTop: 30, marginBottom: 40, marginLeft: 48, marginRight: 16,
+      style: { color: avp_theme.text },
       x: { label: `e(${avp_focalLabel} | ${avp_otherLabels.join(", ")})` },
       y: { label: `e(Y | ${avp_otherLabels.join(", ")})` },
       marks: [
@@ -572,11 +621,11 @@ avp_scatterPlot = {
           r: 4, stroke: avp_ber640.success, strokeOpacity: 0.8
         }),
         Plot.line(
-          lineX.map((x, i) => ({ x, y: lineY[i] })),
+          lineData,
           { x: "x", y: "y", stroke: avp_ber640.secondary, strokeWidth: 2.5 }
         ),
         Plot.text(
-          [{ x: lineX[1], y: lineY[1] }],
+          lineLabel,
           { x: "x", y: "y", text: [`slope = ${avp_formatCoef(avp_avpReg.slope)}`],
             dx: -8, dy: -12, fill: avp_ber640.secondary, fontWeight: 600, fontSize: 12 }
         )
@@ -584,67 +633,72 @@ avp_scatterPlot = {
     }));
   }
 }
-
-avp_barData = [
-  { label: "Bivariate", coef: avp_bivariateReg.slope, color: avp_ber640.accent },
-  { label: "Multiple Reg", coef: avp_multipleCoef, color: avp_ber640.secondary },
-  { label: "AVP Slope", coef: avp_avpReg.slope, color: avp_ber640.success }
-]
-
-avp_barChart = Plot.plot(avp_plotDefaults({
-  title: `Coefficient Comparison for ${avp_focalLabel}`,
-  width: 320,
-  height: 400,
-  x: { label: "Method", domain: avp_barData.map(d => d.label), padding: 0.3 },
-  y: { label: "Slope estimate", grid: true },
-  marks: [
-    Plot.barY(avp_barData, {
-      x: "label", y: "coef",
-      fill: d => d.color, fillOpacity: 0.85
-    }),
-    Plot.text(avp_barData, {
-      x: "label", y: "coef",
-      text: d => avp_formatCoef(d.coef),
-      dy: d => d.coef >= 0 ? -10 : 10,
-      fill: avp_tc.text, fontWeight: 600, fontSize: 12
-    }),
-    Plot.ruleY([0], { stroke: avp_tc.muted })
-  ]
-}))
-
-html`<div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; justify-content: center;">
-  <div>${avp_scatterPlot}</div>
-  <div>${avp_barChart}</div>
-</div>`
 ```
 
 ```{ojs}
 //| echo: false
+avp_barData = [
+  { label: "Bivariate", coef: avp_bivariateReg.slope, color: avp_ber640.accent },
+  { label: "Multiple", coef: avp_multipleCoef, color: avp_ber640.secondary },
+  { label: "AVP", coef: avp_avpReg.slope, color: avp_ber640.success }
+]
 
-avp_isMatch = Math.abs(avp_avpReg.slope - avp_multipleCoef) < 0.005
+avp_barPlotData = avp_barData.filter(d => Number.isFinite(d.coef))
 
-avp_cards = {
-  const cardStyle = (borderColor) => `display: inline-block; padding: 10px 18px; border-radius: 8px; border: 2px solid ${borderColor}; background: ${avp_tc.bg}; margin: 4px 8px; min-width: 160px; text-align: center;`;
-  const labelStyle = `font-size: 0.78em; color: ${avp_tc.muted}; margin-bottom: 2px;`;
-  const valueStyle = (c) => `font-size: 1.25em; font-weight: 700; color: ${c};`;
+avp_barLabelData = avp_barPlotData.map(d => ({
+  ...d,
+  labelY: d.coef + (d.coef >= 0 ? 0.08 : -0.08)
+}))
 
-  return html`<div style="display: flex; flex-wrap: wrap; justify-content: center; margin-top: 16px;">
-    <div style="${cardStyle(avp_ber640.accent)}">
-      <div style="${labelStyle}">Bivariate slope (Y ~ ${avp_focalLabel})</div>
-      <div style="${valueStyle(avp_ber640.accent)}">${avp_formatCoef(avp_bivariateReg.slope)}</div>
-    </div>
-    <div style="${cardStyle(avp_ber640.secondary)}">
-      <div style="${labelStyle}">Multiple reg coef (${avp_focalLabel})</div>
-      <div style="${valueStyle(avp_ber640.secondary)}">${avp_formatCoef(avp_multipleCoef)}</div>
-    </div>
-    <div style="${cardStyle(avp_ber640.success)}">
-      <div style="${labelStyle}">AVP slope (residuals)</div>
-      <div style="${valueStyle(avp_ber640.success)}">${avp_formatCoef(avp_avpReg.slope)}${avp_isMatch ? html`<span style="display:inline-block; margin-left:12px; padding:3px 12px; border-radius:12px; background:${avp_ber640.success}; color:white; font-size:0.82em; font-weight:600;">Match!</span>` : ''}</div>
-    </div>
-  </div>`;
-}
+avp_barChart = Plot.plot(avp_plotDefaults({
+  title: `Coefficients for ${avp_focalLabel}`,
+  width: 270,
+  height: 300,
+  marginTop: 30, marginBottom: 40, marginLeft: 48, marginRight: 12,
+  style: { color: avp_theme.text },
+  x: { label: "Method", domain: avp_barData.map(d => d.label), padding: 0.3 },
+  y: { label: "Slope estimate", grid: true },
+  marks: [
+    Plot.barY(avp_barPlotData, {
+      x: "label", y: "coef",
+      fill: d => d.color, fillOpacity: 0.85
+    }),
+    Plot.text(avp_barLabelData, {
+      x: "label", y: "labelY",
+      text: d => avp_formatCoef(d.coef),
+      fill: avp_theme.text, fontWeight: 600, fontSize: 12
+    }),
+    Plot.ruleY([0], { stroke: avp_theme.muted })
+  ]
+}))
 ```
 
+```{ojs}
+//| echo: false
+avp_sr = avp_srSummary("ch04-avp",
+  `Focal predictor ${avp_focalLabel}. Bivariate slope ${avp_formatCoef(avp_bivariateReg.slope)}, multiple regression coefficient ${avp_formatCoef(avp_multipleCoef)}, added variable plot slope ${avp_formatCoef(avp_avpReg.slope)}. ` + (avp_isMatch ? "The AVP slope matches the multiple regression coefficient." : "The AVP slope differs from the multiple regression coefficient.") + (avp_showAVP ? " Showing added variable (residual-vs-residual) plot." : " Showing raw scatter plot."))
+```
+
+```{ojs}
+//| echo: false
+avp_app = html`<div class="ojs-app" role="group" aria-label="Added variable plot builder">
+  <div class="ojs-controls">${viewof avp_focalPredictor}${viewof avp_showAVP}<div class="ojs-control-group" style="flex:0 0 auto;">${avp_reset}</div></div>
+  ${avp_readouts}
+  <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; justify-content:center;">
+    <div class="ojs-plot">${avp_scatterPlot}</div>
+    <div class="ojs-plot">${avp_barChart}</div>
+  </div>
+  ${avp_sr}
+</div>`
+```
+
+::: {.callout-note}
+## What you should have seen
+
+- The added variable plot slope is *identical* to the multiple-regression coefficient for the focal predictor — "controlling for" the other predictors means regressing on the residualized (partialled-out) variables.
+- The raw `Y vs focal` slope generally differs from the multiple-regression coefficient, because the raw slope ignores the other predictors while the AVP slope removes their linear effect from both X and Y.
+- Switching the focal predictor changes which variables are partialled out, so each predictor gets its own residual-vs-residual geometry but the same slope-equals-coefficient guarantee.
+:::
 
 ## Standardized Coefficients {#sec-ch4-standardized}
 
@@ -670,10 +724,10 @@ model_parameters(model_multi, standardize = "refit") |> print_md()
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch4-standardized"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Standardized coefficients ($\beta^*$)**: Each coefficient now represents the expected change in $y$ (in SD units) for a one-SD increase in the predictor, holding other predictors constant
 - **Comparing magnitudes**: The predictor with the larger absolute standardized coefficient has a stronger partial association with crime. This allows direct comparison between education and urbanization despite their different measurement scales
@@ -683,7 +737,6 @@ model_parameters(model_multi, standardize = "refit") |> print_md()
 ### Code Explanation
 ```{r}
 #| ref.label: "ch4-standardized"
-#| eval: false
 ```
 - `standardize = "refit"` re-fits the model after standardizing all variables to have mean 0 and SD 1
 - `print_md()` formats the output as a clean markdown table
@@ -697,7 +750,7 @@ model_parameters(model_multi, standardize = "refit") |> print_md()
 Standardized coefficients are useful for comparing relative importance of predictors measured on different scales, but they have limitations:
 
 - They depend on the sample variability of each predictor
-- They are **not meaningful for dummy variables** (a "one-SD increase" in a dummy has no practical meaning)
+- They are usually **less interpretable for dummy variables** (a "one-SD increase" in a 0/1 variable has no natural meaning); the unstandardized group difference is usually clearer
 - They should not be compared across different samples (where variances may differ)
 :::
 
@@ -748,8 +801,8 @@ ggplot(coef_both, aes(x = estimate, y = term, color = term)) +
   geom_errorbarh(aes(xmin = conf.low, xmax = conf.high),
                  height = 0.15, linewidth = 1) +
   geom_point(size = 4) +
-  scale_color_manual(values = c("High School %" = ber640_colors["success"],
-                                "Urbanization %" = ber640_colors["secondary"])) +
+  scale_color_manual(values = c("High School %" = ber640_colors[["success"]],
+                                "Urbanization %" = ber640_colors[["secondary"]])) +
   facet_wrap(~ type, scales = "free_x") +
   labs(
     x = "Coefficient Estimate (with 95% CI)",
@@ -761,10 +814,12 @@ ggplot(coef_both, aes(x = estimate, y = term, color = term)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch4-std-comparison"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 10
+#| fig-height: 5
 ```
 - **Unstandardized panel**: Coefficients are in original units. The education and urbanization coefficients cannot be meaningfully compared because the predictors have different units and different variances
 - **Standardized panel**: Both coefficients are now in the same units (SDs of crime rate per SD of predictor). The predictor with the larger absolute standardized coefficient has a stronger partial association with crime
@@ -774,7 +829,8 @@ ggplot(coef_both, aes(x = estimate, y = term, color = term)) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch4-std-comparison"
-#| eval: false
+#| fig-width: 10
+#| fig-height: 5
 ```
 - `model_parameters(model_multi, standardize = "refit")` refits the model with all variables standardized to mean = 0, SD = 1
 - The left panel shows **unstandardized** coefficients in original units (crime rate per percentage point)
@@ -822,30 +878,32 @@ vif_df <- tibble(
 
 ggplot(vif_df, aes(x = predictor, y = VIF, fill = predictor)) +
   geom_col(width = 0.5, alpha = 0.85) +
-  geom_hline(yintercept = 5, linetype = "dashed", color = ber640_colors["warning"],
+  geom_hline(yintercept = 5, linetype = "dashed", color = ber640_colors[["warning"]],
              linewidth = 1) +
-  geom_hline(yintercept = 10, linetype = "dotted", color = ber640_colors["secondary"],
+  geom_hline(yintercept = 10, linetype = "dotted", color = ber640_colors[["secondary"]],
              linewidth = 1) +
   annotate("text", x = 0.6, y = 5.3, label = "Concern (VIF = 5)",
-           color = ber640_colors["warning"], fontface = "bold", hjust = 0, size = 3.5) +
+           color = ber640_colors[["warning"]], fontface = "bold", hjust = 0, size = 3.5) +
   annotate("text", x = 0.6, y = 10.3, label = "Serious (VIF = 10)",
-           color = ber640_colors["secondary"], fontface = "bold", hjust = 0, size = 3.5) +
-  scale_fill_manual(values = c("High School %" = ber640_colors["accent"],
-                               "Urbanization %" = ber640_colors["info"])) +
+           color = ber640_colors[["secondary"]], fontface = "bold", hjust = 0, size = 3.5) +
+  scale_fill_manual(values = c("High School %" = ber640_colors[["accent"]],
+                               "Urbanization %" = ber640_colors[["info"]])) +
   labs(
     x = NULL,
     y = "Variance Inflation Factor",
     title = "VIF Diagnostic for Multicollinearity"
   ) +
   theme(legend.position = "none") +
-  coord_cartesian(ylim = c(0, max(vif_df$VIF, 5) * 1.3))
+  coord_cartesian(ylim = c(0, max(vif_df$VIF, 10) * 1.15))
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch4-vif"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
 ```
 - **VIF = 1**: No multicollinearity --- the predictor is completely uncorrelated with all other predictors
 - **VIF < 5**: Generally acceptable; the standard errors are inflated but not severely
@@ -856,12 +914,13 @@ ggplot(vif_df, aes(x = predictor, y = VIF, fill = predictor)) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch4-vif"
-#| eval: false
+#| fig-width: 7
+#| fig-height: 4
 ```
 - `car::vif()` computes the VIF for each predictor in the model
 - VIF equals $1/(1 - R_j^2)$, where $R_j^2$ is how well predictor $j$ is explained by the other predictors
-- The **dashed yellow line** at VIF = 5 marks the conventional "concern" threshold
-- The **dotted red line** at VIF = 10 marks the "serious multicollinearity" threshold
+- The **dashed gold line** at VIF = 5 marks the conventional "concern" threshold
+- The **dotted rust line** at VIF = 10 marks the "serious multicollinearity" threshold
 - `coord_cartesian()` ensures the y-axis extends to show the threshold lines even if all VIF values are small
 
 
@@ -905,20 +964,19 @@ crime_df |>
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch4-correlations"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **Zero-order $r$**: The bivariate correlation between education and crime, ignoring urbanization. The positive value is misleading due to confounding
-- **Partial $r$**: The correlation between education and crime after removing the linear effect of urbanization from both variables. The negative value reveals the "true" direction of the association
+- **Partial $r$**: The correlation between education and crime after removing the linear effect of urbanization from both variables. The negative value reveals the adjusted direction of the association after accounting for this confounder
 - **Magnitude of partial $r$**: Squaring the partial correlation gives the proportion of *remaining* variance in crime (after controlling for urbanization) that is explained by education
 - The dramatic sign change from positive (zero-order) to negative (partial) reinforces the lesson from @sec-ch2-ovb: always consider potential confounders before interpreting bivariate associations causally
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch4-correlations"
-#| eval: false
 ```
 - `cor()` computes the zero-order (bivariate) Pearson correlation
 - `correlation(partial = TRUE) |> print_md()` computes and displays partial correlations controlling for all other variables in the data frame
@@ -932,13 +990,15 @@ crime_df |>
 ### Variance Partitioning: A Visual Explanation
 
 ::: {.panel-tabset}
-#### R Code
+#### Output
 ```{r}
 #| label: fig-ch4-variance-venn
-#| fig-cap: "Venn diagram of variance partitioning among Crime Rate, Education, and Urbanization. Each circle represents the variance of a variable. Overlapping regions represent shared variance. The partial correlation isolates region a (unique education--crime link after removing shared variance with urbanization). The semi-partial correlation isolates region a relative to the total crime variance."
+#| fig-cap: "Schematic (not area-proportional) Venn diagram of variance partitioning among Crime Rate, Education, and Urbanization. Each circle represents the variance of a variable; overlapping regions represent shared variance. The partial correlation isolates region a (unique education--crime link after removing shared variance with urbanization); the semi-partial correlation isolates region a relative to the total crime variance. Note that the depicted shares are *unsigned*: education's small unique share reflects a *negative* partial association (semi-partial $r = -0.11$), and squaring to get $sr^2$ hides that sign."
 #| fig-alt: "Three-circle Venn diagram illustrating variance partitioning among crime rate, education, and urbanization. Each circle represents the total variance of one variable, and overlapping regions represent shared variance. Labeled regions distinguish unique variance explained by education alone, unique variance explained by urbanization alone, and the shared (confounded) variance common to both predictors. The diagram visually explains the difference between partial and semi-partial correlations by highlighting which portions of variance each statistic isolates."
 #| fig-width: 9
 #| fig-height: 6
+#| code-fold: true
+#| code-summary: "Show R Code"
 
 # --- Venn diagram for variance partitioning ---
 # Define circle centers and radius
@@ -947,7 +1007,7 @@ circle_df <- tibble(
   x0       = c(0.0, -0.7, 0.7),
   y0       = c(0.7, -0.3, -0.3),
   r        = c(1.3, 1.3, 1.3),
-  fill     = c(ber640_colors["secondary"], ber640_colors["success"], ber640_colors["accent"])
+  fill     = c(ber640_colors[["secondary"]], ber640_colors[["success"]], ber640_colors[["accent"]])
 )
 
 # Generate circle points
@@ -971,40 +1031,60 @@ ggplot() +
             linewidth = 1.2) +
   # Label each circle
   annotate("text", x = 0.0, y = 2.15, label = "Crime Rate (Y)",
-           fontface = "bold", size = 4.5, color = ber640_colors["secondary"]) +
+           fontface = "bold", size = 4.5, color = ber640_colors[["secondary"]]) +
   annotate("text", x = -1.8, y = -1.2, label = "Education (X1)",
-           fontface = "bold", size = 4.5, color = ber640_colors["success"]) +
+           fontface = "bold", size = 4.5, color = ber640_colors[["success"]]) +
   annotate("text", x = 1.8, y = -1.2, label = "Urbanization (X2)",
-           fontface = "bold", size = 4.5, color = ber640_colors["accent"]) +
+           fontface = "bold", size = 4.5, color = ber640_colors[["accent"]]) +
   # Label variance regions
-  annotate("text", x = -0.45, y = 0.45, label = "a", fontface = "bold",
-           size = 6, color = ber640_colors["primary"]) +
-  annotate("text", x = 0.45, y = 0.45, label = "b", fontface = "bold",
-           size = 6, color = ber640_colors["primary"]) +
-  annotate("text", x = 0.0, y = -0.1, label = "c", fontface = "bold",
-           size = 6, color = ber640_colors["primary"]) +
-  annotate("text", x = 0.0, y = 0.55, label = "d", fontface = "bold",
-           size = 5, color = ber640_colors["warning"]) +
+  annotate("text", x = -0.72, y = 0.33, label = "a", fontface = "bold",
+           size = 6, color = ber640_colors[["primary"]]) +
+  annotate("text", x = 0.72, y = 0.33, label = "b", fontface = "bold",
+           size = 6, color = ber640_colors[["primary"]]) +
+  annotate("text", x = 0.0, y = -1.0, label = "c", fontface = "bold",
+           size = 6, color = ber640_colors[["primary"]]) +
+  annotate("text", x = 0.0, y = 0.08, label = "d", fontface = "bold",
+           size = 5, color = ber640_colors[["warning"]]) +
   # Legend box
 
   annotate("label", x = -2.2, y = 1.8,
-           label = "a = Unique Education\nb = Unique Urbanization\nc = Shared X1-X2 only\nd = Shared by all three",
+           label = "a = Education unique to Y\nb = Urbanization unique to Y\nc = Shared X1-X2 only\nd = Shared by all three",
            hjust = 0, size = 3.5, fill = "white", label.size = 0.3,
-           color = ber640_colors["primary"]) +
-  scale_fill_manual(values = c("Crime Rate (Y)" = ber640_colors["secondary"],
-                                "Education (X1)" = ber640_colors["success"],
-                                "Urbanization (X2)" = ber640_colors["accent"])) +
-  scale_color_manual(values = c("Crime Rate (Y)" = ber640_colors["secondary"],
-                                 "Education (X1)" = ber640_colors["success"],
-                                 "Urbanization (X2)" = ber640_colors["accent"])) +
+           color = ber640_colors[["primary"]]) +
+  scale_fill_manual(values = c("Crime Rate (Y)" = ber640_colors[["secondary"]],
+                                "Education (X1)" = ber640_colors[["success"]],
+                                "Urbanization (X2)" = ber640_colors[["accent"]])) +
+  scale_color_manual(values = c("Crime Rate (Y)" = ber640_colors[["secondary"]],
+                                 "Education (X1)" = ber640_colors[["success"]],
+                                 "Urbanization (X2)" = ber640_colors[["accent"]])) +
   coord_equal() +
+  scale_x_continuous(expand = expansion(mult = c(0.12, 0.20))) +
   theme_void() +
   theme(legend.position = "none",
         plot.title = element_text(face = "bold", size = 14, hjust = 0.5)) +
   labs(title = "Variance Partitioning in Multiple Regression")
 ```
 
+#### Output Interpretation
+
+```{r}
+#| ref.label: "fig-ch4-variance-venn"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 6
+```
+- **Partial correlation**: Measures the relationship between $Y$ and $X_1$ after removing all variance associated with $X_2$. Conceptually, it asks: "Of the variance in $Y$ that is *not* explained by $X_2$, how much is related to $X_1$?" This corresponds to region **a** relative to the non-$X_2$ portion of the $Y$ circle
+- **Semi-partial (part) correlation**: Measures the *unique* contribution of $X_1$ to $R^2$. It asks: "How much of the *total* variance in $Y$ is uniquely explained by $X_1$?" This corresponds to region **a** relative to the *entire* $Y$ circle
+- **Key difference**: $r_{\text{partial}}^2$ has a smaller denominator (remaining variance), so it is always $\geq r_{\text{semi-partial}}^2$ in absolute value
+- **Shared variance (region d)**: When predictors are correlated, some explained variance cannot be uniquely attributed. This is why $R^2$ for the full model is less than the sum of individual $r^2$ values
+
 #### Code Explanation
+
+```{r}
+#| ref.label: "fig-ch4-variance-venn"
+#| fig-width: 9
+#| fig-height: 6
+```
 - Three overlapping circles represent the total variance of Crime Rate ($Y$), Education ($X_1$), and Urbanization ($X_2$)
 - **Region a**: Variance in Crime uniquely shared with Education (not overlapping with Urbanization). This is the portion captured by the **semi-partial correlation** $r_{y(x_1 \cdot x_2)}$
 - **Region b**: Variance in Crime uniquely shared with Urbanization (not overlapping with Education)
@@ -1012,11 +1092,6 @@ ggplot() +
 - **Region d**: Variance shared by all three variables --- this is the "confounded" portion that cannot be uniquely attributed to either predictor
 - The circles are drawn using polygon coordinates; `coord_equal()` ensures they appear as circles rather than ellipses
 
-#### Output Interpretation
-- **Partial correlation**: Measures the relationship between $Y$ and $X_1$ after removing all variance associated with $X_2$. Conceptually, it asks: "Of the variance in $Y$ that is *not* explained by $X_2$, how much is related to $X_1$?" This corresponds to region **a** relative to the non-$X_2$ portion of the $Y$ circle
-- **Semi-partial (part) correlation**: Measures the *unique* contribution of $X_1$ to $R^2$. It asks: "How much of the *total* variance in $Y$ is uniquely explained by $X_1$?" This corresponds to region **a** relative to the *entire* $Y$ circle
-- **Key difference**: $r_{\text{partial}}^2$ has a smaller denominator (remaining variance), so it is always $\geq r_{\text{semi-partial}}^2$ in absolute value
-- **Shared variance (region d)**: When predictors are correlated, some explained variance cannot be uniquely attributed. This is why $R^2$ for the full model is less than the sum of individual $r^2$ values
 :::
 
 ::: {.callout-note}
@@ -1032,10 +1107,12 @@ ggplot() +
 The squared semi-partial correlations decompose the total model $R^2$ into **unique** and **shared** portions. This tells us exactly how much each predictor uniquely contributes to explained variance.
 
 ::: {.panel-tabset}
-#### R Code
+#### Output
 ```{r}
 #| label: tbl-ch4-r2-decomp
 #| tbl-cap: "R² decomposition showing each predictor's unique contribution (squared semi-partial correlation) and the shared variance that cannot be uniquely attributed."
+#| code-fold: true
+#| code-summary: "Show R Code"
 
 # Compute semi-partial correlations
 # Semi-partial for education: correlation between Y and (X1 residualized on X2)
@@ -1067,28 +1144,40 @@ r2_decomp <- tibble(
 r2_decomp |> kable(digits = 3)
 ```
 
+#### Output Interpretation
+
+```{r}
+#| ref.label: "tbl-ch4-r2-decomp"
+#| echo: false
+```
+- **Unique Education $sr^2$**: The proportion of total variance in crime that is *uniquely* explained by education after accounting for urbanization. This is region **a** from the Venn diagram in @fig-ch4-variance-venn
+- **Unique Urbanization $sr^2$**: The proportion of total variance in crime that is *uniquely* explained by urbanization after accounting for education. This is region **b** from the Venn diagram
+- **Shared variance**: The portion of explained variance that could be attributed to either predictor because they are correlated. When predictors are highly correlated, this shared portion is large, making it difficult to identify which predictor is "really" responsible
+- **Key insight**: The sum of unique contributions is *less than* the total $R^2$. The difference is the shared (confounded) variance. This is why reporting individual $r^2$ values is misleading --- they double-count the shared portion
+
 #### Code Explanation
+
+```{r}
+#| ref.label: "tbl-ch4-r2-decomp"
+```
 - **Semi-partial correlation for education**: Correlate $Y$ (crime) with the residuals from regressing education on urbanization. This isolates the part of education that is independent of urbanization
 - **Semi-partial correlation for urbanization**: Similarly, correlate $Y$ with the residuals from regressing urbanization on education
 - **Squaring** each semi-partial correlation gives the unique $R^2$ contribution ($sr^2$)
 - **Shared variance** = Total $R^2$ minus the sum of unique contributions. This is the portion of explained variance that overlaps between predictors and cannot be attributed to either one alone
 - The percentages show what fraction of total explained variance each component represents
 
-#### Output Interpretation
-- **Unique Education $sr^2$**: The proportion of total variance in crime that is *uniquely* explained by education after accounting for urbanization. This is region **a** from the Venn diagram in @fig-ch4-variance-venn
-- **Unique Urbanization $sr^2$**: The proportion of total variance in crime that is *uniquely* explained by urbanization after accounting for education. This is region **b** from the Venn diagram
-- **Shared variance**: The portion of explained variance that could be attributed to either predictor because they are correlated. When predictors are highly correlated, this shared portion is large, making it difficult to identify which predictor is "really" responsible
-- **Key insight**: The sum of unique contributions is *less than* the total $R^2$. The difference is the shared (confounded) variance. This is why reporting individual $r^2$ values is misleading --- they double-count the shared portion
 :::
 
 ::: {.panel-tabset}
-#### R Code
+#### Output
 ```{r}
 #| label: fig-ch4-r2-bar
 #| fig-cap: "Stacked bar chart showing the decomposition of total model R² into unique contributions from each predictor and the shared (confounded) variance."
 #| fig-alt: "Stacked bar chart decomposing the total model R-squared into three colored segments: the unique contribution of education, the unique contribution of urbanization, and the shared (confounded) variance that cannot be attributed to either predictor alone. The x-axis represents the proportion of variance explained. The chart demonstrates that the sum of unique contributions is less than the total R-squared, with the difference representing the overlapping variance due to the correlation between predictors."
 #| fig-width: 7
 #| fig-height: 4
+#| code-fold: true
+#| code-summary: "Show R Code"
 
 # Prepare data for stacked bar
 r2_bar_df <- tibble(
@@ -1097,17 +1186,28 @@ r2_bar_df <- tibble(
     levels = c("Shared", "Unique: Urbanization", "Unique: Education")
   ),
   R2 = c(sr2_education, sr2_urbanization, sr2_shared)
-)
+) |>
+  mutate(
+    lab    = sprintf("%.1f%%", R2 * 100),
+    # blank out the thin segment's inside label; it is drawn outside instead
+    lab_in = if_else(R2 >= 0.05, lab, "")
+  )
 
 ggplot(r2_bar_df, aes(x = "Model R²", y = R2, fill = Component)) +
   geom_col(width = 0.5, alpha = 0.85) +
-  geom_text(aes(label = paste0(round(R2 * 100, 1), "%")),
+  geom_text(aes(label = lab_in),
             position = position_stack(vjust = 0.5), size = 4.5,
             fontface = "bold", color = "white") +
+  # The Education segment is too thin to hold its label; draw it just left of
+  # the bar in dark teal so the true value (~1.3%) is legible, not clipped.
+  geom_text(data = function(d) subset(d, R2 < 0.05),
+            aes(x = "Model R²", y = -0.012, label = lab),
+            inherit.aes = FALSE, hjust = 1, size = 4,
+            fontface = "bold", color = ber640_colors[["success"]]) +
   scale_fill_manual(values = c(
-    "Unique: Education"    = ber640_colors["success"],
-    "Unique: Urbanization" = ber640_colors["accent"],
-    "Shared"               = ber640_colors["warning"]
+    "Unique: Education"    = ber640_colors[["success"]],
+    "Unique: Urbanization" = ber640_colors[["accent"]],
+    "Shared"               = ber640_colors[["warning"]]
   )) +
   labs(
     x = NULL,
@@ -1115,20 +1215,37 @@ ggplot(r2_bar_df, aes(x = "Model R²", y = R2, fill = Component)) +
     title = "R² Decomposition: Unique and Shared Contributions",
     fill = "Component"
   ) +
+  scale_y_continuous(expand = expansion(mult = c(0.18, 0.05))) +
+  # Reverse legend so its order matches the left-to-right stacking of segments
+  guides(fill = guide_legend(reverse = TRUE)) +
   coord_flip() +
   theme(legend.position = "bottom")
 ```
 
-#### Code Explanation
-- The stacked bar chart visualizes the $R^2$ decomposition: each segment represents one component
-- **Green** = unique contribution of education, **Blue** = unique contribution of urbanization, **Yellow** = shared/confounded variance
-- `position_stack(vjust = 0.5)` centers the percentage labels within each segment
-- `coord_flip()` makes the bar horizontal for readability
-
 #### Output Interpretation
+
+```{r}
+#| ref.label: "fig-ch4-r2-bar"
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+```
 - The relative sizes of the segments reveal how much each predictor uniquely contributes versus how much is confounded
 - If the **shared** segment is large relative to the unique segments, it means the predictors are substantially correlated and their individual contributions are hard to disentangle
 - This visualization directly corresponds to the Venn diagram in @fig-ch4-variance-venn, with the bar chart providing exact numerical values
+
+#### Code Explanation
+
+```{r}
+#| ref.label: "fig-ch4-r2-bar"
+#| fig-width: 7
+#| fig-height: 4
+```
+- The stacked bar chart visualizes the $R^2$ decomposition: each segment represents one component
+- **Teal** = unique contribution of education, **Slate** = unique contribution of urbanization, **Gold** = shared/confounded variance
+- `position_stack(vjust = 0.5)` centers the percentage labels within each segment
+- `coord_flip()` makes the bar horizontal for readability
+
 :::
 
 
@@ -1145,14 +1262,14 @@ $$
 \text{E}(b_{\text{hs}}^*) = \beta_{\text{hs}} + \underbrace{r_{\text{hs,urb}}}_{\text{positive}} \cdot \frac{s_{\text{urb}}}{s_{\text{hs}}} \cdot \underbrace{\beta_{\text{urb}}}_{\text{positive}}
 $$
 
-Even though the true effect of education on crime is negative ($\beta_{\text{hs}} < 0$), the positive bias from omitting urbanization is large enough to make $b_{\text{hs}}^*$ positive.
+Under the data-generating model posited by this DAG --- in which the direct effect of education on crime is negative ($\beta_{\text{hs}} < 0$) --- the positive bias from omitting urbanization is large enough to make $b_{\text{hs}}^*$ positive. (In the observational data the model-adjusted education slope is negative but not statistically significant, $p = 0.22$; the demonstration is about how confounding can reverse a sign, not a claim that education significantly lowers crime.)
 
 ::: {.panel-tabset}
 ### Output
 ```{r}
 #| label: fig-ch4-dag
-#| fig-cap: "Directed Acyclic Graph (DAG) showing the confounding structure. Urbanization affects both education and crime, creating a spurious positive bivariate association. The true direct effect of education on crime is negative."
-#| fig-alt: "Directed Acyclic Graph (DAG) with three nodes: Urbanization at the top, Education at the bottom left, and Crime Rate at the bottom right. Arrows point from Urbanization to both Education and Crime Rate, representing the confounding paths. A direct arrow from Education to Crime Rate represents the true causal effect, which is negative. The DAG visually explains how urbanization creates a spurious positive association between education and crime when not controlled for in the regression model."
+#| fig-cap: "Directed Acyclic Graph (DAG) showing the confounding structure posited for this teaching example. Urbanization affects both education and crime, creating a spurious positive bivariate association. Under the assumed DAG the direct effect of education on crime is negative."
+#| fig-alt: "Directed Acyclic Graph (DAG) with three nodes: Urbanization at the top, Education at the bottom left, and Crime Rate at the bottom right. Arrows point from Urbanization to both Education and Crime Rate, representing the confounding paths. A direct arrow from Education to Crime Rate represents the direct causal effect posited by this DAG, which is assumed negative. The DAG visually explains how urbanization creates a spurious positive association between education and crime when not controlled for in the regression model."
 #| fig-width: 7
 #| fig-height: 5
 #| code-fold: true
@@ -1175,8 +1292,8 @@ arrows <- tibble(
   label     = c("+", "+", "– (true effect)"),
   lbl_x     = c(0.18, 0.82, 0.5),
   lbl_y     = c(0.58, 0.58, -0.12),
-  color     = c(ber640_colors["accent"], ber640_colors["accent"],
-                ber640_colors["success"]),
+  color     = c(ber640_colors[["accent"]], ber640_colors[["accent"]],
+                ber640_colors[["warning"]]),
   linetype  = c("solid", "solid", "solid")
 )
 
@@ -1197,8 +1314,8 @@ ggplot() +
              size = 4.5, fontface = "bold", fill = "white",
              label.padding = unit(0.6, "lines"),
              label.size = 1.2,
-             color = c(ber640_colors["accent"], ber640_colors["success"],
-                       ber640_colors["secondary"])) +
+             color = c(ber640_colors[["accent"]], ber640_colors[["success"]],
+                       ber640_colors[["secondary"]])) +
   coord_cartesian(xlim = c(-0.3, 1.3), ylim = c(-0.3, 1.3)) +
   theme_void() +
   labs(title = "Confounding Structure: Why Education Appears to Increase Crime") +
@@ -1206,24 +1323,27 @@ ggplot() +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch4-dag"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 7
+#| fig-height: 5
 ```
 - **Confounding path** (Education $\leftarrow$ Urbanization $\rightarrow$ Crime): Urbanization increases both education and crime. This creates a **backdoor path** that generates a spurious positive association between education and crime
-- **Direct path** (Education $\rightarrow$ Crime): The true causal effect is negative --- more education reduces crime. But this effect is masked in the bivariate analysis by the stronger confounding path
-- **Why sign reversal occurs**: The positive confounding bias (via urbanization) exceeds the true negative effect in absolute value. The bivariate coefficient sums both paths, yielding a misleading positive result
-- **Solution**: Multiple regression "blocks" the confounding path by conditioning on urbanization, isolating the direct negative effect of education on crime
+- **Direct path** (Education $\rightarrow$ Crime): Under the DAG posited here the direct effect is negative --- the assumed data-generating structure has more education reducing crime. This posited direct effect is masked in the bivariate analysis by the stronger confounding path (note that in the observed data the model-adjusted slope, though negative, is not statistically significant, $p = 0.22$)
+- **Why sign reversal occurs**: Under the DAG posited here, the positive confounding component (via urbanization) exceeds the assumed negative direct path in absolute value. The bivariate coefficient sums both paths, yielding a misleading positive result
+- **Solution**: Multiple regression "blocks" the confounding path by conditioning on urbanization, estimating the adjusted direct association between education and crime
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch4-dag"
-#| eval: false
+#| fig-width: 7
+#| fig-height: 5
 ```
 - The DAG uses three nodes: Urbanization (confounder at top), Education (bottom-left), and Crime Rate (bottom-right)
-- **Blue arrows** from Urbanization to both Education and Crime represent the confounding paths --- both are positive (urban areas have more education *and* more crime)
-- **Green arrow** from Education to Crime represents the true direct (negative) effect: more education is associated with less crime
+- **Slate arrows** from Urbanization to both Education and Crime represent the confounding paths --- both are positive (urban areas have more education *and* more crime)
+- **Gold arrow** from Education to Crime represents the direct (negative) effect posited by this DAG: in the assumed structure, more education goes with less crime
 - The DAG is constructed with `geom_segment()` for arrows and `geom_label()` for nodes --- no external DAG package needed
 - The spurious positive bivariate association arises because the indirect path (Education $\leftarrow$ Urbanization $\rightarrow$ Crime) dominates the direct negative path
 
@@ -1287,10 +1407,10 @@ ovb_check |> kable()
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch4-ovb-verification"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The table verifies that the OVB formula holds **exactly**: the bivariate coefficient equals the partial coefficient plus the bias term
 - **Bias direction**: Since $\delta > 0$ (more educated counties are more urban) and $\gamma > 0$ (more urban counties have more crime), the bias is **positive**
@@ -1300,7 +1420,6 @@ ovb_check |> kable()
 ### Code Explanation
 ```{r}
 #| ref.label: "ch4-ovb-verification"
-#| eval: false
 ```
 - **`b_bivariate`**: The education coefficient from the simple regression `crime ~ education` (positive, misleading)
 - **`b_partial`**: The education coefficient from the multiple regression `crime ~ education + urbanization` (negative, correct)
@@ -1317,15 +1436,16 @@ ovb_check |> kable()
 ```{r}
 #| label: fig-ch4-sign-reversal
 #| fig-cap: "Visualizing the sign reversal: the bivariate relationship (left) shows a positive slope, while the partial relationship (right) shows a negative slope after controlling for urbanization."
-#| fig-alt: "Two-panel scatter plot illustrating the sign reversal caused by omitted variable bias. The left panel shows the bivariate relationship between high school graduation rate on the x-axis and crime rate on the y-axis, with a positively sloped regression line suggesting higher education is associated with more crime. The right panel shows the partial relationship after controlling for urbanization, revealing a negatively sloped line that reflects the true negative effect of education on crime. Together the panels demonstrate how confounding by urbanization reverses the apparent direction of the education effect."
+#| fig-alt: "Two-panel scatter plot illustrating the sign reversal caused by omitted variable bias. The left panel shows the bivariate relationship between high school graduation rate on the x-axis and crime rate on the y-axis, with a positively sloped regression line suggesting higher education is associated with more crime. The right panel shows the partial relationship after controlling for urbanization, revealing a negatively sloped adjusted line. Together the panels demonstrate how confounding by urbanization reverses the apparent direction of the education association."
 #| fig-width: 10
+#| fig-height: 5
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 # Bivariate
 p1 <- ggplot(crime_df, aes(x = high_school, y = crime_rate)) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6) +
-  geom_smooth(method = "lm", formula = y ~ x, color = ber640_colors["secondary"], se = FALSE) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6) +
+  geom_smooth(method = "lm", formula = y ~ x, color = ber640_colors[["secondary"]], se = FALSE) +
   labs(title = "Bivariate: education vs crime",
        subtitle = paste("r =", round(cor(crime_df$high_school, crime_df$crime_rate), 3)),
        x = "% High School Graduates", y = "Crime Rate")
@@ -1335,8 +1455,8 @@ resid_y <- residuals(lm(crime_rate ~ urbanization, data = crime_df))
 resid_x <- residuals(lm(high_school ~ urbanization, data = crime_df))
 
 p2 <- ggplot(data.frame(resid_x, resid_y), aes(x = resid_x, y = resid_y)) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6) +
-  geom_smooth(method = "lm", formula = y ~ x, color = ber640_colors["success"], se = FALSE) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6) +
+  geom_smooth(method = "lm", formula = y ~ x, color = ber640_colors[["success"]], se = FALSE) +
   labs(title = "Partial: controlling for urbanization",
        subtitle = paste("partial r =",
          round(cor(resid_x, resid_y), 3)),
@@ -1346,20 +1466,21 @@ p1 + p2
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch4-sign-reversal"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 10
 ```
 - **Left panel (bivariate)**: The positive slope and correlation coefficient reflect the **confounded** relationship. This is what you would conclude if you only ran a simple regression --- that education *increases* crime
-- **Right panel (partial)**: After removing urbanization from both variables, the negative slope emerges. This is the **adjusted** relationship, and it tells the correct story: education is associated with *lower* crime
+- **Right panel (partial)**: After removing urbanization from both variables, the negative slope emerges. This is the **adjusted** relationship, and it tells the less-confounded story in this example: education is associated with *lower* crime after accounting for urbanization
 - **Visual comparison**: The two panels side by side provide the most compelling visual evidence of sign reversal. The same two variables ($X$ and $Y$) yield opposite slopes depending on whether the confounder is controlled
-- **Connection to OVB**: The difference between the two slopes is exactly the bias term $\delta \times \gamma$ that we verified numerically above
+- **Connection to OVB**: The difference between the two sample slopes matches the omitted-variable component $\delta \times \gamma$ that we verified numerically above
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch4-sign-reversal"
-#| eval: false
+#| fig-width: 10
 ```
 - Left panel: The **bivariate** relationship shows a positive slope (more education → more crime?)
 - Right panel: The **partial** relationship, after removing the effect of urbanization from both variables, shows a negative slope (more education → less crime)
@@ -1373,7 +1494,7 @@ p1 + p2
 ::: {.callout-tip collapse="false"}
 ## Try It: How Confounding Causes Bias
 
-Adjust the confounding strength ρ(X,Z), the true effect of X on Y (β₁), and the effect of the omitted variable Z on Y (β_Z). Watch how omitting Z from the regression biases the estimated coefficient — and can even reverse its sign.
+Adjust the three sliders — **Confounding strength ρ(X, Z)**, **True β₁ (X → Y)**, and **β_Z (Z → Y)** — and then flip the **Include Z in model** toggle, which is the key control: with the toggle off you see only the biased X-only fit, and turning it on overlays the Z-adjusted line so you can compare them. Recommended first move: leave the toggle off, push ρ high (e.g. 0.9) and β_Z large, and watch the biased β̂₁ drift away from the true β₁ — then toggle Z in to see the bias vanish. We simulate the data here because demonstrating omitted-variable bias requires a *known* true β₁ and full control over the confounder Z (its strength and its effect on Y), counterfactual knobs that no single real dataset can provide.
 :::
 
 ```{ojs}
@@ -1382,27 +1503,56 @@ Adjust the confounding strength ρ(X,Z), the true effect of X on Y (β₁), and 
 import { ber640 as ovb_ber640, withAlpha as ovb_withAlpha,
          themeColors as ovb_themeColors, plotDefaults as ovb_plotDefaults,
          normalRandom as ovb_normalRandom, seq as ovb_seq,
-         formatCoef as ovb_formatCoef } from "../ojs/shared.js"
+         formatCoef as ovb_formatCoef, srSummary as ovb_srSummary,
+         resetControls as ovb_resetControls, onThemeChange as ovb_onThemeChange } from "../ojs/shared.js"
 ```
 
 ```{ojs}
 //| echo: false
+ovb_theme = ovb_themeColors()
+```
 
+```{ojs}
+//| echo: false
+ovb_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
+```
+
+```{ojs}
+//| echo: false
 viewof ovb_rho = Inputs.range([0, 0.95], {
-  value: 0.70, step: 0.05, label: "Confounding strength ρ(X, Z):", width: 320
+  value: 0.70, step: 0.05, label: "Confounding strength ρ(X, Z):", width: 200
 })
+```
 
+```{ojs}
+//| echo: false
 viewof ovb_beta1 = Inputs.range([-1, 1], {
-  value: 0.30, step: 0.05, label: "True β₁ (X → Y):", width: 320
+  value: 0.30, step: 0.05, label: "True β₁ (X → Y):", width: 200
 })
+```
 
+```{ojs}
+//| echo: false
 viewof ovb_betaZ = Inputs.range([-2, 2], {
-  value: 1.5, step: 0.1, label: "β_Z (Z → Y):", width: 320
+  value: 1.5, step: 0.1, label: "β_Z (Z → Y):", width: 200
 })
+```
 
+```{ojs}
+//| echo: false
 viewof ovb_includeZ = Inputs.toggle({
   label: "Include Z in model", value: false
 })
+```
+
+```{ojs}
+//| echo: false
+ovb_reset = ovb_resetControls([
+  { input: viewof ovb_rho,      value: 0.70 },
+  { input: viewof ovb_beta1,    value: 0.30 },
+  { input: viewof ovb_betaZ,    value: 1.5 },
+  { input: viewof ovb_includeZ, value: false }
+], { label: "Reset" })
 ```
 
 ```{ojs}
@@ -1411,8 +1561,38 @@ viewof ovb_includeZ = Inputs.toggle({
 ovb_n = 200
 
 ovb_Z = ovb_normalRandom(ovb_n, 0, 1, 42)
-ovb_eps1 = ovb_normalRandom(ovb_n, 0, 1, 43)
-ovb_eps2 = ovb_normalRandom(ovb_n, 0, 1, 44)
+// Draw the two error terms from widely separated seeds, then orthogonalize each
+// against Z (Gram-Schmidt + unit-variance rescale) so Cov(Z, error) = 0 in sample.
+// Consecutive Mulberry32 seeds (42/43/44) yield correlated streams
+// (corr(Z, eps1) ~ -0.117), which would smuggle extra bias into the demo and
+// violate the exogeneity it assumes. After orthogonalization the confounder Z is
+// the ONLY source of bias, uncorrelated with either error for every slider setting.
+ovb_eps1 = {
+  const raw = ovb_normalRandom(ovb_n, 0, 1, 1042);
+  const mz = ovb_Z.reduce((a, b) => a + b, 0) / ovb_n;
+  const mr = raw.reduce((a, b) => a + b, 0) / ovb_n;
+  let dot = 0, nrm = 0;
+  for (let i = 0; i < ovb_n; i++) { const cz = ovb_Z[i] - mz; dot += cz * (raw[i] - mr); nrm += cz * cz; }
+  const b = nrm > 0 ? dot / nrm : 0;
+  const res = raw.map((v, i) => (v - mr) - b * (ovb_Z[i] - mz));
+  const mres = res.reduce((a, c) => a + c, 0) / ovb_n;
+  let ss = 0; for (let i = 0; i < ovb_n; i++) ss += (res[i] - mres) ** 2;
+  const scale = ss > 0 ? Math.sqrt((ovb_n - 1) / ss) : 1;
+  return res.map(v => (v - mres) * scale);
+}
+ovb_eps2 = {
+  const raw = ovb_normalRandom(ovb_n, 0, 1, 2042);
+  const mz = ovb_Z.reduce((a, b) => a + b, 0) / ovb_n;
+  const mr = raw.reduce((a, b) => a + b, 0) / ovb_n;
+  let dot = 0, nrm = 0;
+  for (let i = 0; i < ovb_n; i++) { const cz = ovb_Z[i] - mz; dot += cz * (raw[i] - mr); nrm += cz * cz; }
+  const b = nrm > 0 ? dot / nrm : 0;
+  const res = raw.map((v, i) => (v - mr) - b * (ovb_Z[i] - mz));
+  const mres = res.reduce((a, c) => a + c, 0) / ovb_n;
+  let ss = 0; for (let i = 0; i < ovb_n; i++) ss += (res[i] - mres) ** 2;
+  const scale = ss > 0 ? Math.sqrt((ovb_n - 1) / ss) : 1;
+  return res.map(v => (v - mres) * scale);
+}
 
 ovb_X = {
   const rhoVal = ovb_rho;
@@ -1467,10 +1647,21 @@ ovb_stats = {
   }
   const beta1_adjusted = covResid / varResidX;
 
-  // OVB decomposition: bias = betaZ * gamma where gamma = Cov(X,Z)/Var(X)
+  // OVB, defined ONCE as the finite-sample gap between the X-only (biased) slope
+  // and the Z-adjusted (FWL) slope, shown to equal its decomposition exactly.
+  // delta_{Z~X} = slope of Z on X = Cov(X,Z)/Var(X); this is the `gamma` plotted below.
   const gamma = covXZ / varX;
-  const ovb = beta1_biased - ovb_beta1;
-  const ovb_formula = ovb_betaZ * gamma;
+  // betaZ_hat = coefficient on Z in the multiple regression Y ~ X + Z, obtained by
+  // FWL: residualize Z on X and Y on X, then regress. Using the ESTIMATED betaZ_hat
+  // (not the input ovb_betaZ) makes the identity exact in finite samples:
+  //   (beta1_biased - beta1_adjusted) === betaZ_hat * delta_{Z~X}.
+  const Zresid_X = Z.map((z, i) => (Z[i] - mz) - gamma * (X[i] - mx));
+  const Yresid_X = Y.map((y, i) => (Y[i] - my) - beta1_biased * (X[i] - mx));
+  let covZY_x = 0, varZ_x = 0;
+  for (let i = 0; i < n; i++) { covZY_x += Zresid_X[i] * Yresid_X[i]; varZ_x += Zresid_X[i] * Zresid_X[i]; }
+  const betaZ_hat = varZ_x > 0 ? covZY_x / varZ_x : 0;
+  const ovb = beta1_biased - beta1_adjusted;
+  const ovb_formula = betaZ_hat * gamma;
 
   // Sign reversal
   const signReversed = (ovb_beta1 !== 0) &&
@@ -1479,7 +1670,7 @@ ovb_stats = {
   return {
     beta1_biased, intercept_biased,
     beta1_adjusted,
-    gamma, ovb, ovb_formula,
+    gamma, betaZ_hat, ovb, ovb_formula,
     signReversed,
     mx, my
   };
@@ -1490,7 +1681,7 @@ ovb_stats = {
 //| echo: false
 
 ovb_plot = {
-  const tc = ovb_themeColors();
+  const tc = ovb_theme;
   const colors = ovb_ber640;
   const s = ovb_stats;
 
@@ -1595,10 +1786,12 @@ ovb_plot = {
   );
 
   return Plot.plot(ovb_plotDefaults({
-    width: 640,
-    height: 420,
-    x: { label: "X →" },
-    y: { label: "Y →" },
+    width: 680,
+    height: 340,
+    marginTop: 24, marginBottom: 40, marginLeft: 48, marginRight: 16,
+    style: { color: ovb_theme.text },
+    x: { label: "X →", grid: true },
+    y: { label: "Y →", grid: true },
     marks: marks
   }));
 }
@@ -1607,106 +1800,46 @@ ovb_plot = {
 ```{ojs}
 //| echo: false
 
-ovb_readout = {
+ovb_pills = {
   const s = ovb_stats;
-  const colors = ovb_ber640;
-  const tc = ovb_themeColors();
   const reversed = s.signReversed;
-
-  const cardStyle = (highlight) => `
-    display: inline-block;
-    padding: 10px 16px;
-    margin: 4px 6px;
-    border-radius: 8px;
-    font-family: system-ui, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    background: ${highlight ? ovb_withAlpha(colors.warning, 0.12) : ovb_withAlpha(colors.primary, 0.06)};
-    border-left: 4px solid ${highlight ? colors.warning : colors.primary};
-    color: ${tc.text};
-  `;
-
-  const alertStyle = `
-    display: inline-block;
-    padding: 10px 16px;
-    margin: 4px 6px;
-    border-radius: 8px;
-    font-family: system-ui, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    background: ${ovb_withAlpha(colors.secondary, 0.12)};
-    border-left: 4px solid ${colors.secondary};
-    color: ${tc.text};
-    font-weight: 600;
-  `;
-
-  const biasedSign = s.beta1_biased >= 0 ? "+" : "−";
-  const trueSign = ovb_beta1 >= 0 ? "+" : "−";
-  const signIndicator = reversed
-    ? ` <span style="color:${colors.secondary};font-weight:700;">⚠ sign reversed!</span>` : "";
-
-  const ovbVal = s.ovb;
-
-  let markup = `<div style="display:flex;flex-wrap:wrap;align-items:stretch;margin-top:8px;">`;
-
-  markup += `<div style="${cardStyle(false)}">
-    <strong>True β₁</strong><br>
-    <span style="font-size:20px;font-weight:700;">${ovb_formatCoef(ovb_beta1, 3)}</span>
-  </div>`;
-
-  markup += `<div style="${cardStyle(true)}">
-    <strong>Biased β̂₁</strong><br>
-    <span style="font-size:20px;font-weight:700;">${ovb_formatCoef(s.beta1_biased, 3)}</span>${signIndicator}
-  </div>`;
-
-  markup += `<div style="${cardStyle(false)}">
-    <strong>OVB</strong> (β̂ − β)<br>
-    <span style="font-size:20px;font-weight:700;">${ovb_formatCoef(ovbVal, 3)}</span>
-  </div>`;
-
-  if (reversed) {
-    markup += `<div style="${alertStyle}">
-      ⚠ Sign Reversal<br>
-      <span style="font-size:13px;font-weight:400;">True effect is ${trueSign} but estimate is ${biasedSign}</span>
-    </div>`;
-  }
-
-  markup += `</div>`;
-
-  // Bias arrow indicator
-  const arrowDir = ovbVal > 0 ? "↑" : ovbVal < 0 ? "↓" : "→";
-  markup += `<div style="margin-top:6px;padding:8px 16px;font-family:system-ui,sans-serif;font-size:13px;color:${tc.text};opacity:0.85;">
-    <strong>Bias direction:</strong> ${arrowDir} OVB = β_Z × γ = ${ovb_formatCoef(ovb_betaZ, 2)} × ${ovb_formatCoef(s.gamma, 3)} = ${ovb_formatCoef(s.ovb_formula, 3)}
-  </div>`;
-
-  // Dynamic narrative
-  markup += `<div style="margin-top:4px;padding:10px 16px;font-family:system-ui,sans-serif;font-size:13px;
-    color:${tc.text};background:${ovb_withAlpha(tc.muted, 0.08)};border-radius:6px;line-height:1.6;">
-    With confounding strength ρ = ${ovb_rho.toFixed(2)} and Z→Y effect of ${ovb_formatCoef(ovb_betaZ, 1)},
-    the OLS estimate is biased by ${ovb_formatCoef(ovbVal, 3)}.
-    The true effect is <strong>${ovb_formatCoef(ovb_beta1, 2)}</strong>
-    but the biased estimate is <strong>${ovb_formatCoef(s.beta1_biased, 3)}</strong>.${
-      reversed ? ` <span style='color:${colors.secondary};font-weight:600;'>The sign of the effect is reversed!</span>` : ""
-    }${
-      ovb_includeZ ? ` After controlling for Z, the adjusted estimate is <strong>${ovb_formatCoef(s.beta1_adjusted, 3)}</strong>, recovering the true effect.` : ""
-    }
-  </div>`;
-
-  return html`${markup}`;
+  const ovbTone = Math.abs(s.ovb) < 0.05 ? "good" : Math.abs(s.ovb) < 0.25 ? "warning" : "bad";
+  return html`<div class="ojs-readouts">
+    ${ovb_pill("True β₁", ovb_formatCoef(ovb_beta1, 3), "info")}
+    ${ovb_pill("Biased β̂₁", ovb_formatCoef(s.beta1_biased, 3), reversed ? "bad" : "warning")}
+    ${ovb_includeZ ? ovb_pill("Adjusted β̂₁", ovb_formatCoef(s.beta1_adjusted, 3), "good") : ""}
+    ${ovb_pill("OVB", ovb_formatCoef(s.ovb, 3), ovbTone)}
+    ${reversed ? ovb_pill("⚠ Sign", "reversed", "bad") : ""}
+  </div>`
 }
 ```
 
+```{ojs}
+//| echo: false
 
-::: {.callout-warning}
-## Common Misconceptions about Multiple Regression
+ovb_sr = ovb_srSummary("ch04-ovb",
+  `Confounding rho ${ovb_rho.toFixed(2)}, Z to Y effect ${ovb_formatCoef(ovb_betaZ, 1)}. True beta1 ${ovb_formatCoef(ovb_beta1, 3)}, biased estimate ${ovb_formatCoef(ovb_stats.beta1_biased, 3)}, adjusted estimate ${ovb_formatCoef(ovb_stats.beta1_adjusted, 3)}. Omitted-variable bias ${ovb_formatCoef(ovb_stats.ovb, 3)} = betaZ_hat ${ovb_formatCoef(ovb_stats.betaZ_hat, 2)} times delta(Z~X) ${ovb_formatCoef(ovb_stats.gamma, 3)}.` + (ovb_stats.signReversed ? " The sign of the effect is reversed." : "") + (ovb_includeZ ? " Z is included in the model." : ""))
+```
 
-1. **"A larger coefficient means a more important predictor."** Raw (unstandardized) coefficients depend on the units of measurement. A coefficient of 2.5 for one predictor is not necessarily "larger" than 0.8 for another --- they may be on completely different scales. Use **standardized coefficients** to compare relative importance (see @sec-ch4-standardized)
+```{ojs}
+//| echo: false
 
-2. **"Adding more predictors always improves the model."** While $R^2$ mechanically increases with each added predictor, this does not mean the model is better. Unnecessary predictors increase multicollinearity, inflate standard errors, and reduce the precision of all coefficient estimates. Model building strategies are discussed in @sec-ch7
+ovb_app = html`<div class="ojs-app" role="group" aria-label="Omitted variable bias simulation">
+  <div class="ojs-controls">${viewof ovb_rho}${viewof ovb_beta1}${viewof ovb_betaZ}<div class="ojs-control-group" style="flex:0 0 auto;">${viewof ovb_includeZ}${ovb_reset}</div></div>
+  <div class="ojs-equation">OVB = β̂<sub>Z</sub> · δ(Z~X) = <strong style="color:var(--ber-warning)">${ovb_formatCoef(ovb_stats.betaZ_hat, 2)}</strong> · <strong style="color:var(--ber-warning)">${ovb_formatCoef(ovb_stats.gamma, 3)}</strong> = <strong>${ovb_formatCoef(ovb_stats.ovb_formula, 3)}</strong>${ovb_stats.signReversed ? html`<span style="margin-left:1.25rem; color:var(--ber-secondary); font-weight:600;">⚠ true effect ${ovb_beta1 >= 0 ? "+" : "−"} but estimate ${ovb_stats.beta1_biased >= 0 ? "+" : "−"}</span>` : ""}</div>
+  ${ovb_pills}
+  <div class="ojs-plot">${ovb_plot}</div>
+  ${ovb_sr}
+</div>`
+```
 
-3. **"If a predictor is non-significant, it has no effect."** A non-significant $p$-value does not prove the absence of an effect. The predictor may have a real effect that is too small to detect with the current sample size, or multicollinearity may inflate the standard error enough to obscure a genuine relationship. Confidence intervals are more informative than binary significance decisions (see @sec-ch8 for diagnostics and model evaluation)
+::: {.callout-note}
+## What you should have seen
+
+- Omitting a confounder Z shifts the X-only sample slope by exactly β̂_Z · δ(Z~X); the equation readout and the gap between the X-only and Z-adjusted lines stay in lock-step as you move the sliders.
+- The bias grows with both the confounding strength ρ(X, Z) and the size of Z's effect β_Z — crank both up and the estimate drifts far from the true β₁.
+- When the omitted-variable component is large enough it can flip the sign of the X-only estimate: the true effect can be positive while the biased estimate is negative (or vice versa). Including Z removes that omitted-variable component from the sample slope and targets the true β₁ in expectation, though sampling noise can still leave the adjusted estimate away from the truth in one finite sample.
 :::
-
 
 ## Summary and Key Takeaways {#sec-ch4-summary}
 
@@ -1715,7 +1848,7 @@ ovb_readout = {
 
 1. **Multiple regression with continuous predictors** controls for confounders, revealing partial (unique) associations
 2. **Partial regression plots** (added variable plots) visualize the relationship between a predictor and outcome after removing the effect of all other predictors
-3. **Standardized coefficients** allow comparison of relative importance across predictors on different scales, but should not be used with dummy variables
+3. **Standardized coefficients** allow comparison of relative importance across predictors on different scales, but are usually less interpretable for dummy variables (where the unstandardized group difference is clearer)
 4. **Partial correlations** measure the association between two variables after controlling for others; **semi-partial correlations** measure the unique contribution. Squared semi-partial correlations decompose total $R^2$ into unique and shared components
 5. **Sign reversal** can occur when a confounder is strongly related to both the predictor and the outcome --- a dramatic reminder that bivariate associations can be misleading
 6. **Looking ahead**: In @sec-ch5, we will extend the multiple regression framework to include interaction effects between predictors. @sec-ch7 covers systematic model building strategies, and @sec-ch8 addresses regression diagnostics to check whether model assumptions hold
@@ -1771,7 +1904,7 @@ In a bivariate regression, the coefficient of `high_school` (percent high school
 
 ::: {.callout-tip collapse="true"}
 ## Hint for Exercise 4.5
-This is an instance of Simpson's paradox. States with higher education levels tend to be more urbanized, and urbanization is strongly associated with higher crime. The positive bivariate coefficient reflects this confounding. Once urbanization is held constant, the "true" partial association between education and crime emerges as negative. This illustrates why bivariate associations can be misleading when confounders are present.
+This is an instance of Simpson's paradox. Counties with higher education levels tend to be more urbanized, and urbanization is strongly associated with higher crime. The positive bivariate coefficient reflects this confounding. Once urbanization is held constant, the adjusted partial association between education and crime emerges as negative. This illustrates why bivariate associations can be misleading when confounders are present.
 :::
 
 ::: {.callout-caution collapse="true"}

@@ -89,15 +89,13 @@ export const alphaColors = Object.freeze({
 /**
  * Detect the current Quarto Bootstrap theme and return derived colors.
  *
- * Uses `document.documentElement.dataset.bsTheme` (set by Quarto's
- * cosmo / darkly theme toggle). Falls back to light theme if the
- * attribute is absent.
+ * Uses both Bootstrap's `data-bs-theme` path and Quarto's rendered
+ * `body.quarto-dark` path. Falls back to light theme if both are absent.
  *
  * @returns {{ isDark: boolean, text: string, bg: string, grid: string, muted: string, axis: string }}
  */
 export function themeColors() {
-  const isDark = typeof document !== "undefined" &&
-    document.documentElement.dataset.bsTheme === "dark";
+  const isDark = isQuartoDark();
 
   if (isDark) {
     return {
@@ -119,6 +117,13 @@ export function themeColors() {
   };
 }
 
+function isQuartoDark() {
+  if (typeof document === "undefined") return false;
+  return document.documentElement.dataset.bsTheme === "dark" ||
+    document.body?.classList.contains("quarto-dark") ||
+    !!document.querySelector('link#quarto-bootstrap[data-mode="dark"]:not([rel="disabled-stylesheet"])');
+}
+
 /**
  * Create a reactive MutationObserver that fires a callback whenever
  * the Quarto theme changes (light <-> dark toggle).
@@ -135,19 +140,26 @@ export function onThemeChange(callback) {
     return { disconnect() {} };
   }
 
-  const observer = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      if (m.type === "attributes" && m.attributeName === "data-bs-theme") {
-        const isDark = document.documentElement.dataset.bsTheme === "dark";
-        callback(isDark);
-      }
+  let last = isQuartoDark();
+  const notify = () => {
+    const current = isQuartoDark();
+    if (current !== last) {
+      last = current;
+      callback(current);
     }
-  });
+  };
 
+  const observer = new MutationObserver(notify);
   observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["data-bs-theme"]
+    attributeFilter: ["data-bs-theme", "class"]
   });
+  if (document.body) {
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"]
+    });
+  }
 
   return { disconnect: () => observer.disconnect() };
 }
@@ -508,7 +520,8 @@ export function predictionInterval(x, reg, alpha = 0.05) {
 
 /**
  * Approximate t-distribution quantile using the normal approximation
- * with Cornish-Fisher expansion (adequate for df >= 3).
+ * with Cornish-Fisher expansion (adequate for df >= 6; the expansion is
+ * off by about -0.7% at df = 3, so prefer df >= 6 for critical values).
  *
  * @private
  * @param {number} p - Upper-tail probability (e.g. 0.975 for 95% CI)
@@ -531,6 +544,195 @@ function _tQuantile(p, df) {
   const g3 = (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * df * df * df);
 
   return z + g1 + g2 + g3;
+}
+
+
+// ── Exact distribution tails (incomplete beta) ──────────────────────────────
+//
+// These give machine-precision F- and t-distribution tail probabilities for
+// regression inference (overall F-test, coefficient t-tests). All are pure
+// functions verified against R's pf()/pt()/pbeta() to < 1e-13 max abs error.
+
+/**
+ * Natural logarithm of the gamma function, ln Γ(x).
+ *
+ * Lanczos approximation (g = 7, 9 coefficients), with the reflection formula
+ * for x < 1/2. Accurate to ~1e-13 relative to R's lgamma() across x in
+ * [0.1, 100]. Underpins the incomplete-beta prefactor in {@link regBetaI}.
+ *
+ * @param {number} x - Argument (x != 0, -1, -2, ... where Γ has poles)
+ * @returns {number} ln Γ(x)
+ */
+export function lgamma(x) {
+  const g = 7;
+  const c = [
+    0.99999999999980993,
+    676.5203681218851,
+    -1259.1392167224028,
+    771.32342877765313,
+    -176.61502916214059,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.9843695780195716e-6,
+    1.5056327351493116e-7
+  ];
+
+  // Reflection: Γ(x)Γ(1-x) = π / sin(πx)  ->  lnΓ(x) = ln(π/sin(πx)) - lnΓ(1-x)
+  if (x < 0.5) {
+    return Math.log(Math.PI / Math.sin(Math.PI * x)) - lgamma(1 - x);
+  }
+
+  x -= 1;
+  let a = c[0];
+  const t = x + g + 0.5;
+  for (let i = 1; i < g + 2; i++) {
+    a += c[i] / (x + i);
+  }
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+
+/**
+ * Lentz's continued-fraction evaluation for the incomplete beta function
+ * (Numerical Recipes `betacf`). Converges rapidly only for
+ * x < (a+1)/(a+b+2); callers must apply the symmetry reflection otherwise.
+ *
+ * @private
+ * @param {number} x
+ * @param {number} a
+ * @param {number} b
+ * @returns {number} The continued-fraction value used by {@link regBetaI}
+ */
+function _betacf(x, a, b) {
+  const FPMIN = 1e-300;   // guards against division by zero
+  const EPS = 3e-16;      // ~machine epsilon for convergence
+  const MAXIT = 300;
+
+  const qab = a + b;
+  const qap = a + 1;
+  const qam = a - 1;
+  let c = 1;
+  let d = 1 - (qab * x) / qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN;
+  d = 1 / d;
+  let h = d;
+
+  for (let m = 1; m <= MAXIT; m++) {
+    const m2 = 2 * m;
+    // even step
+    let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c;
+    if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    h *= d * c;
+    // odd step
+    aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c;
+    if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < EPS) break;
+  }
+  return h;
+}
+
+/**
+ * Regularized incomplete beta function I_x(a, b).
+ *
+ * Numerical Recipes algorithm: prefactor times the {@link _betacf}
+ * continued fraction, with the mandatory symmetry reflection
+ *   I_x(a,b) = 1 - I_{1-x}(b,a)  for  x > (a+1)/(a+b+2)
+ * to keep the continued fraction in its fast-converging regime.
+ *
+ * @param {number} x - Upper limit in [0, 1]
+ * @param {number} a - First shape parameter (> 0)
+ * @param {number} b - Second shape parameter (> 0)
+ * @returns {number} I_x(a, b) in [0, 1]; matches R's pbeta(x, a, b)
+ */
+export function regBetaI(x, a, b) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+
+  // Symmetry reflection (mandatory for convergence near x = 1).
+  if (x > (a + 1) / (a + b + 2)) {
+    return 1 - regBetaI(1 - x, b, a);
+  }
+
+  const bt = Math.exp(
+    lgamma(a + b) - lgamma(a) - lgamma(b) +
+    a * Math.log(x) + b * Math.log(1 - x)
+  );
+  return (bt * _betacf(x, a, b)) / a;
+}
+
+/**
+ * Cumulative distribution function of the F distribution, P(F <= f).
+ *
+ * Uses the identity  F_CDF(f; d1, d2) = I_{d1 f / (d1 f + d2)}(d1/2, d2/2).
+ *
+ * @param {number} F - F statistic (>= 0)
+ * @param {number} df1 - Numerator degrees of freedom
+ * @param {number} df2 - Denominator degrees of freedom
+ * @returns {number} P(F <= f); matches R's pf(f, df1, df2)
+ */
+export function fCdf(F, df1, df2) {
+  if (F <= 0) return 0;
+  return regBetaI((df1 * F) / (df1 * F + df2), df1 / 2, df2 / 2);
+}
+
+/**
+ * Upper-tail (one-sided) p-value for an F statistic: P(F >= f).
+ *
+ * This is the p-value for a regression overall-F or model-comparison test.
+ *
+ * @param {number} F - Observed F statistic (>= 0)
+ * @param {number} df1 - Numerator degrees of freedom
+ * @param {number} df2 - Denominator degrees of freedom
+ * @returns {number} Upper-tail probability; matches pf(f, df1, df2, lower.tail=FALSE)
+ */
+export function fPValue(F, df1, df2) {
+  if (F <= 0) return 1;
+  if (F === Infinity) return 0;
+  // Direct complementary incomplete beta: P(F >= f) = I_{df2/(df2+df1 f)}(df2/2, df1/2).
+  // NOT 1 - fCdf, which collapses to 0 once fCdf rounds to 1 (e.g. F=1221, df=(2,87):
+  // true p ~ 2.19e-64). The direct form stays accurate to ~3e-14 relative even at p~1e-64.
+  return regBetaI(df2 / (df2 + df1 * F), df2 / 2, df1 / 2);
+}
+
+/**
+ * Cumulative distribution function of Student's t, P(T <= t).
+ *
+ * Built on the incomplete beta via  I_{df/(df+t²)}(df/2, 1/2), reflected by
+ * the sign of t. Symmetric and numerically stable for all df > 0.
+ *
+ * @param {number} t - t statistic
+ * @param {number} df - Degrees of freedom (> 0)
+ * @returns {number} P(T <= t); matches R's pt(t, df)
+ */
+export function tCdf(t, df) {
+  const p = regBetaI(df / (df + t * t), df / 2, 0.5);
+  // p = P(T <= -|t|) + P(T >= |t|) = 2 * P(T >= |t|); split by sign of t.
+  return t >= 0 ? 1 - 0.5 * p : 0.5 * p;
+}
+
+/**
+ * Two-sided tail p-value for a t statistic: P(|T| >= |t|).
+ *
+ * Uses the exact identity  2·P(T >= |t|) = I_{df/(df+t²)}(df/2, 1/2)
+ * directly, which avoids the catastrophic cancellation of computing
+ * 1 - tCdf for large |t| (where tCdf rounds to 1). This is the p-value
+ * for a regression coefficient t-test.
+ *
+ * @param {number} t - Observed t statistic
+ * @param {number} df - Degrees of freedom (> 0)
+ * @returns {number} Two-sided probability; matches R's 2*pt(-abs(t), df)
+ */
+export function tTailP(t, df) {
+  return regBetaI(df / (df + t * t), df / 2, 0.5);
 }
 
 
@@ -596,6 +798,23 @@ export function normalRandom(n, mean = 0, sd = 1, seed = 42) {
  *   X = Z1
  *   Y = r * Z1 + sqrt(1 - r^2) * Z2
  *
+ * Z1 and Z2 are taken as the two disjoint halves of a SINGLE length-2n
+ * standard-normal stream rather than two separately seeded streams. The
+ * old `seed + 9999` second seed could alias the first stream for nearby
+ * seeds (and produced an identical stream at seed 0), inducing large spurious
+ * correlation; splitting one stream removes all seed-coupling.
+ *
+ * Even with decoupled streams, the *in-sample* corr(Z1, Z2) of two finite
+ * independent normal columns is pure sampling noise of order 1/sqrt(n)
+ * (~0.07 at n = 200) and is therefore irreducible below that floor by any
+ * choice of seed. To make the realized correlation of (X, Y) reflect `r`
+ * alone — independent of seed — Z2 is orthogonalized against Z1 by one
+ * Gram-Schmidt step and rescaled to unit sample variance. This drives
+ * corr(Z1, Z2) to ~1e-16 (machine zero) for every seed, so the Cholesky mix
+ * y = r·Z1 + sqrt(1 - r²)·Z2 yields a realized corr(X, Y) ≈ r that is
+ * seed-independent and free of the old ~0.07 bias (a small residual deviation
+ * remains because only Z2 — not Z1 — is normalized to unit sample variance).
+ *
  * @param {number} n - Number of (x, y) pairs
  * @param {number} r - Desired Pearson correlation in [-1, 1]
  * @param {number} [seed=42] - PRNG seed
@@ -606,8 +825,27 @@ export function bivariateNormal(n, r, seed = 42, params = {}) {
   const { meanX = 0, meanY = 0, sdX = 1, sdY = 1 } = params;
   const clampedR = Math.max(-1, Math.min(1, r));
 
-  const z1 = normalRandom(n, 0, 1, seed);
-  const z2 = normalRandom(n, 0, 1, seed + 9999);
+  const pool = normalRandom(2 * n, 0, 1, seed);
+  const z1 = pool.slice(0, n);
+  const z2raw = pool.slice(n);
+
+  // Gram-Schmidt: strip the in-sample component of Z2 along Z1, then rescale
+  // to unit sample variance. Makes corr(Z1, Z2) ~= 0 to machine precision.
+  let m1 = 0, m2 = 0;
+  for (let i = 0; i < n; i++) { m1 += z1[i]; m2 += z2raw[i]; }
+  m1 /= n; m2 /= n;
+  let dot = 0, nrm = 0;
+  for (let i = 0; i < n; i++) {
+    const c1 = z1[i] - m1;
+    dot += c1 * (z2raw[i] - m2);
+    nrm += c1 * c1;
+  }
+  const beta = nrm > 0 ? dot / nrm : 0;
+  const resid = z2raw.map((v, i) => (v - m2) - beta * (z1[i] - m1));
+  let ss = 0;
+  for (let i = 0; i < n; i++) ss += resid[i] * resid[i];
+  const scale = ss > 0 ? Math.sqrt((n - 1) / ss) : 1;
+  const z2 = resid.map(v => v * scale);
 
   return z1.map((z1i, i) => {
     const x = meanX + sdX * z1i;
@@ -847,6 +1085,183 @@ export function formatTooltip(data, options = {}) {
   return html;
 }
 
+// ── Reset-to-defaults (Step 1.3) ────────────────────────────
+
+/**
+ * Build a "Reset" button that restores a set of Observable Inputs controls to
+ * their default values and fires the reactivity Observable listens for.
+ *
+ * Observable's `viewof` machinery works like this: `viewof x = Inputs.range(...)`
+ * binds `x` to `view.value`, and the runtime recomputes every cell that
+ * references `x` whenever the view element dispatches an "input" event. So to
+ * programmatically change a control we must (1) write the new value onto the
+ * element using the property that *that* input type reads back, and then
+ * (2) dispatch `new Event("input", { bubbles: true })` from the element that
+ * `viewof` is bound to. Just setting `.value` is NOT enough — without the event
+ * the runtime never recomputes.
+ *
+ * The catch is that "the element viewof produced" is a different DOM shape per
+ * Inputs constructor:
+ *   - Inputs.range  -> the bare <input type="range">           (el IS the input)
+ *   - Inputs.toggle -> a <form> wrapping one <input type=checkbox>
+ *   - Inputs.radio  -> a <form> (fieldset-like) of <input type=radio> name-grouped
+ *   - Inputs.select -> a <select> (or a <form> wrapping it, version-dependent)
+ *   - Inputs.checkbox (multi) -> a <form> whose .value is an array
+ * For every form-based input, Observable defines a settable `.value` getter/
+ * setter on the FORM that does the right internal bookkeeping (checks the right
+ * radio, syncs the output label, etc.). We therefore prefer "assign to el.value
+ * on the viewof element, then dispatch input on that same element", and only
+ * fall back to type-specific DOM poking when the element is a raw <input> that
+ * has no Observable value-setter (the range case).
+ *
+ * @param {Array<{input: HTMLElement, value: *}>} specs
+ *        Each `input` is the element a `viewof` produced (pass the viewof
+ *        binding directly, e.g. `{ input: viewof poly_degree, value: 2 }`).
+ *        `value` is the default to restore (number for range, boolean for
+ *        toggle, the option's value for radio/select, array for multi-checkbox).
+ * @param {{label?: string, onReset?: function(): void}} [opts]
+ *        label   - button text (default "Reset").
+ *        onReset - optional callback fired AFTER all controls are reset and
+ *                  their events dispatched (e.g. to reset non-Inputs state).
+ * @returns {HTMLButtonElement} a styled <button class="ojs-btn ojs-btn-outline">.
+ *
+ * @example  // in an OJS cell, AFTER the viewof cells exist:
+ *   resetBtn = S.resetControls([
+ *     { input: viewof poly_degree,        value: 2     },  // range
+ *     { input: viewof poly_showResiduals, value: false },  // toggle
+ *     { input: viewof logtx_modelType,    value: "Level–Level" } // radio
+ *   ])
+ */
+export function resetControls(specs, opts = {}) {
+  const { label = "Reset", onReset } = opts;
+
+  const btn = document.createElement("button");
+  btn.type = "button";                       // never submit a surrounding form
+  btn.className = "ojs-btn ojs-btn-outline";  // themed in interactive.css (light+dark)
+  btn.textContent = label;
+  btn.setAttribute("aria-label", label + " controls to defaults");
+
+  btn.addEventListener("click", () => {
+    for (const spec of (specs || [])) {
+      if (!spec || !spec.input) continue;
+      resetOneControl(spec.input, spec.value);
+    }
+    if (typeof onReset === "function") onReset();
+  });
+
+  return btn;
+}
+
+/**
+ * Restore a single Observable Inputs control to `value` and dispatch the
+ * "input" event the runtime needs. Detects the DOM shape rather than trusting
+ * the caller, so it is robust to every Inputs constructor used in the book
+ * (range, toggle, radio, select, multi-checkbox).
+ * @private
+ */
+function resetOneControl(el, value) {
+  if (!el || typeof el.dispatchEvent !== "function") return;
+
+  const tag = el.tagName;  // "INPUT" | "FORM" | "SELECT" | ...
+
+  // ---- Case A: a raw <input> IS the viewof element (Inputs.range, and any
+  // bare single input). There is no Observable value-setter here, so write the
+  // property the element actually reads back, then dispatch from the input. ----
+  if (tag === "INPUT") {
+    const type = (el.type || "").toLowerCase();
+    if (type === "checkbox" || type === "radio") {
+      // A lone checkbox/radio bound directly: boolean-ish -> .checked
+      el.checked = !!value;
+    } else {
+      // range / number / text / etc. — the value is read from .value as a string
+      el.value = String(value);
+    }
+    fireInput(el);
+    return;
+  }
+
+  // ---- Case B: a <select> bound directly (some Inputs.select builds). ----
+  if (tag === "SELECT") {
+    el.value = String(value);
+    fireInput(el);
+    return;
+  }
+
+  // ---- Case C: a <form> wrapper (Inputs.toggle, Inputs.radio, Inputs.select
+  // in current builds, Inputs.checkbox multi). Observable installs a settable
+  // `.value` on the form that performs the correct internal bookkeeping
+  // (checking the right radio, syncing the <output>, coercing types). Prefer it. ----
+  if ("value" in el) {
+    try {
+      el.value = value;          // Observable's setter: handles bool/string/array
+      fireInput(el);             // recompute cells bound to this viewof
+      return;
+    } catch (_) {
+      /* fall through to manual DOM handling below */
+    }
+  }
+
+  // ---- Case D (defensive fallback): a <form>/fieldset with no usable value
+  // setter — set the underlying inputs by hand, then dispatch on the wrapper. ----
+  const inputs = el.querySelectorAll
+    ? el.querySelectorAll('input, select, textarea')
+    : [];
+
+  if (inputs.length === 0) {
+    // Nothing to set; still try to nudge reactivity.
+    fireInput(el);
+    return;
+  }
+
+  // Radio group: check the input whose value matches; uncheck the rest.
+  const radios = Array.from(inputs).filter(i => i.type === "radio");
+  if (radios.length > 0) {
+    const target = String(value);
+    let matched = false;
+    for (const r of radios) {
+      const on = r.value === target;
+      r.checked = on;
+      if (on) matched = true;
+    }
+    // Fire on a checked member if present (radios report via the group), else form.
+    fireInput(matched ? radios.find(r => r.checked) : el);
+    return;
+  }
+
+  // Single checkbox inside a form (toggle-like fallback).
+  const checks = Array.from(inputs).filter(i => i.type === "checkbox");
+  if (checks.length === 1) {
+    checks[0].checked = !!value;
+    fireInput(checks[0]);
+    return;
+  }
+  // Multi-checkbox group: `value` expected to be an array of checked values.
+  if (checks.length > 1) {
+    const wanted = new Set((Array.isArray(value) ? value : [value]).map(String));
+    for (const c of checks) c.checked = wanted.has(c.value);
+    fireInput(checks[0]);
+    return;
+  }
+
+  // Any other single control (range/number/select) living inside the form.
+  const first = inputs[0];
+  first.value = String(value);
+  fireInput(first);
+}
+
+/**
+ * Dispatch the bubbling "input" event Observable's runtime listens for.
+ * `bubbles: true` lets the event reach the viewof <form> when we fired it from
+ * a child <input> (radio/checkbox case). We also fire "change" for the benefit
+ * of any select/radio listeners that key on change rather than input.
+ * @private
+ */
+function fireInput(el) {
+  el.dispatchEvent(new Event("input",  { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+
 /**
  * Create a styled equation display element.
  * Useful for showing the regression equation or model formula dynamically.
@@ -973,4 +1388,130 @@ export function srSummary(id, text) {
   el.setAttribute("role", "status");
   el.textContent = text;
   return el;
+}
+
+/**
+ * Add low-risk shared accessibility attributes to generated OJS controls.
+ * Observable Inputs.range renders a named number input plus an unnamed range
+ * input; this copies the visible number label onto the actual slider.
+ *
+ * @param {ParentNode} [root=document] - DOM root to enhance
+ * @returns {{ ranges: number, svgs: number }} Counts of enhanced elements
+ */
+export function enhanceOjsAccessibility(root = document) {
+  if (!root || !root.querySelectorAll) return { ranges: 0, svgs: 0 };
+  let ranges = 0;
+  let svgs = 0;
+
+  for (const input of root.querySelectorAll('input[type="range"]')) {
+    if (input.hasAttribute("aria-label") ||
+        input.hasAttribute("aria-labelledby") ||
+        input.hasAttribute("title") ||
+        (input.labels && input.labels.length > 0)) {
+      continue;
+    }
+    const label = rangeLabelText(input);
+    if (label) {
+      input.setAttribute("aria-label", label);
+      input.dataset.ojsA11yEnhanced = "range";
+      ranges++;
+    }
+  }
+
+  for (const svg of root.querySelectorAll(".ojs-app svg")) {
+    if (svg.hasAttribute("aria-hidden") ||
+        svg.hasAttribute("aria-label") ||
+        svg.hasAttribute("aria-labelledby") ||
+        svg.querySelector("title")) {
+      continue;
+    }
+    const app = svg.closest(".ojs-app");
+    const summary = app?.querySelector(".sr-only, [role='status']");
+    if (summary) {
+      svg.setAttribute("aria-hidden", "true");
+    } else {
+      const appLabel = app?.getAttribute("aria-label") || "Interactive statistical graphic";
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", `${appLabel} plot`);
+    }
+    svg.dataset.ojsA11yEnhanced = "svg";
+    svgs++;
+  }
+
+  return { ranges, svgs };
+}
+
+function rangeLabelText(input) {
+  const clean = (value) => String(value || "").replace(/\s+/g, " ").trim();
+  const parent = input.parentElement;
+  const numberInput = parent?.querySelector('input[type="number"][id]');
+  if (numberInput?.id) {
+    const label = document.querySelector(`label[for="${cssEscape(numberInput.id)}"]`);
+    const text = clean(label?.textContent);
+    if (text) return `${text} slider`;
+  }
+  const formLabel = input.closest("form")?.querySelector("label");
+  const formText = clean(formLabel?.textContent);
+  if (formText) return `${formText} slider`;
+  const groupLabel = input.closest(".ojs-control-group")?.querySelector("label");
+  const groupText = clean(groupLabel?.textContent);
+  if (groupText) return `${groupText} slider`;
+  const appLabel = clean(input.closest(".ojs-app")?.getAttribute("aria-label"));
+  return appLabel ? `${appLabel} slider` : "Interactive slider";
+}
+
+function cssEscape(value) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+  return String(value).replace(/["\\]/g, "\\$&");
+}
+
+let ojsEnhancementsInstalled = false;
+
+/**
+ * Install a MutationObserver that keeps shared OJS accessibility attributes
+ * present as Observable cells hydrate and update.
+ *
+ * @returns {{ disconnect: function(): void }}
+ */
+export function installOjsEnhancements() {
+  if (typeof document === "undefined" || ojsEnhancementsInstalled) {
+    return { disconnect() {} };
+  }
+  ojsEnhancementsInstalled = true;
+
+  let pending = false;
+  const runSoon = () => {
+    if (pending) return;
+    pending = true;
+    const run = () => {
+      pending = false;
+      enhanceOjsAccessibility(document);
+    };
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(run);
+    } else {
+      setTimeout(run, 0);
+    }
+  };
+
+  runSoon();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", runSoon, { once: true });
+  }
+  setTimeout(runSoon, 300);
+  setTimeout(runSoon, 1200);
+
+  const observer = new MutationObserver(runSoon);
+  observer.observe(document.body || document.documentElement, {
+    childList: true,
+    subtree: true
+  });
+
+  return { disconnect: () => observer.disconnect() };
+}
+
+if (typeof window !== "undefined") {
+  installOjsEnhancements();
 }

@@ -37,17 +37,28 @@ After completing this chapter, you will be able to:
 7. Distinguish between Type II and Type III sums of squares for testing main effects in the presence of interactions
 :::
 
+::: {.callout-important}
+## A Note on the Worked Examples: Test First, Then Interpret
+This chapter uses three real education datasets --- school exam scores, faculty salaries, and county crime rates --- to illustrate how interactions are *specified, interpreted, tested, and probed*. A candid feature of these examples is worth stating up front: **in all three, the formal test of the interaction comes back non-significant**:
+
+- Continuous $\times$ Categorical (LRT $\times$ school): $F(1, 126) = 2.36$, $p = 0.13$
+- Categorical $\times$ Categorical (gender $\times$ rank): $F(2, 508) = 0.901$, $p = 0.41$
+- Continuous $\times$ Continuous (education $\times$ urbanization): interaction $t \approx -0.97$, $p = 0.34$
+
+This is not a defect of the examples --- it is realistic. Interactions are *higher-order* effects that are notoriously hard to detect in noisy observational education data, and a non-significant result is the most common outcome in practice. We therefore use these examples to teach the **mechanics of interpreting and testing** an interaction --- how to read each coefficient, derive group-specific equations, visualize conditional effects, and run the formal test --- while showing what we *would* conclude if the test were significant. The overarching lesson is simple: **always test an interaction before interpreting it as real**, and remember that a statistically significant interaction (effects *differ*) is not the same as an important one (the difference is *large enough to matter*).
+:::
+
 
 ## Continuous by Categorical Interaction {#sec-ch5-cont-cat}
 
 ::: {.callout-tip}
 ## Connection to Chapter 2
-In @sec-ch2 (ANCOVA), we compared GCSE scores between schools while adjusting for prior achievement (LRT). A critical assumption of that model was **parallel regression lines** --- the LRT slope was forced to be identical across schools, and the only difference was a constant vertical shift in intercepts. In this section, we **release that constraint** by adding an interaction term. This allows each school to have its own slope, letting the data tell us whether the relationship between prior achievement and exam performance truly differs between schools.
+In @sec-ch2 (ANCOVA), we compared **Battersea (school 15) and Chelsea (school 6)** while adjusting for prior achievement (LRT), and estimated an adjusted Chelsea advantage of about **7.51 GCSE points**. A critical assumption of that model was **parallel regression lines** --- the LRT slope was forced to be identical across schools, and the only difference was a constant vertical shift in intercepts. In this section we **release that constraint** by adding an interaction term, allowing each school to have its own slope. To make the slope difference easy to see, we examine a **different pair of schools here --- Chelsea (school 6) and Hackney (school 10)** --- and let the data tell us whether the LRT-GCSE relationship truly differs between schools.
 :::
 
-The continuous by categorical interaction is the most natural entry point into the topic of interactions because it connects directly to a model we already know well: the ANCOVA model from @sec-ch2. Recall that in ANCOVA, we compared GCSE exam scores between two London schools --- Chelsea and Battersea --- while adjusting for prior achievement (LRT scores). The key assumption of that model was that the two schools had **parallel regression lines**: the same LRT slope, differing only in their intercepts.
+The continuous by categorical interaction is the most natural entry point into the topic of interactions because it connects directly to a model we already know well: the ANCOVA model from @sec-ch2. Recall that in @sec-ch2 we compared two London schools --- **Chelsea and Battersea** --- with parallel slopes, adjusting for prior achievement (LRT scores). The key assumption of that model was that the two schools had **parallel regression lines**: the same LRT slope, differing only in their intercepts. Here we relax that assumption, but to make the slope difference visible we switch to a **different pair, Chelsea and Hackney**.
 
-But is that assumption justified? Look at the raw data from these two schools. Some schools may show more progress for high-achieving students while others show more progress for low-achieving students. Chelsea school has a higher mean GCSE score than Battersea school after adjusting for LRT, and the difference appears particularly pronounced for students with high LRT scores. If the estimated slope for Chelsea is 0.54 and for Battersea is 0.30, the lines are clearly not parallel. This suggests that the *effect of prior achievement on exam performance differs between schools* --- an interaction.
+But is that assumption justified? Look at the raw data from these two schools. Some schools may show more progress for high-achieving students while others show more progress for low-achieving students. Chelsea school has a higher mean GCSE score than Hackney school after adjusting for LRT, and the difference appears particularly pronounced for students with high LRT scores. If the estimated slope for Chelsea is about 0.54 and for Hackney is about 0.30, the lines look noticeably different in steepness. This suggests that the *effect of prior achievement on exam performance differs between schools* --- an interaction.
 
 ### From ANCOVA to the Interaction Model
 
@@ -58,7 +69,7 @@ Let us build up the interaction model step by step, starting from the ANCOVA mod
 Define a dummy variable for Chelsea school:
 
 $$
-d_{Ci} = \begin{cases} 1 & \text{if student } i \text{ is in Chelsea school} \\ 0 & \text{if student } i \text{ is in Battersea school} \end{cases}
+d_{Ci} = \begin{cases} 1 & \text{if student } i \text{ is in Chelsea school} \\ 0 & \text{if student } i \text{ is in Hackney school} \end{cases}
 $$
 
 The standard ANCOVA model is:
@@ -89,7 +100,7 @@ Both the intercept and the slope are now **functions of the school dummy** $d_{C
 
 By substituting $d_{Ci} = 0$ and $d_{Ci} = 1$ into @eq-ch5-contcat-grouped, we obtain the regression equation for each school:
 
-**For Battersea school** ($d_{Ci} = 0$):
+**For Hackney school** ($d_{Ci} = 0$):
 
 $$
 \text{E}(y_i \mid d_{Ci} = 0, x_i) = \alpha + \beta_1 x_i
@@ -101,35 +112,35 @@ $$
 \text{E}(y_i \mid d_{Ci} = 1, x_i) = (\alpha + \beta_2) + (\beta_1 + \beta_3) x_i
 $$ {#eq-ch5-chelsea}
 
-Notice that Chelsea has a **different intercept** ($\alpha + \beta_2$) *and* a **different slope** ($\beta_1 + \beta_3$) from Battersea. One model with four parameters encodes two completely separate regression lines.
+Notice that Chelsea has a **different intercept** ($\alpha + \beta_2$) *and* a **different slope** ($\beta_1 + \beta_3$) from Hackney. One model with four parameters encodes two completely separate regression lines.
 
 ### The School Difference Depends on LRT
 
 A crucial consequence of the interaction is that the difference between schools is no longer a single number. Subtracting @eq-ch5-hackney from @eq-ch5-chelsea:
 
 $$
-\underbrace{\text{E}(y_i \mid d_{Ci} = 1, x_i)}_{\text{Chelsea}} - \underbrace{\text{E}(y_i \mid d_{Ci} = 0, x_i)}_{\text{Battersea}} = \beta_2 + \beta_3 x_i
+\underbrace{\text{E}(y_i \mid d_{Ci} = 1, x_i)}_{\text{Chelsea}} - \underbrace{\text{E}(y_i \mid d_{Ci} = 0, x_i)}_{\text{Hackney}} = \beta_2 + \beta_3 x_i
 $$ {#eq-ch5-school-diff}
 
-The school difference is $\beta_2 + \beta_3 x_i$ --- it **depends on the LRT score** $x_i$. For students with low LRT scores, the difference is close to $\beta_2$ (the intercept difference). As LRT increases, the difference changes by $\beta_3$ for each additional unit. With estimated values of $b_2 = 9.28$ and $b_3 = 0.24$, Chelsea's advantage over Battersea *grows* as students' prior achievement increases.
+The school difference is $\beta_2 + \beta_3 x_i$ --- it **depends on the LRT score** $x_i$. For students with low LRT scores, the difference is close to $\beta_2$ (the intercept difference). As LRT increases, the difference changes by $\beta_3$ for each additional unit. With estimated values of $b_2 = 9.28$ and $b_3 = 0.24$, the point estimates suggest Chelsea's advantage over Hackney *grows* as students' prior achievement increases. Note, however, that $b_3 = 0.24$ is only *suggestive*: as the formal F-test in @sec-ch5-testing shows, the slope difference is **not statistically significant** ($F(1, 126) = 2.36$, $p = 0.13$). We use this example to practice *interpreting* an interaction's coefficients, not as established evidence that the slopes differ.
 
 ### Interpretation of Each Coefficient {#sec-ch5-coef-interpret}
 
 Each coefficient in the interaction model has a precise interpretation:
 
-- $\alpha$: Mean GCSE score for Battersea school when LRT equals zero (intercept for the reference group)
-- $\beta_1$: Increase in mean GCSE score per unit increase in LRT, **for Battersea school** (slope for the reference group)
-- $\beta_2$: Difference in mean GCSE between Chelsea and Battersea **when LRT equals zero** (intercept difference)
+- $\alpha$: Mean GCSE score for Hackney school when LRT equals zero (intercept for the reference group)
+- $\beta_1$: Increase in mean GCSE score per unit increase in LRT, **for Hackney school** (slope for the reference group)
+- $\beta_2$: Difference in mean GCSE between Chelsea and Hackney **when LRT equals zero** (intercept difference)
 - $\beta_3$ has **two equivalent interpretations** --- this is a hallmark of interactions:
-    1. Difference in the LRT slope between Chelsea and Battersea (the effect of LRT *depends on* school)
-    2. Increase in the Chelsea--Battersea difference per unit increase in LRT (the effect of school *depends on* LRT)
+    1. Difference in the LRT slope between Chelsea and Hackney (the effect of LRT *depends on* school)
+    2. Increase in the Chelsea--Hackney difference per unit increase in LRT (the effect of school *depends on* LRT)
 
 ::: {.callout-note}
 ## The Symmetry of Interactions
 The interaction coefficient $\beta_3$ can be read in two ways because the product $x_i \times d_{Ci}$ is symmetric. We can rewrite @eq-ch5-contcat as:
 
 $$
-y_i = \underbrace{(\alpha + \beta_1 x_i)}_{\text{Battersea line}} + \underbrace{(\beta_2 + \beta_3 x_i)}_{\text{Chelsea} - \text{Battersea difference}} \cdot d_{Ci} + \epsilon_i
+y_i = \underbrace{(\alpha + \beta_1 x_i)}_{\text{Hackney line}} + \underbrace{(\beta_2 + \beta_3 x_i)}_{\text{Chelsea} - \text{Hackney difference}} \cdot d_{Ci} + \epsilon_i
 $$
 
 Reading across: the effect of LRT depends on school. Reading down: the effect of school depends on LRT. Both readings describe the same phenomenon --- the non-additivity of the two predictors.
@@ -150,11 +161,12 @@ Variables involved in interactions are sometimes called **effect modifiers** or 
 #| code-summary: "Show R Code"
 
 # Setup: select two schools from the GCSE data
+# (Chelsea = school 6, Hackney = school 10; Hackney is the reference)
 two_schools <- gcse |>
-  filter(school %in% c(1, 2)) |>
+  filter(school %in% c(6, 10)) |>
   mutate(school_name = factor(
-    ifelse(school == 1, "Battersea", "Chelsea"),
-    levels = c("Battersea", "Chelsea")
+    ifelse(school == 10, "Hackney", "Chelsea"),
+    levels = c("Hackney", "Chelsea")
   ))
 
 # ANCOVA model: parallel lines (same slope, different intercepts)
@@ -165,22 +177,21 @@ model_interact <- lm(gcse ~ lrt * school_name, data = two_schools)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-cont-cat-setup"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - This code chunk produces no printed output --- it creates the data subset (`two_schools`) and fits both models (`model_parallel` and `model_interact`) for use in subsequent analyses
-- The `two_schools` data frame contains students from schools 1 and 2, with a factor variable `school_name` indicating Battersea (reference) or Chelsea
+- The `two_schools` data frame contains students from schools 6 and 10, with a factor variable `school_name` indicating Hackney (reference) or Chelsea
 - Both model objects are stored and will be examined in the next panel-tabset
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-cont-cat-setup"
-#| eval: false
 ```
-- We subset the `gcse` data to include only schools 1 (Battersea) and 2 (Chelsea), creating a two-group comparison
-- `school_name` is created as a factor with Battersea as the reference level (listed first in `levels`), so the dummy variable $d_{Ci}$ equals 1 for Chelsea
+- We subset the `gcse` data to include only schools 6 (Chelsea) and 10 (Hackney), creating a two-group comparison
+- `school_name` is created as a factor with Hackney as the reference level (listed first in `levels`), so the dummy variable $d_{Ci}$ equals 1 for Chelsea
 - `model_parallel` fits the ANCOVA from @eq-ch5-ancova: `gcse ~ lrt + school_name` specifies parallel lines
 - `model_interact` fits the interaction model from @eq-ch5-contcat: `lrt * school_name` is R shorthand for `lrt + school_name + lrt:school_name`
 
@@ -198,31 +209,33 @@ model_interact <- lm(gcse ~ lrt * school_name, data = two_schools)
 
 # ANCOVA Model (Parallel Lines)
 model_parameters(model_parallel) |> print_md()
+
+# Interaction Model (Non-Parallel Lines)
+model_parameters(model_interact) |> print_md()
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-cont-cat-compare-parallel"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 **ANCOVA Model** (3 parameters):
 
-- `(Intercept)`: Mean GCSE for Battersea when LRT = 0
+- `(Intercept)`: Mean GCSE for Hackney when LRT = 0
 - `lrt`: Common LRT slope for both schools
-- `school_nameChelsea`: Adjusted mean difference (Chelsea $-$ Battersea), assumed constant across all LRT values
+- `school_nameChelsea`: Adjusted mean difference (Chelsea $-$ Hackney), assumed constant across all LRT values
 
 **Interaction Model** (4 parameters):
 
-- `(Intercept)` ($\alpha$): Mean GCSE for Battersea when LRT = 0
-- `lrt` ($\beta_1$): LRT slope **for Battersea only**
+- `(Intercept)` ($\alpha$): Mean GCSE for Hackney when LRT = 0
+- `lrt` ($\beta_1$): LRT slope **for Hackney only**
 - `school_nameChelsea` ($\beta_2$): School difference **only when LRT = 0** (estimated $b_2 \approx 9.28$)
-- `lrt:school_nameChelsea` ($\beta_3$): **Difference in slopes** between Chelsea and Battersea (estimated $b_3 \approx 0.24$)
+- `lrt:school_nameChelsea` ($\beta_3$): **Difference in slopes** between Chelsea and Hackney (estimated $b_3 \approx 0.24$, not significant; see @sec-ch5-testing)
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-cont-cat-compare-parallel"
-#| eval: false
 ```
 - `model_parameters()` from the `easystats` ecosystem provides a clean summary of each model's coefficients
 - In the ANCOVA model, the `school_nameChelsea` coefficient represents the school difference at *all* LRT values (constant shift)
@@ -238,7 +251,7 @@ This is one of the most common sources of confusion in regression analysis. Comp
 | | ANCOVA (no interaction) | Interaction model |
 |:---|:---|:---|
 | **$\beta_2$ means** | Adjusted mean difference for **all** LRT values | Difference **only when LRT = 0** |
-| **$\beta_1$ means** | LRT slope for **both** schools | LRT slope for **Battersea only** |
+| **$\beta_1$ means** | LRT slope for **both** schools | LRT slope for **Hackney only** |
 | **School difference** | Constant: $\beta_2$ | Varies: $\beta_2 + \beta_3 x_i$ |
 
 When you add an interaction, the so-called "main effects" become **conditional effects** --- they describe the effect of one variable *at a specific value* (typically zero) of the other variable. The coefficients that looked the same in the output have fundamentally different interpretations.
@@ -252,8 +265,8 @@ The following diagram illustrates each coefficient in the interaction model geom
 ### Output
 ```{r}
 #| label: fig-ch5-coef-diagram
-#| fig-cap: "Annotated coefficient diagram for the continuous x categorical interaction model. Each coefficient is labeled with its geometric role: alpha is the Battersea intercept, beta_1 is the Battersea slope, beta_2 is the intercept gap at x = 0, and beta_3 is the slope difference."
-#| fig-alt: "Annotated line plot with LRT score on the x-axis and GCSE score on the y-axis showing two non-parallel regression lines for Battersea and Chelsea schools. Arrows and labels mark each coefficient: alpha labels the Battersea intercept on the y-axis, beta_1 labels the Battersea line slope, beta_2 shows the vertical intercept gap between the two lines at x equals zero, and beta_3 highlights the difference in slopes between the two school lines."
+#| fig-cap: "Annotated coefficient diagram for the continuous x categorical interaction model. Each coefficient is labeled with its geometric role: alpha is the Hackney intercept, beta_1 is the Hackney slope, beta_2 is the intercept gap at x = 0, and beta_3 is the slope difference."
+#| fig-alt: "Annotated line plot with LRT score on the x-axis and GCSE score on the y-axis showing two non-parallel regression lines for Hackney and Chelsea schools. Arrows and labels mark each coefficient: alpha labels the Hackney intercept on the y-axis, beta_1 labels the Hackney line slope, beta_2 shows the vertical intercept gap between the two lines at x equals zero, and beta_3 highlights the difference in slopes between the two school lines."
 #| fig-width: 9
 #| fig-height: 6
 #| code-fold: true
@@ -274,7 +287,7 @@ x_max <- x_range[2]
 # A reference x value for illustrating the slope difference
 x_ref <- mean(two_schools$lrt)
 
-# Battersea line values
+# Hackney line values
 y_hack_0 <- alpha
 y_hack_ref <- alpha + beta1 * x_ref
 
@@ -283,64 +296,64 @@ y_chel_0 <- alpha + beta2
 y_chel_ref <- (alpha + beta2) + (beta1 + beta3) * x_ref
 
 ggplot() +
-  # Battersea regression line
+  # Hackney regression line
 
   geom_abline(
     intercept = alpha, slope = beta1,
-    color = ber640_colors["primary"], linewidth = 1.3
+    color = ber640_colors[["primary"]], linewidth = 1.3
   ) +
 
   # Chelsea regression line
   geom_abline(
     intercept = alpha + beta2, slope = beta1 + beta3,
-    color = ber640_colors["accent"], linewidth = 1.3
+    color = ber640_colors[["accent"]], linewidth = 1.3
   ) +
 
-  # (a) alpha: Battersea intercept -- dot at (0, alpha)
+  # (a) alpha: Hackney intercept -- dot at (0, alpha)
   geom_point(aes(x = 0, y = alpha), size = 4,
-             color = ber640_colors["primary"]) +
-  annotate("text", x = -1.5, y = alpha - 2.5, label = expression(alpha ~ "(Battersea intercept)"),
-           hjust = 0.5, size = 4, color = ber640_colors["primary"], fontface = "bold") +
+             color = ber640_colors[["primary"]]) +
+  annotate("text", x = -1.5, y = alpha - 2.5, label = expression(alpha ~ "(Hackney intercept)"),
+           hjust = 0.5, size = 4, color = ber640_colors[["primary"]], fontface = "bold") +
 
-  # (b) beta1: Battersea slope -- arrow along the Battersea line
+  # (b) beta1: Hackney slope -- arrow along the Hackney line
   annotate("segment",
            x = x_ref - 5, y = alpha + beta1 * (x_ref - 5),
            xend = x_ref + 5, yend = alpha + beta1 * (x_ref + 5),
-           color = ber640_colors["success"], linewidth = 1.5,
+           color = ber640_colors[["success"]], linewidth = 1.5,
            arrow = arrow(length = unit(0.25, "cm"), type = "closed")) +
   annotate("text", x = x_ref + 6, y = alpha + beta1 * (x_ref + 5) + 1,
-           label = expression(beta[1] ~ "(Battersea slope)"),
-           hjust = 0, size = 4, color = ber640_colors["success"], fontface = "bold") +
+           label = expression(beta[1] ~ "(Hackney slope)"),
+           hjust = 0, size = 4, color = ber640_colors[["success"]], fontface = "bold") +
 
   # (c) beta2: Vertical gap at x = 0
   geom_segment(aes(x = 0, y = alpha, xend = 0, yend = alpha + beta2),
-               color = ber640_colors["secondary"], linewidth = 1.2,
+               color = ber640_colors[["secondary"]], linewidth = 1.2,
                arrow = arrow(length = unit(0.2, "cm"), ends = "both")) +
   annotate("text", x = 1.5, y = alpha + beta2 / 2,
            label = expression(beta[2] ~ "(intercept gap at x = 0)"),
-           hjust = 0, size = 4, color = ber640_colors["secondary"], fontface = "bold") +
+           hjust = 0, size = 4, color = ber640_colors[["secondary"]], fontface = "bold") +
 
   # (d) beta3: Slope difference -- show at x_ref
   geom_segment(aes(x = x_ref + 8, y = alpha + beta1 * (x_ref + 8),
                    xend = x_ref + 8, yend = (alpha + beta2) + (beta1 + beta3) * (x_ref + 8)),
-               color = ber640_colors["warning"], linewidth = 1.2, linetype = "dashed",
+               color = ber640_colors[["warning"]], linewidth = 1.2, linetype = "dashed",
                arrow = arrow(length = unit(0.2, "cm"), ends = "both")) +
   annotate("text", x = x_ref + 9, y = ((alpha + beta1 * (x_ref + 8)) +
                                          ((alpha + beta2) + (beta1 + beta3) * (x_ref + 8))) / 2,
            label = expression(beta[2] + beta[3] %.% x),
-           hjust = 0, size = 4, color = ber640_colors["warning"], fontface = "bold") +
+           hjust = 0, size = 4, color = ber640_colors[["warning"]], fontface = "bold") +
   annotate("text", x = x_ref + 9,
            y = ((alpha + beta1 * (x_ref + 8)) +
                 ((alpha + beta2) + (beta1 + beta3) * (x_ref + 8))) / 2 - 2,
            label = expression("(" * beta[3] ~ "= slope difference)"),
-           hjust = 0, size = 3.5, color = ber640_colors["warning"]) +
+           hjust = 0, size = 3.5, color = ber640_colors[["warning"]]) +
 
   # Labels for lines
   annotate("text", x = x_max - 2, y = alpha + beta1 * (x_max - 2) - 2,
-           label = "Battersea", size = 4.5, color = ber640_colors["primary"], fontface = "bold") +
+           label = "Hackney", size = 4.5, color = ber640_colors[["primary"]], fontface = "bold") +
   annotate("text", x = x_max - 2,
            y = (alpha + beta2) + (beta1 + beta3) * (x_max - 2) + 2,
-           label = "Chelsea", size = 4.5, color = ber640_colors["accent"], fontface = "bold") +
+           label = "Chelsea", size = 4.5, color = ber640_colors[["accent"]], fontface = "bold") +
 
   coord_cartesian(xlim = c(-5, x_max + 15),
                   ylim = c(min(alpha, alpha + beta2) - 5,
@@ -354,10 +367,12 @@ ggplot() +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-coef-diagram"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 6
 ```
 - The diagram makes the four-parameter model concrete: one intercept ($\alpha$), one slope ($\beta_1$), one intercept shift ($\beta_2$), and one slope shift ($\beta_3$) encode two complete regression lines
 - The vertical gap between the lines at $x = 0$ is exactly $\beta_2$. As $x$ increases, the gap changes by $\beta_3$ per unit, reflecting the interaction
@@ -367,13 +382,14 @@ ggplot() +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-coef-diagram"
-#| eval: false
+#| fig-width: 9
+#| fig-height: 6
 ```
 - Two regression lines are drawn using `geom_abline()` with the estimated intercepts and slopes from `model_interact`
-- **$\alpha$** (green dot at $x = 0$): The Battersea intercept, shown as a point on the y-axis where the Battersea line crosses $x = 0$
-- **$\beta_1$** (green arrow): The Battersea slope, illustrated as the direction and steepness of the Battersea line
-- **$\beta_2$** (red double-ended arrow at $x = 0$): The vertical gap between the two lines at the y-axis, representing the intercept difference between Chelsea and Battersea
-- **$\beta_3$** (orange dashed segment): The slope difference, which causes the lines to diverge. The growing gap between lines at higher LRT values visually shows $\beta_2 + \beta_3 x$
+- **$\alpha$** (navy dot at $x = 0$): The Hackney intercept, shown as a point on the y-axis where the Hackney line crosses $x = 0$
+- **$\beta_1$** (teal arrow): The Hackney slope, illustrated as the direction and steepness of the Hackney line
+- **$\beta_2$** (rust double-ended arrow at $x = 0$): The vertical gap between the two lines at the y-axis, representing the intercept difference between Chelsea and Hackney
+- **$\beta_3$** (gold dashed segment): The slope difference, which causes the lines to diverge. The growing gap between lines at higher LRT values visually shows $\beta_2 + \beta_3 x$
 - `coord_cartesian()` extends the plot slightly beyond the data range so the intercept annotations at $x = 0$ are visible
 
 
@@ -384,7 +400,7 @@ ggplot() +
 ::: {.callout-tip}
 ## Try It Yourself
 
-Drag the **β₃ slider** to see how the interaction coefficient reshapes the relationship between schools. Watch the vertical arrows at three probe points (LRT = -10, 0, +10) — they show that the school difference is **not a single number** but depends on where you look along the x-axis.
+This app has a single control: the **Interaction (β₃) slider** — drag it as your first move. Watch the vertical arrows at three probe points (LRT = -10, 0, +10) — they show that the school difference is **not a single number** but depends on where you look along the x-axis. (The intercept α, the Hackney slope β₁, and the intercept gap β₂ are fixed at their fitted values from the real GCSE data, so only β₃ moves.)
 
 - **β₃ = 0**: Lines are parallel — this is the ANCOVA model
 - **β₃ > 0**: Chelsea's line is steeper — Chelsea's advantage grows with LRT
@@ -411,7 +427,21 @@ import { ber640 as int_ber640, categorical as int_categorical,
          themeColors as int_themeColors,
          plotDefaults as int_plotDefaults,
          formatCoef as int_formatCoef, formatSigned as int_formatSigned,
-         seq as int_seq } from "../ojs/shared.js"
+         seq as int_seq,
+         srSummary as int_srSummary, resetControls as int_resetControls,
+         onThemeChange as int_onThemeChange } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+
+int_theme = int_themeColors()
+```
+
+```{ojs}
+//| echo: false
+
+int_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
 
 ```{ojs}
@@ -427,7 +457,7 @@ viewof int_beta3 = Inputs.range([-1.5, 1.5], {
   value: 0.24,
   step: 0.01,
   label: html`<strong>Interaction (β₃)</strong>`,
-  width: 400
+  width: 280
 })
 ```
 
@@ -435,7 +465,7 @@ viewof int_beta3 = Inputs.range([-1.5, 1.5], {
 //| echo: false
 
 // Fixed coefficients from the actual model (only β₃ is interactive)
-int_alpha = 2.50
+int_alpha = -3.25
 int_beta1 = 0.30
 int_beta2 = 9.28
 
@@ -465,7 +495,7 @@ int_x_range = {
 }
 
 int_line_hackney = int_seq(int_x_range[0], int_x_range[1], 100).map(x => ({
-  x, y: int_hackney_intercept + int_hackney_slope * x, school: "Battersea"
+  x, y: int_hackney_intercept + int_hackney_slope * x, school: "Hackney"
 }))
 int_line_chelsea = int_seq(int_x_range[0], int_x_range[1], 100).map(x => ({
   x, y: int_chelsea_intercept + int_chelsea_slope * x, school: "Chelsea"
@@ -476,18 +506,18 @@ int_line_points = int_line_hackney.concat(int_line_chelsea)
 ```{ojs}
 //| echo: false
 
-// Equations display
-html`<div style="
-  font-size: 0.95rem; line-height: 1.8;
-  padding: 0.6rem 1rem;
-  margin: 0.5rem 0;
-  border-left: 3px solid ${int_categorical[0]};
-  color: ${int_themeColors().text};
-">
-  <strong style="color:${int_categorical[0]}">Battersea:</strong>
-  ŷ = ${int_formatCoef(int_hackney_intercept, 2)} + ${int_formatCoef(int_hackney_slope, 2)} × LRT<br>
-  <strong style="color:${int_categorical[1]}">Chelsea:</strong>
-  ŷ = ${int_formatCoef(int_chelsea_intercept, 2)} + ${int_formatCoef(int_chelsea_slope, 2)} × LRT
+// Status flag (preserved Phase-2 fix: parallel threshold + b3=0.24 significance note)
+int_isParallel = Math.abs(int_beta3) < 0.005
+```
+
+```{ojs}
+//| echo: false
+
+int_readouts = html`<div class="ojs-readouts">
+  ${int_pill("Status", int_isParallel ? "Parallel lines (ANCOVA)" : "Non-parallel lines", int_isParallel ? "good" : "warning")}
+  ${int_pill("Δ @ LRT −10", int_formatSigned(int_probe_data[0].gap, 2), "info")}
+  ${int_pill("Δ @ LRT 0", int_formatSigned(int_probe_data[1].gap, 2), "info")}
+  ${int_pill("Δ @ LRT +10", int_formatSigned(int_probe_data[2].gap, 2), "info")}
 </div>`
 ```
 
@@ -495,115 +525,111 @@ html`<div style="
 //| echo: false
 
 // Interactive scatter plot
-{
-  const tc = int_themeColors();
-  const schoolColors = [int_categorical[0], int_categorical[1]];
+int_plot = Plot.plot(int_plotDefaults({
+  width: 680,
+  height: 340,
+  marginTop: 24,
+  marginBottom: 40,
+  marginLeft: 48,
+  marginRight: 16,
+  style: { color: int_theme.text },
+  color: {
+    domain: ["Hackney", "Chelsea"],
+    range: [int_categorical[0], int_categorical[1]],
+    legend: true
+  },
+  x: { label: "LRT Score", domain: int_x_range, grid: true },
+  y: { label: "GCSE Score", grid: true },
+  marks: [
+    // Data points
+    Plot.dot(int_two_schools, {
+      x: "lrt",
+      y: "gcse",
+      fill: d => d.school_name,
+      opacity: 0.4,
+      r: 3
+    }),
 
-  return Plot.plot(int_plotDefaults({
-    width: 680,
-    height: 460,
-    color: {
-      domain: ["Battersea", "Chelsea"],
-      range: schoolColors,
-      legend: true
-    },
-    x: { label: "LRT Score", domain: int_x_range, grid: true },
-    y: { label: "GCSE Score", grid: true },
-    marks: [
-      // Data points
-      Plot.dot(int_two_schools, {
-        x: "lrt",
-        y: "gcse",
-        fill: d => d.school_name,
-        opacity: 0.4,
-        r: 3
-      }),
+    // Regression lines (non-color channel: Chelsea dashed vs Hackney solid)
+    Plot.line(int_line_points, {
+      x: "x",
+      y: "y",
+      stroke: "school",
+      strokeWidth: 2.5,
+      strokeDasharray: d => d.school === "Chelsea" ? "8,4" : null
+    }),
 
-      // Regression lines
-      Plot.line(int_line_points, {
-        x: "x",
-        y: "y",
-        stroke: "school",
-        strokeWidth: 2.5
-      }),
+    // Probe point markers on Hackney line
+    Plot.dot(int_probe_data, {
+      x: "x", y: "y_hackney",
+      fill: int_categorical[0],
+      r: 5, stroke: int_theme.bg, strokeWidth: 1
+    }),
 
-      // Probe point markers on Battersea line
-      Plot.dot(int_probe_data, {
-        x: "x", y: "y_hackney",
-        fill: schoolColors[0],
-        r: 5, stroke: tc.bg, strokeWidth: 1
-      }),
+    // Probe point markers on Chelsea line
+    Plot.dot(int_probe_data, {
+      x: "x", y: "y_chelsea",
+      fill: int_categorical[1],
+      r: 5, stroke: int_theme.bg, strokeWidth: 1
+    }),
 
-      // Probe point markers on Chelsea line
-      Plot.dot(int_probe_data, {
-        x: "x", y: "y_chelsea",
-        fill: schoolColors[1],
-        r: 5, stroke: tc.bg, strokeWidth: 1
-      }),
+    // Gap arrows at probe points
+    Plot.link(int_probe_data, {
+      x1: "x", y1: "y_hackney",
+      x2: "x", y2: "y_chelsea",
+      stroke: int_theme.text,
+      strokeWidth: 1.5,
+      strokeDasharray: "4,3"
+    }),
 
-      // Gap arrows at probe points
-      Plot.link(int_probe_data, {
-        x1: "x", y1: "y_hackney",
-        x2: "x", y2: "y_chelsea",
-        stroke: tc.text,
-        strokeWidth: 1.5,
-        strokeDasharray: "4,3"
-      }),
-
-      // Gap labels
-      Plot.text(int_probe_data, {
-        x: "x", y: d => (d.y_hackney + d.y_chelsea) / 2,
-        text: d => `Δ = ${int_formatCoef(d.gap, 1)}`,
-        dx: 28,
-        fill: tc.text,
-        fontSize: 11,
-        fontWeight: 600
-      })
-    ]
-  }));
-}
+    // Gap labels
+    Plot.text(int_probe_data, {
+      x: "x", y: d => (d.y_hackney + d.y_chelsea) / 2,
+      text: d => `Δ = ${int_formatCoef(d.gap, 1)}`,
+      dx: 28,
+      fill: int_theme.text,
+      fontSize: 11,
+      fontWeight: 600
+    })
+  ]
+}))
 ```
 
 ```{ojs}
 //| echo: false
 
-// Status readout
-{
-  const tc = int_themeColors();
-  const isParallel = Math.abs(int_beta3) < 0.005;
-
-  const statusColor = isParallel ? int_ber640.success : int_ber640.warning;
-  const statusMsg = isParallel
-    ? "β₃ ≈ 0 → Lines are parallel (ANCOVA model)"
-    : "β₃ ≠ 0 → Lines are NOT parallel — the school difference varies with LRT";
-
-  const gapRows = int_probe_data.map(p =>
-    `<tr>
-      <td style="padding:0.2rem 0.8rem;">LRT = ${p.x}</td>
-      <td style="padding:0.2rem 0.8rem; font-weight:600;">${p.gap >= 0 ? '+' : ''}${int_formatCoef(p.gap, 2)}</td>
-    </tr>`
-  ).join("");
-
-  return html`<div style="
-    font-size: 0.9rem; color: ${tc.text};
-    padding: 0.6rem 1rem;
-    background: ${tc.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'};
-    border-radius: 6px;
-  ">
-    <p style="margin:0 0 0.4rem 0; font-weight:700; color:${statusColor};">${statusMsg}</p>
-    <table style="border-collapse:collapse;">
-      <thead>
-        <tr style="border-bottom:1px solid ${tc.muted};">
-          <th style="padding:0.2rem 0.8rem; text-align:left;">Probe Point</th>
-          <th style="padding:0.2rem 0.8rem; text-align:left;">Chelsea − Battersea Gap</th>
-        </tr>
-      </thead>
-      <tbody>${gapRows}</tbody>
-    </table>
-  </div>`;
-}
+int_sr = int_srSummary("ch05-parallel",
+  `Interaction b3 = ${int_formatCoef(int_beta3, 2)}. Hackney slope ${int_formatCoef(int_hackney_slope, 2)}, Chelsea slope ${int_formatCoef(int_chelsea_slope, 2)}. ` +
+  (int_isParallel
+    ? "Lines are parallel, matching the ANCOVA model."
+    : "Lines look non-parallel — the school difference varies with LRT. ") +
+  `Chelsea minus Hackney gap is ${int_formatSigned(int_probe_data[0].gap, 1)} at LRT -10, ${int_formatSigned(int_probe_data[1].gap, 1)} at LRT 0, and ${int_formatSigned(int_probe_data[2].gap, 1)} at LRT +10. At the fitted b3 = 0.24 this slope difference is not statistically significant (see the F-test).`)
 ```
 
+```{ojs}
+//| echo: false
+
+int_app = html`<div class="ojs-app" role="group" aria-label="Parallel vs non-parallel regression lines by school">
+  <div class="ojs-controls">${viewof int_beta3}</div>
+  <div class="ojs-equation">
+    <strong style="color:${int_categorical[0]}">Hackney:</strong>
+    ŷ = ${int_formatCoef(int_hackney_intercept, 2)} + ${int_formatCoef(int_hackney_slope, 2)} × LRT
+    <span style="margin-left:1.5rem;"><strong style="color:${int_categorical[1]}">Chelsea:</strong>
+    ŷ = ${int_formatCoef(int_chelsea_intercept, 2)} + ${int_formatCoef(int_chelsea_slope, 2)} × LRT</span>
+  </div>
+  ${int_readouts}
+  <div class="ojs-plot">${int_plot}</div>
+  ${int_sr}
+</div>`
+```
+
+::: {.callout-note}
+## What you should have seen
+
+- At β₃ = 0 the two lines are parallel (the ANCOVA model) and the Chelsea–Hackney gap is identical at every probe point — a single number.
+- As soon as β₃ ≠ 0 the lines fan out: the gap (Δ) at LRT −10, 0, and +10 are no longer equal, so the school difference becomes a *function of LRT*, not a constant.
+- The sign of β₃ sets the direction: β₃ > 0 means Chelsea's advantage grows with prior achievement, β₃ < 0 means it shrinks or reverses.
+:::
 
 ### Raw Data: Do the Slopes Look Different?
 
@@ -614,17 +640,17 @@ Before fitting any models, it is always wise to look at the raw data. The scatte
 ```{r}
 #| label: fig-ch5-raw-scatter
 #| fig-cap: "Raw GCSE scores versus LRT scores by school, with separate regression lines. The lines appear to diverge, suggesting that the LRT-GCSE relationship may differ between schools."
-#| fig-alt: "Scatter plot with LRT score on the x-axis and GCSE score on the y-axis. Points are colored by school, Battersea and Chelsea. Two separate regression lines are overlaid, one per school. The lines diverge as LRT increases, with the Chelsea line rising more steeply, suggesting the LRT-GCSE relationship is stronger for Chelsea students than for Battersea students."
+#| fig-alt: "Scatter plot with LRT score on the x-axis and GCSE score on the y-axis. Points are colored by school, Hackney and Chelsea. Two separate regression lines are overlaid, one per school. The lines diverge as LRT increases, with the Chelsea line rising more steeply, suggesting the LRT-GCSE relationship is stronger for Chelsea students than for Hackney students."
 #| fig-width: 8
 #| fig-height: 6
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 ggplot(two_schools, aes(x = lrt, y = gcse, color = school_name)) +
-  geom_point(alpha = 0.4, size = 2) +
+  geom_point(alpha = 0.3, size = 2) +
   geom_smooth(method = "lm", formula = y ~ x, se = TRUE, linewidth = 1.2) +
-  scale_color_manual(values = c(ber640_colors["primary"], ber640_colors["accent"])) +
-  scale_fill_manual(values = c(ber640_colors["primary"], ber640_colors["accent"])) +
+  scale_color_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]])) +
+  scale_fill_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]])) +
   labs(
     title = "GCSE vs LRT by School",
     subtitle = "Do the regression lines look parallel?",
@@ -635,20 +661,23 @@ ggplot(two_schools, aes(x = lrt, y = gcse, color = school_name)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-raw-scatter"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 8
+#| fig-height: 6
 ```
 - Each point represents one student's LRT and GCSE scores, colored by their school
-- The two regression lines allow a visual comparison of slopes: if Chelsea's line is steeper than Battersea's, it suggests Chelsea students show a stronger relationship between prior achievement and exam performance
+- The two regression lines allow a visual comparison of slopes: if Chelsea's line is steeper than Hackney's, it suggests Chelsea students show a stronger relationship between prior achievement and exam performance
 - The degree to which the lines diverge as LRT increases is a visual approximation of the interaction effect
 - The overlapping confidence bands at certain LRT values indicate uncertainty about the slope difference in those regions
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-raw-scatter"
-#| eval: false
+#| fig-width: 8
+#| fig-height: 6
 ```
 - `geom_point(alpha = 0.4)` plots the raw data with transparency to reduce overplotting
 - `geom_smooth(method = "lm", formula = y ~ x)` overlays separate OLS regression lines for each school (because `color = school_name` is mapped in the main `aes()`)
@@ -665,7 +694,7 @@ ggplot(two_schools, aes(x = lrt, y = gcse, color = school_name)) +
 ```{r}
 #| label: fig-ch5-cont-cat-parallel-vs-interact
 #| fig-cap: "Comparison of the ANCOVA model (parallel lines, left) and the interaction model (non-parallel lines, right). The interaction model allows the LRT slope to differ between schools."
-#| fig-alt: "Side-by-side scatter plots of GCSE versus LRT, each showing data points for two schools. The left panel displays the ANCOVA model with two parallel regression lines differing only in intercept. The right panel displays the interaction model with two non-parallel regression lines that diverge as LRT increases, allowing the slope to differ between schools. The comparison highlights how the interaction model provides a more flexible fit."
+#| fig-alt: "Side-by-side fitted-line plots of predicted GCSE versus LRT, each showing two fitted regression lines with 95 percent confidence bands (one per school) and no raw data points. The left panel displays the ANCOVA model with two parallel regression lines differing only in intercept. The right panel displays the interaction model with two non-parallel regression lines that diverge as LRT increases, allowing the slope to differ between schools. The comparison highlights how the interaction model provides a more flexible fit."
 #| fig-width: 10
 #| fig-height: 5
 #| code-fold: true
@@ -673,8 +702,8 @@ ggplot(two_schools, aes(x = lrt, y = gcse, color = school_name)) +
 
 # Left panel: ANCOVA (parallel lines)
 p1 <- plot_predictions(model_parallel, condition = c("lrt", "school_name")) +
-  scale_color_manual(values = c(ber640_colors["primary"], ber640_colors["accent"])) +
-  scale_fill_manual(values = c(ber640_colors["primary"], ber640_colors["accent"])) +
+  scale_color_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]])) +
+  scale_fill_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]])) +
   labs(
     title = "ANCOVA: Parallel Lines",
     subtitle = "Same slope, different intercepts",
@@ -684,8 +713,8 @@ p1 <- plot_predictions(model_parallel, condition = c("lrt", "school_name")) +
 
 # Right panel: Interaction (non-parallel lines)
 p2 <- plot_predictions(model_interact, condition = c("lrt", "school_name")) +
-  scale_color_manual(values = c(ber640_colors["primary"], ber640_colors["accent"])) +
-  scale_fill_manual(values = c(ber640_colors["primary"], ber640_colors["accent"])) +
+  scale_color_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]])) +
+  scale_fill_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]])) +
   labs(
     title = "Interaction: Non-Parallel Lines",
     subtitle = "Different slopes AND intercepts",
@@ -698,19 +727,22 @@ p1 + p2 + plot_layout(guides = "collect") &
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-cont-cat-parallel-vs-interact"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 10
+#| fig-height: 5
 ```
 - In the left panel (ANCOVA), the distance between the two lines is the same everywhere --- this is the parallel lines assumption
-- In the right panel (interaction), the lines spread apart as LRT increases, reflecting the positive interaction: Chelsea's advantage over Battersea grows for students with higher prior achievement
+- In the right panel (interaction), the lines spread apart as LRT increases, reflecting the positive (though not statistically significant) slope difference: the point estimates put Chelsea's advantage over Hackney as growing for students with higher prior achievement
 - The confidence bands (shaded regions) are widest at the extremes of LRT where data are sparser
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-cont-cat-parallel-vs-interact"
-#| eval: false
+#| fig-width: 10
+#| fig-height: 5
 ```
 - `plot_predictions()` from the `marginaleffects` package draws the fitted regression lines with confidence bands
 - The left panel shows the ANCOVA model: two parallel lines separated by a constant vertical distance $\beta_2$
@@ -728,8 +760,8 @@ Since the school difference is $\beta_2 + \beta_3 x_i$ (@eq-ch5-school-diff), we
 ### Output
 ```{r}
 #| label: fig-ch5-school-diff-by-lrt
-#| fig-cap: "The estimated difference between Chelsea and Battersea schools (with 95% confidence interval) as a function of LRT score. The school difference is not constant --- it increases with prior achievement."
-#| fig-alt: "Line plot with LRT score on the x-axis and the estimated Chelsea minus Battersea difference in GCSE on the y-axis. A solid line shows the point estimate of the school difference, surrounded by a shaded 95 percent confidence band. The difference starts near zero at low LRT values and increases steadily at higher LRT values, demonstrating that the school gap grows with prior achievement."
+#| fig-cap: "The estimated difference between Chelsea and Hackney schools (with 95% confidence interval) as a function of LRT score. The point estimate of the school difference is not constant --- it increases with prior achievement --- though the slope of this relationship (b3) is not statistically significant."
+#| fig-alt: "Line plot with LRT score on the x-axis and the estimated Chelsea minus Hackney difference in GCSE on the y-axis. A solid line shows the point estimate of the school difference, surrounded by a shaded 95 percent confidence band. The difference starts near zero at low LRT values and increases at higher LRT values, suggesting the school gap grows with prior achievement, though the confidence band is wide."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -742,31 +774,30 @@ plot_comparisons(
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
   labs(
     title = "School Difference Depends on Prior Achievement",
-    subtitle = expression(paste("Estimated difference (Chelsea - Battersea) = ",
+    subtitle = expression(paste("Estimated difference (Chelsea - Hackney) = ",
                                 hat(beta)[2], " + ", hat(beta)[3], " x LRT")),
     x = "LRT Score",
-    y = "Predicted GCSE Difference\n(Chelsea - Battersea)"
+    y = "Predicted GCSE Difference\n(Chelsea - Hackney)"
   )
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-school-diff-by-lrt"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- The upward-sloping line confirms that the Chelsea advantage increases with LRT score
+- The point-estimate line slopes upward, suggesting a larger Chelsea--Hackney gap at higher LRT values; because the interaction test is not statistically significant, treat this as descriptive rather than confirmed evidence of different slopes
 - At the left end of the LRT range (low prior achievement), the difference between schools is relatively small
-- At the right end (high prior achievement), Chelsea has a substantially larger advantage
+- At the right end (high prior achievement), the estimated Chelsea advantage is larger
 - The confidence interval widens at extreme LRT values where fewer students are observed
 - If the confidence band includes zero at some LRT values, it means the school difference is not statistically significant for those students
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-school-diff-by-lrt"
-#| eval: false
 ```
-- `plot_comparisons()` from the `marginaleffects` package computes the pairwise comparison between factor levels (Chelsea vs. Battersea) at each value of the continuous conditioning variable (LRT)
+- `plot_comparisons()` from the `marginaleffects` package computes the pairwise comparison between factor levels (Chelsea vs. Hackney) at each value of the continuous conditioning variable (LRT)
 - The dashed horizontal line at zero represents no school difference
 - This plot directly visualizes @eq-ch5-school-diff: the school difference is a *linear function* of LRT, with slope $\beta_3$
 
@@ -804,10 +835,10 @@ anova(model_parallel, model_interact)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-interaction-test"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The `Res.Df` column shows the residual degrees of freedom for each model
 - The `RSS` column shows the residual sum of squares --- a smaller value means better fit
@@ -817,7 +848,6 @@ anova(model_parallel, model_interact)
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-interaction-test"
-#| eval: false
 ```
 - `anova(model1, model2)` performs a nested model comparison using an incremental F-test
 - The first argument is the **restricted** (simpler) model: `model_parallel` with 3 parameters
@@ -851,21 +881,22 @@ When building a model with potential interactions, follow this decision sequence
     - Interpret conditional effects (slopes and comparisons at specific values), not main effects
     - The main effects $\beta_1$ and $\beta_2$ are conditional on the other variable equaling zero, which may or may not be meaningful
 3. **If the interaction is not significant** ($p \geq \alpha$):
-    - Remove the interaction and refit the additive (ANCOVA) model
-    - Interpret the main effects from the simpler model
-    - The parallel lines assumption is empirically supported
+    - A non-significant interaction often supports the simpler additive (ANCOVA) model --- especially in exploratory work --- so refit without the interaction, interpret the main effects from the simpler model, and note that the parallel-lines assumption is empirically supported
+    - But do not treat the $p$-value as an automatic switch: **theory, study design, model hierarchy, statistical power, and interpretability** all bear on whether to keep an interaction the design was built to test. Conversely, a *significant* interaction can still be small or practically unimportant
 :::
 
 The logic behind this approach is that when an interaction is present, the main effect coefficients have a different (and often less useful) interpretation than when no interaction is present. Testing the interaction first determines *which interpretation applies* before we try to draw conclusions from the main effects.
 
 ::: {.callout-warning}
-## Do Not Ignore a Significant Interaction
-When a significant interaction is present, reporting only the main effects can be seriously misleading. For example, in our GCSE data, reporting that "Chelsea students score higher on average" without noting the interaction obscures the fact that this difference depends heavily on prior achievement. A student entering with a low LRT score might see a much smaller Chelsea advantage than the average suggests, while a student with a high LRT score might see a much larger advantage. The interaction tells the complete story; the main effect alone tells a partial (and potentially misleading) one.
+## Test the Interaction Before Interpreting It
+**The principle.** When an interaction is *genuinely* present, reporting only the main effects can be seriously misleading. If the LRT $\times$ school interaction were real, then reporting that "Chelsea students score higher on average" without noting the interaction would obscure the fact that this difference depends on prior achievement: a student entering with a low LRT score would see a much smaller Chelsea advantage than the average suggests, while a student with a high LRT score would see a much larger one. In that case the interaction tells the complete story and the main effect alone tells a partial (and potentially misleading) one. This is exactly why a real interaction must not be ignored.
+
+**What our data actually show.** In this GCSE example the interaction is *not* statistically significant ($F(1, 126) = 2.36$, $p = 0.13$). The point estimate $b_3 = 0.24$ hints that Chelsea's advantage grows with LRT, but the evidence is too weak to treat the slopes as genuinely different. The correct conclusion here is therefore to report the simpler **additive (ANCOVA) model** with a single, constant Chelsea--Hackney gap --- while having shown, above, how we *would* interpret the interaction if the test had been significant. The lesson generalizes: **run the formal test first**, and only switch from the additive interpretation to the conditional (interaction) interpretation when the test supports it.
 :::
 
 ### Probing the Interaction: Conditional Slopes
 
-When the interaction is significant, we should probe it by examining the effect of one variable at specific values of the other. For the continuous $\times$ categorical interaction, this means computing the LRT slope **separately for each school**.
+Whether or not the interaction reaches significance, it is instructive to probe it by examining the effect of one variable at specific values of the other. (In this GCSE example the interaction is not significant, $p = 0.13$, so in practice we would report the simpler ANCOVA model; here we probe it for illustration.) For the continuous $\times$ categorical interaction, this means computing the LRT slope **separately for each school**.
 
 ::: {.panel-tabset}
 ### Output
@@ -879,23 +910,22 @@ avg_slopes(model_interact, variables = "lrt", by = "school_name")
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-conditional-slopes"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- The LRT slope for Battersea represents how much GCSE increases per unit increase in LRT for students in Battersea school
+- The LRT slope for Hackney represents how much GCSE increases per unit increase in LRT for students in Hackney school
 - The LRT slope for Chelsea represents the same quantity for Chelsea students
-- If both slopes are positive but Chelsea's is larger, it means Chelsea is more effective at translating prior achievement into GCSE performance
+- If both slopes are positive but Chelsea's is larger, it means the fitted LRT–GCSE association is estimated to be steeper for Chelsea than for Hackney (note these data are observational and this slope difference is not statistically significant)
 - The difference between the two slopes equals $\beta_3$, the interaction coefficient
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-conditional-slopes"
-#| eval: false
 ```
 - `avg_slopes()` from the `marginaleffects` package computes the marginal effect (slope) of `lrt` separately within each level of `school_name`
-- For the Battersea row: this is $\beta_1$ (the LRT slope when $d_{Ci} = 0$)
+- For the Hackney row: this is $\beta_1$ (the LRT slope when $d_{Ci} = 0$)
 - For the Chelsea row: this is $\beta_1 + \beta_3$ (the LRT slope when $d_{Ci} = 1$)
 - Each slope comes with its own standard error, confidence interval, and p-value
 
@@ -916,10 +946,10 @@ compare_performance(model_parallel, model_interact, rank = TRUE)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-model-comparison"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - If the interaction model shows a substantially higher $R^2$ and lower AIC, the additional complexity of the interaction is justified
 - If the improvement is trivial despite a significant p-value, the interaction may be statistically significant but practically unimportant
@@ -928,7 +958,6 @@ compare_performance(model_parallel, model_interact, rank = TRUE)
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-model-comparison"
-#| eval: false
 ```
 - `compare_performance()` from the `easystats` ecosystem provides a side-by-side comparison of fit indices
 - Key metrics include $R^2$ (variance explained), AIC, and BIC
@@ -1002,10 +1031,10 @@ model_parameters(model_cat) |> print_md()
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-cat-cat"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The intercept $\alpha$ is the mean salary for the reference cell (Female Assistant Professors)
 - `genderMale` ($\beta_1$) is the gender gap among Assistant Professors specifically
@@ -1015,7 +1044,6 @@ model_parameters(model_cat) |> print_md()
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-cat-cat"
-#| eval: false
 ```
 - `gender * rank_f` is shorthand for `gender + rank_f + gender:rank_f`, fitting main effects and their interaction
 - R creates all pairwise products of the dummy variables automatically
@@ -1031,13 +1059,13 @@ model_parameters(model_cat) |> print_md()
 ### Output
 ```{r}
 #| label: fig-ch5-cat-cat
-#| fig-cap: "Gender × Rank interaction plot: the gender salary gap may vary across academic ranks. Non-parallel patterns indicate interaction."
-#| fig-alt: "Interaction plot with academic rank on the x-axis and predicted salary on the y-axis, showing separate lines for male and female faculty. The lines connect predicted mean salaries at each rank level. The lines are not parallel, indicating that the gender salary gap varies across ranks. The gap appears largest at the full professor rank and smallest at the assistant professor rank."
+#| fig-cap: "Gender × Rank interaction plot of predicted salaries (points with 95% confidence intervals). The vertical male–female gap is not perfectly constant across ranks, but this apparent rank-dependence of the gender gap is not statistically significant (interaction F(2, 508) = 0.901, p = 0.41); see 'Testing the Overall Interaction'."
+#| fig-alt: "Interaction plot with academic rank on the x-axis and predicted salary on the y-axis, showing separate points with 95 percent confidence intervals for male and female faculty at each rank (no connecting lines are drawn). The vertical gap between the male and female points changes across ranks, though the interaction is not statistically significant (p = 0.41). The gap appears largest at the full professor rank and smallest at the associate professor rank."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 plot_predictions(model_cat, condition = c("rank_f", "gender")) +
-  scale_color_manual(values = c(ber640_colors["secondary"], ber640_colors["accent"])) +
+  scale_color_manual(values = c(ber640_colors[["secondary"]], ber640_colors[["accent"]])) +
   labs(
     title = "Categorical × Categorical Interaction",
     subtitle = "Does the gender gap depend on rank?",
@@ -1047,24 +1075,23 @@ plot_predictions(model_cat, condition = c("rank_f", "gender")) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-cat-cat"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- The plot shows predicted salary (y-axis) for each rank (x-axis), with separate lines or points for Male and Female faculty
+- The plot shows predicted salary (y-axis) for each rank (x-axis), with separate points (and 95% confidence intervals) for Male and Female faculty
 - If the gender gap (vertical distance) is roughly constant across ranks, the additive model is adequate and the interaction is weak
 - If the gap widens or narrows at higher ranks, this visual non-parallelism suggests a meaningful interaction between gender and rank
-- Point estimates are connected by lines, with confidence intervals shown as error bars or bands around each predicted mean
+- Each predicted mean is shown as a point, with its 95% confidence interval drawn as a vertical error bar
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-cat-cat"
-#| eval: false
 ```
-- Non-parallel lines (if the gap between genders changes across ranks) indicate a significant interaction
-- Parallel lines would mean the gender gap is the same at every rank
-- The vertical distance between lines at each rank represents the gender gap *at that rank*
+- A male–female gap that changes across ranks (the vertical distance between the two points shifting from rank to rank) indicates a significant interaction
+- A constant gap (the same vertical distance between the Male and Female points at every rank) would mean the gender gap does not depend on rank
+- The vertical distance between the Male and Female points at each rank represents the gender gap *at that rank*
 
 
 :::
@@ -1092,7 +1119,7 @@ ggplot(cell_means, aes(x = rank_f, y = estimate, fill = gender)) +
     position = position_dodge(width = 0.8),
     width = 0.25, linewidth = 0.6
   ) +
-  scale_fill_manual(values = c(ber640_colors["secondary"], ber640_colors["accent"])) +
+  scale_fill_manual(values = c(ber640_colors[["secondary"]], ber640_colors[["accent"]])) +
   labs(
     title = "Predicted Mean Salary by Gender and Rank",
     subtitle = "Grouped bar chart with 95% confidence intervals",
@@ -1103,10 +1130,12 @@ ggplot(cell_means, aes(x = rank_f, y = estimate, fill = gender)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-cat-cat-bars"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 6
 ```
 - Each pair of bars within a rank represents the predicted mean salary for Female and Male faculty at that rank
 - The gender gap at each rank is the difference in bar heights between Male and Female
@@ -1118,7 +1147,8 @@ ggplot(cell_means, aes(x = rank_f, y = estimate, fill = gender)) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-cat-cat-bars"
-#| eval: false
+#| fig-width: 9
+#| fig-height: 6
 ```
 - `avg_predictions(model_cat, by = c("gender", "rank_f"))` computes predicted means for each of the six gender $\times$ rank cells, along with standard errors and 95% confidence intervals
 - `geom_col(position = position_dodge())` places bars for Male and Female side by side within each rank
@@ -1143,10 +1173,10 @@ anova(model_cat_add, model_cat)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-cat-cat-test"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The `Res.Df` column shows residual degrees of freedom for the additive (larger) and interaction (smaller) models
 - The `RSS` column shows how much unexplained variance remains in each model --- a lower value in the interaction model means the rank-specific gender gaps improve fit
@@ -1157,7 +1187,6 @@ anova(model_cat_add, model_cat)
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-cat-cat-test"
-#| eval: false
 ```
 - The $F$-test compares the additive model (parallel gender gaps) to the interaction model (rank-specific gender gaps)
 - With 2 interaction parameters, this is an $F(2, n-6)$ test
@@ -1165,6 +1194,8 @@ anova(model_cat_add, model_cat)
 
 
 :::
+
+**What the test tells us here.** For these faculty data the interaction is **not statistically significant**: the two interaction coefficients are jointly indistinguishable from zero, $F(2, 508) = 0.901$, $p = 0.41$. In other words, although the predicted gender gap *appears* to differ across ranks in @fig-ch5-cat-cat and @fig-ch5-cat-cat-bars, we do **not** have evidence that the gender salary gap truly varies with rank --- the apparent pattern is well within what sampling noise would produce if the gap were constant. The honest conclusion is to report the simpler **additive model** (a single gender gap, the same at every rank). We still probe the interaction in @sec-ch5-probe-catcat, but purely to illustrate the conditional-comparison machinery, not as evidence that the gap is rank-dependent.
 
 
 ## Continuous by Continuous Interaction {#sec-ch5-cont-cont}
@@ -1202,9 +1233,9 @@ In the interaction model, the "main effect" coefficients $\beta_1$ and $\beta_2$
 | $\beta_2$ | Effect of $x_2$ on $y$ **when $x_1 = 0$** |
 | $\beta_3$ | How much the effect of $x_1$ **changes per unit increase** in $x_2$ (and vice versa) |
 
-::: {.callout-warning}
-## Centering Is Essential
-When $x_2 = 0$ is outside the range of the data, $\beta_1$ has no meaningful interpretation. **Center** both predictors (subtract their means) before creating the interaction term. After centering, $\beta_1$ represents the effect of $x_1$ *at the mean of* $x_2$, and $\beta_2$ represents the effect of $x_2$ *at the mean of* $x_1$.
+::: {.callout-note}
+## Centering Makes the Lower-Order Coefficients Interpretable
+When $x_2 = 0$ is outside the range of the data, $\beta_1$ (the effect of $x_1$ "when $x_2 = 0$") describes an extrapolation and is hard to interpret on its own. **Centering** both predictors --- subtracting their means before forming the product --- fixes this: after centering, $\beta_1$ becomes the effect of $x_1$ *at the mean of* $x_2$, and $\beta_2$ the effect of $x_2$ *at the mean of* $x_1$. Importantly, **centering does not change the interaction coefficient $\beta_3$, the model's fit, or any prediction** --- it only relocates the zero point so the lower-order terms read off at a meaningful value. We fit the worked example below on the *raw* (uncentered) predictors so the coefficients map directly onto the raw-scale equation in @eq-ch5-contcont; Exercise 5.4 reruns the same model on centered predictors so you can see the lower-order coefficients become interpretable while $\beta_3$ stays identical.
 :::
 
 ### Example: Education × Urbanization
@@ -1227,19 +1258,18 @@ model_parameters(model_cont) |> print_md()
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-cont-cont"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- The `high_school` coefficient is the effect of education **when urbanization = 0** (which may or may not be meaningful depending on the data range)
-- The `urbanization` coefficient is the effect of urbanization **when high_school = 0**
+- The `high_school` coefficient is the effect of education **when urbanization = 0** --- meaningful here, since some counties are entirely rural (urbanization reaches 0 in these data)
+- The `urbanization` coefficient is the effect of urbanization **when high_school = 0** --- but note that `high_school` never gets near 0 in these data (it ranges from about 54.5 to 84.9), so this coefficient is an **extrapolation outside the observed range** rather than a directly interpretable effect. Centering `high_school` would shift its zero to the sample mean and make this term interpretable (the interaction coefficient would be unchanged); see Exercise 5.4 for the centered version of this same model
 - The interaction coefficient tells us the rate at which the education slope changes per percentage point increase in urbanization
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-cont-cont"
-#| eval: false
 ```
 - `high_school * urbanization` fits three terms: `high_school`, `urbanization`, and their product `high_school:urbanization`
 - The interaction term `high_school:urbanization` tests whether the slope of education on crime depends on the level of urbanization
@@ -1249,14 +1279,16 @@ model_parameters(model_cont) |> print_md()
 
 :::
 
+**What the interaction term tells us here.** The estimated interaction coefficient is negative --- consistent with education being somewhat more protective in more urbanized counties --- but it is **not statistically significant** ($t \approx -0.97$, $p = 0.34$). We therefore do **not** have evidence that the education--crime slope genuinely changes with urbanization; the simpler additive model would be the one to report. As with the previous two examples, the conditional-slope, response-surface, and Johnson--Neyman displays that follow are used to teach *how to interpret and probe* a continuous $\times$ continuous interaction, not as confirmation that this particular interaction is real.
+
 ### Visualizing the Conditional Slope
 
 ::: {.panel-tabset}
 ### Output
 ```{r}
 #| label: fig-ch5-cont-cont
-#| fig-cap: "How the effect of education on crime changes across levels of urbanization (continuous × continuous interaction). The slope and its 95% confidence band show where the education effect is significantly different from zero."
-#| fig-alt: "Line plot with urbanization on the x-axis and the marginal effect of high school education on crime rate on the y-axis. A solid line shows the conditional slope of education, surrounded by a shaded 95 percent confidence band. At low urbanization the slope is near zero; as urbanization increases the education slope becomes more negative, indicating a stronger crime-reducing effect of education in more urban areas."
+#| fig-cap: "How the effect of education on crime changes across levels of urbanization (continuous × continuous interaction). The slope and its 95% confidence band show where the education effect is statistically distinguishable from zero."
+#| fig-alt: "Line plot with urbanization on the x-axis and the marginal effect of high school education on crime rate on the y-axis. A solid line shows the conditional slope of education, surrounded by a shaded 95 percent confidence band. At low urbanization the slope is near zero; as urbanization increases the point estimate of the education slope becomes more negative; however, the 95 percent confidence band includes zero at every urbanization level, so the education effect is not statistically significant anywhere in this range."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -1273,13 +1305,13 @@ plot_slopes(model_cont,
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-cont-cont"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The line shows the estimated slope of high school education on crime rate at each level of urbanization
-- Where the confidence band lies entirely below zero, increasing education is significantly associated with lower crime
+- In principle, where the confidence band lies entirely below zero increasing education would be significantly associated with lower crime --- but here the band includes zero across the whole urbanization range, so the education effect is non-significant at every level
 - Where the band includes zero, the education-crime relationship is not statistically significant at that urbanization level
 - The direction of the line's slope reveals whether education becomes more or less protective in urban versus rural areas
 - This conditional slope plot is the key diagnostic for continuous $\times$ continuous interactions --- it translates an abstract product term into a substantive story about how one predictor's effect depends on another
@@ -1287,7 +1319,6 @@ plot_slopes(model_cont,
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-cont-cont"
-#| eval: false
 ```
 - `plot_slopes()` visualizes how the marginal effect (slope) of education changes as urbanization varies
 - The confidence band shows where the education slope is significantly different from zero (band excludes the dashed line at zero)
@@ -1305,10 +1336,10 @@ Another powerful way to visualize a continuous $\times$ continuous interaction i
 ### Output
 ```{r}
 #| label: fig-ch5-response-surface
-#| fig-cap: "Response surface heatmap showing predicted crime rate over the (high school education, urbanization) plane. The non-parallel contour lines confirm the interaction: the education-crime relationship changes with urbanization."
-#| fig-alt: "Heatmap with high school education on the x-axis and urbanization on the y-axis, where color intensity represents predicted crime rate. Warmer colors indicate higher predicted crime. Contour lines overlay the surface and are not parallel, confirming the interaction between education and urbanization. Crime is highest in areas with high urbanization and low education, and lowest where education is high and urbanization is low."
+#| fig-cap: "Response surface heatmap showing predicted crime rate over the (high school education, urbanization) plane. The contour lines are slightly non-parallel, reflecting the estimated interaction term --- but that term is not statistically significant (t ≈ -0.97, p = 0.34), so the apparent twist is not strong evidence that the education-crime relationship changes with urbanization."
+#| fig-alt: "Heatmap with high school education on the x-axis and urbanization on the y-axis, where color intensity represents predicted crime rate. Warmer colors indicate higher predicted crime. Contour lines overlay the surface and are slightly non-parallel, reflecting the estimated (but non-significant) interaction between education and urbanization. Crime is highest in areas with high urbanization and low education, and lowest where education is high and urbanization is low."
 #| fig-width: 9
-#| fig-height: 7
+#| fig-height: 6
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -1330,8 +1361,8 @@ ggplot(grid_df, aes(x = high_school, y = urbanization, fill = predicted)) +
   geom_tile() +
   geom_contour(aes(z = predicted), color = "white", linewidth = 0.5, bins = 10) +
   scale_fill_gradient2(
-    low = ber640_colors["accent"], mid = ber640_colors["warning"],
-    high = ber640_colors["secondary"],
+    low = ber640_colors[["accent"]], mid = ber640_colors[["warning"]],
+    high = ber640_colors[["secondary"]],
     midpoint = median(grid_df$predicted),
     name = "Predicted\nCrime Rate"
   ) +
@@ -1343,20 +1374,22 @@ ggplot(grid_df, aes(x = high_school, y = urbanization, fill = predicted)) +
   ) +
   labs(
     title = "Response Surface: Predicted Crime Rate",
-    subtitle = "Non-parallel contours indicate an interaction between education and urbanization",
+    subtitle = "Slightly non-parallel contours reflect the estimated (non-significant) interaction; p = 0.34",
     x = "High School Education (%)",
     y = "Urbanization (%)"
   )
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-response-surface"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 6
 ```
 - The heatmap shows predicted crime rates across the full range of education (x-axis) and urbanization (y-axis)
-- Warmer colors (red) indicate higher predicted crime rates; cooler colors (blue) indicate lower predicted crime rates
+- Warm gold-to-rust fills indicate higher predicted crime rates; muted slate/olive fills indicate lower predicted crime rates
 - The **contour lines** are the key diagnostic: if they are parallel, the effect of education is the same at all levels of urbanization (no interaction); if they are not parallel, the interaction is present
 - The direction of the contour tilt reveals the nature of the interaction: for example, contours that fan out in one direction indicate that the education effect strengthens (or weakens) with urbanization
 - The white data points show the actual observations, revealing any gaps in the predictor space where predictions are extrapolations
@@ -1365,7 +1398,8 @@ ggplot(grid_df, aes(x = high_school, y = urbanization, fill = predicted)) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-response-surface"
-#| eval: false
+#| fig-width: 9
+#| fig-height: 6
 ```
 - `expand.grid()` creates a dense $100 \times 100$ grid spanning the observed range of both predictors
 - `predict()` computes the model-predicted crime rate at each grid point using the fitted interaction model
@@ -1380,24 +1414,45 @@ ggplot(grid_df, aes(x = high_school, y = urbanization, fill = predicted)) +
 
 ### Interactive Exploration: Continuous × Continuous Surface {.unnumbered}
 
-::: {.callout-tip collapse="true"}
+::: {.callout-tip}
 ## Try It: Twist the Prediction Surface
 
-Adjust the interaction coefficient β₃ to see how the prediction surface changes from a flat plane (no interaction) to a twisted surface (interaction present). When β₃ = 0, the effect of X₁ is the same at every level of X₂.
+Start by dragging the **β₃ (interaction X₁×X₂) slider** to see how the prediction surface changes from a flat plane (no interaction) to a twisted surface (interaction present). When β₃ = 0, the effect of X₁ is the same at every level of X₂. Then use the **β₁ and β₂ sliders** to set the two main effects, and switch the **View radio** (Surface / Slopes vs X₁ / Slopes vs X₂) to see the twist as either a heatmap or a fan of non-parallel conditional slopes; **Reset** returns every control to its starting value. We simulate the surface from a known equation rather than fitting real data because demonstrating how β₃ alone twists the plane requires counterfactual control over each coefficient — holding the truth fixed while you vary one term at a time — which no single observed dataset can give you.
 :::
 
 ```{ojs}
 //| echo: false
-import { ber640 as contsurf_ber640, plotDefaults as contsurf_plotDefaults, themeColors as contsurf_themeColors, seq as contsurf_seq, formatCoef as contsurf_formatCoef, withAlpha as contsurf_withAlpha } from "../ojs/shared.js"
+import { ber640 as contsurf_ber640, plotDefaults as contsurf_plotDefaults, themeColors as contsurf_themeColors, onThemeChange as contsurf_onThemeChange, seq as contsurf_seq, formatCoef as contsurf_formatCoef, withAlpha as contsurf_withAlpha, srSummary as contsurf_srSummary, resetControls as contsurf_resetControls } from "../ojs/shared.js"
+```
 
-contsurf_tc = contsurf_themeColors()
+```{ojs}
+//| echo: false
+contsurf_theme = contsurf_themeColors()
+```
+
+```{ojs}
+//| echo: false
+contsurf_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
 
 ```{ojs}
 //| echo: false
 viewof contsurf_beta1 = Inputs.range([-2, 2], {label: "β₁ (effect of X₁)", step: 0.1, value: 1.0})
+```
+
+```{ojs}
+//| echo: false
 viewof contsurf_beta2 = Inputs.range([-2, 2], {label: "β₂ (effect of X₂)", step: 0.1, value: 0.5})
+```
+
+```{ojs}
+//| echo: false
 viewof contsurf_beta3 = Inputs.range([-1, 1], {label: "β₃ (interaction X₁×X₂)", step: 0.05, value: 0})
+```
+
+```{ojs}
+//| echo: false
+viewof contsurf_view = Inputs.radio(["Surface", "Slopes vs X₁", "Slopes vs X₂"], {label: "View", value: "Surface"})
 ```
 
 ```{ojs}
@@ -1409,13 +1464,19 @@ contsurf_predict = function(x1, x2) {
   return contsurf_intercept + contsurf_beta1 * x1 + contsurf_beta2 * x2 + contsurf_beta3 * x1 * x2;
 }
 
-contsurf_gridVals = contsurf_seq(-3, 3, 30)
+contsurf_gridEdges = contsurf_seq(-3, 3, 31)
 
 contsurf_surfaceData = {
   const data = [];
-  for (const x1 of contsurf_gridVals) {
-    for (const x2 of contsurf_gridVals) {
-      data.push({x1: x1, x2: x2, yhat: contsurf_predict(x1, x2)});
+  for (let i = 0; i < contsurf_gridEdges.length - 1; i++) {
+    const x1_min = contsurf_gridEdges[i];
+    const x1_max = contsurf_gridEdges[i + 1];
+    const x1 = (x1_min + x1_max) / 2;
+    for (let j = 0; j < contsurf_gridEdges.length - 1; j++) {
+      const x2_min = contsurf_gridEdges[j];
+      const x2_max = contsurf_gridEdges[j + 1];
+      const x2 = (x2_min + x2_max) / 2;
+      data.push({x1, x2, x1_min, x1_max, x2_min, x2_max, yhat: contsurf_predict(x1, x2)});
     }
   }
   return data;
@@ -1438,6 +1499,7 @@ contsurf_equationStr = {
 contsurf_condColors = [contsurf_ber640.primary, contsurf_ber640.accent, contsurf_ber640.secondary]
 contsurf_condLabels = ["-2", "0", "+2"]
 contsurf_condVals = [-2, 0, 2]
+contsurf_condDashes = ["6,4", "none", "2,3"]
 
 contsurf_slopeX1Data = {
   const data = [];
@@ -1463,109 +1525,155 @@ contsurf_slopeX2Data = {
   return data;
 }
 
-html`<div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
-  <span style="font-size:1.1rem; font-family:var(--font-mono,monospace); color:${contsurf_tc.text};">${contsurf_equationStr}</span>
-  <span style="padding:0.2rem 0.7rem; border-radius:1rem; font-size:0.85rem; font-weight:600; background:${contsurf_hasInteraction ? contsurf_ber640.warning : contsurf_ber640.success}; color:#fff;">
-    ${contsurf_hasInteraction ? "Interaction Present" : "No Interaction"}
-  </span>
-</div>`
-```
-
-```{ojs}
-//| echo: false
-
-contsurf_heatmap = {
-  return Plot.plot(contsurf_plotDefaults({
-    title: "Predicted Ŷ Surface",
-    width: 520,
-    height: 460,
-    marginLeft: 50,
-    marginBottom: 45,
-    x: {label: "X₁", domain: [-3, 3]},
-    y: {label: "X₂", domain: [-3, 3]},
-    color: {
-      type: "diverging",
-      scheme: "RdBu",
-      reverse: true,
-      domain: [contsurf_yRange[0], contsurf_yRange[1]],
-      pivot: (contsurf_yRange[0] + contsurf_yRange[1]) / 2,
-      legend: true,
-      label: "Ŷ"
-    },
-    marks: [
-      Plot.cell(contsurf_surfaceData, {
-        x: "x1",
-        y: "x2",
-        fill: "yhat"
-      }),
-      Plot.frame({stroke: contsurf_tc.muted})
-    ]
-  }));
-}
-
-contsurf_heatmap
-```
-
-```{ojs}
-//| echo: false
-
 contsurf_condYRange = {
   const allY = [...contsurf_slopeX1Data.map(d => d.yhat), ...contsurf_slopeX2Data.map(d => d.yhat)];
   return [d3.min(allY), d3.max(allY)];
 }
+```
 
-contsurf_plotLeft = {
-  return Plot.plot(contsurf_plotDefaults({
-    title: "Conditional Slopes: Ŷ vs X₁",
-    subtitle: "at X₂ = -2, 0, +2",
-    width: 360,
-    height: 280,
-    marginLeft: 50,
-    marginBottom: 40,
-    x: {label: "X₁", domain: [-3, 3]},
-    y: {label: "Ŷ", domain: contsurf_condYRange},
-    color: {
-      domain: [`X₂ = -2`, `X₂ = 0`, `X₂ = +2`],
-      range: contsurf_condColors,
-      legend: true
-    },
-    marks: [
-      Plot.ruleY([contsurf_intercept], {stroke: contsurf_tc.muted, strokeDasharray: "3,3"}),
-      Plot.line(contsurf_slopeX1Data, {x: "x", y: "yhat", stroke: "group", strokeWidth: 2.5}),
-      Plot.frame({stroke: contsurf_tc.muted})
-    ]
-  }));
+```{ojs}
+//| echo: false
+contsurf_dashFor = (group) => {
+  if (group.endsWith("-2")) return contsurf_condDashes[0];
+  if (group.endsWith("+2")) return contsurf_condDashes[2];
+  return contsurf_condDashes[1];
 }
 
-contsurf_plotRight = {
-  return Plot.plot(contsurf_plotDefaults({
-    title: "Conditional Slopes: Ŷ vs X₂",
-    subtitle: "at X₁ = -2, 0, +2",
-    width: 360,
-    height: 280,
-    marginLeft: 50,
-    marginBottom: 40,
-    x: {label: "X₂", domain: [-3, 3]},
-    y: {label: "Ŷ", domain: contsurf_condYRange},
-    color: {
-      domain: [`X₁ = -2`, `X₁ = 0`, `X₁ = +2`],
-      range: contsurf_condColors,
-      legend: true
-    },
-    marks: [
-      Plot.ruleY([contsurf_intercept], {stroke: contsurf_tc.muted, strokeDasharray: "3,3"}),
-      Plot.line(contsurf_slopeX2Data, {x: "x", y: "yhat", stroke: "group", strokeWidth: 2.5}),
-      Plot.frame({stroke: contsurf_tc.muted})
-    ]
-  }));
+contsurf_endLabels = (data) => {
+  const out = [];
+  for (let i = 0; i < contsurf_condVals.length; i++) {
+    const pts = data.filter(d => d.group.endsWith(contsurf_condLabels[i]));
+    const last = pts[pts.length - 1];
+    if (last) out.push({x: last.x, yhat: last.yhat, group: last.group});
+  }
+  return out;
 }
 
-html`<div style="display:flex; gap:1.5rem; flex-wrap:wrap; justify-content:center;">
-  <div>${contsurf_plotLeft}</div>
-  <div>${contsurf_plotRight}</div>
+contsurf_surfaceStops = [
+  "#4EA3C8",
+  "#D8D2C2",
+  "#D97852"
+]
+
+contsurf_surfaceColor = {
+  const [lo, hi] = contsurf_yRange;
+  const mid = (lo + hi) / 2;
+  const lowRamp = d3.interpolateRgb(contsurf_surfaceStops[0], contsurf_surfaceStops[1]);
+  const highRamp = d3.interpolateRgb(contsurf_surfaceStops[1], contsurf_surfaceStops[2]);
+  return function(y) {
+    if (hi === lo) return contsurf_surfaceStops[1];
+    if (y <= mid) return lowRamp((y - lo) / Math.max(mid - lo, 1e-9));
+    return highRamp((y - mid) / Math.max(hi - mid, 1e-9));
+  };
+}
+
+contsurf_surfaceLegend = {
+  const [lo, hi] = contsurf_yRange;
+  const mid = (lo + hi) / 2;
+  return html`<div style="width:min(600px,100%);margin:6px auto 0;color:var(--ojs-text, ${contsurf_theme.text});font-size:0.78rem;line-height:1.25;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;font-weight:600;">
+      <span>${contsurf_formatCoef(lo, 1)}</span>
+      <span>Predicted Ŷ</span>
+      <span>${contsurf_formatCoef(hi, 1)}</span>
+    </div>
+    <div aria-hidden="true" style="height:12px;border:1px solid var(--ojs-border, ${contsurf_theme.muted});border-radius:3px;background:linear-gradient(90deg, ${contsurf_surfaceStops[0]} 0%, ${contsurf_surfaceStops[1]} 50%, ${contsurf_surfaceStops[2]} 100%);"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:3px;color:var(--ojs-text-muted, ${contsurf_theme.muted});">
+      <span>Lower</span><span>Midpoint ${contsurf_formatCoef(mid, 1)}</span><span>Higher</span>
+    </div>
+  </div>`;
+}
+
+contsurf_slopePlot = (data, xLabel) => Plot.plot(contsurf_plotDefaults({
+  width: 600, height: 340,
+  marginTop: 24, marginBottom: 40, marginLeft: 55, marginRight: 80,
+  style: { color: "var(--ojs-text, " + contsurf_theme.text + ")" },
+  x: {label: xLabel, domain: [-3, 3.6], grid: true},
+  y: {label: "Ŷ", domain: contsurf_condYRange, grid: true},
+  color: {
+    domain: data === contsurf_slopeX1Data ? [`X₂ = -2`, `X₂ = 0`, `X₂ = +2`] : [`X₁ = -2`, `X₁ = 0`, `X₁ = +2`],
+    range: contsurf_condColors,
+    legend: false
+  },
+  marks: [
+    Plot.ruleY([contsurf_intercept], {stroke: "var(--ojs-text-muted, " + contsurf_theme.muted + ")", strokeDasharray: "3,3"}),
+    Plot.line(data, {x: "x", y: "yhat", z: "group", stroke: "group", strokeWidth: 2.5,
+      strokeDasharray: d => contsurf_dashFor(d.group)}),
+    Plot.text(contsurf_endLabels(data), {x: "x", y: "yhat", text: "group", fill: "group",
+      textAnchor: "start", dx: 6, fontWeight: 600, fontSize: 11}),
+    Plot.frame({stroke: "var(--ojs-border, " + contsurf_theme.muted + ")"})
+  ]
+}))
+
+contsurf_heatmap = Plot.plot(contsurf_plotDefaults({
+  width: 600, height: 360,
+  marginTop: 24, marginLeft: 55, marginBottom: 45, marginRight: 16,
+  style: { color: "var(--ojs-text, " + contsurf_theme.text + ")" },
+  x: {label: "X₁", domain: [-3, 3], grid: true},
+  y: {label: "X₂", domain: [-3, 3], grid: true},
+  marks: [
+    Plot.rect(contsurf_surfaceData, {
+      x1: "x1_min", x2: "x1_max", y1: "x2_min", y2: "x2_max",
+      fill: d => contsurf_surfaceColor(d.yhat),
+      stroke: "none"
+    }),
+    Plot.frame({stroke: "var(--ojs-border, " + contsurf_theme.muted + ")"})
+  ]
+}))
+
+contsurf_plot = contsurf_view === "Surface"
+  ? contsurf_heatmap
+  : contsurf_view === "Slopes vs X₁"
+    ? contsurf_slopePlot(contsurf_slopeX1Data, "X₁", "X₂")
+    : contsurf_slopePlot(contsurf_slopeX2Data, "X₂", "X₁")
+```
+
+```{ojs}
+//| echo: false
+contsurf_reset = contsurf_resetControls([
+  { input: viewof contsurf_beta1, value: 1.0 },
+  { input: viewof contsurf_beta2, value: 0.5 },
+  { input: viewof contsurf_beta3, value: 0 },
+  { input: viewof contsurf_view,  value: "Surface" }
+], { label: "Reset" })
+```
+
+```{ojs}
+//| echo: false
+contsurf_readouts = html`<div class="ojs-readouts">
+  ${contsurf_pill("β₃ (interaction)", contsurf_beta3.toFixed(2), contsurf_hasInteraction ? "warning" : "info")}
+  ${contsurf_pill("Surface", contsurf_hasInteraction ? "Twisted" : "Flat plane", contsurf_hasInteraction ? "warning" : "good")}
+  ${contsurf_pill("Ŷ range", `${contsurf_formatCoef(contsurf_yRange[0], 1)} … ${contsurf_formatCoef(contsurf_yRange[1], 1)}`, "info")}
 </div>`
 ```
 
+```{ojs}
+//| echo: false
+contsurf_sr = contsurf_srSummary("ch05-surface",
+  `Prediction surface for ${contsurf_equationStr}. Interaction coefficient beta3 is ${contsurf_beta3.toFixed(2)}, so the surface is ${contsurf_hasInteraction ? "twisted (the slope of X1 changes across X2)" : "a flat plane (the slope of X1 is constant across X2)"}. Predicted Y ranges from ${contsurf_formatCoef(contsurf_yRange[0], 1)} to ${contsurf_formatCoef(contsurf_yRange[1], 1)}. Showing ${contsurf_view}.`)
+```
+
+```{ojs}
+//| echo: false
+contsurf_app = html`<div class="ojs-app" role="group" aria-label="Continuous by continuous interaction surface">
+  <div class="ojs-controls">${viewof contsurf_beta1}${viewof contsurf_beta2}${viewof contsurf_beta3}<div class="ojs-control-group" style="flex:0 0 auto;">${viewof contsurf_view}${contsurf_reset}</div></div>
+  <div class="ojs-equation">
+    <span style="font-family:var(--font-mono,monospace);">${contsurf_equationStr}</span>
+    <span style="margin-left:1rem; padding:0.15rem 0.7rem; border-radius:1rem; font-size:0.85rem; font-weight:600; background:${contsurf_hasInteraction ? contsurf_ber640.warning : contsurf_ber640.success}; color:#fff;">${contsurf_hasInteraction ? "Interaction Present" : "No Interaction"}</span>
+  </div>
+  ${contsurf_readouts}
+  <div class="ojs-plot">${contsurf_plot}</div>
+  ${contsurf_view === "Surface" ? contsurf_surfaceLegend : ""}
+  ${contsurf_sr}
+</div>`
+```
+
+::: {.callout-note}
+## What you should have seen
+
+- With β₃ = 0 the surface is a flat tilted plane and the conditional-slope views show parallel lines — the effect of X₁ does not depend on X₂.
+- Turning β₃ away from zero twists the surface and fans the conditional slopes apart: the slope of X₁ now changes across levels of X₂ (and symmetrically, the slope of X₂ changes across X₁).
+- The magnitude and sign of β₃ control how sharply the plane twists; β₁ and β₂ only tilt the plane and never create this dependence on their own.
+:::
 
 ## Probing Interactions {#sec-ch5-probing}
 
@@ -1603,12 +1711,12 @@ slopes_by_school
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-probe-contcat"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- The Battersea row gives $\hat{\beta}_1$ --- the LRT slope for the reference group
+- The Hackney row gives $\hat{\beta}_1$ --- the LRT slope for the reference group
 - The Chelsea row gives $\hat{\beta}_1 + \hat{\beta}_3$ --- the LRT slope for Chelsea
 - The difference between the two estimates equals the interaction coefficient $\hat{\beta}_3$
 - If both *p*-values are significant, LRT predicts GCSE in both schools, but potentially at different rates
@@ -1617,7 +1725,6 @@ slopes_by_school
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-probe-contcat"
-#| eval: false
 ```
 - `variables = "lrt"` specifies the predictor whose slope we want
 - `by = "school_name"` tells `avg_slopes()` to compute the slope **separately** for each school
@@ -1633,14 +1740,14 @@ We can visualize these conditional slopes directly using `plot_slopes()`:
 ### Output
 ```{r}
 #| label: fig-ch5-probe-contcat
-#| fig-cap: "Conditional slopes of LRT on GCSE by school. Both slopes are positive, but the Chelsea slope is steeper, indicating that high-LRT students benefit more in Chelsea."
-#| fig-alt: "Dot-and-whisker plot showing the conditional slope of LRT on GCSE for each school. The x-axis shows the estimated slope and the y-axis lists the two schools. Both point estimates are positive with 95 percent confidence intervals. The Chelsea slope is noticeably steeper than the Battersea slope, indicating that each unit increase in LRT is associated with a larger GCSE gain in Chelsea."
+#| fig-cap: "Conditional slopes of LRT on GCSE by school. Both slopes are positive, but the Chelsea slope is steeper, so the fitted LRT–GCSE association is estimated to be somewhat stronger in Chelsea (the slope difference is not statistically significant, and these data are observational)."
+#| fig-alt: "Dot-and-whisker plot showing the conditional slope of LRT on GCSE for each school. The x-axis lists the two schools (Hackney, Chelsea) and the y-axis shows the estimated slope of LRT on GCSE, drawn as vertical 95 percent confidence intervals. Both point estimates are positive; the Chelsea point sits higher (steeper slope) than the Hackney point, though the confidence intervals overlap, so each unit increase in LRT is associated with a somewhat larger GCSE gain in Chelsea than in Hackney."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 plot_slopes(model_interact, variables = "lrt", by = "school_name") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
-  scale_color_manual(values = c(ber640_colors["primary"], ber640_colors["accent"])) +
+  scale_color_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]])) +
   labs(
     title = "Conditional Slopes of LRT by School",
     subtitle = "How does the LRT-GCSE relationship differ between schools?",
@@ -1650,10 +1757,10 @@ plot_slopes(model_interact, variables = "lrt", by = "school_name") +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-probe-contcat"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - Each point represents the estimated LRT slope for one school, with error bars showing the 95% confidence interval
 - Both slopes should be positive (higher LRT is associated with higher GCSE), but the magnitude may differ
@@ -1664,7 +1771,6 @@ plot_slopes(model_interact, variables = "lrt", by = "school_name") +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-probe-contcat"
-#| eval: false
 ```
 - `plot_slopes()` creates a point-and-interval plot showing the estimated slope and its 95% confidence interval for each school
 - The dashed line at zero is a visual reference --- slopes above this line indicate a positive LRT effect
@@ -1675,7 +1781,7 @@ plot_slopes(model_interact, variables = "lrt", by = "school_name") +
 
 ::: {.callout-tip}
 ## Reporting Probed Interactions
-When reporting probed interactions, be specific about the conditional effects. For example: "For students in Battersea, each additional point on the LRT is associated with a 0.30-point increase in GCSE ($p < .001$). For students in Chelsea, the corresponding increase is 0.54 points ($p < .001$). The difference in slopes (0.24) is the interaction effect, indicating that Chelsea is more effective at translating prior achievement into exam performance."
+When reporting probed interactions, be specific about the conditional effects and honest about the uncertainty in the slope difference. For example: "For students in Hackney, each additional point on the LRT is associated with a 0.30-point increase in GCSE ($p = .02$). For students in Chelsea, the corresponding increase is 0.54 points ($p < .001$). The difference in slopes ($b_3 = 0.24$) is the interaction effect; however, this difference is not statistically significant ($F(1, 126) = 2.36$, $p = .13$), so we do not have strong evidence that the LRT-GCSE relationship differs between the two schools."
 :::
 
 
@@ -1700,10 +1806,10 @@ comparisons_by_rank
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-probe-catcat"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - Each row reports the estimated gender salary gap (Male $-$ Female) at one academic rank
 - A positive estimate means male faculty earn more than female faculty at that rank; a negative estimate means the reverse
@@ -1714,7 +1820,6 @@ comparisons_by_rank
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-probe-catcat"
-#| eval: false
 ```
 - `variables = "gender"` specifies the contrast we want (Male $-$ Female)
 - `by = "rank_f"` computes this gender comparison **separately at each rank**
@@ -1749,10 +1854,10 @@ cell_means_probed |>
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-probe-catcat-means"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The table displays six predicted mean salaries --- one for each gender $\times$ rank cell
 - Within each rank, the difference between Male and Female predicted salaries is the gender gap at that rank
@@ -1763,7 +1868,6 @@ cell_means_probed |>
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-probe-catcat-means"
-#| eval: false
 ```
 - `avg_predictions()` with `by = c("gender", "rank_f")` computes the predicted salary for every combination of the two categorical variables
 - These are the **cell means** of the $2 \times 3$ factorial design
@@ -1777,15 +1881,15 @@ cell_means_probed |>
 ### Output
 ```{r}
 #| label: fig-ch5-probe-catcat
-#| fig-cap: "Conditional gender comparisons by rank. The point estimates and 95% confidence intervals show how the gender salary gap varies across academic ranks."
-#| fig-alt: "Dot-and-whisker plot with academic rank on the y-axis and the estimated gender difference in salary on the x-axis. Each rank has a point estimate with a horizontal 95 percent confidence interval. The plot shows how the magnitude of the gender salary gap varies across assistant, associate, and full professor ranks, with the largest estimated gap at the full professor level."
+#| fig-cap: "Conditional gender comparisons by rank. The point estimates and 95% confidence intervals show the estimated gender salary gap at each rank; the differences among ranks are not statistically significant (interaction F(2, 508) = 0.901, p = 0.41), so this plot illustrates the probing tools rather than a confirmed rank-dependent gap."
+#| fig-alt: "Dot-and-whisker plot with academic rank on the x-axis and the estimated Male-minus-Female salary difference on the y-axis. Each rank has a point estimate with a vertical 95 percent confidence interval. The plot shows how the magnitude of the gender salary gap varies across assistant, associate, and full professor ranks, with the largest estimated gap at the full professor level."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 plot_comparisons(model_cat, variables = "gender", by = "rank_f") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
-  scale_color_manual(values = c(ber640_colors["primary"], ber640_colors["secondary"],
-                                ber640_colors["accent"])) +
+  scale_color_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]],
+                                ber640_colors[["accent"]])) +
   labs(
     title = "Gender Salary Gap by Academic Rank",
     subtitle = "Conditional comparisons from the interaction model",
@@ -1795,10 +1899,10 @@ plot_comparisons(model_cat, variables = "gender", by = "rank_f") +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-probe-catcat"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - Each point represents the estimated salary difference (Male $-$ Female) at a given academic rank, with 95% confidence intervals
 - Points above the dashed zero line indicate ranks where male faculty earn more than female faculty; points below indicate the reverse
@@ -1809,7 +1913,6 @@ plot_comparisons(model_cat, variables = "gender", by = "rank_f") +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-probe-catcat"
-#| eval: false
 ```
 - `plot_comparisons()` visualizes the gender salary gap at each rank as a point-and-interval plot
 - If the confidence interval includes zero for a particular rank, the gender gap is not statistically significant at that rank
@@ -1831,7 +1934,9 @@ When both variables are continuous, there is no natural set of groups to compare
 #| code-summary: "Show R Code"
 
 # Slope of education at specific urbanization levels
-slopes_at_urban <- avg_slopes(
+# Use slopes() (not avg_slopes()) so we get one slope PER urbanization
+# value; avg_slopes() would average the three rows into a single number.
+slopes_at_urban <- slopes(
   model_cont,
   variables = "high_school",
   newdata = datagrid(urbanization = c(25, 50, 75))
@@ -1840,22 +1945,21 @@ slopes_at_urban
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-probe-contcont"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-- Each row in the output corresponds to one urbanization level (25%, 50%, 75%)
-- The `estimate` column gives the conditional slope of education on crime at that urbanization level
-- If the slope is negative at low urbanization but becomes less negative (or positive) at high urbanization, it means education's protective effect weakens in more urban areas
-- The `p.value` column indicates whether the education effect is statistically significant at each urbanization level --- some slopes may be significant while others are not
-- The difference between slopes at adjacent urbanization levels is proportional to $\beta_3$, the interaction coefficient
+- The output has **one row per urbanization value** (25%, 50%, 75%); the `urbanization` column labels each row
+- The `estimate` column gives the conditional slope of education on crime at that urbanization level. Here the three education slopes are roughly $-0.27$ at urbanization 25, $-0.57$ at 50, and $-0.87$ at 75 --- the slope grows *more negative* as urbanization rises, consistent with education being more protective in more urban counties
+- The `p.value` column indicates whether the education effect is statistically significant at each urbanization level --- in this example none of the three slopes reaches significance (recall the overall interaction is itself non-significant)
+- The slopes change by a constant amount per equal step in urbanization: each $+25$ points of urbanization moves the slope by $25 \beta_3 \approx -0.30$, so the difference between adjacent rows is proportional to $\beta_3$, the interaction coefficient
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-probe-contcont"
-#| eval: false
 ```
+- `slopes()` reports a separate slope for **each row of `newdata`**, giving us three rows here; this is the key difference from `avg_slopes()`, which would *average* those three slopes into a single number and hide the pattern. (Equivalently, `avg_slopes(model_cont, variables = "high_school", by = "urbanization", newdata = datagrid(urbanization = c(25, 50, 75)))` produces the same three rows.)
 - `variables = "high_school"` requests the slope of education on crime
 - `newdata = datagrid(urbanization = c(25, 50, 75))` specifies three urbanization levels at which to evaluate the slope
 - Each row answers: "At this level of urbanization, what is the estimated effect of a one-percentage-point increase in high school education on the crime rate?"
@@ -1868,8 +1972,8 @@ slopes_at_urban
 ### Output
 ```{r}
 #| label: fig-ch5-probe-contcont
-#| fig-cap: "The slope of education on crime as a function of urbanization. The confidence band shows where the education effect is statistically significant."
-#| fig-alt: "Line plot with urbanization on the x-axis and the marginal slope of education on crime on the y-axis. A diagonal line shows the conditional education slope decreasing from near zero to strongly negative as urbanization increases. A shaded 95 percent confidence band surrounds the line, and a horizontal reference line at zero helps identify the range of urbanization values where the education effect is statistically significant."
+#| fig-cap: "The slope of education on crime as a function of urbanization. The 95% confidence band includes zero at every urbanization level, so the education effect is not statistically significant anywhere in the observed range."
+#| fig-alt: "Line plot with urbanization on the x-axis and the marginal slope of education on crime on the y-axis. A diagonal line shows the conditional education slope decreasing from near zero to strongly negative as urbanization increases. A shaded 95 percent confidence band surrounds the line and includes the horizontal zero reference line at every urbanization value, so there is no range where the education effect is statistically significant."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -1888,13 +1992,13 @@ plot_slopes(
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-probe-contcont"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The line shows how the marginal effect of high school education on crime changes continuously as urbanization increases
-- Where the confidence band lies entirely below zero, education has a statistically significant *negative* effect on crime (more education is associated with lower crime)
+- In this plot the confidence band includes zero across the entire urbanization range, so the education effect is not statistically significant at any level (the band never lies entirely below zero), consistent with the non-significant overall interaction
 - Where the band crosses the dashed zero line, the education effect is not statistically distinguishable from zero at the 95% level
 - The slope of this line equals $\beta_3$, the interaction coefficient --- a steeper line indicates a stronger interaction
 - This plot is the continuous-moderator analog of the discrete slope comparisons in the continuous $\times$ categorical case
@@ -1902,18 +2006,19 @@ plot_slopes(
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-probe-contcont"
-#| eval: false
 ```
 - `plot_slopes()` with `condition = "urbanization"` draws a continuous line showing the slope of education at every value of urbanization, with a confidence band
 - The dashed line at zero marks the point where the education effect is neither positive nor negative
-- The urbanization value where the confidence band crosses zero is the point at which education no longer has a significant effect on crime
+- The urbanization value where the confidence band crosses zero is the point at which the education slope changes statistical-significance status
 
 
 :::
 
 ::: {.callout-note}
 ## The Johnson-Neyman Technique
-The crossing point where the slope of one variable becomes non-significant is sometimes called the **Johnson-Neyman point** or the boundary of the **region of significance**. It answers: "For what range of the moderator is the focal predictor's effect statistically significant?" The plot below implements this technique using `plot_slopes()` data and custom `ggplot2` code to highlight the significance regions.
+The crossing point where the confidence interval for a conditional slope first includes or excludes zero is sometimes called the **Johnson-Neyman point** or the boundary of the **region of significance**. It answers: "For what range of the moderator is the focal predictor's effect statistically distinguishable from zero?" The plot below implements this technique using `plot_slopes()` data and custom `ggplot2` code to highlight the significance regions.
+
+**Read the boundary carefully.** The J-N point is the moderator value where the *confidence interval* for the conditional slope touches zero --- **not** the value where the slope itself equals zero, and **not** a threshold at which the effect "starts to matter" in any causal sense. It marks a transition in *statistical significance*, which depends on the sample size and standard errors as much as on the underlying effect. And because the overall interaction in this example is **not statistically significant**, the J-N regions below are **exploratory and illustrative** --- a way to teach how the technique works --- not substantive evidence that the education effect genuinely switches on or off at a particular urbanization level. With observational data especially, "regions of statistical significance" are not "regions of causal effect."
 :::
 
 ### Johnson-Neyman Plot
@@ -1924,8 +2029,8 @@ The Johnson-Neyman (J-N) plot provides a precise visual answer to the question: 
 ### Output
 ```{r}
 #| label: fig-ch5-jn-plot
-#| fig-cap: "Johnson-Neyman plot: the conditional effect of high school education on crime rate across values of urbanization. The shaded blue region marks where the effect is statistically significant (95% CI excludes zero). The dashed line at zero indicates no effect."
-#| fig-alt: "Johnson-Neyman plot with urbanization on the x-axis and the conditional effect of high school education on crime rate on the y-axis. A solid line shows the point estimate of the education slope across urbanization values, flanked by 95 percent confidence interval lines. A shaded blue region highlights the range of urbanization where the confidence interval excludes zero, indicating statistical significance. A horizontal dashed line at zero serves as the reference for no effect."
+#| fig-cap: "Johnson-Neyman plot: the conditional effect of high school education on crime rate across values of urbanization. Here the 95% CI for the slope includes zero at every urbanization value, so there is no significant region to shade --- the band stays grey across the whole range. The dashed line at zero indicates no effect."
+#| fig-alt: "Johnson-Neyman plot with urbanization on the x-axis and the conditional effect of high school education on crime rate on the y-axis. A solid line shows the point estimate of the education slope across urbanization values, surrounded by a 95 percent confidence band. The band includes zero at every urbanization value, so no significant region is shaded and the band stays grey throughout. A horizontal dashed line at zero serves as the reference for no effect."
 #| fig-width: 9
 #| fig-height: 6
 #| code-fold: true
@@ -1950,7 +2055,7 @@ ggplot(jn_data, aes(x = urbanization, y = estimate)) +
   geom_ribbon(
     data = filter(jn_data, significant),
     aes(ymin = conf.low, ymax = conf.high),
-    fill = ber640_colors["accent"], alpha = 0.25
+    fill = ber640_colors[["accent"]], alpha = 0.25
   ) +
   # Non-significant region (lighter)
   geom_ribbon(
@@ -1959,9 +2064,9 @@ ggplot(jn_data, aes(x = urbanization, y = estimate)) +
     fill = "grey80", alpha = 0.4
   ) +
   # Conditional slope line
-  geom_line(linewidth = 1.2, color = ber640_colors["primary"]) +
+  geom_line(linewidth = 1.2, color = ber640_colors[["primary"]]) +
   # Zero reference line
-  geom_hline(yintercept = 0, linetype = "dashed", color = ber640_colors["secondary"],
+  geom_hline(yintercept = 0, linetype = "dashed", color = ber640_colors[["secondary"]],
              linewidth = 0.7) +
   # Labels
   labs(
@@ -1971,33 +2076,40 @@ ggplot(jn_data, aes(x = urbanization, y = estimate)) +
     y = "Conditional Slope of Education on Crime Rate"
   ) +
   annotate("text", x = max(jn_data$urbanization) * 0.95,
-           y = min(jn_data$estimate) * 0.7,
-           label = "Blue = Significant region\nGrey = Non-significant region",
+           y = min(jn_data$estimate) * 0.45,
+           label = if (any(jn_data$significant)) {
+             "Shaded (slate) = Significant region\nGrey = Non-significant region"
+           } else {
+             "No significant region:\n95% CI includes zero at all urbanization levels"
+           },
            hjust = 1, size = 3.5, color = "grey30", fontface = "italic")
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch5-jn-plot"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 6
 ```
-- The **blue shaded region** indicates urbanization values where the education effect on crime is statistically significant at the 95% level
-- The **grey shaded region** indicates urbanization values where the education effect is not distinguishable from zero
-- The boundary between blue and grey is the **Johnson-Neyman point** --- the precise moderator value at which the focal predictor's effect transitions between significance and non-significance
-- If the line slopes downward (education becomes more protective at higher urbanization), the significant region may be concentrated at higher urbanization levels
-- This plot provides a more informative answer than simply testing the interaction: it tells us *exactly where* and *for whom* the education effect matters
+- A shaded coloured region would mark urbanization values where the education slope is statistically distinguishable from zero at the 95% level --- but here no such region appears, because the 95% CI includes zero at every urbanization value
+- The **grey shaded band** spans the entire plot, indicating that the education effect is not distinguishable from zero at any urbanization value
+- A **Johnson-Neyman point** would appear where the band's boundary touches zero, marking the moderator value at which significance changes --- but no such crossing falls within the plotted urbanization range here, so no boundary is shown
+- If the line slopes downward (education becomes more protective at higher urbanization), any statistically significant region may be concentrated at higher urbanization levels
+- This plot provides a more detailed statistical answer than simply testing the interaction: it identifies where the conditional-slope confidence interval excludes zero, not where an effect "matters" causally or substantively
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-jn-plot"
-#| eval: false
+#| fig-width: 9
+#| fig-height: 6
 ```
 - `plot_slopes(..., draw = FALSE)` extracts the slopes data as a data frame instead of drawing a plot, giving us full control over the visualization
 - `significant` is a logical column indicating whether the 95% CI excludes zero at each urbanization value
-- `geom_ribbon()` is used twice: once with blue shading for the significant region and once with grey shading for the non-significant region
+- `geom_ribbon()` is used twice: once with slate shading for the significant region and once with grey shading for the non-significant region
 - `geom_line()` draws the conditional slope (the marginal effect of education) as a function of urbanization
-- `geom_hline(yintercept = 0)` marks the threshold --- where the slope crosses zero, education has no effect on crime
+- `geom_hline(yintercept = 0)` marks the zero-effect reference line for the conditional slope
 - The Johnson-Neyman point(s) are where the confidence band boundary touches zero, separating significant from non-significant regions
 
 
@@ -2005,22 +2117,39 @@ ggplot(jn_data, aes(x = urbanization, y = estimate)) +
 
 ### Interactive Exploration: Johnson-Neyman Region {.unnumbered}
 
-::: {.callout-tip collapse="true"}
+::: {.callout-tip}
 ## Try It: Find Where the Effect is Significant
 
-Adjust the interaction coefficient to see how the Johnson-Neyman region changes. The blue-shaded area shows moderator values where the focal predictor's effect is statistically significant at α = 0.05. The gray-shaded area shows where the effect is not significant.
+This app has three sliders. First drag the **Interaction β₃ slider** to see how the Johnson-Neyman region changes; the **Main effect β₁ slider** shifts the conditional-effect line up or down (the two together determine where the confidence band excludes zero). The **Moderator W slider** does *not* reshape the region — it only slides the highlighted readout dot along the curve so you can inspect θ, its SE, test statistic, and p-value at one chosen W; **Reset** restores all three. The blue-shaded area shows moderator values where the focal predictor's effect is statistically distinguishable from zero at α = 0.05, and the gray-shaded area shows where it is not. For interactive speed, the app uses the 1.96 normal-approximation cutoff and normal-approximation p-values; fitted-model Johnson-Neyman tests typically use a t critical value based on the model's degrees of freedom. We simulate from a known model with fixed coefficient variances rather than a real dataset because the Johnson-Neyman boundary requires a known truth and counterfactual control over β₁ and β₃ — letting you watch the region of significance form — which a single observed sample cannot provide.
 :::
 
 ```{ojs}
 //| echo: false
-import { ber640 as jn_ber640, plotDefaults as jn_plotDefaults, themeColors as jn_themeColors, seq as jn_seq, formatCoef as jn_formatCoef, withAlpha as jn_withAlpha } from "../ojs/shared.js"
-jn_tc = jn_themeColors()
+import { ber640 as jn_ber640, plotDefaults as jn_plotDefaults, themeColors as jn_themeColors, onThemeChange as jn_onThemeChange, seq as jn_seq, formatCoef as jn_formatCoef, withAlpha as jn_withAlpha, srSummary as jn_srSummary, resetControls as jn_resetControls } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+jn_theme = jn_themeColors()
+```
+
+```{ojs}
+//| echo: false
+jn_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
 
 ```{ojs}
 //| echo: false
 viewof jn_W = Inputs.range([-3, 3], {value: 0, step: 0.1, label: "Moderator W"})
+```
+
+```{ojs}
+//| echo: false
 viewof jn_beta3 = Inputs.range([-1.5, 1.5], {value: 0.5, step: 0.05, label: "Interaction β₃"})
+```
+
+```{ojs}
+//| echo: false
 viewof jn_beta1 = Inputs.range([0, 3], {value: 1.5, step: 0.1, label: "Main effect β₁"})
 ```
 
@@ -2059,7 +2188,7 @@ jn_jnPoints = {
   const sqrtDisc = Math.sqrt(disc);
   const w1 = (-b - sqrtDisc) / (2 * a);
   const w2 = (-b + sqrtDisc) / (2 * a);
-  const pts = [w1, w2].filter(w => w >= -3.5 && w <= 3.5).sort((a, b) => a - b);
+  const pts = [w1, w2].filter(w => w >= -3 && w <= 3).sort((a, b) => a - b);
   return pts;
 }
 
@@ -2100,11 +2229,49 @@ jn_currentSig = Math.abs(jn_currentT) > jn_tcrit
 ```{ojs}
 //| echo: false
 
+jn_jnText = jn_jnPoints.length === 0
+  ? "None in range"
+  : jn_jnPoints.length === 1
+    ? `W = ${jn_jnPoints[0].toFixed(2)}`
+    : `W = ${jn_jnPoints[0].toFixed(2)}, ${jn_jnPoints[1].toFixed(2)}`
+
+jn_sigParabolaA = jn_beta3 * jn_beta3 - jn_tcrit * jn_tcrit * jn_varB3
+jn_sigAt = (w) => Math.abs(jn_theta(w) / jn_se_theta(w)) > jn_tcrit
+
+jn_jnDesc = jn_jnPoints.length === 2
+  ? (jn_sigParabolaA > 0
+      ? `Effect statistically distinguishable from zero when W < ${jn_jnPoints[0].toFixed(2)} or W > ${jn_jnPoints[1].toFixed(2)}`
+      : `Effect statistically distinguishable from zero when ${jn_jnPoints[0].toFixed(2)} < W < ${jn_jnPoints[1].toFixed(2)}`)
+  : jn_jnPoints.length === 1
+    ? (jn_sigAt(Math.max(-3, jn_jnPoints[0] - 0.05))
+        ? `Effect statistically distinguishable from zero when W < ${jn_jnPoints[0].toFixed(2)}`
+        : `Effect statistically distinguishable from zero when W > ${jn_jnPoints[0].toFixed(2)}`)
+    : (jn_sigAt(0)
+        ? "Effect is statistically distinguishable from zero across the entire range"
+        : "Effect is not statistically distinguishable from zero across the entire range")
+```
+
+```{ojs}
+//| echo: false
+
+jn_readouts = html`<div class="ojs-readouts">
+  ${jn_pill(`θ at W=${jn_W.toFixed(1)}`, jn_formatCoef(jn_currentTheta), "info")}
+  ${jn_pill("SE", jn_currentSE.toFixed(3))}
+  ${jn_pill("z/t approx", jn_currentT.toFixed(3) + " (±" + jn_tcrit + ")")}
+  ${jn_pill("p-value (normal)", jn_currentP < 0.001 ? "< .001" : jn_currentP.toFixed(3), jn_currentSig ? "good" : "warning")}
+  ${jn_pill("Status", jn_currentSig ? "Distinguishable" : "Not Distinguishable", jn_currentSig ? "good" : "")}
+  ${jn_pill("JN point(s)", jn_jnText, "warning")}
+</div>`
+```
+
+```{ojs}
+//| echo: false
+
 jn_plot = {
   const shadingMarks = jn_sigRegions.flatMap(region => {
     const color = region.sig
       ? jn_withAlpha(jn_ber640.accent, 0.2)
-      : jn_withAlpha(jn_tc.muted, 0.15);
+      : jn_withAlpha(jn_theme.muted, 0.15);
     return [
       Plot.areaY(region.data, {
         x: "w", y1: "lo", y2: "hi",
@@ -2114,21 +2281,23 @@ jn_plot = {
   });
 
   return Plot.plot(jn_plotDefaults({
-    width: 720,
-    height: 420,
+    width: 680,
+    height: 340,
+    marginTop: 24, marginBottom: 40, marginLeft: 48, marginRight: 16,
+    style: { color: jn_theme.text },
     x: {label: "Moderator (W)", domain: [-3, 3]},
     y: {label: "Conditional Effect θ(W)", grid: true},
     marks: [
       ...shadingMarks,
-      Plot.ruleY([0], {stroke: jn_tc.muted, strokeDasharray: "6,4", strokeWidth: 1}),
-      Plot.line(jn_plotData, {x: "w", y: "lo", stroke: jn_tc.muted, strokeDasharray: "4,3", strokeWidth: 1.2}),
-      Plot.line(jn_plotData, {x: "w", y: "hi", stroke: jn_tc.muted, strokeDasharray: "4,3", strokeWidth: 1.2}),
+      Plot.ruleY([0], {stroke: jn_theme.muted, strokeDasharray: "6,4", strokeWidth: 1}),
+      Plot.line(jn_plotData, {x: "w", y: "lo", stroke: jn_theme.muted, strokeDasharray: "4,3", strokeWidth: 1.2}),
+      Plot.line(jn_plotData, {x: "w", y: "hi", stroke: jn_theme.muted, strokeDasharray: "4,3", strokeWidth: 1.2}),
       Plot.line(jn_plotData, {x: "w", y: "theta", stroke: jn_ber640.primary, strokeWidth: 2.5}),
       ...jn_jnPoints.map(jnw => Plot.ruleX([jnw], {
         stroke: jn_ber640.warning, strokeDasharray: "5,3", strokeWidth: 1.8
       })),
       ...jn_jnPoints.map(jnw => Plot.dot([{w: jnw, theta: jn_theta(jnw)}], {
-        x: "w", y: "theta", fill: jn_ber640.warning, r: 5, stroke: jn_tc.bg, strokeWidth: 1.5
+        x: "w", y: "theta", fill: jn_ber640.warning, r: 5, stroke: jn_theme.bg, strokeWidth: 1.5
       })),
       ...jn_jnPoints.map(jnw => Plot.text([{w: jnw, theta: jn_theta(jnw)}], {
         x: "w", y: "theta",
@@ -2138,86 +2307,51 @@ jn_plot = {
       })),
       Plot.ruleX([jn_W], {stroke: jn_ber640.secondary, strokeWidth: 1.5, strokeDasharray: "3,2"}),
       Plot.dot([{w: jn_W, theta: jn_currentTheta}], {
-        x: "w", y: "theta", fill: jn_ber640.secondary, r: 6, stroke: jn_tc.bg, strokeWidth: 2
+        x: "w", y: "theta", fill: jn_ber640.secondary, r: 6, stroke: jn_theme.bg, strokeWidth: 2
       })
     ]
   }))
 }
-
-jn_plot
 ```
 
 ```{ojs}
 //| echo: false
-
-jn_readout = {
-  const sigColor = jn_currentSig ? jn_ber640.success : jn_tc.muted;
-  const sigLabel = jn_currentSig ? "Significant" : "Not Significant";
-  const sigBg = jn_currentSig ? jn_withAlpha(jn_ber640.success, 0.1) : jn_withAlpha(jn_tc.muted, 0.08);
-
-  const jnText = jn_jnPoints.length === 0
-    ? "None in range"
-    : jn_jnPoints.length === 1
-      ? `W = ${jn_jnPoints[0].toFixed(2)}`
-      : `W = ${jn_jnPoints[0].toFixed(2)}, ${jn_jnPoints[1].toFixed(2)}`;
-
-  const jnDesc = jn_jnPoints.length === 2
-    ? `Effect significant when W < ${jn_jnPoints[0].toFixed(2)} or W > ${jn_jnPoints[1].toFixed(2)}`
-    : jn_jnPoints.length === 1
-      ? `Effect changes significance at W = ${jn_jnPoints[0].toFixed(2)}`
-      : "Effect is uniformly significant or non-significant across the range";
-
-  return html`<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 8px;">
-    <div style="background: ${jn_withAlpha(jn_ber640.primary, 0.07)}; border-radius: 10px; padding: 14px; border-left: 4px solid ${jn_ber640.primary};">
-      <div style="font-size: 0.75em; color: ${jn_tc.muted}; margin-bottom: 4px;">Conditional Effect at W = ${jn_W.toFixed(1)}</div>
-      <div style="font-size: 1.3em; font-weight: 700; color: ${jn_tc.text};">${jn_formatCoef(jn_currentTheta)}</div>
-      <div style="font-size: 0.8em; color: ${jn_tc.muted};">SE = ${jn_currentSE.toFixed(3)}</div>
-    </div>
-    <div style="background: ${jn_withAlpha(jn_ber640.secondary, 0.07)}; border-radius: 10px; padding: 14px; border-left: 4px solid ${jn_ber640.secondary};">
-      <div style="font-size: 0.75em; color: ${jn_tc.muted}; margin-bottom: 4px;">t-Statistic</div>
-      <div style="font-size: 1.3em; font-weight: 700; color: ${jn_tc.text};">${jn_currentT.toFixed(3)}</div>
-      <div style="font-size: 0.8em; color: ${jn_tc.muted};">Critical: ±${jn_tcrit}</div>
-    </div>
-    <div style="background: ${jn_withAlpha(jn_ber640.info, 0.07)}; border-radius: 10px; padding: 14px; border-left: 4px solid ${jn_ber640.info};">
-      <div style="font-size: 0.75em; color: ${jn_tc.muted}; margin-bottom: 4px;">p-Value</div>
-      <div style="font-size: 1.3em; font-weight: 700; color: ${jn_tc.text};">${jn_currentP < 0.001 ? "< .001" : jn_currentP.toFixed(3)}</div>
-      <div style="font-size: 0.8em; color: ${jn_tc.muted};">α = 0.05</div>
-    </div>
-    <div style="background: ${sigBg}; border-radius: 10px; padding: 14px; border-left: 4px solid ${sigColor};">
-      <div style="font-size: 0.75em; color: ${jn_tc.muted}; margin-bottom: 4px;">Status at W = ${jn_W.toFixed(1)}</div>
-      <div style="font-size: 1.3em; font-weight: 700; color: ${sigColor};">${sigLabel}</div>
-      <div style="font-size: 0.8em; color: ${jn_tc.muted};">${jn_currentSig ? "|t| > 1.96" : "|t| ≤ 1.96"}</div>
-    </div>
-    <div style="background: ${jn_withAlpha(jn_ber640.warning, 0.07)}; border-radius: 10px; padding: 14px; border-left: 4px solid ${jn_ber640.warning}; grid-column: 1 / -1;">
-      <div style="font-size: 0.75em; color: ${jn_tc.muted}; margin-bottom: 4px;">Johnson-Neyman Point(s)</div>
-      <div style="font-size: 1.3em; font-weight: 700; color: ${jn_tc.text};">${jnText}</div>
-      <div style="font-size: 0.8em; color: ${jn_tc.muted}; margin-top: 2px;">${jnDesc}</div>
-    </div>
-  </div>`
-}
-
-jn_readout
+jn_reset = jn_resetControls([
+  { input: viewof jn_W,     value: 0 },
+  { input: viewof jn_beta3, value: 0.5 },
+  { input: viewof jn_beta1, value: 1.5 }
+], { label: "Reset" })
 ```
 
 ```{ojs}
 //| echo: false
-
-jn_equation = {
-  return html`<div style="background: ${jn_withAlpha(jn_tc.muted, 0.06)}; border-radius: 8px; padding: 12px 16px; margin-top: 4px; font-size: 0.85em; color: ${jn_tc.text};">
-    <strong>Model:</strong> Y = ${jn_alpha} + ${jn_formatCoef(jn_beta1)}·X + ${jn_formatCoef(jn_beta2)}·W + ${jn_formatCoef(jn_beta3)}·X·W + ε
-    &nbsp;→&nbsp;
-    <strong>θ(W=${jn_W.toFixed(1)})</strong> = ${jn_formatCoef(jn_beta1)} + ${jn_formatCoef(jn_beta3)} × ${jn_W.toFixed(1)} = <strong>${jn_formatCoef(jn_currentTheta)}</strong>
-  </div>`
-}
-
-jn_equation
+jn_sr = jn_srSummary("ch05-jn",
+  `Model with interaction β₃ = ${jn_formatCoef(jn_beta3)} and main effect β₁ = ${jn_formatCoef(jn_beta1)}. At W = ${jn_W.toFixed(1)}, conditional effect θ = ${jn_formatCoef(jn_currentTheta)}, SE ${jn_currentSE.toFixed(3)}, normal-approximation statistic = ${jn_currentT.toFixed(3)}, p ${jn_currentP < 0.001 ? "< .001" : "= " + jn_currentP.toFixed(3)}; effect is ${jn_currentSig ? "statistically distinguishable from zero" : "not statistically distinguishable from zero"} under the 1.96 approximation. Johnson-Neyman point(s): ${jn_jnText}. ${jn_jnDesc}.`)
 ```
+
+```{ojs}
+//| echo: false
+jn_app = html`<div class="ojs-app" role="group" aria-label="Johnson-Neyman region of significance">
+  <div class="ojs-controls">${viewof jn_W}${viewof jn_beta3}${viewof jn_beta1}<div class="ojs-control-group" style="flex:0 0 auto;">${jn_reset}</div></div>
+  <div class="ojs-equation">Y = ${jn_alpha} + <strong style="color:var(--ber-primary)">${jn_formatCoef(jn_beta1)}</strong>·X + ${jn_formatCoef(jn_beta2)}·W + <strong style="color:var(--ber-warning)">${jn_formatCoef(jn_beta3)}</strong>·X·W + ε &nbsp;→&nbsp; <strong>θ(W=${jn_W.toFixed(1)})</strong> = ${jn_formatCoef(jn_beta1)} + ${jn_formatCoef(jn_beta3)} × ${jn_W.toFixed(1)} = <strong>${jn_formatCoef(jn_currentTheta)}</strong></div>
+  ${jn_readouts}
+  <div class="ojs-plot">${jn_plot}</div>
+  ${jn_sr}
+</div>`
+```
+
+::: {.callout-note}
+## What you should have seen
+
+- The conditional effect θ(W) = β₁ + β₃·W is a straight line in W, but its confidence band is curved, so it may be statistically distinguishable from zero over all, none, or only part of the moderator's range — the Johnson-Neyman point(s) mark where that statistical-significance status changes.
+- Increasing |β₃| tilts θ(W) more steeply and shrinks the non-significant region; setting β₃ = 0 makes the effect constant so the region of significance no longer depends on W.
+- Moving the Moderator W slider does not change the region — it only relocates the readout dot, confirming that the displayed significance status is a conditional statistical statement at that value of W, not a single overall verdict.
+:::
 
 ::: {.callout-note}
 ## Looking Ahead: Polynomial Regression as Self-Interaction
 The continuous $\times$ continuous interaction we have studied here has an interesting special case. What happens when we interact a variable with *itself*? The product $x \times x = x^2$ creates a **quadratic term**, and the model $y = \alpha + \beta_1 x + \beta_2 x^2 + \epsilon$ is a polynomial regression. Just as $\beta_3$ in an interaction model tells us how the effect of $x_1$ changes with $x_2$, the coefficient $\beta_2$ on $x^2$ tells us how the effect of $x$ changes with $x$ itself --- that is, whether the relationship between $x$ and $y$ is curved. We explore this idea in detail in @sec-ch6.
 :::
-
 
 ## Type II vs Type III Sums of Squares {#sec-ch5-ss}
 
@@ -2276,10 +2410,10 @@ faculty_df |>
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-balance-check"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The table shows the number of faculty members in each gender $\times$ rank cell
 - If all cells have the same count, the design is balanced and the choice of SS type does not matter
@@ -2289,7 +2423,6 @@ faculty_df |>
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-balance-check"
-#| eval: false
 ```
 - Unequal cell sizes across the gender $\times$ rank combinations indicate an **unbalanced** design
 - With unbalanced data, the choice between Type II and Type III sums of squares affects the main effect tests
@@ -2316,10 +2449,10 @@ car::Anova(model_cat, type = 2)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-type-ii"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - Each row shows the sum of squares, degrees of freedom, $F$-statistic, and $p$-value for one effect
 - The gender row tests whether gender predicts salary **after controlling for rank** (but not the interaction)
@@ -2330,7 +2463,6 @@ car::Anova(model_cat, type = 2)
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-type-ii"
-#| eval: false
 ```
 - `car::Anova()` with `type = 2` computes Type II (experimental) sums of squares
 - The gender test: MSS(gender | rank) --- does gender matter after controlling for rank?
@@ -2361,10 +2493,10 @@ options(old_contrasts)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch5-type-iii"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The Type III table includes a row for the `(Intercept)`, which is typically not of interest
 - The gender and rank main effect rows now test each effect **controlling for the interaction**
@@ -2375,7 +2507,6 @@ options(old_contrasts)
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-type-iii"
-#| eval: false
 ```
 - `car::Anova()` with `type = 3` computes Type III (unique) sums of squares
 - The model is refit with sum-to-zero contrasts (`contr.sum`) because Type III tests require these contrasts to produce the conventional results matching SAS and SPSS
@@ -2391,6 +2522,8 @@ options(old_contrasts)
 ::: {.callout-warning}
 ## Why We Set Contrasts Before Type III
 In the code above, we set `options(contrasts = c("contr.sum", "contr.poly"))` before fitting the model and then reset to defaults afterward. This is **required** for Type III sums of squares to produce the conventional tests that match SAS and SPSS output. R's default treatment contrasts (`contr.treatment`) test whether the first level of a factor differs from the reference level, which is not what Type III main effect tests are designed to do. Sum-to-zero contrasts (`contr.sum`) test whether the *unweighted mean* across levels differs from the grand mean --- the standard interpretation of a "main effect" in factorial designs. The contrast choice does **not** affect the interaction test (which is identical in both types), only the main effect rows. Always reset contrasts to defaults after computing Type III tests to avoid unexpected behavior in subsequent analyses.
+
+**An interpretive caveat.** Because Type III main-effect tests in the presence of an interaction depend on the contrast coding, they are *conditional* (at-the-mean) effects, not unconditional "overall" effects --- and they are not automatically the "best" or most interpretable summary of the model. In applied regression, the **plotted conditional (simple) slopes and marginal effects** shown earlier usually communicate what an interaction is doing far more clearly than an isolated main-effect $F$-test. Treat the Type III table as one diagnostic among several, not the headline result.
 :::
 
 
@@ -2519,7 +2652,6 @@ anova(model_parallel_ex, model_interact_ex)
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-ex1"
-#| eval: false
 ```
 
 :::
@@ -2543,6 +2675,8 @@ Use `avg_comparisons(model_cat, variables = "gender", by = "rank_f")` to get the
 ### Output
 ```{r}
 #| label: ch5-ex2
+#| fig-cap: "Solution to Exercise 5.2: estimated gender salary gap (Male - Female) at each academic rank, with 95% confidence intervals."
+#| fig-alt: "Dot-and-whisker plot with academic rank on the x-axis and the estimated Male-minus-Female salary difference on the y-axis. Each rank has a point estimate with a vertical 95 percent confidence interval, and a dashed line marks zero. All three intervals lie above zero, with the largest estimated gap at the full professor rank."
 #| code-fold: true
 #| code-summary: "Show Solution"
 
@@ -2578,7 +2712,6 @@ plot_comparisons(model_cat, variables = "gender", by = "rank_f") +
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-ex2"
-#| eval: false
 ```
 
 :::
@@ -2605,17 +2738,17 @@ Use `plot_predictions(model_cont, condition = list("high_school", urbanization =
 #| code-fold: true
 #| code-summary: "Show Solution"
 #| fig-cap: "Predicted crime rate by education level, at three levels of urbanization."
-#| fig-alt: "Line plot with high school education on the x-axis and predicted crime rate on the y-axis, showing three separate lines for low, medium, and high urbanization levels. Each line has a shaded 95 percent confidence band. The lines fan out as education increases: at high urbanization, crime drops steeply with education, while at low urbanization the slope is nearly flat, illustrating the continuous-by-continuous interaction."
+#| fig-alt: "Line plot with high school education on the x-axis and predicted crime rate on the y-axis, showing three separate lines for low, medium, and high urbanization levels. Each line has a shaded 95 percent confidence band. The lines are farthest apart at low education and converge as education increases: at high urbanization (rust, +SD) crime drops steeply with education, while at low urbanization (navy, -SD) the slope is nearly flat, illustrating the continuous-by-continuous interaction."
 
 # Interaction plot with three urbanization levels
 plot_predictions(
   model_cont,
   condition = list("high_school", urbanization = "threenum")
 ) +
-  scale_color_manual(values = c(ber640_colors["primary"], ber640_colors["warning"],
-                                ber640_colors["secondary"])) +
-  scale_fill_manual(values = c(ber640_colors["primary"], ber640_colors["warning"],
-                               ber640_colors["secondary"])) +
+  scale_color_manual(values = c(ber640_colors[["primary"]], ber640_colors[["warning"]],
+                                ber640_colors[["secondary"]])) +
+  scale_fill_manual(values = c(ber640_colors[["primary"]], ber640_colors[["warning"]],
+                               ber640_colors[["secondary"]])) +
   labs(
     title = "Education x Urbanization Interaction",
     subtitle = "Predicted crime rate at three urbanization levels",
@@ -2628,7 +2761,6 @@ plot_predictions(
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch5-ex3"
-#| eval: false
 ```
 
 :::
@@ -2683,7 +2815,6 @@ model_centered <- lm(crime_rate ~ hs_c * urban_c, data = crime_centered)
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-ex4"
-#| eval: false
 ```
 
 :::
@@ -2772,7 +2903,6 @@ pairwise_gaps
 ### Code Explanation
 ```{r}
 #| ref.label: "ch5-ex6"
-#| eval: false
 ```
 
 :::

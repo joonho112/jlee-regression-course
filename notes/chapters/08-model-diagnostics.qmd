@@ -6,7 +6,7 @@
 
 In @sec-ch7, you learned how to build regression models using both confirmatory and exploratory strategies. The five-step confirmatory workflow ended with a crucial but deferred task: **model diagnostics**. A regression model is only as trustworthy as its assumptions. If those assumptions are violated, the consequences range from mildly misleading to catastrophically wrong --- and the type of violation determines which aspects of the analysis break down.
 
-The ordinary least squares (OLS) regression model rests on four key assumptions about the residuals:
+The ordinary least squares (OLS) regression model rests on four key assumptions about the model's unobserved *errors* --- the deviations of the outcome from its true conditional mean. Because the errors cannot be observed directly, we assess these assumptions using the *residuals*, which estimate them:
 
 1. **Linearity**: The relationship between each predictor and the outcome is linear (given the other predictors in the model)
 2. **Constant variance (homoscedasticity)**: The spread of residuals is the same across all levels of fitted values
@@ -22,7 +22,7 @@ Not all assumption violations are equally serious. @tbl-ch8-consequences summari
 | Normality | No | No | Yes (in small samples) |
 | Independence | No | Yes | Yes |
 
-: Consequences of violating regression assumptions. Linearity violations are the most damaging because they bias everything. Heteroscedasticity and non-independence leave coefficients unbiased but invalidate inference. Normality matters primarily in small samples. {#tbl-ch8-consequences}
+: Consequences of violating regression assumptions. Linearity violations are the most damaging because they bias everything. Heteroscedasticity and non-independence leave coefficients unbiased --- but only when the conditional mean is correctly specified and the predictors are exogenous --- while still invalidating inference; if the violation instead reflects omitted variables or misspecification (e.g., non-independence arising from an omitted group structure correlated with the predictors), the coefficients can also be biased. Normality matters primarily in small samples. {#tbl-ch8-consequences}
 
 This chapter develops a systematic toolkit for detecting these violations. We begin with the different types of residuals --- the raw material for all diagnostic procedures --- and then address each assumption in turn. We close with the `check_model()` dashboard from the `performance` package, which provides a convenient one-stop diagnostic summary.
 
@@ -42,9 +42,26 @@ After completing this chapter, you will be able to:
 :::
 
 
+## Diagnostics Answer Four Questions {#sec-ch8-four-questions}
+
+Before reaching for any formula, fix the **goal**: regression diagnostics comes down to four practical questions about a fitted model, each tied to one of the assumptions above and each answered mainly by a *plot*.
+
+| # | Question | Assumption | Main tool / section |
+|:---:|:---|:---|:---|
+| 1 | Is the **mean function** right (no systematic curve left in the residuals)? | Linearity | Residuals-vs-fitted & partial-regression plots (@sec-ch8-resid-fitted) |
+| 2 | Is the **spread** of residuals roughly constant across fitted values? | Homoscedasticity | Residuals-vs-fitted / scale-location plot and the Breusch-Pagan test (@sec-ch8-heteroscedasticity) |
+| 3 | Are the residuals **normal enough** for the inference we want? | Normality (matters mainly in small samples) | Q-Q plot and histogram (@sec-ch8-normality) |
+| 4 | Are any **observations unusually influential**? | Robustness / leverage | Leverage, Cook's distance, influence plot (@sec-ch8-influence) |
+
+: The four diagnostic questions, the assumption each one probes, and where this chapter answers it. {#tbl-ch8-four-questions}
+
+The `check_model()` dashboard at the end of the chapter answers all four at a glance.
+
+The next section defines several *types of residuals* --- the raw material these plots are built from. Those formulas are worth understanding, but they are a means to an end. If the algebra feels abstract on a first read, skim it and jump straight to the plots (@sec-ch8-resid-fitted), then circle back later: the four **questions**, not the formulas, are the point.
+
 ## Types of Residuals {#sec-ch8-residuals}
 
-Residuals are the foundation of regression diagnostics. A residual measures how far each observed value falls from the model's prediction. But there are several ways to define "residual," and the choice matters for diagnostic sensitivity. This section introduces five types, progressing from the simplest to the most powerful.
+Residuals are the foundation of regression diagnostics. A residual measures how far each observed value falls from the model's prediction. But there are several ways to define "residual," and the choice matters for diagnostic sensitivity. This section introduces five types, progressing from the simplest to the most powerful. These residual types are the **raw material** for the diagnostic plots in the sections that follow, so a reader who prefers the big picture first can skim the definitions now and return to them after seeing the plots.
 
 ### The Working Model
 
@@ -67,17 +84,16 @@ r2(diag_model)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch8-working-model"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 The model estimates the effects of SES, minority status, and school sector on math achievement. The $R^2$ tells us how much variance in math achievement is explained by these three predictors. We now turn to the residuals from this model to assess whether the underlying assumptions hold.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch8-working-model"
-#| eval: false
 ```
 - `ses` is a continuous measure of socioeconomic status
 - `minority` is a binary indicator (0 = non-minority, 1 = minority)
@@ -138,10 +154,10 @@ This is what R reports as `.std.resid` in `broom::augment()`. These residuals ha
 The **studentized deleted residual** combines the best features of deleted and studentized residuals. It uses the deleted residual (prediction without observation $i$) and standardizes it using the variance estimate from the model fitted without observation $i$:
 
 $$
-r_i^{(c)} = \frac{e_i^{(d)}}{s_{(i)}\sqrt{1 - h_{ii}}}
+r_i^{(c)} = \frac{e_i^{(d)}}{s_{(i)}/\sqrt{1 - h_{ii}}} = \frac{e_i}{s_{(i)}\sqrt{1 - h_{ii}}}
 $$ {#eq-ch8-stud-deleted}
 
-where $s_{(i)}$ is the residual standard error from the model that excludes observation $i$. Under the null hypothesis (the model is correct and observation $i$ is not an outlier), studentized deleted residuals follow a $t$-distribution with $n - k - 2$ degrees of freedom. This makes them the **best choice** for formal outlier testing: if $|r_i^{(c)}|$ exceeds the appropriate $t$ critical value (with a Bonferroni correction for multiple testing), observation $i$ is a statistically significant outlier.
+where $s_{(i)}$ is the residual standard error from the model that excludes observation $i$. Because $e_i^{(d)} = e_i/(1 - h_{ii})$ for OLS, the deleted residual is divided by *its own* standard error, $s_{(i)}/\sqrt{1 - h_{ii}}$, which simplifies to the right-hand (computational) form above and equals what `rstudent()` returns in R. Under the null hypothesis (the model is correct and observation $i$ is not an outlier), studentized deleted residuals follow a $t$-distribution with $n - k - 2$ degrees of freedom. This makes them the **best choice** for formal outlier testing: if $|r_i^{(c)}|$ exceeds the appropriate $t$ critical value (with a Bonferroni correction for multiple testing), observation $i$ is a statistically significant outlier.
 
 ::: {.callout-tip}
 ## Which Residual Should I Use?
@@ -171,17 +187,16 @@ diag_df |>
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch8-augment"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 Each row corresponds to one observation in the dataset. The `.resid` column shows how far the observed math achievement score is from the model's prediction. The `.std.resid` column rescales this to account for leverage --- values beyond $\pm 2$ deserve attention, and values beyond $\pm 3$ are potential outliers. The `.hat` column shows leverage: the average leverage is $(k+1)/n$, and values exceeding $2(k+1)/n$ indicate high-leverage points.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch8-augment"
-#| eval: false
 ```
 - `augment()` adds columns to the original data for each observation:
   - `.fitted`: predicted value $\hat{y}_i$
@@ -225,17 +240,16 @@ diag_comparison |>
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch8-residual-types"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 All four residual types have a mean near zero. The raw residuals have a standard deviation equal to the residual standard error (approximately). The standardized versions have standard deviations near 1. The studentized deleted residuals tend to have slightly larger extreme values than the other types because they use a leave-one-out estimate --- this is precisely what makes them more sensitive to outliers.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch8-residual-types"
-#| eval: false
 ```
 - `residuals()` returns raw residuals $e_i$
 - `sigma()` extracts $\hat{\sigma} = \sqrt{MSE}$, so dividing gives semi-studentized residuals
@@ -268,16 +282,16 @@ Violations appear as recognizable patterns:
 ```{r}
 #| label: fig-ch8-resid-fitted
 #| fig-cap: "Residuals versus fitted values for the math achievement model. Random scatter with no obvious pattern supports the linearity and constant variance assumptions."
-#| fig-alt: "Scatter plot with fitted values on the horizontal axis and standardized residuals on the vertical axis for the math achievement regression model. A horizontal dashed reference line is drawn at zero. The points form a random cloud with no discernible curvature or fanning pattern, supporting both the linearity and constant variance assumptions."
+#| fig-alt: "Scatter plot with fitted values on the horizontal axis and studentized residuals on the vertical axis for the math achievement regression model. A horizontal dashed reference line is drawn at zero. The points form a random cloud with no discernible curvature or fanning pattern, supporting both the linearity and constant variance assumptions."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 ggplot(diag_df, aes(x = .fitted, y = .std.resid)) +
   geom_point(alpha = 0.4, color = "grey50") +
   geom_hline(yintercept = 0, linetype = "dashed",
-             color = ber640_colors["secondary"], linewidth = 0.8) +
+             color = ber640_colors[["secondary"]], linewidth = 0.8) +
   geom_smooth(method = "loess", formula = y ~ x, se = FALSE,
-              color = ber640_colors["accent"], linewidth = 1) +
+              color = ber640_colors[["accent"]], linewidth = 1) +
   labs(
     title = "Residuals vs Fitted Values",
     subtitle = "LOESS curve should be flat and centered on zero",
@@ -287,17 +301,16 @@ ggplot(diag_df, aes(x = .fitted, y = .std.resid)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-resid-fitted"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 Look for two things: (1) Does the LOESS curve stay near zero across the range of fitted values? If it curves, the linearity assumption is violated. (2) Does the vertical spread of points remain roughly constant? If the cloud widens or narrows (a "funnel" shape), heteroscedasticity is present. When both conditions are met, this plot gives a green light for the linearity and constant variance assumptions.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-resid-fitted"
-#| eval: false
 ```
 - The x-axis shows the model's predictions ($\hat{y}_i$); the y-axis shows the studentized residuals ($r_i^{(b)}$)
 - `geom_hline(yintercept = 0)` adds a reference line --- residuals should scatter symmetrically around this line
@@ -343,7 +356,7 @@ res_a <- residuals(lm(y_a ~ x_a))
 
 # (b) U-shape — nonlinearity
 x_b <- runif(n_sim, 0, 10)
-y_b <- 2 + 1.5 * x_b - 0.2 * x_b^2 + rnorm(n_sim, sd = 1.5)
+y_b <- 2 + 1.5 * x_b + 0.2 * x_b^2 + rnorm(n_sim, sd = 1.5)
 fit_b <- fitted(lm(y_b ~ x_b))
 res_b <- residuals(lm(y_b ~ x_b))
 
@@ -355,7 +368,7 @@ res_c <- residuals(lm(y_c ~ x_c))
 
 # (d) Both violations
 x_d <- runif(n_sim, 0, 10)
-y_d <- 2 + 1.5 * x_d - 0.2 * x_d^2 + rnorm(n_sim, sd = 0.3 * x_d + 0.5)
+y_d <- 2 + 1.5 * x_d + 0.2 * x_d^2 + rnorm(n_sim, sd = 0.3 * x_d + 0.5)
 fit_d <- fitted(lm(y_d ~ x_d))
 res_d <- residuals(lm(y_d ~ x_d))
 
@@ -370,21 +383,23 @@ sim_df <- tibble(
 )
 
 ggplot(sim_df, aes(x = fitted, y = residual)) +
-  geom_point(alpha = 0.4, color = ber640_colors["primary"]) +
+  geom_point(alpha = 0.4, color = ber640_colors[["primary"]]) +
   geom_hline(yintercept = 0, linetype = "dashed",
-             color = ber640_colors["secondary"], linewidth = 0.8) +
+             color = ber640_colors[["secondary"]], linewidth = 0.8) +
   geom_smooth(method = "loess", formula = y ~ x, se = FALSE,
-              color = ber640_colors["accent"], linewidth = 1) +
+              color = ber640_colors[["accent"]], linewidth = 1) +
   facet_wrap(~ panel, scales = "free", ncol = 2) +
   labs(x = "Fitted Values", y = "Residuals") +
   theme(strip.text = element_text(face = "bold", size = 11))
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-resid-patterns"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 7
 ```
 Use this figure as a **visual dictionary** when reading your own residual plots:
 
@@ -396,7 +411,8 @@ Use this figure as a **visual dictionary** when reading your own residual plots:
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-resid-patterns"
-#| eval: false
+#| fig-width: 9
+#| fig-height: 7
 ```
 - Four datasets are simulated, each with $n = 200$ observations, to illustrate different residual patterns
 - **(a)** Linear relationship with constant variance --- residuals scatter randomly around zero (the ideal pattern)
@@ -413,15 +429,26 @@ Use this figure as a **visual dictionary** when reading your own residual plots:
 ::: {.callout-tip collapse="false"}
 ## Try It: Diagnosing Assumption Violations
 
-Select a violation type to see how it distorts residual plots. Compare the residuals vs. fitted plot (left) and the Q-Q plot (right) to learn the visual signatures of each assumption failure.
+Use the **Violation type** radio to switch among the five scenarios; start with **None (Ideal)** to learn the baseline, then step through the violations one at a time. Compare the residuals vs. fitted plot (left) and the Q-Q plot (right) to learn the visual signatures of each assumption failure, and use the **Q-Q r² guide** readout as a rough numerical companion to the visual plot, not as a formal normality test. We simulate the data here because demonstrating each violation in isolation requires a known truth (a single line we deliberately bend, fan, or perturb) and the ability to switch the failure on and off on demand --- a counterfactual control no single real dataset can provide.
 :::
 
 ```{ojs}
 //| echo: false
 import { ber640 as diag_ber640, withAlpha as diag_withAlpha,
          themeColors as diag_themeColors, plotDefaults as diag_plotDefaults,
+         onThemeChange as diag_onThemeChange, srSummary as diag_srSummary,
          normalRandom as diag_normalRandom, normalQuantile as diag_normalQuantile,
          seq as diag_seq, formatCoef as diag_formatCoef } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+diag_theme = diag_themeColors()
+```
+
+```{ojs}
+//| echo: false
+diag_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
 
 ```{ojs}
@@ -445,21 +472,29 @@ diag_xVals = {
 
 diag_eps_base = diag_normalRandom(diag_n, 0, 1, 42)
 
-// Heavy-tail noise: approximate t(3) by inflating normal tails
+// Heavy-tail noise: a genuine Student t(3) error.
+// t(df) = Z / sqrt( (W1^2 + ... + Wdf^2) / df ), where Z and the Wk are
+// INDEPENDENT standard normals. With df = 3 the tails are clearly heavy
+// (the 4th moment diverges -> large positive excess kurtosis), which is what
+// the Q-Q instruction below promises. The numerator Z must NOT appear in the
+// chi-square denominator; the four streams use distinct seeds so they are
+// independent. A modest 0.6 display scale keeps the residual panel readable
+// without removing the heavy tails.
 diag_eps_heavy = {
-  const u1 = diag_normalRandom(diag_n, 0, 1, 42);
-  const u2 = diag_normalRandom(diag_n, 0, 1, 99);
-  const u3 = diag_normalRandom(diag_n, 0, 1, 137);
-  return u1.map((v, i) => {
-    const chi2 = (u2[i] * u2[i] + u3[i] * u3[i] + v * v) / 3;
-    return u1[i] / Math.sqrt(chi2 < 0.01 ? 0.01 : chi2) * 1.2;
+  const z  = diag_normalRandom(diag_n, 0, 1, 42);
+  const w1 = diag_normalRandom(diag_n, 0, 1, 99);
+  const w2 = diag_normalRandom(diag_n, 0, 1, 137);
+  const w3 = diag_normalRandom(diag_n, 0, 1, 211);
+  return z.map((zi, i) => {
+    const chi2over3 = (w1[i] * w1[i] + w2[i] * w2[i] + w3[i] * w3[i]) / 3;
+    return zi / Math.sqrt(chi2over3) * 0.6;
   });
 }
 
-// Outlier mask: ~5% of points
+// Outlier mask: approximately 5% of points from a two-sided |Z| > 1.96 cutoff
 diag_outlierIdx = {
   const seed = diag_normalRandom(diag_n, 0, 1, 73);
-  return seed.map(v => Math.abs(v) > 1.65);
+  return seed.map(v => Math.abs(v) > 1.96);
 }
 
 diag_simData = {
@@ -562,7 +597,9 @@ diag_qqData = {
   });
 }
 
-// --- Normality test (simplified Shapiro-Wilk approximation via correlation) ---
+// --- Q-Q probability-plot correlation: r^2 between ordered residuals and normal quantiles ---
+// Screening aid only: this is the squared probability-plot correlation coefficient,
+// Shapiro-Francia flavored, not Shapiro-Wilk W or a formal p-value.
 diag_normalityTest = {
   const qq = diag_qqData;
   const n = qq.length;
@@ -575,23 +612,55 @@ diag_normalityTest = {
   const W = r * r;
   return W;
 }
+
+// --- Per-violation diagnostic copy (content lookup) ---
+diag_diagnosticMessages = ({
+  "None (Ideal)": {
+    pattern: "No systematic pattern visible.",
+    look: "Residuals scatter randomly around zero with constant spread. Q-Q points follow the diagonal closely."
+  },
+  "Non-linearity": {
+    pattern: "Curved pattern in residuals.",
+    look: "The LOESS smoother shows a U-shape or curve, indicating the linear model misses a nonlinear trend. Q-Q plot may look roughly normal."
+  },
+  "Heteroscedasticity": {
+    pattern: "Fan or funnel shape in residuals.",
+    look: "Residual spread increases (or decreases) with fitted values, forming a fan shape. Q-Q plot is approximately normal."
+  },
+  "Non-normality (Heavy tails)": {
+    pattern: "Heavy tails in the error distribution.",
+    look: "Residual plot may look acceptable, but the Q-Q plot shows S-shaped deviation — points curl away from the diagonal at both ends."
+  },
+  "Outliers/Influential": {
+    pattern: "Isolated extreme points.",
+    look: "A few points sit far from the bulk in both plots. The Q-Q plot shows extreme deviations at the tails."
+  }
+})
+
+diag_msg = diag_diagnosticMessages[diag_violation]
+
+// --- Normality guide from the probability-plot r^2 ---
+diag_W = diag_normalityTest
+diag_wLabel = diag_W > 0.98 ? "Likely OK" : diag_W > 0.95 ? "Check tails" : "Strong departure"
+diag_wTone = diag_W > 0.98 ? "good" : diag_W > 0.95 ? "warning" : "bad"
 ```
 
 ```{ojs}
 //| echo: false
-diag_colors = diag_themeColors()
-
 // --- Left panel: Residuals vs Fitted ---
 diag_residPlot = {
-  const tc = diag_colors;
+  const tc = diag_theme;
   const pal = diag_ber640;
   return Plot.plot(diag_plotDefaults({
-    width: 420,
-    height: 360,
-    marginLeft: 55,
-    marginBottom: 45,
-    x: { label: "Fitted values →", labelOffset: 38 },
-    y: { label: "↑ Residuals", labelOffset: 48 },
+    width: 300,
+    height: 310,
+    marginTop: 28,
+    marginBottom: 42,
+    marginLeft: 50,
+    marginRight: 14,
+    style: { color: diag_theme.text },
+    x: { label: "Fitted values →", labelOffset: 36 },
+    y: { label: "↑ Residuals", labelOffset: 44 },
     marks: [
       // Reference line at 0
       Plot.ruleY([0], {
@@ -622,20 +691,23 @@ diag_residPlot = {
 
 // --- Right panel: Q-Q Plot ---
 diag_qqPlot = {
-  const tc = diag_colors;
+  const tc = diag_theme;
   const pal = diag_ber640;
   const qq = diag_qqData;
   const tMin = Math.min(...qq.map(d => d.theoretical));
   const tMax = Math.max(...qq.map(d => d.theoretical));
   return Plot.plot(diag_plotDefaults({
-    width: 420,
-    height: 360,
-    marginLeft: 55,
-    marginBottom: 45,
-    x: { label: "Theoretical quantiles →", labelOffset: 38 },
-    y: { label: "↑ Standardized residuals", labelOffset: 48 },
+    width: 300,
+    height: 310,
+    marginTop: 28,
+    marginBottom: 42,
+    marginLeft: 50,
+    marginRight: 14,
+    style: { color: diag_theme.text },
+    x: { label: "Theoretical quantiles →", labelOffset: 36 },
+    y: { label: "↑ Std. residuals", labelOffset: 44 },
     marks: [
-      // Reference diagonal
+      // Reference diagonal (dashed = non-color channel vs solid LOESS in left panel)
       Plot.line(
         [[tMin, tMin], [tMax, tMax]],
         {
@@ -660,67 +732,39 @@ diag_qqPlot = {
 
 ```{ojs}
 //| echo: false
-
-// --- Compose side-by-side layout ---
-diag_diagnosticMessages = ({
-  "None (Ideal)": {
-    pattern: "No systematic pattern visible.",
-    look: "Residuals scatter randomly around zero with constant spread. Q-Q points follow the diagonal closely."
-  },
-  "Non-linearity": {
-    pattern: "Curved pattern in residuals.",
-    look: "The LOESS smoother shows a U-shape or curve, indicating the linear model misses a nonlinear trend. Q-Q plot may look roughly normal."
-  },
-  "Heteroscedasticity": {
-    pattern: "Fan or funnel shape in residuals.",
-    look: "Residual spread increases (or decreases) with fitted values, forming a fan shape. Q-Q plot is approximately normal."
-  },
-  "Non-normality (Heavy tails)": {
-    pattern: "Heavy tails in the error distribution.",
-    look: "Residual plot may look acceptable, but the Q-Q plot shows S-shaped deviation — points curl away from the diagonal at both ends."
-  },
-  "Outliers/Influential": {
-    pattern: "Isolated extreme points.",
-    look: "A few points sit far from the bulk in both plots. The Q-Q plot shows extreme deviations at the tails."
-  }
-})
-
-diag_msg = diag_diagnosticMessages[diag_violation]
-
-diag_display = {
-  const W = diag_normalityTest;
-  const wLabel = W > 0.98 ? "Pass" : W > 0.95 ? "Borderline" : "Fail";
-  const wColor = W > 0.98 ? diag_ber640.success : W > 0.95 ? diag_ber640.warning : diag_ber640.accent;
-
-  return html`
-<div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; margin-top: 0.5rem;">
-  <div style="flex: 1; min-width: 380px;">
-    <div style="font-weight: 600; text-align: center; margin-bottom: 0.25rem; color: ${diag_colors.text};">Residuals vs Fitted</div>
-    ${diag_residPlot}
-  </div>
-  <div style="flex: 1; min-width: 380px;">
-    <div style="font-weight: 600; text-align: center; margin-bottom: 0.25rem; color: ${diag_colors.text};">Normal Q-Q Plot</div>
-    ${diag_qqPlot}
-  </div>
-</div>
-<div class="ojs-readout" style="margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 8px; background: ${diag_withAlpha(diag_colors.muted, 0.15)}; border-left: 4px solid ${diag_ber640.primary};">
-  <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: baseline;">
-    <div>
-      <span style="font-weight: 600; color: ${diag_colors.text};">Normality check (W):</span>
-      <span style="font-weight: 700; color: ${wColor}; margin-left: 0.25rem;">${diag_formatCoef(W, 4)}</span>
-      <span style="color: ${wColor}; margin-left: 0.25rem;">[${wLabel}]</span>
-    </div>
-    <div>
-      <span style="font-weight: 600; color: ${diag_colors.text};">Pattern:</span>
-      <span style="color: ${diag_colors.text}; margin-left: 0.25rem;">${diag_msg.pattern}</span>
-    </div>
-  </div>
-  <div style="margin-top: 0.4rem; color: ${diag_withAlpha(diag_colors.text, 0.8)}; font-size: 0.92em;">
-    <span style="font-weight: 600;">What to look for:</span> ${diag_msg.look}
-  </div>
-</div>`;
-}
+diag_readouts = html`<div class="ojs-readouts">
+  ${diag_pill("Violation", diag_violation, "info")}
+  ${diag_pill("Q-Q r² guide", `${diag_formatCoef(diag_W, 4)} [${diag_wLabel}]`, diag_wTone)}
+  ${diag_pill("Pattern", diag_msg.pattern, "warning")}
+</div>`
 ```
+
+```{ojs}
+//| echo: false
+diag_sr = diag_srSummary("ch08-violation",
+  `Violation type ${diag_violation}. Q-Q probability-plot correlation r² guide ${diag_formatCoef(diag_W, 4)} [${diag_wLabel}]. Pattern: ${diag_msg.pattern} What to look for: ${diag_msg.look}`)
+```
+
+```{ojs}
+//| echo: false
+diag_app = html`<div class="ojs-app" role="group" aria-label="Assumption violation detector: residuals-vs-fitted and Q-Q plots for each violation type">
+  <div class="ojs-controls">${viewof diag_violation}</div>
+  ${diag_readouts}
+  <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; justify-content:center;">
+    <div class="ojs-plot"><div style="font-weight:600; text-align:center; margin-bottom:0.2rem; color:var(--ojs-text);">Residuals vs Fitted</div>${diag_residPlot}</div>
+    <div class="ojs-plot"><div style="font-weight:600; text-align:center; margin-bottom:0.2rem; color:var(--ojs-text);">Normal Q-Q Plot</div>${diag_qqPlot}</div>
+  </div>
+  <div class="ojs-equation" style="text-align:left; font-family:inherit; font-size:0.92rem;"><strong>What to look for:</strong> ${diag_msg.look}</div>
+  ${diag_sr}
+</div>`
+```
+
+::: {.callout-note}
+## What you should have seen
+- Each assumption failure leaves a distinct fingerprint: **non-linearity** bends the LOESS curve in the residuals-vs-fitted panel, **heteroscedasticity** fans the point cloud, and **heavy tails** can bow the Q-Q points away from the diagonal even when the residual panel looks fairly ordinary. **Outliers** usually show up as isolated extreme points in both panels.
+- The two panels are complementary: the residuals-vs-fitted plot catches problems with the *mean function and variance*, while the Q-Q plot is useful for *normality*; the **Q-Q r² guide** usually falls most clearly for the heavy-tail and outlier scenarios, but the visual tail pattern still drives the diagnosis.
+- No single plot checks every assumption; reading both together is what lets you name the violation and choose the right remedy.
+:::
 
 ### Partial Regression Plots {#sec-ch8-partial-regression}
 
@@ -730,29 +774,34 @@ When you have multiple predictors, the residuals-vs-fitted plot assesses the *ov
 ### Output
 ```{r}
 #| label: fig-ch8-avplots
-#| fig-cap: "Partial regression (added variable) plots for each predictor. The slope in each panel equals the corresponding regression coefficient. Look for nonlinearity in the SES panel."
-#| fig-alt: "Multi-panel figure of added variable plots, one panel per predictor in the regression model. Each panel plots the residuals of the outcome against the residuals of that predictor after removing the effects of all other predictors. The slope of the fitted line in each panel equals the corresponding regression coefficient. Most panels show linear trends, though the SES panel may exhibit slight nonlinearity worth further investigation."
-#| fig-height: 4
+#| fig-cap: "Partial regression (added variable) plots for each predictor. The slope in each panel equals the corresponding regression coefficient. Check the SES panel for linearity. Numeric labels flag the most extreme (high-leverage or outlying) observations."
+#| fig-alt: "Multi-panel figure of added variable plots, one panel per predictor in the regression model. Each panel plots the residuals of the outcome against the residuals of that predictor after removing the effects of all other predictors. The slope of the fitted line in each panel equals the corresponding regression coefficient. All panels show roughly linear trends; the SES panel is the one to check for any curvature."
+#| fig-width: 9
+#| fig-height: 3.5
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 # Partial regression plots using car::avPlots()
-avPlots(diag_model, pch = 19, col = adjustcolor("grey50", 0.5),
-        col.lines = ber640_colors["accent"], lwd = 2)
+avPlots(diag_model, layout = c(1, 3), id = list(n = 2),
+        pch = 19, col = adjustcolor("grey50", 0.5),
+        col.lines = ber640_colors[["accent"]], lwd = 2)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-avplots"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 3.5
 ```
-The SES panel is the most informative here because SES is the only continuous predictor. A reasonably linear pattern in that panel supports the linear specification. If you see curvature, consider adding `I(ses^2)` to the model (as demonstrated in the linearity check from @sec-ch7-step3). The binary predictors (`minority`, `sector`) will show only two vertical strips of points --- linearity is not a concern for binary predictors.
+The SES panel is the most informative here because SES is the only continuous predictor. A reasonably linear pattern in that panel supports the linear specification. If you see curvature, consider adding `I(ses^2)` to the model (as demonstrated in the linearity check from @sec-ch7-step3). Because an added-variable plot uses the *residuals* of each predictor (after removing the other predictors), even binary predictors like `minority` and `sector` spread into two diffuse clusters (one per group) rather than two perfectly vertical strips --- and linearity is not a concern for binary predictors anyway.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-avplots"
-#| eval: false
+#| fig-width: 9
+#| fig-height: 3.5
 ```
 - `avPlots()` from the `car` package creates a partial regression plot for each predictor
 - For a given predictor $x_j$, the plot shows the residuals from regressing $y$ on all predictors *except* $x_j$ (y-axis) against the residuals from regressing $x_j$ on all other predictors (x-axis)
@@ -781,17 +830,16 @@ anova(diag_model, model_quad)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch8-linearity-test"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 If the $F$-test for the quadratic term is not significant ($p > .05$), we retain the simpler linear model. If significant, the quadratic term should be included, and the interpretation of the SES effect changes: the effect of SES on math achievement depends on the level of SES itself (see @sec-ch6 for interpreting polynomial models).
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch8-linearity-test"
-#| eval: false
 ```
 - `I(ses^2)` adds a squared SES term to test for curvature
 - `anova()` performs an incremental $F$-test comparing the linear-only model to the model with the quadratic term
@@ -817,12 +865,12 @@ check_heteroscedasticity(diag_model)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch8-hetero-test"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-If the test is not significant, the constant variance assumption is supported. If significant, you have two main remedies: (1) transform the outcome variable (see the transformation ladder in @sec-ch8-normality), or (2) use **heteroscedasticity-consistent (robust) standard errors**, which provide valid inference even when the variance is not constant. The `sandwich` and `lmtest` packages provide robust SEs:
+If the test is not significant, we do not find evidence against constant variance --- this does not prove that the variance is constant, especially if the test has low power, so still inspect the residual plots. If significant, you have two main remedies: (1) transform the outcome variable (see the transformation ladder in @sec-ch8-normality), or (2) use **heteroscedasticity-consistent (robust) standard errors**, which provide valid inference even when the variance is not constant. The `sandwich` and `lmtest` packages provide robust SEs:
 
 ```r
 # Robust standard errors (not run here)
@@ -834,7 +882,6 @@ coeftest(diag_model, vcov = vcovHC(diag_model, type = "HC3"))
 ### Code Explanation
 ```{r}
 #| ref.label: "ch8-hetero-test"
-#| eval: false
 ```
 - `check_heteroscedasticity()` from the `performance` package performs the Breusch-Pagan test
 - The null hypothesis is homoscedasticity (constant variance)
@@ -851,7 +898,7 @@ When heteroscedasticity is present, the OLS coefficient estimates remain **unbia
 
 ## Checking Normality {#sec-ch8-normality}
 
-The normality assumption states that the residuals (or equivalently, the errors) follow a normal distribution. This assumption is the **least critical** of the four: OLS estimates remain unbiased and consistent regardless of the error distribution. However, normality is needed for confidence intervals and hypothesis tests to be exactly valid, particularly in small samples. In large samples, the Central Limit Theorem ensures that test statistics are approximately correct even with non-normal errors.
+The normality assumption concerns the model's unobserved *errors*; because the errors cannot be observed, we assess it through the *residuals*, which estimate them. This assumption is the **least critical** of the four: OLS estimates remain unbiased and consistent regardless of the error distribution. However, normality is needed for confidence intervals and hypothesis tests to be exactly valid, particularly in small samples. In large samples, the Central Limit Theorem ensures that test statistics are approximately correct even with non-normal errors.
 
 We examine three visual approaches and one formal test.
 
@@ -862,16 +909,16 @@ We examine three visual approaches and one formal test.
 ```{r}
 #| label: fig-ch8-histogram
 #| fig-cap: "Histogram of studentized residuals with a normal density overlay. A roughly bell-shaped histogram supports the normality assumption."
-#| fig-alt: "Histogram of studentized residuals on the horizontal axis with frequency or density on the vertical axis, overlaid with a smooth normal density curve. The histogram displays a roughly symmetric, bell-shaped distribution centered near zero that aligns well with the normal curve, supporting the assumption that residuals are approximately normally distributed."
+#| fig-alt: "Histogram of studentized residuals on the horizontal axis with frequency or density on the vertical axis, overlaid with a smooth normal density curve. The histogram is broadly symmetric and centered near zero, tracking the shape of the normal curve overall, with the usual bin-to-bin bumpiness expected at this sample size, supporting the assumption that residuals are approximately normally distributed."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 ggplot(diag_df, aes(x = .std.resid)) +
   geom_histogram(aes(y = after_stat(density)),
-                 bins = 30, fill = ber640_colors["accent"], alpha = 0.6,
+                 bins = 18, fill = ber640_colors[["accent"]], alpha = 0.6,
                  color = "white") +
   stat_function(fun = dnorm, args = list(mean = 0, sd = 1),
-                color = ber640_colors["secondary"], linewidth = 1.2) +
+                color = ber640_colors[["secondary"]], linewidth = 1.2) +
   labs(
     title = "Distribution of Studentized Residuals",
     subtitle = "Overlay: standard normal density",
@@ -881,17 +928,16 @@ ggplot(diag_df, aes(x = .std.resid)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-histogram"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 A histogram that roughly matches the normal curve supports the normality assumption. Common departures include **skewness** (a long tail on one side), **heavy tails** (more extreme values than a normal distribution), and **bimodality** (two humps, suggesting a mixture of subpopulations). Histograms are useful for detecting gross departures but are not very sensitive to subtle non-normality --- the Q-Q plot is better for that.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-histogram"
-#| eval: false
 ```
 - The histogram shows the empirical distribution of the studentized residuals
 - `stat_function(fun = dnorm)` overlays a standard normal curve for comparison
@@ -907,15 +953,15 @@ A histogram that roughly matches the normal curve supports the normality assumpt
 ### Output
 ```{r}
 #| label: fig-ch8-boxplot
-#| fig-cap: "Boxplot of studentized residuals. A symmetric box centered near zero with few outliers supports normality."
-#| fig-alt: "Boxplot of studentized residuals with the residual scale on the vertical axis. The box is approximately symmetric and centered near zero, with the median line close to the center of the box. The whiskers extend roughly equally in both directions and only a few individual points appear beyond the whiskers as potential outliers, supporting the normality assumption."
+#| fig-cap: "Boxplot of studentized residuals. A symmetric box centered near zero with no points beyond the whiskers supports normality."
+#| fig-alt: "Boxplot of studentized residuals with the residual scale on the vertical axis. The box is approximately symmetric and centered near zero, with the median line close to the center of the box. The whiskers extend roughly equally in both directions and span the full range of the data with no points flagged beyond the whiskers, supporting the normality assumption."
 #| fig-height: 3
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 ggplot(diag_df, aes(x = "", y = .std.resid)) +
-  geom_boxplot(fill = ber640_colors["accent"], alpha = 0.4, width = 0.4,
-               outlier.color = ber640_colors["secondary"], outlier.size = 2) +
+  geom_boxplot(fill = ber640_colors[["accent"]], alpha = 0.4, width = 0.4,
+               outlier.color = ber640_colors[["secondary"]], outlier.size = 2) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
   coord_flip() +
   labs(
@@ -926,17 +972,18 @@ ggplot(diag_df, aes(x = "", y = .std.resid)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-boxplot"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-height: 3
 ```
 For normally distributed residuals, the median should be near zero, the box should be approximately symmetric (equal whisker lengths), and there should be relatively few outliers. Asymmetry (one whisker much longer than the other) suggests skewness. Many outliers beyond the whiskers suggest heavy tails.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-boxplot"
-#| eval: false
+#| fig-height: 3
 ```
 - The box shows the interquartile range (IQR); the line inside the box is the median
 - Whiskers extend to the most extreme values within $1.5 \times \text{IQR}$ of the quartiles
@@ -961,7 +1008,7 @@ The **normal quantile-quantile (Q-Q) plot** is the most informative visual diagn
 
 ggplot(diag_df, aes(sample = .std.resid)) +
   stat_qq(alpha = 0.4, color = "grey50") +
-  stat_qq_line(color = ber640_colors["secondary"], linewidth = 1) +
+  stat_qq_line(color = ber640_colors[["secondary"]], linewidth = 1) +
   labs(
     title = "Normal Q-Q Plot",
     subtitle = "Points on the line = normal residuals",
@@ -971,15 +1018,15 @@ ggplot(diag_df, aes(sample = .std.resid)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-qqplot"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 The Q-Q plot reveals specific types of non-normality through characteristic patterns:
 
-- **Points curving upward at both tails** (S-shape above the line at both ends): **heavy tails** --- the distribution has more extreme values than a normal
-- **Points curving downward at both tails**: **light tails** --- fewer extreme values than expected
+- **S-shape: left tail below the line, right tail above it**: **heavy tails** --- the distribution has more extreme values than a normal
+- **Reverse S-shape: left tail above the line, right tail below it**: **light tails** --- fewer extreme values than expected
 - **Points curving above the line on the right**: **positive (right) skew**
 - **Points curving below the line on the left**: **negative (left) skew**
 - **Points close to the line throughout**: normality is well supported
@@ -989,7 +1036,6 @@ The Q-Q plot is more sensitive than histograms because it directly compares quan
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-qqplot"
-#| eval: false
 ```
 - `stat_qq()` plots the sample quantiles (y-axis) against the theoretical normal quantiles (x-axis)
 - `stat_qq_line()` adds a reference line passing through the first and third quartiles
@@ -1004,8 +1050,8 @@ The Q-Q plot is more sensitive than histograms because it directly compares quan
 | Pattern | Diagnosis | Remedy |
 |:--------|:----------|:-------|
 | Points on the line | Normal | None needed |
-| S-shape (both tails above line) | Heavy tails | Consider robust methods |
-| Reverse S-shape (both tails below line) | Light tails | Usually not problematic |
+| S-shape: left tail below, right tail above the line | Heavy tails | Consider robust methods |
+| Reverse S-shape: left tail above, right tail below the line | Light tails | Usually not problematic |
 | Right tail curves up | Positive skew | $\sqrt{y}$, $\log(y)$, or $-1/y$ |
 | Left tail curves down | Negative skew | $y^2$ or $y^3$ |
 :::
@@ -1052,8 +1098,8 @@ qq_df <- tibble(
 )
 
 ggplot(qq_df, aes(sample = residual)) +
-  stat_qq(alpha = 0.4, color = ber640_colors["primary"]) +
-  stat_qq_line(color = ber640_colors["secondary"], linewidth = 1) +
+  stat_qq(alpha = 0.4, color = ber640_colors[["primary"]]) +
+  stat_qq_line(color = ber640_colors[["secondary"]], linewidth = 1) +
   facet_wrap(~ panel, scales = "free", ncol = 2) +
   labs(x = "Theoretical Quantiles (Normal)",
        y = "Sample Quantiles") +
@@ -1061,10 +1107,12 @@ ggplot(qq_df, aes(sample = residual)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-qq-patterns"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 7
 ```
 Match these patterns to your own Q-Q plots:
 
@@ -1076,7 +1124,8 @@ Match these patterns to your own Q-Q plots:
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-qq-patterns"
-#| eval: false
+#| fig-width: 9
+#| fig-height: 7
 ```
 - Four distributions are simulated with $n = 300$ observations each to create recognizable Q-Q patterns
 - **(a)** Standard normal draws --- the ideal case where points fall on the reference line
@@ -1102,17 +1151,16 @@ check_normality(diag_model)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch8-normality-test"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 Formal tests are a useful supplement to visual diagnostics, but interpret them cautiously. With large samples, even trivial departures from normality will produce significant results --- the test becomes too sensitive. With small samples, the test may lack power to detect meaningful departures. **Always combine the formal test with visual inspection** (especially the Q-Q plot). If the Q-Q plot looks reasonable and the sample is moderately large, a significant Shapiro-Wilk test may not be practically concerning.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch8-normality-test"
-#| eval: false
 ```
 - `check_normality()` from the `performance` package performs the Shapiro-Wilk test (for $n \leq 5000$) or the Kolmogorov-Smirnov test (for larger samples)
 - The null hypothesis is that the residuals are normally distributed
@@ -1154,8 +1202,8 @@ Transforming the outcome variable changes the scale on which coefficients are in
 ### Output
 ```{r}
 #| label: fig-ch8-transform-demo
-#| fig-cap: "Q-Q plots for the original residuals and after a log transformation. If residuals are positively skewed, the log transformation often improves normality."
-#| fig-alt: "Two-panel figure comparing Q-Q plots before and after a log transformation of the outcome variable. The left panel shows the Q-Q plot for original residuals with noticeable departure from the reference line at the tails due to positive skew. The right panel shows the Q-Q plot after the log transformation, where points follow the reference line more closely, demonstrating improved normality."
+#| fig-cap: "Q-Q plots for the original residuals and after a log transformation. The original residuals are already close to normal, so applying a log transformation here makes normality *worse* --- a cautionary example that transformations help only when there is genuine skew to correct, not as an automatic step."
+#| fig-alt: "Two-panel figure comparing Q-Q plots before and after a log transformation of the outcome variable. The left panel shows the Q-Q plot for the original residuals, which fall close to the reference line, indicating they are approximately normal. The right panel shows the Q-Q plot after the log transformation, where the points deviate from the reference line more, with a pronounced downward-curving left tail, showing that normality has become worse."
 #| fig-height: 4
 #| code-fold: true
 #| code-summary: "Show R Code"
@@ -1164,7 +1212,7 @@ Transforming the outcome variable changes the scale on which coefficients are in
 # Original model
 p_original <- ggplot(diag_df, aes(sample = .std.resid)) +
   stat_qq(alpha = 0.4, color = "grey50") +
-  stat_qq_line(color = ber640_colors["secondary"], linewidth = 1) +
+  stat_qq_line(color = ber640_colors[["secondary"]], linewidth = 1) +
   labs(title = "Original Scale", x = "Theoretical Quantiles",
        y = "Studentized Residuals")
 
@@ -1179,7 +1227,7 @@ log_df <- augment(model_log)
 
 p_log <- ggplot(log_df, aes(sample = .std.resid)) +
   stat_qq(alpha = 0.4, color = "grey50") +
-  stat_qq_line(color = ber640_colors["secondary"], linewidth = 1) +
+  stat_qq_line(color = ber640_colors[["secondary"]], linewidth = 1) +
   labs(title = "Log-Transformed Outcome", x = "Theoretical Quantiles",
        y = "Studentized Residuals")
 
@@ -1187,21 +1235,22 @@ p_original + p_log
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-transform-demo"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-height: 4
 ```
-If the original residuals show positive skew (right tail deviating upward from the line), the log transformation should bring the tails closer to the reference line. If the original residuals are already approximately normal, the transformation may make things worse. Always compare before and after --- do not blindly transform.
+Here the original `mathach` residuals are *already* approximately normal --- the left panel hugs the reference line. Because there is no real skew to correct, applying a log transformation pushes the residuals *away* from normality: the right panel shows a pronounced left-tail departure from the line, and the Shapiro-Wilk statistic falls from about $W = 0.98$ (original) to about $W = 0.94$ (log-transformed), where a lower $W$ means farther from normal. The general principle still holds --- a log transformation helps when there is genuine right skew to compress --- but this example shows the reverse case. Always compare before and after, and transform to fix a *diagnosed* problem, not reflexively.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-transform-demo"
-#| eval: false
+#| fig-height: 4
 ```
 - The left panel shows the Q-Q plot for the original model
 - The right panel shows the Q-Q plot after log-transforming the outcome
-- `mathach` is shifted to ensure all values are positive (required for `log()`)
+- `mathach` is shifted to ensure all values are positive (required for `log()`); note that shifting a variable to force positivity changes its scale and complicates interpretation of the log-scale coefficients, so this is a demonstration device, not a recommended routine step
 - Compare the alignment of points to the reference line across the two panels
 - This is a *demonstration* of the transformation effect --- whether it is appropriate depends on the actual pattern in the original residuals
 
@@ -1217,8 +1266,8 @@ The `performance::check_model()` function from the `easystats` ecosystem provide
 ### Output
 ```{r}
 #| label: fig-ch8-check-model
-#| fig-cap: "The check_model() dashboard for the math achievement model. Six diagnostic panels cover linearity, homoscedasticity, normality, influential observations, and collinearity in a single display."
-#| fig-alt: "Six-panel diagnostic dashboard produced by the performance package check_model function for the math achievement regression model. The panels assess linearity, homoscedasticity, normality of residuals, influential observations, and collinearity in a single composite display. Each panel uses a different plot type such as residual scatter plots, Q-Q plots, and bar charts to evaluate a specific regression assumption at a glance."
+#| fig-cap: "The check_model() dashboard for the math achievement model. Six diagnostic panels cover the posterior predictive check, linearity, homoscedasticity, normality, influential observations, and collinearity in a single display."
+#| fig-alt: "Six-panel diagnostic dashboard produced by the performance package check_model function for the math achievement regression model. The panels assess linearity, homoscedasticity, normality of residuals, influential observations, and collinearity in a single composite display. Each panel uses a different plot type such as density overlays, residual scatter plots, a detrended Q-Q plot, and a point-and-interval collinearity display to evaluate a specific regression assumption at a glance."
 #| fig-height: 10
 #| code-fold: true
 #| code-summary: "Show R Code"
@@ -1228,24 +1277,25 @@ check_model(diag_model)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-check-model"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-height: 10
 ```
 Read each panel in sequence:
 
-1. **Posterior predictive check**: The green lines (simulated data from the model) should overlap with the dark blue line (observed data). Large discrepancies indicate the model does not capture the data-generating process well.
+1. **Posterior predictive check**: The teal curve (observed data) should broadly overlap with the blue curves (model-predicted/simulated data). Large discrepancies indicate the model does not capture the data-generating process well.
 2. **Linearity**: The reference line should be approximately flat and horizontal. Curvature indicates a missing nonlinear term.
 3. **Homogeneity of variance**: The reference line should be approximately flat. An increasing trend indicates the residual spread grows with the fitted values (heteroscedasticity).
 4. **Influential observations**: Points with Cook's distance exceeding the threshold line deserve investigation. High-influence observations can substantially change the regression results.
 5. **Collinearity**: VIF values below 5 are generally acceptable. Values above 10 indicate problematic multicollinearity, meaning the predictor's standard error is inflated due to correlation with other predictors.
-6. **Normality**: Points should follow the diagonal line, as discussed in @sec-ch8-qqplot.
+6. **Normality**: In `check_model()` this panel is a *detrended* Q-Q display, so the plotted deviations should stay close to the horizontal reference line at zero (no systematic pattern), rather than following a diagonal line. See @sec-ch8-qqplot for the standard diagonal Q-Q plot.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-check-model"
-#| eval: false
+#| fig-height: 10
 ```
 - `check_model()` from the `performance` package produces a multi-panel diagnostic display
 - The dashboard typically includes:
@@ -1254,7 +1304,7 @@ Read each panel in sequence:
   3. **Homogeneity of variance**: Scale-location plot (square root of standardized residuals vs. fitted values)
   4. **Influential observations**: Cook's distance identifying observations with outsized influence
   5. **Collinearity**: Variance inflation factors (VIF) for each predictor (see also `check_collinearity()`)
-  6. **Normality of residuals**: Q-Q plot
+  6. **Normality of residuals**: detrended Q-Q plot (deviations from the reference line, not a diagonal)
 - `fig-height: 10` ensures the panels are large enough to read comfortably
 
 
@@ -1299,7 +1349,7 @@ $$
 #| label: fig-ch8-dfbetas
 #| fig-cap: "DFBETAS index plots for each regression coefficient. Dashed lines mark the size-adjusted threshold at ±2/√n. Observations beyond these lines have a disproportionate influence on the corresponding coefficient."
 #| fig-alt: "Multi-panel figure of DFBETAS index plots, one panel per regression coefficient. Each panel plots observation index on the horizontal axis and the DFBETAS value on the vertical axis. Horizontal dashed lines mark the size-adjusted threshold at plus and minus two divided by the square root of n. Most observations cluster within the threshold bands, but a few points exceed the lines, identifying cases with disproportionate influence on individual coefficients."
-#| fig-height: 8
+#| fig-height: 6
 #| fig-width: 9
 #| code-fold: true
 #| code-summary: "Show R Code"
@@ -1316,9 +1366,9 @@ dfb_threshold <- 2 / sqrt(n_obs)
 coef_names <- colnames(dfb)
 dfb_plots <- map(seq_along(coef_names), \(j) {
   ggplot(dfb_df, aes(x = obs, y = .data[[coef_names[j]]])) +
-    geom_point(alpha = 0.5, color = ber640_colors["primary"]) +
+    geom_point(alpha = 0.5, color = ber640_colors[["primary"]]) +
     geom_hline(yintercept = c(-dfb_threshold, dfb_threshold),
-               linetype = "dashed", color = ber640_colors["secondary"],
+               linetype = "dashed", color = ber640_colors[["secondary"]],
                linewidth = 0.7) +
     geom_hline(yintercept = 0, color = "grey70") +
     labs(title = coef_names[j],
@@ -1331,10 +1381,12 @@ wrap_plots(dfb_plots, ncol = 2)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-dfbetas"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 9
+#| fig-height: 6
 ```
 Scan each panel for points that exceed the dashed threshold lines. Key questions to ask:
 
@@ -1346,7 +1398,8 @@ Scan each panel for points that exceed the dashed threshold lines. Key questions
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-dfbetas"
-#| eval: false
+#| fig-width: 9
+#| fig-height: 6
 ```
 - `dfbetas()` returns a matrix with one column per coefficient and one row per observation
 - Each column tells you how much that coefficient would change (in standard-error units) if the corresponding observation were deleted
@@ -1376,7 +1429,7 @@ This formulation shows that Cook's distance is large when an observation has **b
 ::: {.callout-note}
 ## Cook's Distance Thresholds
 - **Absolute:** $D_i > 1$
-- **Relative:** $D_i > 4(k+1)/n$
+- **Relative (size-adjusted):** common screening cutoffs include $D_i > 4/n$ and the more conservative $D_i > 4(k+1)/n$; these are rules of thumb for flagging points to investigate, not definitive tests, and the two can flag different numbers of observations.
 :::
 
 ### Leverage (Hat Values)
@@ -1388,7 +1441,7 @@ Leverage $h_{ii}$ measures how far an observation's predictors are from the cent
 ```{r}
 #| label: fig-ch8-influence
 #| fig-cap: "Cook's distance index plot (top) with the top 5 most influential observations labeled, and leverage-vs-studentized-residual plot (bottom) with threshold lines for both leverage and residual magnitude."
-#| fig-alt: "Two-panel influence diagnostic figure. The top panel is a Cook's distance index plot with observation number on the horizontal axis and Cook's distance on the vertical axis, where the five most influential observations are labeled by their index numbers and stand out as tall spikes. The bottom panel is a scatter plot of leverage on the horizontal axis versus studentized residuals on the vertical axis, with dashed threshold lines marking high leverage and large residual cutoffs to identify jointly influential cases."
+#| fig-alt: "Two-panel influence diagnostic figure. The top panel is a Cook's distance index plot with observation number on the horizontal axis and Cook's distance on the vertical axis, where the five most influential observations are labeled by their index numbers, though all of them fall below the dashed threshold line. The bottom panel is a scatter plot of leverage on the horizontal axis versus studentized residuals on the vertical axis, with dashed threshold lines marking high leverage and large residual cutoffs to identify jointly influential cases."
 #| fig-height: 9
 #| code-fold: true
 #| code-summary: "Show R Code"
@@ -1418,12 +1471,12 @@ top5 <- diag_df |> slice_max(.cooksd, n = 5)
 
 # Cook's distance index plot with labels
 p1 <- ggplot(diag_df, aes(x = obs, y = .cooksd)) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6) +
   geom_hline(yintercept = cooks_threshold, linetype = "dashed",
-             color = ber640_colors["secondary"], linewidth = 0.7) +
+             color = ber640_colors[["secondary"]], linewidth = 0.7) +
   ggrepel::geom_text_repel(
     data = top5, aes(label = obs),
-    color = ber640_colors["secondary"], size = 3.5,
+    color = ber640_colors[["secondary"]], size = 3.5,
     fontface = "bold", max.overlaps = 10
   ) +
   labs(title = "Cook's Distance",
@@ -1432,17 +1485,17 @@ p1 <- ggplot(diag_df, aes(x = obs, y = .cooksd)) +
 
 # Leverage vs studentized residuals with threshold lines
 p2 <- ggplot(diag_df, aes(x = .hat, y = abs(.std.resid))) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6) +
   geom_vline(xintercept = leverage_threshold, linetype = "dashed",
-             color = ber640_colors["warning"], linewidth = 0.7) +
+             color = ber640_colors[["warning"]], linewidth = 0.7) +
   geom_hline(yintercept = 2, linetype = "dashed",
-             color = ber640_colors["secondary"], linewidth = 0.7) +
+             color = ber640_colors[["secondary"]], linewidth = 0.7) +
   annotate("text", x = leverage_threshold, y = max(abs(diag_df$.std.resid)) * 0.95,
            label = paste0("2(k+1)/n = ", round(leverage_threshold, 3)),
-           hjust = -0.1, color = ber640_colors["warning"], size = 3.5) +
+           hjust = -0.1, color = ber640_colors[["warning"]], size = 3.5) +
   annotate("text", x = max(diag_df$.hat) * 0.95, y = 2.15,
-           label = "|Residual| = 2",
-           hjust = 1, color = ber640_colors["secondary"], size = 3.5) +
+           label = "|Studentized residual| = 2",
+           hjust = 1, color = ber640_colors[["secondary"]], size = 3.5) +
   labs(title = "Leverage vs |Studentized Residual|",
        subtitle = "Upper-right quadrant = high leverage AND large residual",
        x = "Leverage (hat value)", y = "|Studentized Residual|")
@@ -1451,10 +1504,11 @@ p1 / p2
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch8-influence"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-height: 9
 ```
 **Cook's distance plot (top)**: Most points cluster near zero. The labeled observations are the top 5 by Cook's distance --- examine these first. Points above the dashed threshold are changing the regression coefficients more than is typical given the sample size. The labels allow you to look up these observations in the data to investigate potential coding errors, unusual subgroups, or substantive explanations.
 
@@ -1463,19 +1517,19 @@ p1 / p2
 - **Lower-left**: Low leverage, small residual --- typical, well-fit observations (most should be here)
 - **Lower-right**: High leverage, small residual --- unusual predictor values but the observation fits the model well (not necessarily problematic)
 - **Upper-left**: Low leverage, large residual --- an outlier in the outcome but without much pull on the regression line
-- **Upper-right**: High leverage *and* large residual --- this combination means the observation is actively pulling the regression line toward itself. These are the observations most likely to change your conclusions if removed.
+- **Upper-right**: High leverage *and* large residual --- this combination means the observation is actively pulling the regression line toward itself. These are the observations most likely to change your conclusions if removed. In this model no observation falls into the upper-right quadrant, so there is no jointly high-leverage, large-residual case to worry about here.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch8-influence"
-#| eval: false
+#| fig-height: 9
 ```
 - `broom::augment()` adds `.cooksd`, `.hat`, `.std.resid` to the data for every observation
 - The Cook's distance threshold $4(k+1)/n$ and leverage threshold $2(k+1)/n$ are commonly used size-adjusted cutoffs
 - `slice_max(.cooksd, n = 5)` identifies the top 5 most influential observations for labeling with `geom_text_repel()` from the `ggrepel` package
 - The leverage-vs-residual plot now includes two reference lines:
   - **Vertical dashed line** at $2(k+1)/n$: observations to the right have unusually high leverage
-  - **Horizontal dashed line** at $|\text{residual}| = 2$: observations above this have large studentized residuals (roughly corresponding to values beyond 2 standard deviations)
+  - **Horizontal dashed line** at $|\text{studentized residual}| = 2$: observations above this have large studentized residuals (roughly corresponding to values beyond 2 standard deviations)
 - Observations in the **upper-right quadrant** (above both thresholds) are the most concerning because they combine high leverage with poor fit
 - `patchwork`'s `/` operator stacks the two plots vertically
 
@@ -1484,29 +1538,45 @@ p1 / p2
 
 ### Interactive Exploration: Influence Explorer {.unnumbered}
 
-::: {.callout-tip collapse="true"}
+::: {.callout-tip collapse="false"}
 ## Try It: Add Special Points
 
-Toggle different types of unusual points to see how they affect the regression line, residuals, and Cook's distance.
+Use the three toggles --- **Add High Leverage Point**, **Add Influential Outlier**, and **Add Low-Leverage Outlier** --- to drop special points into the data, then use **Reset** to clear them; a good first move is to turn on **Add High Leverage Point** alone and watch how little the line moves. Then try the low-leverage outlier by itself: it is visibly poorly fit, but it sits near the center of the predictor distribution, so it has little pull on the slope. Each toggle shows how that kind of point affects the regression line, residuals, and Cook's distance. We simulate the base data and inject these points because the lesson is causal --- you need to add and remove one extreme observation at a time and watch the fitted line respond, a controlled counterfactual that a single fixed real dataset cannot offer.
 :::
 
 ```{ojs}
 //| echo: false
-import { ber640 as influ_ber640, plotDefaults as influ_plotDefaults, themeColors as influ_themeColors, olsRegression as influ_olsRegression, seq as influ_seq, formatCoef as influ_formatCoef, withAlpha as influ_withAlpha } from "../ojs/shared.js"
+import { ber640 as influ_ber640, plotDefaults as influ_plotDefaults, themeColors as influ_themeColors, onThemeChange as influ_onThemeChange, olsRegression as influ_olsRegression, seq as influ_seq, formatCoef as influ_formatCoef, withAlpha as influ_withAlpha, srSummary as influ_srSummary, resetControls as influ_resetControls } from "../ojs/shared.js"
+```
 
-influ_tc = influ_themeColors()
+```{ojs}
+//| echo: false
+influ_theme = influ_themeColors()
+```
+
+```{ojs}
+//| echo: false
+influ_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
 
 ```{ojs}
 //| echo: false
 viewof influ_toggleLeverage = Inputs.toggle({label: "Add High Leverage Point", value: false})
+```
+
+```{ojs}
+//| echo: false
 viewof influ_toggleInfluential = Inputs.toggle({label: "Add Influential Outlier", value: false})
+```
+
+```{ojs}
+//| echo: false
 viewof influ_toggleLowLev = Inputs.toggle({label: "Add Low-Leverage Outlier", value: false})
 ```
 
 ```{ojs}
 //| echo: false
-influ_seed = 20260320
+influ_seed = 20264909
 
 influ_mulberry32 = function(seed) {
   let t = seed | 0;
@@ -1539,7 +1609,7 @@ influ_fullData = {
   const data = influ_baseData.map(d => ({...d}));
   let nextId = data.length;
   if (influ_toggleLeverage) {
-    data.push({x: 15, y: 2 + 0.8 * 15, type: "High Leverage", id: nextId++});
+    data.push({x: 15, y: influ_baseReg.intercept + influ_baseReg.slope * 15, type: "High Leverage", id: nextId++});
   }
   if (influ_toggleInfluential) {
     data.push({x: 15, y: -5, type: "Influential Outlier", id: nextId++});
@@ -1590,27 +1660,30 @@ influ_colorMap = ({
   "Influential Outlier": influ_ber640.secondary,
   "Low-Leverage Outlier": influ_ber640.warning
 })
+
+influ_labelMap = ({
+  "High Leverage": "High leverage",
+  "Influential Outlier": "Influential",
+  "Low-Leverage Outlier": "Low-lev outlier"
+})
 ```
 
 ```{ojs}
 //| echo: false
-html`<div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-  <div style="flex:1; min-width:140px; padding:12px 16px; border-radius:8px; background:${influ_tc.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'}; border:1px solid ${influ_tc.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'};">
-    <div style="font-size:0.75rem; color:${influ_tc.muted}; text-transform:uppercase; letter-spacing:0.05em;">Full Model R²</div>
-    <div style="font-size:1.4rem; font-weight:700; color:${influ_ber640.accent}; margin-top:2px;">${influ_fullReg.rSquared.toFixed(3)}</div>
-  </div>
-  <div style="flex:1; min-width:140px; padding:12px 16px; border-radius:8px; background:${influ_tc.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'}; border:1px solid ${influ_tc.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'};">
-    <div style="font-size:0.75rem; color:${influ_tc.muted}; text-transform:uppercase; letter-spacing:0.05em;">Slope Change</div>
-    <div style="font-size:1.4rem; font-weight:700; color:${Math.abs(influ_slopeChange) > 0.1 ? influ_ber640.secondary : influ_ber640.success}; margin-top:2px;">${influ_slopeChange >= 0 ? '+' : ''}${influ_slopeChange.toFixed(3)}</div>
-  </div>
-  <div style="flex:1; min-width:140px; padding:12px 16px; border-radius:8px; background:${influ_tc.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'}; border:1px solid ${influ_tc.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'};">
-    <div style="font-size:0.75rem; color:${influ_tc.muted}; text-transform:uppercase; letter-spacing:0.05em;">Max Cook's D</div>
-    <div style="font-size:1.4rem; font-weight:700; color:${influ_maxCookD > influ_threshold ? influ_ber640.secondary : influ_ber640.accent}; margin-top:2px;">${influ_maxCookD.toFixed(3)}</div>
-  </div>
-  <div style="flex:1; min-width:140px; padding:12px 16px; border-radius:8px; background:${influ_tc.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)'}; border:1px solid ${influ_tc.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'};">
-    <div style="font-size:0.75rem; color:${influ_tc.muted}; text-transform:uppercase; letter-spacing:0.05em;">Influential Points</div>
-    <div style="font-size:1.4rem; font-weight:700; color:${influ_numInfluential > 0 ? influ_ber640.secondary : influ_ber640.success}; margin-top:2px;">${influ_numInfluential} / ${influ_fullData.length}</div>
-  </div>
+influ_reset = influ_resetControls([
+  { input: viewof influ_toggleLeverage,    value: false },
+  { input: viewof influ_toggleInfluential, value: false },
+  { input: viewof influ_toggleLowLev,      value: false }
+], { label: "Reset" })
+```
+
+```{ojs}
+//| echo: false
+influ_readouts = html`<div class="ojs-readouts">
+  ${influ_pill("Full Model R²", influ_fullReg.rSquared.toFixed(3), "info")}
+  ${influ_pill("Slope Change", (influ_slopeChange >= 0 ? "+" : "") + influ_slopeChange.toFixed(3), Math.abs(influ_slopeChange) > 0.1 ? "bad" : "good")}
+  ${influ_pill("Max Cook's D", influ_maxCookD.toFixed(3), influ_maxCookD > influ_threshold ? "bad" : "info")}
+  ${influ_pill("Influential", influ_numInfluential + " / " + influ_fullData.length, influ_numInfluential > 0 ? "bad" : "good")}
 </div>`
 ```
 
@@ -1621,6 +1694,14 @@ influ_xRange = {
   const xmin = Math.min(...xs) - 1;
   const xmax = Math.max(...xs) + 1;
   return [xmin, xmax];
+}
+
+influ_cookTicks = {
+  const ticks = new Set();
+  for (let i = 0; i < influ_cooksData.length; i += 5) ticks.add(i);
+  ticks.add(influ_cooksData.length - 1);
+  influ_cooksData.filter(d => d.type !== "Base").forEach(d => ticks.add(d.index));
+  return Array.from(ticks).sort((a, b) => a - b);
 }
 
 influ_scatterPlot = {
@@ -1634,7 +1715,7 @@ influ_scatterPlot = {
   const marks = [
     Plot.line(baseLineData, {
       x: "x", y: "y",
-      stroke: influ_tc.muted,
+      stroke: influ_theme.muted,
       strokeDasharray: "6,4",
       strokeWidth: 2
     }),
@@ -1658,19 +1739,23 @@ influ_scatterPlot = {
     }),
     Plot.text(influ_fullData.filter(d => d.type !== "Base"), {
       x: "x", y: "y",
-      text: d => d.type,
-      dy: -14,
-      fontSize: 11,
+      text: d => influ_labelMap[d.type] || d.type,
+      dx: d => d.x > 10 ? -6 : 0,
+      dy: d => d.x > 10 && d.y < 0 ? 16 : -14,
+      textAnchor: d => d.x > 10 ? "end" : "middle",
+      fontSize: 10,
       fontWeight: 600,
       fill: d => influ_colorMap[d.type]
     })
   ];
 
   return Plot.plot(influ_plotDefaults({
-    width: 480,
-    height: 380,
-    x: {label: "X", domain: influ_xRange},
-    y: {label: "Y"},
+    width: 330,
+    height: 310,
+    marginTop: 24, marginBottom: 40, marginLeft: 48, marginRight: 16,
+    style: { color: influ_theme.text },
+    x: {label: "X", domain: influ_xRange, grid: true},
+    y: {label: "Y", grid: true},
     marks
   }));
 }
@@ -1681,7 +1766,8 @@ influ_cooksPlot = {
       x: "index",
       y: "cookD",
       fill: d => d.cookD > influ_threshold ? influ_ber640.secondary : influ_ber640.accent,
-      fillOpacity: d => d.type !== "Base" ? 1.0 : 0.7
+      fillOpacity: d => d.type !== "Base" ? 1.0 : 0.7,
+      title: d => `${d.type} #${d.index}\nCook's D = ${d.cookD.toFixed(3)}`
     }),
     Plot.ruleY([influ_threshold], {
       stroke: influ_ber640.secondary,
@@ -1693,42 +1779,60 @@ influ_cooksPlot = {
       text: [`4/n = ${influ_threshold.toFixed(3)}`],
       dy: -10,
       textAnchor: "end",
-      fontSize: 11,
+      fontSize: 10,
       fill: influ_ber640.secondary,
       fontWeight: 600
     })
   ];
 
   return Plot.plot(influ_plotDefaults({
-    width: 480,
-    height: 380,
-    x: {label: "Observation Index", tickFormat: d => Number.isInteger(d) ? d : ""},
-    y: {label: "Cook's Distance", domain: [0, Math.max(influ_maxCookD * 1.15, influ_threshold * 2)]},
+    width: 330,
+    height: 310,
+    marginTop: 24, marginBottom: 40, marginLeft: 48, marginRight: 16,
+    style: { color: influ_theme.text },
+    x: {label: "Observation Index", ticks: influ_cookTicks, tickFormat: d => Number.isInteger(d) ? d : ""},
+    y: {label: "Cook's Distance", grid: true, domain: [0, Math.max(influ_maxCookD * 1.15, influ_threshold * 2)]},
     marks
   }));
 }
+```
 
-html`<div style="display:flex; flex-wrap:wrap; gap:16px; justify-content:center;">
-  <div>
-    <div style="font-weight:600; text-align:center; margin-bottom:6px; color:${influ_tc.text}; font-size:0.95rem;">
-      Scatter Plot with Regression Lines
+```{ojs}
+//| echo: false
+influ_sr = influ_srSummary("ch08-influence",
+  `Active special points: ${[influ_toggleLeverage ? "high-leverage" : null, influ_toggleInfluential ? "influential outlier" : null, influ_toggleLowLev ? "low-leverage outlier" : null].filter(s => s).join(", ") || "none"}. Base slope ${influ_formatCoef(influ_baseReg.slope, 3)}, full-model slope ${influ_formatCoef(influ_fullReg.slope, 3)} (change ${(influ_slopeChange >= 0 ? "+" : "") + influ_slopeChange.toFixed(3)}). Full model R² ${influ_fullReg.rSquared.toFixed(3)}, max Cook's distance ${influ_maxCookD.toFixed(3)} against the 4/n threshold of ${influ_threshold.toFixed(3)}; ${influ_numInfluential} of ${influ_fullData.length} observations flagged influential.`)
+```
+
+```{ojs}
+//| echo: false
+influ_app = html`<div class="ojs-app" role="group" aria-label="Influence explorer: add special points to see their effect on the regression line and Cook's distance">
+  <div class="ojs-controls">${viewof influ_toggleLeverage}${viewof influ_toggleInfluential}${viewof influ_toggleLowLev}<div class="ojs-control-group" style="flex:0 0 auto;">${influ_reset}</div></div>
+  ${influ_readouts}
+  <div style="display:flex; flex-wrap:wrap; gap:16px; justify-content:center;">
+    <div>
+      <div style="font-weight:600; text-align:center; margin-bottom:6px; color:var(--ojs-fg, ${influ_theme.text}); font-size:0.9rem;">Scatter with Regression Lines</div>
+      ${influ_scatterPlot}
+      <div style="display:flex; gap:16px; justify-content:center; margin-top:4px; font-size:0.78rem; color:${influ_theme.muted};">
+        <span><span style="display:inline-block; width:20px; height:2px; background:${influ_ber640.primary}; vertical-align:middle; margin-right:4px;"></span>Full model</span>
+        <span><span style="display:inline-block; width:20px; height:0; vertical-align:middle; margin-right:4px; border-top:2px dashed ${influ_theme.muted};"></span>Base model</span>
+      </div>
     </div>
-    ${influ_scatterPlot}
-    <div style="display:flex; gap:16px; justify-content:center; margin-top:4px; font-size:0.8rem; color:${influ_tc.muted};">
-      <span><span style="display:inline-block; width:20px; height:2px; background:${influ_ber640.primary}; vertical-align:middle; margin-right:4px;"></span>Full model</span>
-      <span><span style="display:inline-block; width:20px; height:2px; background:${influ_tc.muted}; vertical-align:middle; margin-right:4px; border-top:2px dashed ${influ_tc.muted};"></span>Base model</span>
+    <div>
+      <div style="font-weight:600; text-align:center; margin-bottom:6px; color:var(--ojs-fg, ${influ_theme.text}); font-size:0.9rem;">Cook's Distance</div>
+      ${influ_cooksPlot}
     </div>
   </div>
-  <div>
-    <div style="font-weight:600; text-align:center; margin-bottom:6px; color:${influ_tc.text}; font-size:0.95rem;">
-      Cook's Distance
-    </div>
-    ${influ_cooksPlot}
-  </div>
+  ${influ_sr}
 </div>`
 ```
 
-::: {.callout-important}
+::: {.callout-note}
+## What you should have seen
+- **Leverage alone is not influence**: the high-leverage point sits far out in *X* but lies on the existing trend, so it barely moves the slope and its Cook's distance stays small.
+- **Influence requires both leverage and a large residual**: only the high-leverage *outlier* (far in *X* and off the line) swings the slope sharply and pushes Cook's distance past the 4/n threshold. A low-leverage outlier can still be a real data problem to investigate, but because it sits near the center of *X*, it mostly increases residual variation and leaves the slope almost unchanged.
+- Cook's distance fuses these two ingredients into one number, flagging exactly the observations whose removal would change your conclusions --- which is why you investigate (not automatically delete) the points it highlights.
+:::
+
 ## Dealing with Influential Observations
 1. Check for coding errors
 2. Check if the subject belongs in the analysis
@@ -1736,7 +1840,6 @@ html`<div style="display:flex; flex-wrap:wrap; gap:16px; justify-content:center;
 4. Consider omitted covariates
 5. Conduct sensitivity analysis: refit without, compare results
 6. **Deletion is NOT justified merely because a residual is large**
-:::
 
 
 ## Collinearity Diagnostics {#sec-ch8-collinearity}
@@ -1769,17 +1872,16 @@ check_collinearity(diag_model)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch8-vif"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-Each row shows the VIF and tolerance for one predictor. All VIF values below 5 indicate that collinearity is not inflating standard errors to a concerning degree. If any predictor has VIF above 10, its coefficient estimate is unreliable --- the data do not contain enough independent information to distinguish its effect from the effects of correlated predictors. In that case, consider the remedies listed below (selecting, combining, or transforming predictors).
+Each row shows the VIF and tolerance for one predictor. All VIF values below 5 indicate that collinearity is not inflating standard errors to a concerning degree. A VIF above 10 is a common rule of thumb signalling that the coefficient's standard error is greatly inflated, so the estimate is imprecise and unstable --- the data do not contain enough independent information to distinguish its effect from the effects of correlated predictors. Note that high VIF inflates the standard error; it does not by itself bias the coefficient, and a high VIF is sometimes expected by construction (e.g., polynomial or interaction terms). When a high VIF is a genuine concern, consider the remedies listed below (selecting, combining, or transforming predictors).
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch8-vif"
-#| eval: false
 ```
 - `check_collinearity()` from the `performance` package computes VIF and tolerance ($1/\text{VIF}$) for each predictor, along with interpretive labels (low, moderate, high)
 - VIF $\geq 5$ means the standard error is inflated by more than a factor of two ($\sqrt{5} \approx 2.2$) compared to what it would be if the predictor were uncorrelated with all others
@@ -1801,7 +1903,7 @@ Each row shows the VIF and tolerance for one predictor. All VIF values below 5 i
 
 ::: {.callout-tip}
 ## Connection to the Confirmatory Workflow
-This section completes **Step 5** of the confirmatory workflow from @sec-ch7. After fitting the model (Steps 1--3) and running diagnostics (Step 4, covered earlier in this chapter), the final step is to apply corrective measures where needed. Robust standard errors are the primary tool for maintaining valid inference when heteroscedasticity or clustering is detected.
+This section follows on from the confirmatory workflow from @sec-ch7. After fitting the model (Steps 1--4) and running diagnostics (Step 5, covered earlier in this chapter), the next move is to apply corrective measures where the Step 5 diagnostics reveal a problem. Robust standard errors are the primary tool for maintaining valid inference when heteroscedasticity or clustering is detected.
 :::
 
 The diagnostic tools covered so far help you *detect* assumption violations. But what do you do when a violation is confirmed? For heteroscedasticity --- which leaves coefficient estimates unbiased but invalidates standard errors (see @tbl-ch8-consequences) --- **robust standard errors** provide valid inference without requiring transformations or changes to the model itself.
@@ -1831,17 +1933,16 @@ tibble(
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch8-robust-se"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-If the ratios are all close to 1.0 (e.g., between 0.9 and 1.1), heteroscedasticity is minimal and OLS inference is adequate. Ratios substantially above 1.0 indicate that OLS standard errors understate the true uncertainty --- confidence intervals are too narrow and $p$-values are too small. In such cases, use the robust SEs for inference. As a practical rule, many applied researchers now report robust SEs by default, since they are valid under both homoscedasticity and heteroscedasticity (though slightly less efficient when the variance is truly constant).
+If the ratios are all close to 1.0 (e.g., between 0.9 and 1.1), heteroscedasticity is minimal and OLS inference is adequate. Ratios substantially above 1.0 indicate that OLS standard errors understate the true uncertainty --- confidence intervals are too narrow and $p$-values are too small. In such cases, use the robust SEs for inference. As a practical rule, many applied researchers now report HC3 robust SEs by default. These standard errors are heteroscedasticity-consistent and asymptotically valid when observations are independent and the mean model is correctly specified; they change the inference, not the fitted coefficients. They do not, however, fix omitted variables, nonlinearity, endogeneity, or clustering.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch8-robust-se"
-#| eval: false
 ```
 - `vcovHC(model, type = "HC3")` from the `sandwich` package computes the heteroscedasticity-consistent covariance matrix; HC3 is recommended for its better finite-sample properties
 - `coeftest()` from the `lmtest` package produces the coefficient table using the specified covariance matrix
@@ -1864,6 +1965,7 @@ For clustered data (e.g., students in schools), use `sandwich::vcovCL()`:
 #| code-fold: true
 #| code-summary: "Show R Code"
 
+data(gcse)
 model_gcse <- lm(gcse ~ lrt + gender, data = gcse)
 
 ols_se <- coeftest(model_gcse)
@@ -1880,17 +1982,16 @@ tibble(
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch8-cluster-robust"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-Cluster-robust SEs are typically larger than OLS SEs because OLS treats all observations as independent, effectively overstating the amount of unique information in the sample. If students within the same school tend to have similar outcomes (positive intraclass correlation), OLS standard errors are too optimistic. A ratio of 1.5, for example, means the true standard error is 50% larger than OLS suggests --- confidence intervals should be 50% wider, and some previously "significant" effects may no longer reach significance. When ratios are large, this signals substantial within-cluster dependence and the need for either cluster-robust SEs or a multilevel model.
+Cluster-robust SEs are typically larger than OLS SEs because OLS treats all observations as independent, effectively overstating the amount of unique information in the sample. If students within the same school tend to have similar outcomes (positive intraclass correlation), OLS standard errors are too optimistic. A ratio of 1.5, for example, means the cluster-robust SE estimate is 50% larger than OLS suggests --- confidence intervals should be 50% wider, and some previously "significant" effects may no longer reach significance. Cluster-robust SEs rely on having a sufficient number of independent clusters (a common rule of thumb is roughly 40 or more); with few clusters they can be unreliable. When ratios are large, this signals substantial within-cluster dependence and the need for either cluster-robust SEs or a multilevel model.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch8-cluster-robust"
-#| eval: false
 ```
 - `vcovCL(model, cluster = gcse$school)` computes the cluster-robust covariance matrix, treating each school as an independent unit
 - Cluster-robust SEs account for the fact that observations within the same school are correlated (violating the independence assumption)
@@ -1969,11 +2070,11 @@ check_model(model_ex)
 
 ::: {.callout-caution collapse="true"}
 ## Exercise 8.2: Identifying Influential Observations
-Using the model from Exercise 8.1, identify observations with Cook's $D > 4(k+1)/n$. Remove them and refit. How much do coefficients change?
+Using the model from Exercise 8.1, identify observations with Cook's $D > 4/n$. Remove them and refit. How much do coefficients change?
 
 ::: {.callout-tip collapse="true"}
 ## Hint
-Use `broom::augment()` to extract `.cooksd`, then filter observations exceeding the threshold $4(k+1)/n$. Refit the model on the remaining data and compare coefficients side-by-side using `tidy_model()` and `pivot_wider()`.
+Use `broom::augment()` to extract `.cooksd`, then filter observations exceeding the threshold $4/n$ (a common, more lenient screening cutoff than the conservative $4(k+1)/n$ used in the main worked example). Refit the model on the remaining data and compare coefficients side-by-side using `tidy_model()` and `pivot_wider()`.
 :::
 
 ```{r}
@@ -2020,6 +2121,7 @@ Use `check_heteroscedasticity()` for the formal test. Then use `coeftest()` with
 #| code-fold: true
 #| code-summary: "Show Solution"
 
+data(gcse)
 m <- lm(gcse ~ lrt, data = gcse)
 check_heteroscedasticity(m)
 
@@ -2041,7 +2143,7 @@ Fit `mathach ~ ses + I(ses^2) + minority` (uncentered polynomial). Check VIF. Th
 
 ::: {.callout-tip collapse="true"}
 ## Hint
-Use `car::vif()` to get VIF values. For centering, subtract the mean before creating the polynomial: `I(ses - mean(ses))` and `I((ses - mean(ses))^2)`. Centering should dramatically reduce VIF for the polynomial terms without changing the model's predictions.
+Use `car::vif()` to get VIF values. For centering, subtract the mean before creating the polynomial: `I(ses - mean(ses))` and `I((ses - mean(ses))^2)`. Centering reduces VIF for the polynomial terms (here only modestly, since SES is already near zero, so the VIFs were already low); the reduction can be large for strictly positive predictors that are far from zero. Centering does not change the model's predictions.
 :::
 
 ```{r}
@@ -2081,13 +2183,13 @@ m_log <- lm(log(y_skew) ~ ses + minority, data = hsb_skew)
 
 p1 <- ggplot(tibble(r = rstandard(m_skew)), aes(sample = r)) +
   stat_qq(alpha = 0.4, color = "grey50") +
-  stat_qq_line(color = ber640_colors["secondary"], linewidth = 1) +
+  stat_qq_line(color = ber640_colors[["secondary"]], linewidth = 1) +
   labs(title = "Skewed Outcome", x = "Theoretical Quantiles",
        y = "Studentized Residuals")
 
 p2 <- ggplot(tibble(r = rstandard(m_log)), aes(sample = r)) +
   stat_qq(alpha = 0.4, color = "grey50") +
-  stat_qq_line(color = ber640_colors["secondary"], linewidth = 1) +
+  stat_qq_line(color = ber640_colors[["secondary"]], linewidth = 1) +
   labs(title = "Log-Transformed Outcome", x = "Theoretical Quantiles",
        y = "Studentized Residuals")
 
@@ -2105,7 +2207,7 @@ A researcher fits a linear model predicting math achievement from socioeconomic 
 
 ::: {.callout-tip collapse="true"}
 ## Hint for Exercise 8.6
-$R^2$ measures how much variance is explained but says nothing about whether the model's assumptions are satisfied. A U-shaped pattern in residuals indicates that the true relationship is nonlinear --- the model systematically overpredicts in some regions and underpredicts in others. Adding a quadratic term might produce a lower $R^2$ in rare cases but would eliminate the systematic bias. The key principle is that $R^2$ rewards variance explained, but a model with biased predictions (systematic residual patterns) is fundamentally misspecified regardless of how much variance it captures. Always check residual plots before interpreting $R^2$.
+$R^2$ measures how much variance is explained but says nothing about whether the model's assumptions are satisfied. A U-shaped pattern in residuals indicates that the true relationship is nonlinear --- the model systematically overpredicts in some regions and underpredicts in others. Adding a quadratic term to fix the misspecification will *not* lower the raw $R^2$: for nested OLS models fit to the same observations, adding a predictor can never increase the residual sum of squares (the larger model can always set the new coefficient to zero and reproduce the smaller one), so raw $R^2 = 1 - \text{SSE}/\text{SST}$ is monotone non-decreasing as terms are added. What *can* worsen when an added term does not earn its keep are the *adjusted* $R^2$, information criteria such as AIC/BIC, and the cross-validated (out-of-sample) prediction error. So can a model with a lower $R^2$ be better? Yes --- but not by adding a nested term that lowers $R^2$ (that is impossible). Rather, a differently specified model (for example one judged by unbiasedness, out-of-sample prediction, parsimony, or fit on a transformed scale) can have lower raw $R^2$ yet be preferable, because raw in-sample $R^2$ rewards variance explained and is blind to bias and assumption violations. The key principle is that $R^2$ rewards variance explained, but a model with biased predictions (systematic residual patterns) is fundamentally misspecified regardless of how much variance it captures. Always check residual plots before interpreting $R^2$.
 :::
 
 ::: {.callout-caution collapse="true"}

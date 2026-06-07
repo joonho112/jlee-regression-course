@@ -39,8 +39,8 @@ This chapter extends the linear regression framework from Chapters 1--4 by **rel
 ### Output
 ```{r}
 #| label: fig-ch6-lowess
-#| fig-cap: "Comparing a linear fit (blue) with a LOWESS curve (red dashed) for the GCSE-LRT relationship. Modest curvature is visible at the extremes."
-#| fig-alt: "Scatter plot with LRT score on the x-axis and GCSE score on the y-axis. A straight blue regression line and a red dashed LOWESS curve are overlaid on the semi-transparent data points. The LOWESS curve closely follows the linear fit through the middle range of LRT but deviates slightly at both extremes, suggesting modest nonlinearity in the tails of the distribution."
+#| fig-cap: "Comparing a linear fit (blue) with a LOWESS curve (red dashed) for the GCSE-LRT relationship. The two curves nearly overlap, with only a slight deviation at the low-LRT extreme."
+#| fig-alt: "Scatter plot with LRT score on the x-axis and GCSE score on the y-axis. A straight blue regression line and a red dashed LOWESS curve are overlaid on the semi-transparent data points. The LOWESS curve closely follows the linear fit across almost the entire range of LRT, deviating only slightly at the low-LRT extreme, so the curvature is negligible."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -49,10 +49,10 @@ data(gcse)
 ggplot(gcse, aes(x = lrt, y = gcse)) +
   geom_point(alpha = 0.1, color = "grey50") +
   geom_smooth(method = "lm", formula = y ~ x,
-              color = ber640_colors["accent"],
+              color = ber640_colors[["accent"]],
               se = FALSE, linewidth = 1) +
   geom_smooth(method = "loess", formula = y ~ x,
-              color = ber640_colors["secondary"],
+              color = ber640_colors[["secondary"]],
               se = FALSE, linewidth = 1, linetype = "dashed") +
   labs(
     title = "Linear Fit vs LOWESS Curve",
@@ -62,17 +62,16 @@ ggplot(gcse, aes(x = lrt, y = gcse)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-lowess"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-Look for where the red dashed LOWESS curve deviates from the blue straight line. In the GCSE-LRT data, you may see modest curvature at the extremes of the LRT range: the LOWESS curve bends slightly, suggesting the true relationship may not be perfectly linear. If the two curves nearly overlap everywhere, a linear model is adequate. If the LOWESS diverges noticeably, consider the nonlinear modeling approaches covered in the rest of this chapter (log transformations, polynomials, or piecewise models).
+Look for where the red dashed LOWESS curve deviates from the blue straight line. In the GCSE-LRT data, the two curves nearly overlap everywhere, with only a slight deviation at the low-LRT extreme: the curvature is negligible and a linear model is adequate here. If the two curves nearly overlap everywhere, a linear model is adequate. If the LOWESS diverges noticeably, consider the nonlinear modeling approaches covered in the rest of this chapter (log transformations, polynomials, or piecewise models).
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-lowess"
-#| eval: false
 ```
 - `geom_smooth(method = "lm")`: Fits a straight line (assumes linearity)
 - `geom_smooth(method = "loess")`: Fits a LOWESS curve (no linearity assumption)
@@ -115,10 +114,10 @@ m_loglog   <- lm(log(crime_rate) ~ log(urbanization), data = crime_df) # Log-log
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch6-log-demo"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 Compare the four models:
 
@@ -127,12 +126,11 @@ Compare the four models:
 - **Level-log**: Divide the coefficient by 100 to get the approximate unit change in crime rate per 1% increase in urbanization.
 - **Log-log**: The coefficient is the elasticity --- a 1% increase in urbanization is associated with approximately a $\beta$% change in crime rate.
 
-Compare $R^2$ and residual behavior across models. If the log-level or log-log model shows better fit, the multiplicative specification may be more appropriate for these data.
+Compare $R^2$ **only among models that share the same response scale** --- for example, level-level versus level-log (both have $y$ as the outcome), or log-level versus log-log (both have $\log y$). **$R^2$ is not comparable across models with different response transformations**, because models with $y$ and $\log(y)$ outcomes explain variance on different scales (different total sums of squares). To judge fit *across* response transformations, compare instead via the **residual-plot / LOWESS linearization** shown in @fig-ch6-log-transform (how closely the linear and LOWESS curves overlap) or via **back-transformed prediction error on the original scale** (e.g., RMSE computed after exponentiating the fitted log-values). If the log-level or log-log specification linearizes the relationship more cleanly, the multiplicative specification may be more appropriate for these data.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch6-log-demo"
-#| eval: false
 ```
 - **Level-level** (`crime_rate ~ urbanization`): The baseline model with no transformations; the coefficient is in raw units (crimes per 1000 per percentage point of urbanization)
 - **Log-level** (`log(crime_rate) ~ urbanization`): Log-transforming the outcome estimates the effect in approximate percentage terms
@@ -146,7 +144,7 @@ Compare $R^2$ and residual behavior across models. If the log-level or log-log m
 ::: {.callout-tip}
 ## Log Interpretation Rules
 - $\log(y)$ model: Think in **percentages for $y$**. A coefficient of 0.05 means a ~5% increase in $y$ per unit increase in $x$.
-- $\log(x)$ model: Think in **percentages for $x$**. A coefficient of 2 means a 2-unit increase in $y$ per doubling of $x$.
+- $\log(x)$ model: Think in **percentages for $x$**. A coefficient of $\beta$ means a **$\beta \cdot \ln 2 \approx 0.69\,\beta$ unit change in $y$ per doubling of $x$** (equivalently, $\beta$ units per $e$-fold $\approx 2.718\times$ increase; or, for small changes, $\approx \beta/100$ units per 1% increase in $x$). So a coefficient of 2 implies about a 1.39-unit change in $y$ per doubling of $x$, **not** 2.
 - $\log$-$\log$ model: $\beta$ is the **elasticity** --- the percentage change in $y$ per 1% change in $x$.
 :::
 
@@ -164,38 +162,38 @@ Compare $R^2$ and residual behavior across models. If the log-level or log-log m
 #| code-summary: "Show R Code"
 
 p_ll <- ggplot(crime_df, aes(x = urbanization, y = crime_rate)) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6) +
   geom_smooth(method = "lm", formula = y ~ x,
-              color = ber640_colors["accent"], se = FALSE) +
+              color = ber640_colors[["accent"]], se = FALSE) +
   geom_smooth(method = "loess", formula = y ~ x,
-              color = ber640_colors["secondary"],
+              color = ber640_colors[["secondary"]],
               se = FALSE, linetype = "dashed") +
   labs(title = "Level-Level", x = "Urbanization (%)", y = "Crime Rate")
 
 p_loglev <- ggplot(crime_df, aes(x = urbanization, y = log(crime_rate))) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6) +
   geom_smooth(method = "lm", formula = y ~ x,
-              color = ber640_colors["accent"], se = FALSE) +
+              color = ber640_colors[["accent"]], se = FALSE) +
   geom_smooth(method = "loess", formula = y ~ x,
-              color = ber640_colors["secondary"],
+              color = ber640_colors[["secondary"]],
               se = FALSE, linetype = "dashed") +
   labs(title = "Log-Level", x = "Urbanization (%)", y = "log(Crime Rate)")
 
 p_levlog <- ggplot(crime_df, aes(x = log(urbanization), y = crime_rate)) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6) +
   geom_smooth(method = "lm", formula = y ~ x,
-              color = ber640_colors["accent"], se = FALSE) +
+              color = ber640_colors[["accent"]], se = FALSE) +
   geom_smooth(method = "loess", formula = y ~ x,
-              color = ber640_colors["secondary"],
+              color = ber640_colors[["secondary"]],
               se = FALSE, linetype = "dashed") +
   labs(title = "Level-Log", x = "log(Urbanization)", y = "Crime Rate")
 
 p_loglog <- ggplot(crime_df, aes(x = log(urbanization), y = log(crime_rate))) +
-  geom_point(color = ber640_colors["primary"], alpha = 0.6) +
+  geom_point(color = ber640_colors[["primary"]], alpha = 0.6) +
   geom_smooth(method = "lm", formula = y ~ x,
-              color = ber640_colors["accent"], se = FALSE) +
+              color = ber640_colors[["accent"]], se = FALSE) +
   geom_smooth(method = "loess", formula = y ~ x,
-              color = ber640_colors["secondary"],
+              color = ber640_colors[["secondary"]],
               se = FALSE, linetype = "dashed") +
   labs(title = "Log-Log", x = "log(Urbanization)", y = "log(Crime Rate)")
 
@@ -203,17 +201,20 @@ p_loglog <- ggplot(crime_df, aes(x = log(urbanization), y = log(crime_rate))) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-log-transform"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 10
+#| fig-height: 8
 ```
 Examine which of the four panels shows the closest overlap between the linear fit (blue) and the LOWESS curve (red dashed). The panel where the two curves nearly coincide suggests the most appropriate specification for these data. For the crime-urbanization relationship, you may find that the log-log specification linearizes the relationship best, meaning the elasticity interpretation is most natural: a 1% increase in urbanization is associated with a roughly constant percentage change in crime rate across the full range.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-log-transform"
-#| eval: false
+#| fig-width: 10
+#| fig-height: 8
 ```
 - **Top-left (Level-Level)**: The raw relationship; curvature in the LOWESS curve indicates nonlinearity
 - **Top-right (Log-Level)**: Log-transforming the outcome compresses large values, potentially linearizing a concave relationship
@@ -229,7 +230,7 @@ Examine which of the four panels shows the closest overlap between the linear fi
 ::: {.callout-tip collapse="false"}
 ## Try It: Four Ways to Linearize
 
-Select a model type below to see how transforming X, Y, or both affects the scatter plot, the fitted regression line, and how we **interpret** the slope coefficient. Watch how R² changes across specifications to find the best linear fit.
+Use the **Model specification** radio buttons (Level–Level, Log–Level, Level–Log, Log–Log) to see how transforming X, Y, or both affects the scatter plot, the fitted regression line, and how we **interpret** the slope coefficient; start on Level–Level to see the raw curvature, then switch to Log–Level and Log–Log to watch the cloud straighten out. Watch how R² changes as you transform X — but **compare R² only within the same Y scale**: the level-Y models (Level–Level, Level–Log) explain variation in Y, while the log-Y models (Log–Level, Log–Log) explain variation in ln Y, so their R² values are *not* on a common scale and cannot be ranked against each other. We simulate the data from a known exponential process ($Y = e^{1.5 + 0.04X + \varepsilon}$) because demonstrating that one specific transformation linearizes the relationship requires a *known multiplicative truth* — a single real dataset would leave you guessing whether any residual curvature came from the model or from the data.
 :::
 
 ```{ojs}
@@ -237,7 +238,18 @@ Select a model type below to see how transforming X, Y, or both affects the scat
 import { ber640 as logtx_ber640, withAlpha as logtx_withAlpha,
          themeColors as logtx_themeColors, plotDefaults as logtx_plotDefaults,
          normalRandom as logtx_normalRandom, seq as logtx_seq,
-         formatCoef as logtx_formatCoef } from "../ojs/shared.js"
+         formatCoef as logtx_formatCoef, srSummary as logtx_srSummary,
+         resetControls as logtx_resetControls, onThemeChange as logtx_onThemeChange } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+logtx_theme = logtx_themeColors()
+```
+
+```{ojs}
+//| echo: false
+logtx_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
 
 ```{ojs}
@@ -284,8 +296,6 @@ logtx_data = {
 
 ```{ojs}
 //| echo: false
-logtx_tc = logtx_themeColors()
-
 // Transform data based on model type
 logtx_transformed = {
   const mt = logtx_modelType;
@@ -337,11 +347,19 @@ logtx_allR2 = {
 }
 
 logtx_bestModel = {
-  let best = null, bestR2 = -Infinity;
-  for (const [k, v] of Object.entries(logtx_allR2)) {
-    if (v > bestR2) { bestR2 = v; best = k; }
-  }
-  return best;
+  // R² is only comparable WITHIN a common Y scale, so pick the best model
+  // SEPARATELY for the level-Y group and the log-Y group. Returning a Set
+  // (one winner per scale) avoids implying a single cross-scale champion.
+  const levelY = ["Level–Level", "Level–Log"];   // R² computed on Y
+  const logY   = ["Log–Level",   "Log–Log"];     // R² computed on ln(Y)
+  const argmax = group => {
+    let best = null, bestR2 = -Infinity;
+    for (const m of group) {
+      if (logtx_allR2[m] > bestR2) { bestR2 = logtx_allR2[m]; best = m; }
+    }
+    return best;
+  };
+  return new Set([argmax(levelY), argmax(logY)]);
 }
 ```
 
@@ -378,6 +396,44 @@ logtx_yLabel = (logtx_modelType === "Log–Level" || logtx_modelType === "Log–
 
 ```{ojs}
 //| echo: false
+// Interpretation strings (slope meaning per model type)
+logtx_interp = {
+  const { a, b } = logtx_ols;
+  const mt = logtx_modelType;
+  let equation, meaning;
+  switch (mt) {
+    case "Level–Level":
+      equation = `Y = ${logtx_formatCoef(a, 3)} + ${logtx_formatCoef(b, 4)} · X`;
+      meaning = `A 1-unit ↑ in X → <strong>${logtx_formatCoef(Math.abs(b), 4)}-unit ${b >= 0 ? "↑" : "↓"}</strong> in Y.`;
+      break;
+    case "Log–Level":
+      equation = `ln(Y) = ${logtx_formatCoef(a, 3)} + ${logtx_formatCoef(b, 4)} · X`;
+      meaning = `A 1-unit ↑ in X → <strong>${logtx_formatCoef(Math.abs(b * 100), 2)}% ${b >= 0 ? "↑" : "↓"}</strong> in Y.`;
+      break;
+    case "Level–Log":
+      equation = `Y = ${logtx_formatCoef(a, 3)} + ${logtx_formatCoef(b, 3)} · ln(X)`;
+      meaning = `A 1% ↑ in X → <strong>${logtx_formatCoef(Math.abs(b / 100), 4)}-unit ${b >= 0 ? "↑" : "↓"}</strong> in Y.`;
+      break;
+    case "Log–Log":
+      equation = `ln(Y) = ${logtx_formatCoef(a, 3)} + ${logtx_formatCoef(b, 4)} · ln(X)`;
+      meaning = `A 1% ↑ in X → <strong>${logtx_formatCoef(Math.abs(b), 4)}% ${b >= 0 ? "↑" : "↓"}</strong> in Y (elasticity).`;
+      break;
+  }
+  return { equation, meaning };
+}
+```
+
+```{ojs}
+//| echo: false
+logtx_readouts = html`<div class="ojs-readouts">
+  ${logtx_pill("Slope b", logtx_formatCoef(logtx_ols.b, 4), "info")}
+  ${logtx_pill("R² (" + logtx_yLabel + " scale)", logtx_ols.r2.toFixed(4), "good")}
+  ${logtx_pill("Best on this Y scale", logtx_bestModel.has(logtx_modelType) ? "★ yes" : "no", logtx_bestModel.has(logtx_modelType) ? "good" : "")}
+</div>`
+```
+
+```{ojs}
+//| echo: false
 // Scatter plot
 logtx_scatterPlot = {
   const { a, b } = logtx_ols;
@@ -385,24 +441,26 @@ logtx_scatterPlot = {
   const xMin = d3.min(txArr), xMax = d3.max(txArr);
   const lineData = [{ tx: xMin, ty: a + b * xMin }, { tx: xMax, ty: a + b * xMax }];
   const pal = logtx_ber640;
-  const tc = logtx_tc;
 
   return Plot.plot(logtx_plotDefaults({
-    width: 480,
-    height: 400,
-    marginLeft: 60,
-    marginBottom: 50,
-    x: { label: logtx_xLabel },
-    y: { label: logtx_yLabel },
+    width: 330,
+    height: 300,
+    marginLeft: 48,
+    marginBottom: 40,
+    marginTop: 16,
+    marginRight: 16,
+    style: { color: logtx_theme.text },
+    x: { label: logtx_xLabel, grid: true },
+    y: { label: logtx_yLabel, grid: true },
     marks: [
       Plot.dot(logtx_transformed, {
-        x: "tx", y: "ty", r: 4,
+        x: "tx", y: "ty", r: 3.5,
         fill: logtx_withAlpha(pal.primary, 0.5),
         stroke: pal.primary, strokeWidth: 0.8
       }),
       Plot.line(logtx_loessSmooth, {
         x: "tx", y: "ty",
-        stroke: tc.muted, strokeWidth: 2, strokeDasharray: "6,3", strokeOpacity: 0.7
+        stroke: logtx_theme.muted, strokeWidth: 2, strokeDasharray: "6,3", strokeOpacity: 0.7
       }),
       Plot.line(lineData, {
         x: "tx", y: "ty",
@@ -415,105 +473,53 @@ logtx_scatterPlot = {
 
 ```{ojs}
 //| echo: false
-// Interpretation card
-logtx_interpCard = {
-  const { a, b, r2 } = logtx_ols;
-  const mt = logtx_modelType;
-  const isBest = mt === logtx_bestModel;
-  const pal = logtx_ber640;
-  const tc = logtx_tc;
-
-  let equation, interp;
-  switch (mt) {
-    case "Level–Level":
-      equation = `Y = ${logtx_formatCoef(a, 3)} + ${logtx_formatCoef(b, 4)} · X`;
-      interp = `A 1-unit increase in X → <strong>${logtx_formatCoef(Math.abs(b), 4)}-unit ${b >= 0 ? "increase" : "decrease"}</strong> in Y.`;
-      break;
-    case "Log–Level":
-      equation = `ln(Y) = ${logtx_formatCoef(a, 3)} + ${logtx_formatCoef(b, 4)} · X`;
-      interp = `A 1-unit increase in X → <strong>${logtx_formatCoef(Math.abs(b * 100), 2)}% ${b >= 0 ? "increase" : "decrease"}</strong> in Y.`;
-      break;
-    case "Level–Log":
-      equation = `Y = ${logtx_formatCoef(a, 3)} + ${logtx_formatCoef(b, 3)} · ln(X)`;
-      interp = `A 1% increase in X → <strong>${logtx_formatCoef(Math.abs(b / 100), 4)}-unit ${b >= 0 ? "increase" : "decrease"}</strong> in Y.`;
-      break;
-    case "Log–Log":
-      equation = `ln(Y) = ${logtx_formatCoef(a, 3)} + ${logtx_formatCoef(b, 4)} · ln(X)`;
-      interp = `A 1% increase in X → <strong>${logtx_formatCoef(Math.abs(b), 4)}% ${b >= 0 ? "increase" : "decrease"}</strong> in Y (elasticity).`;
-      break;
-  }
-
-  const bestBadge = isBest
-    ? `<span style="display:inline-block;background:${pal.success};color:#fff;padding:2px 10px;border-radius:12px;font-size:0.8em;font-weight:600;margin-left:8px;">★ Best Fit</span>` : "";
-
-  return html`<div style="
-    background: ${logtx_withAlpha(tc.muted, 0.08)};
-    border: 1px solid ${tc.muted};
-    border-radius: 8px; padding: 24px; width: 420px;
-    display: flex; flex-direction: column; gap: 16px; color: ${tc.text};
-  ">
-    <div style="font-size:1.1em;font-weight:700;color:${pal.primary};border-bottom:2px solid ${pal.primary};padding-bottom:8px;">
-      ${mt} Model ${html`${bestBadge}`}
-    </div>
-    <div>
-      <div style="font-size:0.8em;text-transform:uppercase;letter-spacing:0.05em;color:${tc.muted};margin-bottom:4px;">Model Equation</div>
-      <div style="font-size:1.05em;font-family:monospace;background:${tc.bg};padding:10px 14px;border-radius:6px;border:1px solid ${tc.muted};">
-        ${equation}
-      </div>
-    </div>
-    <div>
-      <div style="font-size:0.8em;text-transform:uppercase;letter-spacing:0.05em;color:${tc.muted};margin-bottom:4px;">Interpretation of <em>b</em></div>
-      <div style="font-size:0.95em;line-height:1.5;padding:10px 14px;background:${tc.bg};border-radius:6px;border:1px solid ${tc.muted};">
-        ${html`${interp}`}
-      </div>
-    </div>
-    <div style="display:flex;gap:16px;margin-top:auto;">
-      <div style="flex:1;background:${tc.bg};border-radius:6px;border:1px solid ${tc.muted};padding:12px;text-align:center;">
-        <div style="font-size:0.75em;text-transform:uppercase;color:${tc.muted};">Slope (b)</div>
-        <div style="font-size:1.4em;font-weight:700;color:${pal.secondary};">${logtx_formatCoef(b, 4)}</div>
-      </div>
-      <div style="flex:1;background:${tc.bg};border-radius:6px;border:1px solid ${tc.muted};padding:12px;text-align:center;">
-        <div style="font-size:0.75em;text-transform:uppercase;color:${tc.muted};">R²</div>
-        <div style="font-size:1.4em;font-weight:700;color:${pal.primary};">${r2.toFixed(4)}</div>
-      </div>
-    </div>
-  </div>`;
-}
-```
-
-```{ojs}
-//| echo: false
-// R² comparison bar
+// R² comparison bar — grouped by Y scale (level-Y on top, log-Y below).
+// The two groups are NOT cross-comparable, so they read as separate panels
+// via per-group color + label + a dashed divider.
 logtx_r2Bar = {
-  const models = ["Level–Level", "Log–Level", "Level–Log", "Log–Log"];
-  const barData = models.map(m => ({
-    model: m, r2: logtx_allR2[m], current: m === logtx_modelType
+  const ordered = ["Level–Level", "Level–Log", "Log–Level", "Log–Log"];
+  const scaleOf = m => (m === "Log–Level" || m === "Log–Log") ? "logY" : "levelY";
+  const barData = ordered.map(m => ({
+    model: m, r2: logtx_allR2[m], current: m === logtx_modelType, scale: scaleOf(m)
   }));
   const pal = logtx_ber640;
-  const tc = logtx_tc;
+  const scaleColor = s => s === "levelY" ? pal.primary : pal.secondary;
+  const groupLabels = [
+    { model: "Level–Level", text: "R² on Y" },
+    { model: "Log–Level",   text: "R² on ln Y" }
+  ];
 
   return Plot.plot(logtx_plotDefaults({
-    width: 920,
-    height: 120,
-    marginLeft: 100,
-    marginBottom: 30,
-    marginTop: 10,
-    x: { label: "R²", domain: [0, 1] },
-    y: { label: null, domain: models },
+    width: 330,
+    height: 200,
+    marginLeft: 90,
+    marginBottom: 34,
+    marginTop: 18,
+    marginRight: 16,
+    style: { color: logtx_theme.text },
+    x: { label: "R²  (compare only within a Y-scale group)", domain: [0, 1] },
+    y: { label: null, domain: ordered },
     marks: [
       Plot.barX(barData, {
         x: "r2", y: "model",
-        fill: d => d.current ? pal.primary : logtx_withAlpha(pal.primary, 0.25),
+        fill: d => scaleColor(d.scale),
+        fillOpacity: d => d.current ? 1 : 0.3,
         rx: 4
       }),
       Plot.text(barData, {
-        x: d => d.r2 + 0.015, y: "model",
-        text: d => d.r2.toFixed(4),
-        fontSize: 11, fontWeight: d => d.current ? 700 : 400,
-        fill: d => d.current ? pal.primary : tc.muted,
+        x: d => Math.min(d.r2 + 0.02, 0.98), y: "model",
+        text: d => d.r2.toFixed(3),
+        fontSize: 10, fontWeight: d => d.current ? 700 : 400,
+        fill: d => d.current ? scaleColor(d.scale) : logtx_theme.muted,
         textAnchor: "start"
       }),
-      Plot.ruleX([0])
+      Plot.text(groupLabels, {
+        x: 0.98, y: "model", dy: -9,
+        text: "text", fontSize: 9, fontStyle: "italic",
+        fill: logtx_theme.muted, textAnchor: "end"
+      }),
+      Plot.ruleX([0]),
+      Plot.ruleY(["Log–Level"], { stroke: logtx_theme.muted, strokeDasharray: "3,3", strokeOpacity: 0.6 })
     ]
   }));
 }
@@ -521,24 +527,35 @@ logtx_r2Bar = {
 
 ```{ojs}
 //| echo: false
-// Layout
-html`<div style="max-width:960px;margin:0 auto;">
-  <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;align-items:start;margin-bottom:16px;">
-    <div>
-      <div style="font-size:0.85em;font-weight:600;color:${logtx_tc.text};text-align:center;margin-bottom:6px;">
-        Scatter Plot (${logtx_xLabel} vs ${logtx_yLabel})
-      </div>
-      ${logtx_scatterPlot}
-    </div>
-    <div>${logtx_interpCard}</div>
+logtx_sr = logtx_srSummary("ch06-log",
+  `${logtx_modelType} model: ${logtx_interp.equation}. Slope b ${logtx_formatCoef(logtx_ols.b, 4)}, R² ${logtx_ols.r2.toFixed(4)} on the ${logtx_yLabel} scale (comparable only within the same Y scale). ${logtx_bestModel.has(logtx_modelType) ? "Best fit on this Y scale." : ""}`)
+```
+
+```{ojs}
+//| echo: false
+logtx_app = html`<div class="ojs-app" role="group" aria-label="Log transformation explorer: four ways to linearize">
+  <div class="ojs-controls">${viewof logtx_modelType}</div>
+  <div class="ojs-equation">${logtx_interp.equation}${logtx_bestModel.has(logtx_modelType) ? html`<span style="margin-left:1rem;color:var(--ber-success);font-weight:600;">★ best on ${logtx_yLabel} scale</span>` : ""}</div>
+  <div style="font-size:0.85em;line-height:1.45;color:${logtx_theme.muted};margin:-2px 0 2px;">Interpretation: ${html`${logtx_interp.meaning}`}</div>
+  ${logtx_readouts}
+  <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:center;">
+    <div class="ojs-plot">${logtx_scatterPlot}</div>
+    <div class="ojs-plot">${logtx_r2Bar}</div>
   </div>
-  <div style="font-size:0.85em;font-weight:600;color:${logtx_tc.text};text-align:center;margin-bottom:4px;">
-    R² Comparison Across All Four Specifications
+  <div style="font-size:0.76em;line-height:1.45;color:${logtx_theme.muted};margin-top:4px;padding:8px 12px;border-left:3px solid var(--ber-warning);background:${logtx_withAlpha(logtx_ber640.warning, 0.07)};">
+    <strong>Reading R²:</strong> comparable <em>only within the same Y scale</em>. The level-Y bars (Level–Level, Level–Log) measure fit to <em>Y</em>; the log-Y bars (Log–Level, Log–Log) measure fit to <em>ln Y</em>. Different totals (Var(Y) vs Var(ln Y)) mean a larger log-Y R² does <strong>not</strong> beat a level-Y model. To compare across response scales, back-transform predictions to a common scale; do not compare raw AIC/BIC across transformed outcomes unless the likelihoods have been put on the same outcome scale, including the needed transformation adjustment.
   </div>
-  ${logtx_r2Bar}
+  ${logtx_sr}
 </div>`
 ```
 
+::: {.callout-note}
+## What you should have seen
+
+- The *same* data look curved on one set of axes and straight on another: the scatter is only well described by a line once you pick the transformation that matches the underlying multiplicative process, here the log-Y specifications.
+- The slope's meaning changes with the specification --- a raw-unit change (Level–Level), an approximate percent change in Y (Log–Level), a unit change per 1% change in X (Level–Log), or an elasticity (Log–Log) --- so you must read the coefficient in the units the model implies.
+- R² is comparable **only within the same Y scale**: a larger R² in a log-Y model does not beat a level-Y model, because the two are explaining variance of different quantities (Var(Y) vs Var(ln Y)).
+:::
 
 ## Polynomial Regression {#sec-ch6-polynomial}
 
@@ -559,22 +576,23 @@ R's `poly()` function uses **orthogonal** polynomials by default, which are nume
 ### Output
 ```{r}
 #| label: fig-ch6-polynomial
-#| fig-cap: "Comparing linear, quadratic, and cubic fits to the GCSE-LRT relationship. Higher-order polynomials capture subtle curvature."
-#| fig-alt: "Scatter plot with LRT score on the x-axis and GCSE score on the y-axis, with three overlaid fitted curves: a straight linear fit, a curved quadratic fit, and a cubic fit. The linear line misses curvature at the extremes. The quadratic and cubic curves bend to follow the data more closely, with the cubic showing a slight additional inflection. A legend distinguishes the three model fits by color."
+#| fig-cap: "Comparing linear, quadratic, and cubic fits to the GCSE-LRT relationship. For these data all three fits are nearly identical and essentially straight, separating only slightly at the LRT extremes."
+#| fig-alt: "Scatter plot with LRT score on the x-axis and GCSE score on the y-axis, with three overlaid fitted lines for the linear, quadratic, and cubic models. The three fits are nearly coincident and look essentially straight; the quadratic and cubic lines pull only slightly below the linear line at the highest LRT scores, and no inflection is visible. A legend distinguishes the three model fits by color."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
 ggplot(gcse, aes(x = lrt, y = gcse)) +
-  geom_point(alpha = 0.05, color = "grey50") +
+  geom_point(alpha = 0.12, color = "grey50") +
   geom_smooth(method = "lm", formula = y ~ x,
               aes(color = "Linear"), se = FALSE, linewidth = 1) +
   geom_smooth(method = "lm", formula = y ~ poly(x, 2, raw = TRUE),
               aes(color = "Quadratic"), se = FALSE, linewidth = 1) +
   geom_smooth(method = "lm", formula = y ~ poly(x, 3, raw = TRUE),
               aes(color = "Cubic"), se = FALSE, linewidth = 1) +
-  scale_color_manual(values = c("Linear" = ber640_colors["accent"],
-                                "Quadratic" = ber640_colors["secondary"],
-                                "Cubic" = ber640_colors["success"])) +
+  scale_color_manual(values = c("Linear" = ber640_colors[["accent"]],
+                                "Quadratic" = ber640_colors[["secondary"]],
+                                "Cubic" = ber640_colors[["warning"]]),
+                     limits = c("Linear", "Quadratic", "Cubic")) +
   labs(
     title = "Polynomial Regression Fits",
     x = "LRT Score", y = "GCSE Score",
@@ -583,17 +601,16 @@ ggplot(gcse, aes(x = lrt, y = gcse)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-polynomial"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-Compare the three fitted lines. The linear fit (blue) is a straight line that may miss curvature. The quadratic fit (red) allows a single bend, capturing any U-shape or inverted-U pattern. The cubic fit (green) adds an inflection point. If the quadratic and cubic curves are nearly identical, the extra cubic term is unnecessary. If the linear line clearly diverges from the polynomial curves, nonlinearity is present and a polynomial model is more appropriate.
+Compare the three fitted lines. The linear fit (blue) is a straight line that may miss curvature. The quadratic fit (red) allows a single bend, capturing any U-shape or inverted-U pattern. The cubic fit (gold) adds an inflection point. If the quadratic and cubic curves are nearly identical, the extra cubic term is unnecessary. If the linear line clearly diverges from the polynomial curves, nonlinearity is present and a polynomial model is more appropriate.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-polynomial"
-#| eval: false
 ```
 - `poly(x, 2, raw = TRUE)` fits a quadratic (second-degree) polynomial using raw powers of $x$
 - `poly(x, 3, raw = TRUE)` fits a cubic (third-degree) polynomial
@@ -621,17 +638,16 @@ anova(m_linear, m_quad, m_cubic)
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch6-poly-compare"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-Each row of the ANOVA output tests whether adding the next polynomial term significantly improves the model. If the quadratic term is significant ($p < .05$) but the cubic term is not, the quadratic model is the most parsimonious adequate model. If both are significant, the cubic model captures meaningful additional curvature (an inflection point) in the data.
+Each row of the ANOVA output tests whether adding the next polynomial term significantly improves the model. For these data the linear-to-quadratic step is significant ($F = 5.65$, $p = .018$), so the quadratic adds *some* evidence of curvature, while the quadratic-to-cubic step is only borderline ($F = 3.78$, $p = .052$). Borderline results like this are exactly where a single $p$-value should not decide the model: a threshold of $.05$ would keep the cubic, but $.06$ would drop it. Read the $F$-tests alongside the AIC/BIC comparison below, the residual diagnostics, and substantive theory rather than treating one cutoff as decisive.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch6-poly-compare"
-#| eval: false
 ```
 - `anova()` with multiple models performs sequential $F$-tests comparing each model to the previous one
 - A significant test for the quadratic term means the relationship has curvature beyond a straight line
@@ -653,17 +669,16 @@ compare_performance(m_linear, m_quad, m_cubic) |> print_md()
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "ch6-poly-performance"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-Look for the model with the lowest AIC and BIC values. AIC tends to favor slightly more complex models, while BIC penalizes complexity more heavily. If both criteria agree on the best model, you can be more confident in that choice. The $R^2$ values show the proportion of variance explained by each model. A large jump in $R^2$ from linear to quadratic with minimal improvement from quadratic to cubic supports choosing the quadratic model.
+Look for the model with the lowest AIC and BIC values. AIC tends to favor slightly more complex models, while BIC penalizes complexity more heavily. Here the two criteria **disagree**: AIC favors the cubic model, while BIC favors the linear model --- a common outcome when the competing models fit almost equally well. The $R^2$ values reinforce this: they hover around $0.35$ for all three specifications, so the practical fit differences are small and no model is clearly superior on goodness-of-fit alone. When AIC and BIC point in different directions and $R^2$ is essentially flat, the choice should rest on theory, interpretability, residual diagnostics, and out-of-sample predictive performance rather than on any single statistic.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "ch6-poly-performance"
-#| eval: false
 ```
 - AIC and BIC penalize model complexity, helping to select the best model
 - Lower AIC/BIC values indicate a better balance of fit and parsimony
@@ -676,7 +691,7 @@ Look for the model with the lowest AIC and BIC values. AIC tends to favor slight
 ::: {.callout-tip collapse="false"}
 ## Try It: How Many Curves Is Too Many?
 
-The true data-generating process here is **quadratic** (degree 2). Use the slider to increase the polynomial degree and watch what happens to the fit statistics. Can you spot where the model starts memorizing noise instead of learning the signal?
+The true data-generating process here is **quadratic** (degree 2). Drag the **Polynomial degree (d)** slider from 1 up toward 8 and watch what happens to the fit statistics; flip the **Show residuals** toggle on to see how the vertical residual segments shrink as the curve bends to chase individual points, and use the **Reset** button to return to the starting degree. We simulate the data here because the lesson requires a *known truth*: only by fixing the true degree (2) ourselves can we label the high-degree wiggles as overfitting rather than real signal --- something no single real dataset can certify. Can you spot where the model starts memorizing noise instead of learning the signal?
 :::
 
 ```{ojs}
@@ -684,7 +699,18 @@ The true data-generating process here is **quadratic** (degree 2). Use the slide
 import { ber640 as poly_ber640, withAlpha as poly_withAlpha,
          themeColors as poly_themeColors, plotDefaults as poly_plotDefaults,
          normalRandom as poly_normalRandom, seq as poly_seq,
-         formatCoef as poly_formatCoef } from "../ojs/shared.js"
+         formatCoef as poly_formatCoef, srSummary as poly_srSummary,
+         resetControls as poly_resetControls, onThemeChange as poly_onThemeChange } from "../ojs/shared.js"
+```
+
+```{ojs}
+//| echo: false
+poly_theme = poly_themeColors()
+```
+
+```{ojs}
+//| echo: false
+poly_pill = (label, value, tone = "") => html`<span class="ojs-readout ${tone ? "ojs-readout-" + tone : ""}"><span class="ojs-readout-label">${label}</span><span class="ojs-readout-value">${value}</span></span>`
 ```
 
 ```{ojs}
@@ -692,7 +718,10 @@ import { ber640 as poly_ber640, withAlpha as poly_withAlpha,
 viewof poly_degree = Inputs.range([1, 8], {
   value: 2, step: 1, label: "Polynomial degree (d)"
 })
+```
 
+```{ojs}
+//| echo: false
 viewof poly_showResiduals = Inputs.toggle({
   label: "Show residuals", value: false
 })
@@ -715,7 +744,7 @@ poly_xRaw = {
   return lcg(42, poly_n).map(u => u * 10);
 }
 
-poly_epsilon = poly_normalRandom(poly_n, 0, 1.5, 43)
+poly_epsilon = poly_normalRandom(poly_n, 0, 1.5, 7)  // seed 7: adjusted R² and AIC both identify the true degree (2); seed 43 was an unlucky sample where adj R² drifted up to degree 6
 poly_trueFunc = (x) => 2 + 0.5 * x - 0.08 * x * x
 poly_yRaw = poly_xRaw.map((x, i) => poly_trueFunc(x) + poly_epsilon[i])
 poly_data = poly_xRaw.map((x, i) => ({ x: x, y: poly_yRaw[i] }))
@@ -769,10 +798,17 @@ poly_matOps = {
 //| echo: false
 poly_fit = {
   const d = poly_degree, n = poly_n, x = poly_xRaw, y = poly_yRaw;
+  // Center the predictor before building the polynomial terms (matches the
+  // "Center Before Polynomial Regression" callout below). Centering subtracts
+  // the mean of x, which sharply reduces the correlation between x, x^2, x^3,
+  // ... and therefore the condition number of XtX, without changing the
+  // fitted values, R^2, Adj R^2, or AIC (same column space).
+  const xMean = x.reduce((s, v) => s + v, 0) / n;
   const X = x.map(xi => {
+    const xc = xi - xMean;
     const row = new Array(d + 1);
     row[0] = 1;
-    for (let k = 1; k <= d; k++) row[k] = Math.pow(xi, k);
+    for (let k = 1; k <= d; k++) row[k] = Math.pow(xc, k);
     return row;
   });
   const Xt = poly_matOps.transpose(X);
@@ -792,8 +828,11 @@ poly_fit = {
 
   const xGrid = poly_seq(0, 10, 200);
   const curveData = xGrid.map(xi => {
+    // beta is now expressed in centered coordinates, so evaluate the fitted
+    // polynomial at (xi - xMean) but plot it at the original xi position.
+    const xc = xi - xMean;
     let yp = 0;
-    for (let k = 0; k <= d; k++) yp += beta[k] * Math.pow(xi, k);
+    for (let k = 0; k <= d; k++) yp += beta[k] * Math.pow(xc, k);
     return { x: xi, y: yp };
   });
   const trueData = xGrid.map(xi => ({ x: xi, y: poly_trueFunc(xi) }));
@@ -802,31 +841,62 @@ poly_fit = {
   return { beta, R2, adjR2, AIC, curveData, trueData, residualSegs };
 }
 
+poly_bestDegree = {
+  // Data-driven: the degree that MINIMIZES AIC across all selectable degrees,
+  // computed on the centered design (same as poly_fit). AIC penalizes complexity,
+  // so for this quadratic DGP it identifies the true degree (2) rather than the
+  // noise-chasing high-degree fit. The badge below compares the slider to this.
+  const n = poly_n, x = poly_xRaw, y = poly_yRaw;
+  const xMean = x.reduce((s, v) => s + v, 0) / n;
+  let best = 1, bestAIC = Infinity;
+  for (let dd = 1; dd <= 8; dd++) {
+    const X = x.map(xi => {
+      const row = new Array(dd + 1); row[0] = 1;
+      for (let k = 1; k <= dd; k++) row[k] = Math.pow(xi - xMean, k);
+      return row;
+    });
+    const Xt = poly_matOps.transpose(X);
+    const XtXinv = poly_matOps.invert(poly_matOps.multiply(Xt, X));
+    if (!XtXinv) continue;
+    const beta = poly_matOps.multiply(XtXinv, poly_matOps.multiply(Xt, y.map(v => [v]))).map(r => r[0]);
+    const yHat = X.map(row => row.reduce((s, v, k) => s + v * beta[k], 0));
+    const RSS = y.reduce((s, yi, i) => s + (yi - yHat[i]) ** 2, 0);
+    const AIC = n * Math.log(RSS / n) + 2 * (dd + 1);
+    if (AIC < bestAIC) { bestAIC = AIC; best = dd; }
+  }
+  return best;
+}
+
 poly_status = {
-  const d = poly_degree;
-  if (d === 2) return { label: "Just right", color: poly_ber640.success };
-  if (d === 1 || d === 3) return { label: d === 1 ? "Underfitting" : "Slight overfitting", color: poly_ber640.warning };
-  return { label: "Overfitting", color: poly_ber640.secondary };
+  const d = poly_degree, best = poly_bestDegree;
+  if (d === best) return { label: "Just right", color: poly_ber640.success, tone: "good" };
+  if (d < best) return { label: "Underfitting", color: poly_ber640.warning, tone: "warning" };
+  if (d === best + 1) return { label: "Slight overfitting", color: poly_ber640.warning, tone: "warning" };
+  return { label: "Overfitting", color: poly_ber640.secondary, tone: "bad" };
 }
 ```
 
 ```{ojs}
 //| echo: false
-poly_tc = poly_themeColors()
+poly_reset = poly_resetControls([
+  { input: viewof poly_degree, value: 2 },
+  { input: viewof poly_showResiduals, value: false }
+], { label: "Reset" })
+```
 
-poly_cards = {
-  const st = poly_status;
-  const tc = poly_tc;
-  return html`<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; color: ${tc.text};">
-    <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:0.88em;font-weight:600;background:${poly_withAlpha(tc.muted, 0.12)};">R² = ${poly_fit.R2.toFixed(4)}</span>
-    <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:0.88em;font-weight:600;background:${poly_withAlpha(tc.muted, 0.12)};">Adj R² = ${poly_fit.adjR2.toFixed(4)}</span>
-    <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:0.88em;font-weight:600;background:${poly_withAlpha(tc.muted, 0.12)};">AIC = ${poly_fit.AIC.toFixed(1)}</span>
-    <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:0.88em;font-weight:600;background:${poly_withAlpha(st.color, 0.14)};color:${st.color};border:1.5px solid ${poly_withAlpha(st.color, 0.35)};">Degree ${poly_degree}: ${st.label}</span>
-  </div>`;
-}
+```{ojs}
+//| echo: false
+poly_readouts = html`<div class="ojs-readouts">
+  ${poly_pill("R²", poly_fit.R2.toFixed(4), "info")}
+  ${poly_pill("Adj R²", poly_fit.adjR2.toFixed(4), "info")}
+  ${poly_pill("AIC", poly_fit.AIC.toFixed(1), "info")}
+  ${poly_pill("Degree " + poly_degree, poly_status.label, poly_status.tone)}
+</div>`
+```
 
+```{ojs}
+//| echo: false
 poly_plot = {
-  const tc = poly_tc;
   const marks = [];
 
   if (poly_showResiduals) {
@@ -836,7 +906,7 @@ poly_plot = {
     }));
   }
   marks.push(Plot.line(poly_fit.trueData, {
-    x: "x", y: "y", stroke: tc.muted, strokeWidth: 2, strokeDasharray: "6,4"
+    x: "x", y: "y", stroke: poly_theme.muted, strokeWidth: 2, strokeDasharray: "6,4"
   }));
   marks.push(Plot.line(poly_fit.curveData, {
     x: "x", y: "y", stroke: poly_status.color, strokeWidth: 2.5
@@ -848,18 +918,41 @@ poly_plot = {
   }));
 
   return Plot.plot(poly_plotDefaults({
-    width: 680, height: 420,
-    x: { label: "x", domain: [0, 10] },
-    y: { label: "y" },
+    width: 680, height: 340, marginTop: 24, marginBottom: 40, marginLeft: 48, marginRight: 16,
+    style: { color: poly_theme.text },
+    x: { label: "x", domain: [0, 10], grid: true },
+    y: { label: "y", grid: true },
     marks
   }));
 }
 ```
 
-::: {.callout-warning}
+```{ojs}
+//| echo: false
+poly_sr = poly_srSummary("ch06-poly",
+  `Polynomial degree ${poly_degree} (best by AIC is ${poly_bestDegree}): ${poly_status.label}. R² ${poly_fit.R2.toFixed(4)}, adjusted R² ${poly_fit.adjR2.toFixed(4)}, AIC ${poly_fit.AIC.toFixed(1)}.` + (poly_showResiduals ? " Residual segments shown." : ""))
+```
+
+```{ojs}
+//| echo: false
+poly_app = html`<div class="ojs-app" role="group" aria-label="Polynomial degree chooser">
+  <div class="ojs-controls">${viewof poly_degree}<div class="ojs-control-group" style="flex:0 0 auto;">${viewof poly_showResiduals}${poly_reset}</div></div>
+  ${poly_readouts}
+  <div class="ojs-plot">${poly_plot}</div>
+  ${poly_sr}
+</div>`
+```
+
+::: {.callout-note}
+## What you should have seen
+
+- Raw R² **never decreases** as you raise the polynomial degree --- a degree-8 fit always looks at least as good in-sample as the true degree-2 fit, so R² alone cannot tell you the right complexity.
+- Adjusted R² peaks and AIC (which penalizes complexity) is minimized at or near the true degree (2); after that, both criteria deteriorate and correctly flag the higher-degree models as overfit. Turning on the residuals shows the high-degree curve wiggling to chase individual points rather than the underlying trend.
+- The right degree balances fit against parsimony: past the true degree the model is memorizing noise, which hurts out-of-sample prediction even as the in-sample curve hugs the data more tightly.
+:::
+
 ## Polynomial Extrapolation
 Polynomial models can fit the data well within the observed range but behave **wildly** outside it. A cubic curve that fits well between LRT = $-30$ and LRT = $30$ may predict absurd GCSE scores at LRT = $50$. **Never extrapolate** with polynomial models.
-:::
 
 ::: {.callout-important}
 ## Center Before Polynomial Regression
@@ -867,6 +960,8 @@ When fitting polynomial models, **center the predictor** (subtract its mean) bef
 
 1. **Reduces multicollinearity**: $x$ and $x^2$ are highly correlated when $x$ is far from zero. Centering moves the mean to zero, substantially reducing the correlation between the linear and quadratic terms.
 2. **Makes $\beta_1$ interpretable**: In the uncentered model, $\beta_1$ is the slope when $x = 0$, which may be outside the data range or meaningless. In the centered model, $\beta_1$ is the **slope at the mean of $x$** --- a much more useful quantity.
+
+A note on the models above: because `lrt` is already standardized to a mean of about 0, the raw and centered polynomials are nearly identical *here*, so we fit the chapter's polynomial models on raw `lrt` for simplicity. In general, however, center before creating polynomial terms to reduce the correlation between $x$ and $x^2$.
 
 ```{r}
 #| label: ch6-centering-demo
@@ -898,8 +993,8 @@ A key diagnostic for detecting nonlinearity is the residual-vs-fitted plot. When
 ### Output
 ```{r}
 #| label: fig-ch6-resid-comparison
-#| fig-cap: "Residual-vs-fitted plots comparing the linear model (left) with the quadratic model (right). The linear model shows a characteristic curved pattern indicating missed nonlinearity; the quadratic model corrects this."
-#| fig-alt: "Side-by-side residual-versus-fitted-value plots. The left panel shows residuals from the linear model, which display a characteristic U-shaped curved pattern around zero indicating missed nonlinearity. The right panel shows residuals from the quadratic model, which are more randomly scattered around zero with no systematic curvature, confirming that the quadratic term corrects the nonlinearity."
+#| fig-cap: "Residual-vs-fitted plots comparing the linear model (left) with the quadratic model (right). The linear model's residual LOWESS shows only a very slight downward drift at high fitted values; the curvature is negligible and the quadratic model flattens it further."
+#| fig-alt: "Side-by-side residual-versus-fitted-value plots. The left panel shows residuals from the linear model, whose LOWESS curve stays close to zero with only a very slight downward drift at high fitted values, so any missed curvature is negligible. The right panel shows residuals from the quadratic model, which are more randomly scattered around zero with no systematic curvature, confirming that the quadratic term corrects the nonlinearity."
 #| fig-width: 10
 #| fig-height: 5
 #| code-fold: true
@@ -920,7 +1015,7 @@ resid_quad <- data.frame(
 p_resid_lin <- ggplot(resid_linear, aes(x = fitted, y = residuals)) +
   geom_point(alpha = 0.1, color = "grey50") +
   geom_smooth(method = "loess", formula = y ~ x,
-              color = ber640_colors["secondary"], se = FALSE,
+              color = ber640_colors[["secondary"]], se = FALSE,
               linewidth = 1) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
   labs(title = "Linear Model Residuals",
@@ -929,7 +1024,7 @@ p_resid_lin <- ggplot(resid_linear, aes(x = fitted, y = residuals)) +
 p_resid_quad <- ggplot(resid_quad, aes(x = fitted, y = residuals)) +
   geom_point(alpha = 0.1, color = "grey50") +
   geom_smooth(method = "loess", formula = y ~ x,
-              color = ber640_colors["success"], se = FALSE,
+              color = ber640_colors[["success"]], se = FALSE,
               linewidth = 1) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey30") +
   labs(title = "Quadratic Model Residuals",
@@ -939,17 +1034,20 @@ p_resid_lin + p_resid_quad
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-resid-comparison"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 10
+#| fig-height: 5
 ```
-In the left panel, look for a curved (U-shaped or frown-shaped) LOWESS curve --- this "frown" pattern is the classic signature of missed nonlinearity in the residuals. The quadratic model (right panel) should show a flatter LOWESS curve near zero, indicating that the curvature has been captured by the $x^2$ term. If the quadratic residuals still show a pattern, higher-order terms or a different modeling strategy may be needed.
+In the left panel, look for systematic departures of the LOWESS curve from zero --- a pronounced curved ("frown") pattern is the classic signature of missed nonlinearity, though here the curve is nearly flat with only a slight downward drift at high fitted values. The quadratic model (right panel) should show a flatter LOWESS curve near zero, indicating that the curvature has been captured by the $x^2$ term. If the quadratic residuals still show a pattern, higher-order terms or a different modeling strategy may be needed.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-resid-comparison"
-#| eval: false
+#| fig-width: 10
+#| fig-height: 5
 ```
 - The left panel plots residuals from the linear model against fitted values, with a LOWESS curve (red) to highlight any systematic pattern
 - The right panel does the same for the quadratic model
@@ -967,8 +1065,8 @@ Because the slope in a quadratic model changes with $x$, we can visualize **how 
 ### Output
 ```{r}
 #| label: fig-ch6-marginal-slopes
-#| fig-cap: "Marginal effect (instantaneous slope) of LRT on GCSE across the range of LRT scores, estimated from the quadratic model. The slope decreases as LRT increases, indicating diminishing returns."
-#| fig-alt: "Line plot with LRT score on the x-axis and the marginal effect of LRT on GCSE on the y-axis. A downward-sloping line shows that the instantaneous slope starts positive and large at low LRT values and decreases steadily as LRT increases. A shaded 95 percent confidence band surrounds the line. The pattern indicates diminishing returns: each additional unit of LRT produces a smaller gain in GCSE at higher LRT levels."
+#| fig-cap: "Marginal effect (instantaneous slope) of LRT on GCSE across the range of LRT scores, estimated from the quadratic model. The slope rises gently from about 0.47 to 0.73 as LRT increases, indicating a mildly accelerating (slightly increasing-returns) but essentially monotone-increasing relationship over the observed data. The curvature is negligible (the quadratic term adds only about 0.001 to R-squared and is detectable only because n is large)."
+#| fig-alt: "Line plot with LRT score on the x-axis and the marginal effect of LRT on GCSE on the y-axis. A gently upward-sloping line shows that the instantaneous slope is positive everywhere and rises slightly as LRT increases, from about 0.47 at the lowest LRT values to about 0.73 at the highest. A shaded 95 percent confidence band surrounds the line and stays well above zero throughout. The pattern indicates a slightly accelerating but essentially monotone-increasing relationship: each additional unit of LRT produces a marginally larger gain in GCSE at higher LRT levels, with the overall curvature so small that the line is barely distinguishable from a flat constant slope."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -985,21 +1083,20 @@ plot_slopes(m_quad,
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-marginal-slopes"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-The plot shows how the relationship between LRT and GCSE varies across LRT values. If the slope line is declining, it means the positive effect of LRT on GCSE diminishes at higher LRT scores (diminishing returns). Where the confidence band includes zero, the effect is not statistically significant at that value of LRT. The point where the slope crosses zero (if it does) is the **turning point** of the quadratic curve.
+The plot shows how the relationship between LRT and GCSE varies across LRT values. Here the slope line rises gently --- from roughly 0.47 at the lowest LRT scores to roughly 0.73 at the highest --- so the positive effect of LRT on GCSE *grows slightly* at higher LRT scores rather than diminishing. The confidence band stays well above zero across the entire observed range, so the marginal effect is positive and significant everywhere in the data. The point where the slope would cross zero is the **turning point** of the quadratic curve; here it is a *minimum* at LRT $\approx -141$, far below the observed range $[-29.35, 30.16]$, so no turning point appears in the plot. In practical terms the relationship is **monotone increasing** over the data. The curvature is also **negligible**: the quadratic term raises $R^2$ by only about $0.001$ and is "significant" only because the sample is very large ($n = 4059$), so within the data the quadratic is barely distinguishable from a straight line.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-marginal-slopes"
-#| eval: false
 ```
 - `plot_slopes()` from the `marginaleffects` package computes the instantaneous slope $\partial y / \partial x$ at each value of $x$
 - For a quadratic model, this slope is a straight line: $\beta_1 + 2\beta_2 x$
-- The horizontal dashed line at zero marks where the effect of LRT switches from positive to negative (or vice versa)
+- The horizontal dashed line at zero marks where the effect of LRT would switch sign; here the marginal-effect line stays well above zero across the whole observed range, so the effect never switches sign in the data
 - The confidence band shows uncertainty in the marginal effect at each point
 
 
@@ -1013,8 +1110,8 @@ We can also compute and plot the first derivative analytically from the quadrati
 ### Output
 ```{r}
 #| label: fig-ch6-derivative
-#| fig-cap: "First derivative of the quadratic regression function, showing how the instantaneous slope changes linearly across LRT. The vertical dashed line marks the turning point where the slope equals zero."
-#| fig-alt: "Line plot with LRT score on the x-axis and the first derivative (instantaneous slope) on the y-axis. A straight diagonal line descends from positive values on the left to negative values on the right, reflecting the linear change in slope implied by the quadratic model. A vertical dashed line marks the turning point where the derivative crosses zero, indicating the LRT value at which the predicted GCSE score reaches its maximum."
+#| fig-cap: "First derivative of the quadratic regression function, showing how the instantaneous slope changes linearly across LRT. The line ascends gently and stays positive throughout the observed range, so the slope never reaches zero within the data; the turning point (a minimum) lies at LRT around -141, far outside the data, and is noted in the plot rather than drawn."
+#| fig-alt: "Line plot with LRT score on the x-axis and the first derivative (instantaneous slope) on the y-axis. A straight diagonal line ascends gently from about 0.47 on the left to about 0.73 on the right, staying positive across the whole observed range and reflecting the slight linear increase in slope implied by the convex quadratic model. The line never crosses zero within the data; a text note reports that the turning point --- a minimum --- lies at LRT of about -141, far outside the observed range, so within the data the predicted GCSE score is monotonically increasing."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -1034,13 +1131,19 @@ deriv_df <- data.frame(
   mutate(derivative = b1 + 2 * b2 * lrt)
 
 ggplot(deriv_df, aes(x = lrt, y = derivative)) +
-  geom_line(color = ber640_colors["primary"], linewidth = 1.2) +
+  geom_line(color = ber640_colors[["primary"]], linewidth = 1.2) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
-  geom_vline(xintercept = turning_point, linetype = "dashed",
-             color = ber640_colors["secondary"]) +
-  annotate("text", x = turning_point + 2, y = max(deriv_df$derivative) * 0.9,
-           label = paste0("Turning point: LRT = ", round(turning_point, 1)),
-           hjust = 0, color = ber640_colors["secondary"], fontface = "bold") +
+  # The turning point (-b1 / (2 b2)) is a MINIMUM far outside the data range,
+  # so we constrain the plot to the observed LRT range and annotate its location
+  # rather than drawing an off-range vertical line that would strand the curve.
+  annotate("text",
+           x = lrt_range[1],
+           y = max(deriv_df$derivative),
+           label = paste0("Turning point (minimum) at LRT = ",
+                          round(turning_point, 1), ", far outside the data"),
+           hjust = 0, vjust = 1,
+           color = ber640_colors[["secondary"]], fontface = "bold") +
+  coord_cartesian(xlim = lrt_range) +
   labs(
     title = "First Derivative of Quadratic Model",
     subtitle = expression(paste("Instantaneous slope = ", beta[1], " + 2", beta[2], "x")),
@@ -1050,22 +1153,21 @@ ggplot(deriv_df, aes(x = lrt, y = derivative)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-derivative"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
-This plot provides a direct visualization of @eq-ch6-marginal. The $y$-axis shows the instantaneous rate of change of GCSE with respect to LRT at each point. Where the derivative is positive, increasing LRT is associated with higher GCSE scores; where it is negative, the association reverses. The turning point (vertical dashed line) tells you the LRT score at which the predicted GCSE is maximized (for an inverted-U) or minimized (for a U-shape). If the turning point falls outside the observed data range, the practical effect within the data is monotonic (always increasing or always decreasing, but at a changing rate).
+This plot provides a direct visualization of @eq-ch6-marginal. The $y$-axis shows the instantaneous rate of change of GCSE with respect to LRT at each point. The derivative line is positive across the entire observed range and rises gently (from about 0.47 to about 0.73), so increasing LRT is associated with higher GCSE scores everywhere in the data, and slightly more so at higher LRT. In general, the turning point (where the derivative equals zero) is the LRT score at which the predicted GCSE is maximized (for an inverted-U, $\beta_2 < 0$) or minimized (for a U-shape, $\beta_2 > 0$). Here $\beta_2 > 0$, so the curve is convex and the turning point is a **minimum** at LRT $\approx -141$ --- far outside the observed range $[-29.35, 30.16]$. Because that turning point falls well outside the data, the practical effect within the data is **monotone increasing** (always increasing, at a very slightly accelerating rate). In fact the curvature is **negligible**: the quadratic term raises $R^2$ by only about $0.001$ and is statistically significant only because $n = 4059$ is large, so over the observed range the quadratic is nearly indistinguishable from a straight line.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-derivative"
-#| eval: false
 ```
 - The first derivative of $y = \alpha + \beta_1 x + \beta_2 x^2$ is $dy/dx = \beta_1 + 2\beta_2 x$, which is a straight line
 - The **turning point** occurs where $dy/dx = 0$, i.e., at $x = -\beta_1 / (2\beta_2)$
-- To the left of the turning point, the slope is positive (GCSE increases with LRT); to the right, it may decrease
-- The vertical dashed red line marks this turning point
+- The sign of $\beta_2$ determines the shape: $\beta_2 > 0$ gives a convex (U-shaped) curve whose turning point is a minimum, while $\beta_2 < 0$ gives a concave (inverted-U) curve whose turning point is a maximum. Here $\beta_2 > 0$ and the minimum lies at LRT $\approx -141$, far below the data, so the slope is positive and *rising* across the entire observed range
+- Because the turning point ($-\beta_1 / 2\beta_2 \approx -141$) lies far outside the observed LRT range, the plot is constrained to the data via `coord_cartesian()` and the turning point is reported in a text annotation instead of an off-range vertical line
 
 
 :::
@@ -1079,8 +1181,8 @@ A piecewise constant model treats a continuous variable as a categorical variabl
 ### Output
 ```{r}
 #| label: fig-ch6-piecewise
-#| fig-cap: "Piecewise constant model: LRT is divided into quartile groups, and a separate mean GCSE is estimated for each group."
-#| fig-alt: "Scatter plot with LRT score on the x-axis and GCSE score on the y-axis, overlaid with a step function. The LRT range is divided into four quartile groups, and a horizontal line segment within each group shows the estimated mean GCSE for that quartile. The step pattern reveals a positive staircase trend, with each successive quartile group having a higher mean GCSE than the previous one."
+#| fig-cap: "Piecewise constant model: predicted mean GCSE (with 95% confidence intervals) for each LRT quartile group, shown as a point-and-interval plot."
+#| fig-alt: "Point-and-interval plot with four LRT quartile groups (Q1 Low through Q4 High) on the x-axis and predicted GCSE score on the y-axis. Each group is shown as a point marking its estimated mean GCSE with a vertical 95 percent confidence interval. The predicted means rise from Q1 to Q4, showing a positive trend across the quartile groups."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -1103,17 +1205,16 @@ plot_predictions(m_piece, condition = "lrt_group") +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-piecewise"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 The plot shows the predicted mean GCSE score for each LRT quartile group, with confidence intervals. Each bar or point represents the estimated group mean. If the means increase steadily from Q1 to Q4, the relationship is monotonically positive. If the jump between adjacent groups is uneven (e.g., a large jump from Q1 to Q2 but a small jump from Q3 to Q4), this suggests the relationship is not linear --- the effect of LRT on GCSE is stronger at lower LRT values. Compare these group means to the smooth polynomial curve: the piecewise model captures the general trend but misses within-group variation. The confidence intervals help you judge whether adjacent groups are statistically distinguishable.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-piecewise"
-#| eval: false
 ```
 - `cut()` divides LRT into quartile groups based on the 25th, 50th, and 75th percentiles
 - The model estimates a separate mean for each group --- this is just one-way ANOVA (@sec-ch3)
@@ -1192,9 +1293,9 @@ ggplot() +
             aes(x = lrt, y = gcse, color = model, linetype = model),
             linewidth = 1.1) +
   scale_color_manual(
-    values = c("Linear"    = ber640_colors["accent"],
-               "Quadratic" = ber640_colors["secondary"],
-               "Piecewise" = ber640_colors["success"])
+    values = c("Linear"    = ber640_colors[["accent"]],
+               "Quadratic" = ber640_colors[["secondary"]],
+               "Piecewise" = ber640_colors[["success"]])
   ) +
   scale_linetype_manual(
     values = c("Linear" = "solid", "Quadratic" = "dashed", "Piecewise" = "dotdash")
@@ -1208,23 +1309,26 @@ ggplot() +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-model-comparison"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
+#| fig-width: 10
+#| fig-height: 6
 ```
 Compare how closely each parametric model follows the LOWESS benchmark (grey dotted curve). The linear model will diverge wherever the true relationship curves. The quadratic model should track the LOWESS more closely if there is genuine curvature, particularly at the extremes of the LRT range. The piecewise model approximates the curve in broad steps --- it captures the correct direction but introduces artificial jumps at the quartile boundaries. The model whose predictions most closely match the LOWESS curve across the entire range is likely the best choice, though parsimony and interpretability also matter. Note that the piecewise model may appear better in some regions and worse in others compared to the polynomial.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-model-comparison"
-#| eval: false
+#| fig-width: 10
+#| fig-height: 6
 ```
 - **Prediction grids**: We generate predictions from each model across the full LRT range using `predict()`, then combine them into a single data frame for plotting
 - **LOWESS benchmark**: The grey dotted LOWESS curve provides a nonparametric reference --- the closer a parametric model follows it, the better it captures the true relationship
 - **Linear model** (solid blue): Assumes a constant slope; misses any curvature
 - **Quadratic model** (dashed red): Allows a single bend, capturing diminishing returns or a turning point
-- **Piecewise model** (dot-dash green): Produces step-like predictions within quartile groups; captures the general trend but not smooth transitions
+- **Piecewise model** (dot-dash teal): Produces step-like predictions within quartile groups; captures the general trend but not smooth transitions
 - Different linetypes make models distinguishable even in black-and-white printing
 
 
@@ -1255,6 +1359,8 @@ d. **No strong theory $\rightarrow$ LOWESS first**: When you have no prior expec
 
 
 ## Spline Regression {#sec-ch6-spline}
+
+Before introducing splines, note a shift in the running example. The polynomial section used the full GCSE dataset; from here on the spline and GAM examples focus on a single school (Battersea, school 15) to isolate the LRT--GCSE shape within one context. With this smaller sample, the flexible fits below are used mainly for illustration rather than as definitive models.
 
 The polynomial models from the previous section are a natural first tool for capturing curvature, but they have two important limitations that become apparent as the degree increases:
 
@@ -1289,7 +1395,7 @@ where $B_j(x)$ are the natural spline basis functions. The `df` parameter equals
 library(splines)
 
 # Subset to Battersea school for spline demonstrations
-battersea <- gcse |> filter(school == 1)
+battersea <- gcse |> filter(school == 15)
 
 # Fit models
 m_spline <- lm(gcse ~ ns(lrt, df = 4), data = battersea)
@@ -1308,9 +1414,9 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
               color = "grey40", se = FALSE,
               linewidth = 0.8, linetype = "dotted") +
   geom_line(data = lrt_grid, aes(y = spline_pred),
-            color = ber640_colors["accent"], linewidth = 1.1) +
+            color = ber640_colors[["accent"]], linewidth = 1.1) +
   geom_line(data = lrt_grid, aes(y = poly5_pred),
-            color = ber640_colors["secondary"], linewidth = 1,
+            color = ber640_colors[["secondary"]], linewidth = 1,
             linetype = "dashed") +
   labs(
     title = "Natural Spline vs Degree-5 Polynomial",
@@ -1320,19 +1426,18 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-spline-vs-poly"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - The **natural spline** (blue solid) tracks the LOWESS benchmark closely across the entire LRT range, including at the boundaries.
 - The **degree-5 polynomial** (red dashed) may diverge at the extremes, illustrating the Runge phenomenon.
-- When the spline and LOWESS nearly coincide, the spline is capturing the true nonlinear relationship without overfitting.
+- When the spline and LOWESS nearly coincide, the two flexible fits agree on the shape under the chosen tuning, which increases confidence that the pattern is not a one-off artifact of a single parametric choice. Agreement does **not**, however, prove that this is the true functional form or that the spline is free of overfitting --- both methods could be smoothing the same idiosyncrasies in the same way.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-spline-vs-poly"
-#| eval: false
 ```
 - `splines::ns(lrt, df = 4)` creates a natural cubic spline basis matrix with 4 degrees of freedom (3 interior knots placed at data quantiles)
 - The spline is fit inside an ordinary `lm()` call --- no special estimation is needed
@@ -1345,8 +1450,12 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
 ### Choosing Degrees of Freedom
 
 ::: {.panel-tabset}
-### R Code
+### Output
 ```{r}
+#| label: tbl-ch6-spline-df
+#| code-fold: true
+#| code-summary: "Show R Code"
+
 # Compare natural spline models with df = 2 through 6
 spline_fits <- tibble(df = 2:6) |>
   mutate(
@@ -1366,14 +1475,24 @@ spline_fits |>
   )
 ```
 
+### Output Interpretation
+
+```{r}
+#| ref.label: "tbl-ch6-spline-df"
+#| echo: false
+```
+- AIC tends to select a more flexible model (higher `df`); BIC penalizes complexity more and prefers parsimony
+- In most education research applications, `df = 3` or `df = 4` provides a good balance
+
 ### Code Explanation
+
+```{r}
+#| ref.label: "tbl-ch6-spline-df"
+```
 - We fit five spline models with `df` from 2 to 6, each inside a standard `lm()` call
 - AIC and BIC are extracted for model comparison; lower values indicate better fit-complexity tradeoff
 - $R^2$ shows where gains plateau
 
-### Output Interpretation
-- AIC tends to select a more flexible model (higher `df`); BIC penalizes complexity more and prefers parsimony
-- In most education research applications, `df = 3` or `df = 4` provides a good balance
 :::
 
 ::: {.callout-important}
@@ -1411,8 +1530,8 @@ where $(x_i - \kappa)_+ = \max(x_i - \kappa, 0)$. This ensures:
 ### Output
 ```{r}
 #| label: fig-ch6-pwl-fit
-#| fig-cap: "Piecewise linear fit with a knot at the median LRT score. The slope changes at the knot, but the fitted function remains continuous."
-#| fig-alt: "Scatter plot of GCSE score versus LRT score with a piecewise linear fit shown as two connected line segments meeting at the median LRT value, marked by a vertical dashed grey line."
+#| fig-cap: "Piecewise linear fit with a knot at the median LRT score. For the Battersea data the slope change at the knot is small, so the fit looks nearly straight; the fitted function remains continuous at the knot."
+#| fig-alt: "Scatter plot of GCSE score versus LRT score with a piecewise linear fit shown as two connected line segments meeting at the median LRT value, marked by a vertical dashed grey line. The slope change at the knot is slight, so the two segments look nearly collinear (almost a single straight line)."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -1429,7 +1548,7 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
   geom_point(alpha = 0.4, color = "grey50") +
   geom_vline(xintercept = knot, linetype = "dashed", color = "grey60") +
   geom_line(data = lrt_grid, aes(y = pwl_pred),
-            color = ber640_colors["secondary"], linewidth = 1.2) +
+            color = ber640_colors[["secondary"]], linewidth = 1.2) +
   annotate("text", x = knot + 0.3, y = max(battersea$gcse, na.rm = TRUE),
            label = paste0("Knot = ", round(knot, 1)),
            hjust = 0, color = "grey40", size = 3.5) +
@@ -1441,17 +1560,16 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-pwl-fit"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 The plot shows two joined line segments. The coefficient on `I(pmax(lrt - knot, 0))` gives the *change* in slope at the knot: positive means the relationship steepens, negative means it flattens. A significant coefficient indicates the slope genuinely changes at that point.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-pwl-fit"
-#| eval: false
 ```
 - `pmax(lrt - knot, 0)` computes $(x - \kappa)_+$: values below the knot become 0, values above become `lrt - knot`
 - `I()` tells R's formula parser to treat the expression as-is
@@ -1467,7 +1585,7 @@ The plot shows two joined line segments. The coefficient on `I(pmax(lrt - knot, 
 ```{r}
 #| label: fig-ch6-pw-three-way
 #| fig-cap: "Three piecewise approaches compared: constant (step function), linear (broken stick), and natural spline."
-#| fig-alt: "Scatter plot with three overlaid curves: a green step function, a red piecewise linear fit with a single knot, and a blue natural cubic spline."
+#| fig-alt: "Scatter plot with three overlaid curves: a teal step function, a red piecewise linear fit with a single knot, and a blue natural cubic spline."
 #| code-fold: true
 #| code-summary: "Show R Code"
 
@@ -1498,9 +1616,9 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
   geom_line(data = pred_compare,
             aes(y = pred, color = Model, linetype = Model), linewidth = 1.1) +
   scale_color_manual(values = c(
-    "Piecewise Constant" = ber640_colors["success"],
-    "Piecewise Linear"   = ber640_colors["secondary"],
-    "Natural Spline (df=4)" = ber640_colors["accent"]
+    "Piecewise Constant" = ber640_colors[["success"]],
+    "Piecewise Linear"   = ber640_colors[["secondary"]],
+    "Natural Spline (df=4)" = ber640_colors[["accent"]]
   )) +
   scale_linetype_manual(values = c(
     "Piecewise Constant" = "dotdash",
@@ -1513,17 +1631,16 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-pw-three-way"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 The three models represent increasing flexibility: the step function captures direction but creates jumps; the broken line eliminates jumps but has an "elbow"; the spline produces the smoothest curve. Choose the simplest model that captures the key features.
 
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-pw-three-way"
-#| eval: false
 ```
 - **Piecewise constant**: Quartile-based step function from @sec-ch6-piecewise
 - **Piecewise linear**: Broken line with a knot at the median
@@ -1577,9 +1694,9 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
               aes(y = gam_pred,
                   ymin = gam_pred - 1.96 * gam_se,
                   ymax = gam_pred + 1.96 * gam_se),
-              fill = ber640_colors["accent"], alpha = 0.2) +
+              fill = ber640_colors[["accent"]], alpha = 0.2) +
   geom_line(data = lrt_grid, aes(y = gam_pred),
-            color = ber640_colors["accent"], linewidth = 1.2) +
+            color = ber640_colors[["accent"]], linewidth = 1.2) +
   annotate("text", x = min(battersea$lrt) + 1,
            y = max(battersea$gcse, na.rm = TRUE),
            label = paste0("edf = ", edf_val),
@@ -1590,10 +1707,10 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
 ```
 
 ### Output Interpretation
+
 ```{r}
 #| ref.label: "fig-ch6-gam-fit"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 ```
 - **edf** close to 1: the data support a nearly linear relationship
 - **edf** $\approx 2$: roughly quadratic complexity
@@ -1603,10 +1720,9 @@ ggplot(battersea, aes(x = lrt, y = gcse)) +
 ### Code Explanation
 ```{r}
 #| ref.label: "fig-ch6-gam-fit"
-#| eval: false
 ```
 - `mgcv::gam()` fits the model; `s(lrt)` specifies a smooth function using thin-plate regression splines
-- Smoothing parameter selected automatically by REML
+- Smoothing parameter selected automatically by GCV (generalized cross-validation), the default for `mgcv::gam()`; the rendered output reports the resulting GCV score (REML is often recommended in applied GAM work, and can be requested with `method = "REML"`)
 - `predict(..., se.fit = TRUE)` provides fitted values and standard errors for the confidence band
 - The edf indicates estimated complexity
 
@@ -1650,12 +1766,12 @@ The tools in this chapter let you model nonlinear relationships, but several nat
 
 ::: {.callout-caution collapse="true"}
 ## Exercise 6.1: Log Transformation
-Using the `crime` data, fit both a level-level and log-log model of crime rate on urbanization. Which model provides a better fit (compare $R^2$ and residual plots)?
+Using the `crime` data, fit both a level-level and log-log model of crime rate on urbanization. Which model provides a better fit? Because the two models have different response scales ($y$ versus $\log y$), their $R^2$ values are **not** directly comparable; judge fit instead by comparing the residual plots (which LOWESS curve sits closer to zero) and the back-transformed prediction error on the original crime-rate scale (e.g., RMSE after exponentiating the fitted log-values).
 :::
 
 ::: {.callout-tip collapse="true"}
 ## Hint for Exercise 6.1
-Start by fitting the two models: `lm(crime_rate ~ urbanization, data = crime_df)` and `lm(log(crime_rate) ~ log(urbanization), data = crime_df)`. Compare $R^2$ using `glance()` from `broom`. For residual plots, create residual-vs-fitted scatterplots for each model and overlay a LOWESS curve. The model with a flatter LOWESS curve in the residual plot (closer to zero) has better-specified functional form. Remember that $R^2$ values from models with different dependent variables (raw vs log) are not directly comparable --- focus on the residual patterns.
+Start by fitting the two models: `lm(crime_rate ~ urbanization, data = crime_df)` and `lm(log(crime_rate) ~ log(urbanization), data = crime_df)`. You can inspect each model's $R^2$ using `glance()` from `broom`, but do not rank the two models by those cross-scale $R^2$ values. For residual plots, create residual-vs-fitted scatterplots for each model and overlay a LOWESS curve. The model with a flatter LOWESS curve in the residual plot (closer to zero) has better-specified functional form; for predictive comparison, use back-transformed prediction error on the original crime-rate scale.
 :::
 
 ::: {.callout-caution collapse="true"}

@@ -171,12 +171,12 @@ See the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for de
 
 All work must comply with the [University of Alabama Academic Misconduct Policy](https://catalog.ua.edu/undergraduate/about/academic-regulations/student-expectations/academic-misconduct-policy/).
 
-**Regarding AI tools** (ChatGPT, Copilot, etc.):
+**Regarding software tools and outside assistance**:
 
-- You **may** use AI tools to learn concepts and debug code
-- You **must** understand and adapt any AI-generated code
-- You **cannot** submit entirely AI-generated work without attribution and substantial modification
-- If in doubt, disclose your use of AI---transparency is never penalized
+- You **may** use software tools and reference materials to learn concepts and debug code
+- You **must** understand, adapt, and be able to explain any code you submit
+- You **cannot** submit work that you do not understand or that substantially comes from outside assistance without meaningful revision and attribution
+- If in doubt, disclose outside assistance---transparency is never penalized
 
 ### Disability Accommodations
 
