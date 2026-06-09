@@ -1,6 +1,6 @@
 # BER 640: Advanced Statistical Methods in Education
 
-> The complete course materials for an asynchronous online graduate course in applied regression with R at the University of Alabama — lecture notes, hands-on R labs, homework solutions, module quizzes, a final-project guide, a course website, and a companion data package, all built and published from one place to a **single website**.
+> The complete course materials for an asynchronous online graduate course in applied regression with R at the University of Alabama — lecture notes, hands-on R labs, homework solutions, module quizzes, an interactive student practice-quiz site, a final-project guide, a course website, and a companion data package, all built and published from one place to a **single website**.
 
 [![Content: CC BY-NC-SA 4.0](https://img.shields.io/badge/Content-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Code: MIT](https://img.shields.io/badge/Code-MIT-green.svg)](https://opensource.org/licenses/MIT)
@@ -15,27 +15,28 @@
 
 **BER 640: Advanced Statistical Methods in Education** is a 3-credit, fully online (asynchronous) graduate course at the **University of Alabama**. It teaches applied regression analysis with R — from simple linear regression through generalized linear models — for students in education and the social sciences.
 
-This repository is the **single source for the entire course**. It brings together the lecture notes, R labs, homework solutions, module quizzes, the final-project guide, the course website, and the companion data package, and builds and publishes them together to one website.
+This repository is the **single source for the entire course**. It brings together the lecture notes, R labs, homework solutions, module quizzes, an interactive student practice-quiz site, the final-project guide, the course website, and the companion data package, and builds and publishes them together to one website.
 
 The course was developed with the support of the University of Alabama's **Office of Teaching Innovation and Digital Education (OTIDE)** and is first offered in **Fall 2026**. This repository is its living source: I maintain it for ongoing online delivery at UA and revise it each time the course runs.
 
-> **Status.** The six Quarto projects below are now consolidated into this repository as subfolders, and the unified site builds locally — the course website at the root, the five books at their subpaths, and the `regdatasets` documentation at `/regdatasets`. The unified site at <https://joonho112.github.io/jlee-regression-course/> is the canonical public deployment; the standalone repositories/sites are retained as legacy and development references. Automated deployment to GitHub Pages via the included workflow is the remaining step.
+> **Status.** All seven Quarto projects are consolidated into this repository as subfolders, and the unified site **builds and deploys automatically**: a single push to `main` renders every project, assembles them, and publishes to GitHub Pages — the course website at the root, the six books at their subpaths, and the `regdatasets` documentation at `/regdatasets`. The unified site at <https://joonho112.github.io/jlee-regression-course/> is the canonical public deployment and is live.
 
 ---
 
 ## The deliverables
 
-The course is made of seven parts. Six are Quarto projects consolidated into this repository as subfolders — the course website publishes to the site root and the five books to subpaths; the seventh (`regdatasets`) stays its own installable R package, with its documentation embedded in the published site. For the course materials, the canonical public URLs are the unified-site paths in the final column; `regdatasets` remains a package special case, mirrored at `/regdatasets` while its standalone repository remains the package source.
+The course is made of **eight deliverables**. Seven are Quarto projects consolidated into this repository as subfolders — the course website publishes to the site root and the six books to their subpaths; the eighth, `regdatasets`, stays its own installable R package, with its documentation embedded in the published site at `/regdatasets`. Every deliverable's live URL is in the final column.
 
-| # | Deliverable | What it is | Legacy standalone site | Canonical path in unified site |
-|:--|:------------|:-----------|:-------------|:-------------|
-| 1 | **Lecture Notes** — *A Regression Approach with R* | A narrative textbook in 13 chapters with executable R and interactive Observable JS apps | [regression-lecture-notes](https://joonho112.github.io/regression-lecture-notes/) | `/notes` |
-| 2 | **R Lab Book** | 13 hands-on R labs paralleling the notes | [regression-labs](https://joonho112.github.io/regression-labs/) | `/labs` |
-| 3 | **Homework Solutions** | 8 problem sets with complete, fully explained R solutions | [regression-homework-solutions](https://joonho112.github.io/regression-homework-solutions/) | `/homework` |
-| 4 | **Final Project Guide** | Step-by-step guide with fully worked linear and logistic regression project examples | [regression-project-guide](https://joonho112.github.io/regression-project-guide/) | `/project` |
-| 5 | **Course Website** | Syllabus, 15-week schedule, weekly module pages, assignment pages, and resources | [regression-course-website](https://joonho112.github.io/regression-course-website/) | `/` (site root / hub) |
-| 6 | **`regdatasets`** | An R data package bundling 24 curated teaching datasets | [github.com/joonho112/regdatasets](https://github.com/joonho112/regdatasets) | `/regdatasets` (embedded pkgdown site) |
-| 7 | **Module Quizzes** *(instructor-facing)* | 8 auto-gradable Blackboard quizzes (85 items) with answer keys & deployment settings | — (in this repo) | `/quizzes` |
+| # | Deliverable | What it is | Live URL |
+|:--|:------------|:-----------|:---------|
+| 1 | **Lecture Notes** — *A Regression Approach with R* | A narrative textbook in 13 chapters with executable R and interactive Observable JS apps | **[`/notes`](https://joonho112.github.io/jlee-regression-course/notes/)** |
+| 2 | **R Lab Book** | 13 hands-on R labs paralleling the notes | **[`/labs`](https://joonho112.github.io/jlee-regression-course/labs/)** |
+| 3 | **Homework Solutions** | 8 problem sets with complete, fully explained R solutions | **[`/homework`](https://joonho112.github.io/jlee-regression-course/homework/)** |
+| 4 | **Final Project Guide** | Step-by-step guide with fully worked linear and logistic regression project examples | **[`/project`](https://joonho112.github.io/jlee-regression-course/project/)** |
+| 5 | **Course Website** | Syllabus, 15-week schedule, weekly module pages, assignment pages, and resources | **[`/`](https://joonho112.github.io/jlee-regression-course/)** (site root / hub) |
+| 6 | **Module Quizzes** *(instructor-facing)* | 8 auto-gradable Blackboard quizzes (85 items) with answer keys & deployment settings | **[`/quizzes`](https://joonho112.github.io/jlee-regression-course/quizzes/)** |
+| 7 | **Practice Quizzes** *(student-facing)* | A serverless, self-grading web quiz of the same 85 items — instant per-option feedback, a running score, and deep links into the lecture notes | **[`/practice`](https://joonho112.github.io/jlee-regression-course/practice/)** |
+| 8 | **`regdatasets`** | An R data package bundling 24 curated teaching datasets | **[`/regdatasets`](https://joonho112.github.io/jlee-regression-course/regdatasets/)** · [package repo](https://github.com/joonho112/regdatasets) |
 
 ---
 
@@ -89,6 +90,7 @@ jlee-regression-course/
 ├── labs/         # R Lab Book (Quarto)            → /labs
 ├── homework/     # Homework Solutions (Quarto)    → /homework
 ├── quizzes/      # Module Quizzes (Quarto)        → /quizzes
+├── practice/     # Practice Quizzes (Quarto)      → /practice
 ├── project/      # Final Project Guide (Quarto)   → /project
 ├── scripts/
 │   └── assemble.sh      # Collect rendered projects into _site/
@@ -103,7 +105,7 @@ jlee-regression-course/
 
 Each book commits its `_freeze/` cache (the stored results of its R computations), so the site rebuilds without re-executing R. The course website is the **site root** — there is no separate landing page. `regdatasets` is **not** a subfolder here: it is built from its [own repository](https://github.com/joonho112/regdatasets) and its pkgdown site is slotted in at `/regdatasets`.
 
-After the build, every output is collected into a single `_site/` tree that mirrors the published URL structure: the course website at the root, plus `/notes`, `/labs`, `/homework`, `/quizzes`, `/project`, and `/regdatasets`.
+After the build, every output is collected into a single `_site/` tree that mirrors the published URL structure: the course website at the root, plus `/notes`, `/labs`, `/homework`, `/quizzes`, `/practice`, `/project`, and `/regdatasets`.
 
 ### Stable lab URLs
 
@@ -121,9 +123,9 @@ The pipeline is a two-stage process: **render**, then **assemble**.
 
 > **Why two stages.** A Quarto *website* render **cleans its output directory** before writing. If several projects rendered straight into one shared directory, each render would wipe the previous project's output. The safe pattern is therefore: render each project into its own output directory, then **copy** those outputs into `_site/` in a separate assemble step.
 
-1. **Render** each Quarto project. The four R-bearing books reuse their committed `_freeze/` caches, so this does **not** re-execute R; the course website and the quizzes book contain no executable code.
+1. **Render** each Quarto project. The four R-bearing books reuse their committed `_freeze/` caches, so this does **not** re-execute R; the course website, the quizzes book, and the practice book contain no executable code. (The practice book also runs a Python validation gate that compiles its YAML question banks to JSON before rendering.)
 2. **Build** the `regdatasets` pkgdown site from [its own repository](https://github.com/joonho112/regdatasets).
-3. **Assemble** the outputs into one `_site/` tree (`scripts/assemble.sh`): course website → root, the five books → their subpaths, `regdatasets` → `/regdatasets`.
+3. **Assemble** the outputs into one `_site/` tree (`scripts/assemble.sh`): course website → root, the six books → their subpaths, `regdatasets` → `/regdatasets`.
 4. **Deploy** the assembled `_site/` to GitHub Pages.
 
 A **GitHub Actions** workflow ([`.github/workflows/publish.yml`](.github/workflows/publish.yml), triggered on push to `main`, with the Pages *Source* set to **GitHub Actions**) runs the four steps and publishes via `actions/upload-pages-artifact` + `actions/deploy-pages` — no manually maintained `gh-pages` branch, and the assembled `_site/` stays git-ignored. Because each book's `_freeze/` is committed, the build is fast, deterministic, and never needs to re-run R. The design intent is simple: **one push to `main` = a full rebuild and redeploy of the entire course.**
@@ -149,6 +151,7 @@ quarto render notes
 quarto render labs
 quarto render homework
 quarto render quizzes
+quarto render practice
 quarto render project
 
 # 2. Assemble everything into a single _site/ tree.
