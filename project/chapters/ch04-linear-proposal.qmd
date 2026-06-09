@@ -33,40 +33,38 @@ analyses.
 
 However, the traditional Mincer model relies on *quantity* of schooling (years
 of education) and does not directly measure what individuals actually know or
-can do. The Programme for the International Assessment of Adult Competencies
-(**PIAAC**), administered by the OECD, provides direct measures of cognitive
-skills --- including literacy, numeracy, and problem solving --- for nationally
-representative samples of adults in 24 participating countries and sub-national regions. These data allow
-researchers to ask whether *skill proficiency* adds explanatory power beyond
-what years of schooling already captures.
+can do. Measures of adult skill proficiency allow researchers to ask whether
+cognitive skills add explanatory power beyond what years of schooling already
+captures.
 
 South Korea is a particularly interesting context for this question. Korea has
 one of the highest rates of tertiary education attainment among OECD countries,
 which means that years of education may have limited variation and reduced
 predictive power compared with other settings. At the same time, the gender
 wage gap in Korea is among the largest in the OECD, raising the question of
-whether the returns to education and cognitive skills differ between men and
-women.
+whether education and cognitive skills are associated with earnings in the same
+way for men and women.
 
-In this project, we analyze a sample of Korean full-time workers to examine
-how traditional human capital variables (education, experience), cognitive
-skills (numeracy), and occupational classification relate to monthly earnings,
-and whether these relationships vary by gender.
+In this project, we examine how traditional human capital variables
+(education, experience), cognitive skills (numeracy), and occupational
+classification are associated with monthly earnings among Korean full-time
+workers, and whether these associations vary by gender.
 
 ### Research Questions
 
-1. **RQ1:** What are the returns to education and work experience on monthly
-   earnings for Korean workers, controlling for gender?
-2. **RQ2:** Do cognitive skills (numeracy) and occupational classification add
-   explanatory power beyond the traditional Mincer model?
-3. **RQ3:** Do the returns to education and cognitive skills differ by gender?
+1. **RQ1:** How are years of education and work experience associated with
+   monthly earnings for Korean full-time workers, controlling for gender?
+2. **RQ2:** Do numeracy and occupational classification improve the explanation
+   of monthly earnings beyond the baseline human-capital model?
+3. **RQ3:** Do the associations of education and numeracy with monthly earnings
+   differ by gender?
 
 ::: {.callout-tip}
 ## Writing Tip
 Notice how each research question maps to a specific model extension. RQ1 asks
-about the baseline Mincer variables, RQ2 asks about adding new predictors, and
-RQ3 asks about interaction effects. This structure makes it easy to link each
-question to a specific analysis later in Part 3.
+about the baseline human-capital variables, RQ2 asks about adding occupation
+and numeracy, and RQ3 asks about interaction effects. This structure makes it
+easy to link each question to a specific analysis later in Part 3.
 :::
 
 
@@ -74,10 +72,12 @@ question to a specific analysis later in Part 3.
 
 ::: {.callout-important}
 ## Guideline Reminder --- Part 2
-Describe the **data source** and study design, the **subjects** (who, how
-sampled, sample size), and provide a table listing **every variable** with its
-name, type, and definition. For categorical predictors, list all categories and
-the reference group. (See @sec-linear-part2 for the full expectations.)
+Describe the **data source** and study design, the **subjects** and final
+analytic sample size, the **missing-data rule**, and provide a table listing
+**every variable** with its name, type, coding, and definition. For categorical
+predictors, list all categories and the reference group. For transformed
+variables, explain what the transformation means. (See @sec-linear-part2 for
+the full expectations.)
 :::
 
 ### Study Design and Data Source
@@ -90,47 +90,74 @@ literacy, numeracy, and problem solving in technology-rich environments across
 
 ### Subjects
 
-The original PIAAC Korea sample included 6,667 Korean adults aged 16--65. We
-restrict our analysis sample using the following inclusion criteria:
+The original PIAAC Korea sample included 6,667 Korean adults aged 16--65. The
+provided analysis file is an already-filtered complete-case subset of the
+Korean PIAAC Round 1 data. It contains adults from the original Korean PIAAC
+sample who met the project inclusion criteria:
 
 - **Age:** 35--54 years (prime working-age adults)
 - **Employment status:** Full-time employed (excluding part-time workers and the
   self-employed)
-- **Complete cases:** No missing data on any analysis variable
+- **Complete cases:** Complete data on all variables used in the planned linear
+  regression models
 
-After applying these restrictions, the final analytic sample includes
-**$N$ = 1,357** adults.
+The supplied analysis file has **$N$ = 1,357** rows and no missing values on
+the planned analysis variables, so all three linear regression models use the
+same analytic sample.
+
+Because this course dataset is an unweighted teaching subset of PIAAC Korea,
+the analysis treats the 1,357 complete cases as the study sample rather than as
+a survey-weighted national estimate. The standard errors, confidence intervals,
+and p-values from the planned linear regression models are model-based and do
+not incorporate PIAAC's complex survey design, sampling weights, replicate
+weights, or plausible values. Results should therefore be framed as sample
+associations in this teaching file, not as population-level estimates for all
+Korean adults or workers.
 
 ::: {.callout-tip}
 ## Writing Tip
-Be explicit about your inclusion and exclusion criteria. This allows the reader
-to judge whether your findings generalize to a broader population and to
-understand any selection issues.
+Be explicit about your inclusion and exclusion criteria, even when the course
+dataset has already been filtered for you. This allows the reader to judge
+how far your findings may extend beyond the teaching subset and to understand any
+selection issues.
 :::
 
 ### Variables
 
-Let us load the dataset and examine its structure before defining the
-variables.
+Let us load the dataset, define the exact variables used in the planned models,
+and create one complete-case analysis dataset.
 
 ```{r}
 #| label: load-piaac
 #| message: false
 
-# Load the PIAAC Korea analysis dataset
-piaac <- readRDS(here::here("data", "piaac_kor.rds"))
+analysis_vars <- c(
+  "ln_inc", "female", "schyrs_c", "exper_c",
+  "exper2_c", "occupation", "numeracy"
+)
 
-# Explicitly set Skilled as the reference category for occupation
-piaac <- piaac |>
+analysis_df <- readRDS(here::here("data", "piaac_kor.rds")) |>
   mutate(occupation = fct_relevel(occupation, "Skilled"))
 
-# Quick overview of the data
-glimpse(piaac)
+analysis_df <- analysis_df |>
+  drop_na(all_of(analysis_vars))
+
+tibble(
+  final_n = nrow(analysis_df),
+  missing_analysis_values = sum(is.na(analysis_df[analysis_vars])),
+  occupation_reference = levels(analysis_df$occupation)[1]
+)
 ```
 
 ::: {.callout-important}
 ## Setting the Reference Category
-R orders factor levels alphabetically by default, which would make "Elementary" the reference. We explicitly set "Skilled" as the reference because it is the largest and most interpretable comparison group. The original Stata analysis used "Elementary" as the reference — both choices are valid, but they produce different coefficient signs. Always verify your reference category with `levels(your_factor)` before fitting models.
+The supplied `piaac_kor.rds` file already stores `occupation` with `Skilled` as
+the first factor level. We still relevel it explicitly so the regression
+reference category is unambiguous. `Skilled` is used as the reference because it
+is an interpretable comparison group for the earnings models; in this sample,
+`Semi-white` is slightly more common than `Skilled`. If you create a factor from
+character values, R may sort levels alphabetically, so always verify the
+reference category with `levels(your_factor)` before fitting models.
 :::
 
 @tbl-linear-variables presents all variables used in the analysis, including
@@ -138,17 +165,17 @@ their roles, types, and definitions.
 
 ```{r}
 #| label: tbl-linear-variables
-#| tbl-cap: "Variables used in the linear regression analysis of Korean adults' monthly earnings."
+#| tbl-cap: "Variables used in the linear regression analysis of monthly earnings in the PIAAC Korea teaching subset."
 
 var_table <- tibble::tribble(
-  ~Variable,      ~Role,        ~Type,                    ~Definition,
-  "`ln_inc`",     "Outcome",    "Continuous",             "Natural log of monthly income (PPP-adjusted)",
-  "`female`",     "Predictor",  "Binary",                 "1 = female, 0 = male",
-  "`schyrs_c`",   "Predictor",  "Continuous",             "Mean-centered years of education",
-  "`exper_c`",    "Predictor",  "Continuous",             "Mean-centered work experience (in decades)",
-  "`exper2_c`",   "Predictor",  "Continuous",             "Squared term of mean-centered experience",
-  "`occupation`", "Predictor",  "Categorical (4 levels)", "Skilled (ref), Semi-white, Semi-blue, Elementary",
-  "`numeracy`",   "Predictor",  "Continuous",             "Z-scored numeracy proficiency (1 unit = 1 SD)"
+  ~Variable,      ~Role,       ~Type,                    ~Coding, ~Definition,
+  "`ln_inc`",     "Outcome",   "Continuous",             "Natural log scale", "Natural log of monthly income as supplied in the analysis file",
+  "`female`",     "Predictor", "Binary",                 "1 = female; 0 = male (ref)", "Worker gender",
+  "`schyrs_c`",   "Predictor", "Continuous",             "Centered at 13.65 years", "Years of formal education, centered at the sample mean",
+  "`exper_c`",    "Predictor", "Continuous",             "Centered experience in decades", "Work experience divided by 10, then centered at the sample mean",
+  "`exper2_c`",   "Predictor", "Continuous",             "Squared centered experience term", "Quadratic term used to allow a curved experience-earnings association",
+  "`occupation`", "Predictor", "Categorical (4 levels)", "Skilled (ref), Semi-white, Semi-blue, Elementary", "Broad occupational classification",
+  "`numeracy`",   "Predictor", "Continuous",             "Approximately z-scored", "PIAAC numeracy proficiency; about 1 unit = 1 SD"
 )
 
 kable(var_table, align = "lllll")
@@ -157,30 +184,34 @@ kable(var_table, align = "lllll")
 Below we describe the measurement and coding decisions for each variable.
 
 **Outcome variable.** The outcome is the natural logarithm of monthly income
-(`ln_inc`). We use the log transformation for two reasons: (a) income
-distributions are typically right-skewed, and the log transformation yields a
-more symmetric distribution that better satisfies the normality assumption of
-linear regression; and (b) coefficients in a log-income model have a convenient
-percentage-change interpretation (i.e., a one-unit change in a predictor is
-associated with approximately a $100 \times \beta$% change in income).
+(`ln_inc`) as supplied in the analysis file. Log-income is useful for earnings
+models because income distributions are often right-skewed, and coefficients in
+a log-income model have a convenient percentage-change interpretation: the
+exact percent difference is $100 \times [\exp(\beta) - 1]$, holding other
+variables constant. For small coefficients, $100 \times \beta$ is a close
+approximation.
 
 **Gender.** The variable `female` is a binary indicator coded 1 for female
 workers and 0 for male workers. Male is the reference category.
 
 **Years of education (mean-centered).** The variable `schyrs_c` is years of
-formal education, centered at the sample mean. Mean-centering serves two
-purposes: (a) it makes the intercept interpretable as the predicted log-income
-for a person with *average* education (and zero on all other centered
+formal education, centered at the sample mean of 13.65 years. Mean-centering
+serves two purposes: (a) it makes the intercept interpretable as the predicted
+log-income for a person with *average* education (and zero on all other centered
 predictors), and (b) it reduces collinearity between the main effect and any
 interaction terms involving this variable.
 
 **Work experience (mean-centered, in decades).** The variable `exper_c` is
-years of work experience divided by 10 and then centered at the sample mean.
+years of work experience divided by 10 and then centered at the sample mean of
+16.46 years.
 Rescaling by 10 means that a one-unit change in `exper_c` corresponds to a
 change of 10 years of experience, producing coefficients that are easier to
 interpret than per-year coefficients (which tend to be very small). The squared
 term `exper2_c` captures the well-known concavity in the experience--earnings
 profile: earnings increase with experience but at a diminishing rate.
+When making adjusted predictions, `exper_c` and `exper2_c` should be set
+coherently. Because `exper2_c` is the squared centered experience term, setting
+both `exper_c = 0` and `exper2_c = 0` represents average experience.
 
 **Occupation.** The variable `occupation` is a four-level categorical predictor
 representing broad occupational classifications:
@@ -190,30 +221,35 @@ representing broad occupational classifications:
 - **Semi-blue**: Skilled agricultural, craft, and machine operators
 - **Elementary**: Elementary occupations
 
-In the regression models, three dummy variables are created automatically
-(semi-white, semi-blue, elementary), with skilled occupations as the
-reference group.
+When `occupation` is included as a factor in `lm()`, R estimates three contrasts:
+Semi-white versus Skilled, Semi-blue versus Skilled, and Elementary versus
+Skilled. The supplied data also include equivalent 0/1 dummy columns
+(`semiwhite`, `semiblue`, `elementary`), but the main worked example uses the
+factor directly so R creates the contrasts automatically.
 
-**Numeracy (z-scored).** The variable `numeracy` is the PIAAC numeracy
-proficiency score, standardized to have a mean of 0 and a standard deviation of
-1 in the analysis sample. A one-unit increase in `numeracy` thus represents a
-one-standard-deviation increase in numeracy proficiency.
+**Numeracy (z-scored).** The variable `numeracy` is a course-supplied PIAAC
+numeracy proficiency measure, approximately standardized to have a mean of 0
+and a standard deviation of 1 in the analysis sample. A one-unit increase in
+`numeracy` thus represents about a one-standard-deviation increase in numeracy
+proficiency. The worked example does not use the full set of PIAAC plausible
+values, so proficiency-measurement uncertainty is not incorporated.
 
 ```{r}
 #| label: check-variable-summary
 #| message: false
 
-# Verify sample size and key variable summaries
-cat("Sample size:", nrow(piaac), "\n\n")
+analysis_df |>
+  summarise(
+    final_n = n(),
+    missing_analysis_values = sum(is.na(analysis_df[analysis_vars])),
+    ln_income_mean = mean(ln_inc),
+    ln_income_sd = sd(ln_inc),
+    numeracy_mean = mean(numeracy),
+    numeracy_sd = sd(numeracy)
+  )
 
-# Outcome variable
-summary(piaac$ln_inc)
-
-# Check the distribution of the categorical predictor
-if ("occupation" %in% names(piaac)) {
-  cat("\nOccupation distribution:\n")
-  table(piaac$occupation)
-}
+analysis_df |>
+  count(occupation, name = "n")
 ```
 
 ::: {.callout-tip}
@@ -232,9 +268,10 @@ different scales.
 ::: {.callout-important}
 ## Guideline Reminder --- Part 3
 Write out your regression model(s) using proper notation. If you use a model
-comparison strategy (e.g., nested models), describe each model and explain which
-research question each model addresses. State your significance level.
-(See @sec-linear-part3 for the full expectations.)
+comparison strategy, describe each model, explain which research question each
+model addresses, and state exactly which models will be compared. State your
+significance level and your planned diagnostic checks. (See @sec-linear-part3
+for the full expectations.)
 :::
 
 ### Analytic Strategy
@@ -242,48 +279,68 @@ research question each model addresses. State your significance level.
 We estimate a series of **three nested linear regression models**, each building
 on the previous one by adding predictors. This nested approach allows us to
 quantify how much additional variance each block of predictors explains and to
-address each research question in turn.
+address each research question in turn. All three models are fit to the same
+complete-case analysis dataset (`analysis_df`, $N$ = 1,357), so differences in
+model fit are due to model specification rather than changes in the analytic
+sample.
 
 All analyses are conducted in R (version 4.4+). We set the significance level
-at $\alpha = 0.05$ for all statistical tests.
+at $\alpha = 0.05$ for all statistical tests. These tests use ordinary
+unweighted regression for instructional purposes; they are not
+survey-design-based tests for national population inference.
 
 ### Model 1: Traditional Mincer Model (RQ1) {#sec-linear-ex-model1}
 
-The first model estimates the traditional Mincer earnings function, regressing
-log-income on gender, years of education, and work experience (including the
-quadratic term):
+The first model estimates a baseline human-capital earnings model, regressing
+log-income on gender, years of education, and work experience. We include
+`exper2_c` because the experience-earnings association is expected to be curved:
+earnings may rise with experience but at a diminishing rate.
 
 $$
-\text{ln\_inc}_i = \beta_0 + \beta_1 \, \text{female}_i + \beta_2 \, \text{schyrs\_c}_i + \beta_3 \, \text{exper\_c}_i + \beta_4 \, \text{exper2\_c}_i + \varepsilon_i
+\begin{aligned}
+\text{ln\_inc}_i ={}& \beta_0 + \beta_1 \, \text{female}_i +
+\beta_2 \, \text{schyrs\_c}_i + \beta_3 \, \text{exper\_c}_i \\
+&+ \beta_4 \, \text{exper2\_c}_i + \varepsilon_i
+\end{aligned}
 $$ {#eq-model1}
 
 where $\varepsilon_i \sim N(0, \sigma^2)$.
 
-This model addresses **RQ1** by estimating the returns to education
-($\beta_2$) and experience ($\beta_3$, $\beta_4$), while controlling for
-gender ($\beta_1$). The intercept $\beta_0$ represents the predicted
+This model addresses **RQ1** by estimating the associations of education
+($\beta_2$) and experience ($\beta_3$, $\beta_4$) with log-income, while
+controlling for gender ($\beta_1$). The intercept $\beta_0$ represents the predicted
 log-income for a *male* worker with *average* education and *average*
 experience (because both predictors are mean-centered).
 
 ### Model 2: Adding Cognitive Skills and Occupation (RQ2) {#sec-linear-ex-model2}
 
 The second model extends Model 1 by adding occupational classification and
-numeracy proficiency:
+numeracy proficiency. In the equation below, `semiwhite`, `semiblue`, and
+`elementary` represent the factor contrasts for `occupation`, with `Skilled` as
+the reference group.
 
 $$
-\text{ln\_inc}_i = \beta_0 + \beta_1 \, \text{female}_i + \beta_2 \, \text{schyrs\_c}_i + \beta_3 \, \text{exper\_c}_i + \beta_4 \, \text{exper2\_c}_i + \beta_5 \, \text{semiwhite}_i + \beta_6 \, \text{semiblue}_i + \beta_7 \, \text{elementary}_i + \beta_8 \, \text{numeracy}_i + \varepsilon_i
+\begin{aligned}
+\text{ln\_inc}_i ={}& \beta_0 + \beta_1 \, \text{female}_i +
+\beta_2 \, \text{schyrs\_c}_i + \beta_3 \, \text{exper\_c}_i +
+\beta_4 \, \text{exper2\_c}_i \\
+&+ \beta_5 \, \text{semiwhite}_i +
+\beta_6 \, \text{semiblue}_i +
+\beta_7 \, \text{elementary}_i +
+\beta_8 \, \text{numeracy}_i + \varepsilon_i
+\end{aligned}
 $$ {#eq-model2}
 
-This model addresses **RQ2**. Comparing the $R^2$ values of Model 1 and
-Model 2 tells us how much additional variance in log-income is explained by
-occupation and numeracy, above and beyond the traditional Mincer variables. We
-also test whether the block of new predictors is statistically significant
-using an incremental $F$-test (i.e., `anova(model1, model2)`).
+This model addresses **RQ2**. Comparing the $R^2$ values of Model 1 and Model 2
+tells us how much additional variance in log-income is explained by occupation
+and numeracy, above and beyond the baseline human-capital variables. We also
+test whether the block of new predictors is statistically significant using an
+incremental $F$-test (i.e., `anova(model1, model2)`).
 
 Key coefficients of interest:
 
-- $\beta_8$ (numeracy): the expected change in log-income for a one-SD increase
-  in numeracy, holding all other variables constant.
+- $\beta_8$ (numeracy): the expected difference in log-income associated with
+  about a one-SD increase in numeracy, holding all other variables constant.
 - $\beta_5$, $\beta_6$, $\beta_7$: the expected difference in log-income
   between each occupation category and the skilled reference group, holding all
   other variables constant.
@@ -291,48 +348,68 @@ Key coefficients of interest:
 ### Model 3: Gender Interactions (RQ3) {#sec-linear-ex-model3}
 
 The third model extends Model 2 by adding interaction terms between gender and
-two key predictors --- education and numeracy:
+two key predictors: education and numeracy. These interaction terms are included
+because **RQ3** asks whether the education-income and numeracy-income
+associations differ between men and women.
 
 $$
-\text{ln\_inc}_i = \beta_0 + \cdots + \beta_9 \, (\text{female} \times \text{schyrs\_c})_i + \beta_{10} \, (\text{female} \times \text{numeracy})_i + \varepsilon_i
+\begin{aligned}
+\text{ln\_inc}_i ={}& \beta_0 + \beta_1 \, \text{female}_i +
+\beta_2 \, \text{schyrs\_c}_i + \beta_3 \, \text{exper\_c}_i +
+\beta_4 \, \text{exper2\_c}_i \\
+&+ \beta_5 \, \text{semiwhite}_i +
+\beta_6 \, \text{semiblue}_i +
+\beta_7 \, \text{elementary}_i +
+\beta_8 \, \text{numeracy}_i \\
+&+ \beta_9 \, (\text{female}_i \times \text{schyrs\_c}_i) +
+\beta_{10} \, (\text{female}_i \times \text{numeracy}_i) +
+\varepsilon_i
+\end{aligned}
 $$ {#eq-model3}
 
-where "$\cdots$" represents all terms from Model 2.
-
 This model addresses **RQ3**. The interaction coefficients tell us whether the
-returns to education ($\beta_9$) and numeracy ($\beta_{10}$) differ between men
-and women:
+associations of education ($\beta_9$) and numeracy ($\beta_{10}$) with
+log-income differ between men and women:
 
-- $\beta_9 > 0$ would indicate that the returns to education are *larger* for
-  women than for men.
-- $\beta_{10} > 0$ would indicate that the returns to numeracy are *larger* for
-  women than for men.
+- $\beta_9 > 0$ would indicate that the education-income association is more
+  positive for women than for men.
+- $\beta_{10} > 0$ would indicate that the numeracy-income association is more
+  positive for women than for men.
 
 We test the significance of the interaction block using an incremental
 $F$-test comparing Model 2 and Model 3.
 
 ### Summary of Model--Research Question Mapping
 
-| Model | Predictors Added | Research Question |
-|-------|------------------|-------------------|
-| Model 1 | `female`, `schyrs_c`, `exper_c`, `exper2_c` | RQ1: Returns to education and experience |
-| Model 2 | + `occupation` dummies, `numeracy` | RQ2: Added value of skills and occupation |
-| Model 3 | + `female` $\times$ `schyrs_c`, `female` $\times$ `numeracy` | RQ3: Gender differences in returns |
+@tbl-model-summary summarizes how the nested model sequence maps onto the
+three research questions.
+
+| Model | Predictors Added | Research Question | Planned comparison |
+|-------|------------------|-------------------|--------------------|
+| Model 1 | `female`, `schyrs_c`, `exper_c`, `exper2_c` | RQ1: Education and experience associations | Interpret focal coefficients |
+| Model 2 | + `occupation`, `numeracy` | RQ2: Added value of occupation and numeracy | Compare Model 1 vs. Model 2 |
+| Model 3 | + `female` $\times$ `schyrs_c`, `female` $\times$ `numeracy` | RQ3: Gender differences in associations | Compare Model 2 vs. Model 3 |
 
 : Summary of the three nested regression models. {#tbl-model-summary}
 
 ### Assumption Checks
 
-For each model, we will assess the standard linear regression assumptions:
+For the planned model sequence, we will assess the standard linear regression
+assumptions:
 
-1. **Linearity:** Residual-vs-fitted plots to check for nonlinear patterns.
-2. **Normality:** Q--Q plots of standardized residuals.
-3. **Homoscedasticity:** Scale-location plots and the Breusch--Pagan test.
-4. **Multicollinearity:** Variance inflation factors (VIF $< 5$ as a
-   guideline).
+1. **Linearity and constant spread:** Residual-vs-fitted plots and the
+   `check_model()` dashboard.
+2. **Residual distribution:** Q--Q plots and residual histograms.
+3. **Multicollinearity:** VIFs from `check_collinearity()`, using VIF > 5 as a
+   conservative flag and VIF > 10 as a stronger warning.
+4. **Influential observations:** Cook's distance and related influence checks,
+   treating $4/n$ as a sensitive screening rule rather than a deletion rule.
+5. **Independence/design:** We will discuss the cross-sectional individual-level
+   design and avoid causal language.
 
-If assumption violations are detected, we will note them and, where
-appropriate, apply robust standard errors (HC3).
+If diagnostic problems are detected, we will describe them clearly and discuss
+how they affect interpretation. Diagnostics will be reported in the Results
+section, not in the proposal.
 
 ::: {.callout-tip}
 ## Writing Tip
@@ -345,37 +422,43 @@ need to report the results of assumption checks until the Results section
 
 ### R Setup for the Analysis
 
-The code below shows the R commands we will use to fit the three models. We
-present the code here to make the analysis fully transparent; the results will
+The code below shows the R commands we will use to fit the three models. The
+same `analysis_df` created in Part 2 is used for every model. The results will
 be reported and interpreted in @sec-linear-results.
 
 ```{r}
 #| label: linear-model-setup
 #| eval: false
 
-# --- Model 1: Traditional Mincer model (RQ1) ---
+# Model 1: baseline human-capital model (RQ1)
 model1 <- lm(ln_inc ~ female + schyrs_c + exper_c + exper2_c,
-             data = piaac)
+             data = analysis_df)
 
-# --- Model 2: + Occupation and numeracy (RQ2) ---
+# Model 2: add occupation and numeracy (RQ2)
 model2 <- lm(ln_inc ~ female + schyrs_c + exper_c + exper2_c +
                occupation + numeracy,
-             data = piaac)
+             data = analysis_df)
 
-# --- Model 3: + Gender interactions (RQ3) ---
+# Model 3: add gender interactions (RQ3)
 model3 <- lm(ln_inc ~ female + schyrs_c + exper_c + exper2_c +
                occupation + numeracy +
                female:schyrs_c + female:numeracy,
-             data = piaac)
+             data = analysis_df)
 
-# --- Incremental F-tests ---
-anova(model1, model2)   # Tests whether occupation + numeracy add explanatory power
-anova(model2, model3)   # Tests whether gender interactions are significant
+# Simple easystats-style summaries
+model_params(model3)
+model_fit(model3)
+compare_models(model1, model2, model3, rank = FALSE)
+
+# Incremental F-tests for the planned model comparisons
+anova(model1, model2)
+anova(model2, model3)
 ```
 
 ::: {.callout-note}
 ## What Comes Next
 In @sec-linear-results, we will fit these three models, report the coefficient
-estimates in a combined table, interpret the results in the context of each
-research question, and verify the regression assumptions.
+estimates in combined tables, interpret the results in the context of each
+research question, compare the nested models, and verify the regression
+diagnostics.
 :::

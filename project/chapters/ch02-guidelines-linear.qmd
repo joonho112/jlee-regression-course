@@ -4,9 +4,14 @@
 
 This chapter walks you through the seven required parts of the linear regression project. For each part, you will find the expectations, page limits, and advice to help you produce a strong final product. Read this chapter carefully before you begin writing.
 
+::: {.callout-tip}
+## Review Before You Draft
+For the statistical ideas, review [Simple Linear Regression](https://joonho112.github.io/jlee-regression-course/notes/chapters/01-simple-linear-regression.html), [Continuous Predictors](https://joonho112.github.io/jlee-regression-course/notes/chapters/04-continuous-predictors.html), [Interactions](https://joonho112.github.io/jlee-regression-course/notes/chapters/05-interactions.html), [Nonlinear Relationships](https://joonho112.github.io/jlee-regression-course/notes/chapters/06-nonlinear-relationships.html), [Model Building](https://joonho112.github.io/jlee-regression-course/notes/chapters/07-model-building.html), and [Model Diagnostics](https://joonho112.github.io/jlee-regression-course/notes/chapters/08-model-diagnostics.html). For the R workflow, review [Lab 05](https://joonho112.github.io/jlee-regression-course/labs/labs/lab05-multiple-regression.html), [Lab 06](https://joonho112.github.io/jlee-regression-course/labs/labs/lab06-interactions.html), [Lab 07](https://joonho112.github.io/jlee-regression-course/labs/labs/lab07-model-building.html), and [Lab 08](https://joonho112.github.io/jlee-regression-course/labs/labs/lab08-diagnostics.html).
+:::
+
 ::: {.callout-note}
 ## Overall Page Limits
-The main text of your project (Parts 1--6) should not exceed approximately **6 pages** of single-spaced text. Tables, figures, and the appendix are in addition to this limit. Quality and clarity matter more than length.
+The main text of Project 1 (Parts 1--6) should not exceed approximately **6 pages** of single-spaced text. The section budgets below sum to 6 pages of main text. Parts 4--5 allow up to **5 additional pages** of tables, figures, and essential diagnostic displays. Appendix and reproducibility materials are separate. Quality and clarity matter more than length.
 :::
 
 
@@ -19,7 +24,7 @@ Begin your project by motivating the topic and stating your research questions. 
 ::: {.callout-note}
 ## Expectations for Part 1
 - Provide a brief paragraph motivating **why** the topic matters.
-- Formulate **2--3 research questions** that you will address with linear regression.
+- Formulate **2--3 research questions** that you will address with linear regression. This 2--3 RQ pattern is for Project 1; Project 2 has its own binary-outcome RQ policy.
 - **Number** your research questions (RQ1, RQ2, RQ3). You will refer back to these numbers throughout the project.
 - Each research question should involve a clear outcome variable and one or more predictor variables.
 :::
@@ -54,12 +59,14 @@ This section describes the data you will analyze. The reader should finish Part 
 ::: {.callout-note}
 ## Expectations for Part 2
 - Identify the **data source** and briefly describe the study design (e.g., survey, observational study).
-- Describe the **subjects**: who they are, how they were sampled, and the sample size.
+- Describe the **subjects**: who they are, how they were sampled, the starting sample size, any exclusions or restrictions, and the final analytic sample size.
+- Summarize missingness on the variables used in your planned model sequence.
 - For **each variable** in your analysis, provide:
   - The variable name (as it appears in the dataset)
   - Whether it is **continuous** or **categorical**
   - The measurement scale or unit (e.g., years, dollars, Likert scale 1--5)
   - For categorical variables: list **all categories** and specify which category serves as the **reference group**
+- Define any recodes, transformations, centered variables, or dummy variables you create.
 - If you create dummy variables from a categorical predictor, define each dummy variable explicitly (e.g., $D_1 = 1$ if female, 0 otherwise).
 :::
 
@@ -67,14 +74,14 @@ This section describes the data you will analyze. The reader should finish Part 
 ## Organizing Variable Descriptions
 A concise table can help the reader quickly grasp your variables:
 
-| Variable | Role | Type | Description |
-|----------|------|------|-------------|
+| Variable | Role | Type | Coding / Description |
+|----------|------|------|----------------------|
 | `earnings` | Outcome | Continuous | Monthly earnings in USD |
 | `education` | Predictor | Continuous | Years of formal education |
 | `gender` | Predictor | Categorical | Male (ref), Female |
 | `region` | Predictor | Categorical | Urban (ref), Suburban, Rural |
 
-Follow the table with a sentence or two defining the dummy variables for each categorical predictor.
+Follow the table with a sentence or two defining the analytic sample and any dummy variables for categorical predictors.
 :::
 
 ::: {.callout-warning}
@@ -95,8 +102,23 @@ This short section tells the reader exactly which regression model(s) you will f
 ## Expectations for Part 3
 - State the regression model(s) you will estimate. You may write them in equation form or in words.
 - **Link each model to specific research questions.** For example: "To address RQ1 and RQ2, we fit the following model: $Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_3 + \varepsilon$."
-- If you fit more than one model (e.g., a reduced model and a full model), explain the purpose of each.
+- If you fit more than one model (e.g., a reduced model and a full model), present a **planned model sequence** and explain the purpose of each model.
+- State that all nested models will be fit on the same complete-case analysis dataset.
+- If you include an interaction or nonlinear term, explain which research question motivates it before you fit it.
 - State the significance level you will use (typically $\alpha = 0.05$).
+:::
+
+::: {.callout-tip}
+## Planned Model Sequence and R Workflow
+A clear analysis plan often has a small table like this:
+
+| Model | Predictors added | RQ addressed | Planned comparison |
+|---|---|---|---|
+| Model 1 | Key predictor + basic controls | RQ1 | Baseline model |
+| Model 2 | Add categorical predictor block | RQ2 | Compare with Model 1 |
+| Model 3 | Add interaction term, if justified | RQ3 | Compare with Model 2 |
+
+In R, use one analysis dataset such as `analysis_df`, fit models with `lm()`, inspect results with `model_params()` and `model_fit()`, compare planned models with `compare_models()` or `anova()`, and build final report tables with `gtsummary::tbl_regression()`.
 :::
 
 ::: {.callout-tip}
@@ -112,6 +134,8 @@ This makes it easy for the reader (and the grader) to follow your analytic logic
 ::: {.callout-warning}
 ## Common Mistakes in Part 3
 - **Describing the model without linking it to a research question.** Every model must have a purpose tied to your RQs.
+- **Changing samples across nested models.** If Model 1 and Model 2 use different rows, the comparison is not clean.
+- **Adding terms just to search for significance.** Interactions, transformations, and polynomial terms should be motivated by your research questions, theory, or clear diagnostic evidence.
 - **Forgetting to mention the significance level.** A simple sentence such as "All tests were conducted at the $\alpha = 0.05$ level" is sufficient.
 :::
 
@@ -127,17 +151,19 @@ Before jumping into regression results, you need to describe your data. Descript
 - Report the **final analytic sample size** and describe any missing data.
 - For **continuous variables**: report the mean, standard deviation, minimum, and maximum.
 - For **categorical variables**: report frequency counts and percentages.
-- Include appropriate **graphs**:
+- Use the same complete-case analysis dataset that will be used for the largest planned regression model.
+- A `gtsummary::tbl_summary()` table is a good default: mean/SD/min/max for continuous variables and n/% for categorical variables.
+- Include the most relevant **graphs** in the report, and place extras in the appendix if useful:
   - A **histogram** of the outcome variable
-  - **Scatterplots** of the outcome vs. each continuous predictor
-  - **Boxplots** of the outcome by each categorical predictor
+  - **Scatterplots** of the outcome vs. key continuous predictors
+  - **Boxplots** of the outcome by key categorical predictors
 - If you apply a **transformation** to any variable (e.g., log transformation), explain why, and redo the descriptive statistics for the transformed variable.
 - Write a brief narrative summarizing key patterns you observe.
 :::
 
 ::: {.callout-important}
 ## Run Descriptives on the Complete-Case Subsample
-Your descriptive statistics must be computed on the **same set of cases** that will be used in the regression analysis. If your regression drops cases with missing values (listwise deletion), your descriptive statistics should be based on that same complete-case subsample. This ensures consistency between Parts 4 and 5.
+Your descriptive statistics must be computed on the **same set of cases** that will be used in the planned model sequence. Create one complete-case analysis dataset for all variables in the largest planned model, then use those same rows for descriptives and every nested model. This ensures consistency between Parts 4 and 5.
 :::
 
 ::: {.callout-tip}
@@ -151,39 +177,53 @@ Your descriptive statistics must be computed on the **same set of cases** that w
 
 ## Part 5: Results --- Regression Analyses {#sec-linear-part5}
 
-*Maximum length: 2 pages of text + up to 2 pages of tables*
+*Maximum length: 2 pages of text + up to 2 pages of tables or essential diagnostic figures*
 
-This is the core of your project. You will fit the regression model(s) described in Part 3, check assumptions, and interpret every coefficient.
+This is the core of your project. You will fit the regression model(s) described in Part 3, check assumptions, and interpret the focal results in substantive terms.
 
 ::: {.callout-note}
 ## Expectations for Part 5
 1. **Fit the model(s)** from Part 3 and present a publication-style regression table that includes:
-   - Estimated coefficients ($\hat{\beta}$)
+   - Unstandardized coefficients (`b`)
    - Standard errors (SE)
    - 95% confidence intervals
    - *p*-values
-2. **Check for collinearity**: Report VIF values. Flag any predictor with VIF > 5.
-3. **Check for linearity**: Use added-variable (partial regression) plots or try polynomial terms to assess whether the linear specification is adequate.
-4. **Residual diagnostics**: Produce residual plots (residuals vs. fitted values, Q-Q plot of residuals). Place these graphs in the **Appendix** (Part 7), but summarize your conclusions in the text.
-5. **Categorical predictors with 3+ categories**: Report the overall *F*-test *p*-value for the set of dummy variables, in addition to the individual coefficient tests.
-6. **Interpret ALL coefficients** substantively. Do not simply say a coefficient is "significant" or "not significant."
+   - $N$, $R^2$, adjusted $R^2$, and model-comparison or overall *F*-tests when applicable
+2. **Check for collinearity**: Report VIF values using a tool such as `performance::check_collinearity()`. As a convention, flag VIF values above 5 for discussion and treat values above 10 as more serious; thresholds are rules of thumb, not automatic decision rules.
+3. **Check linearity and spread**: Use scatterplots, residuals-vs-fitted plots, LOWESS/smooth trends, or the `performance::check_model()` dashboard. If plots suggest curvature, compare a theoretically justified transformation or polynomial term and explain the choice. If unequal spread is a concern, HC3 robust standard errors are an appropriate sensitivity check or reporting option; they address unequal residual variance in ordinary regression, not nonlinearity, omitted variables, clustering, or survey-design issues.
+4. **Check residual distribution**: Use a Q-Q plot or residual histogram to assess whether the normality assumption is reasonable for inference.
+5. **Check influential cases**: Examine influence diagnostics such as Cook's distance. A cutoff such as $4/n$ is a sensitive screening rule, especially in larger samples; flagged cases should be inspected and discussed, not automatically deleted.
+6. **Check independence/design issues**: Briefly note whether the study design creates clustering or repeated observations. If it does, discuss the limitation or use an appropriate remedy.
+7. **Categorical predictors with 3+ categories**: Report a term-level or planned nested-model *F*-test for the set of dummy variables, in addition to the individual coefficient tests. Remember that ordinary `anova()` output is sequential unless you are using it for a planned nested-model comparison.
+8. **Interpret coefficients substantively**: Interpret every non-intercept coefficient in the primary/final model. For earlier nested models, summarize model fit changes and key coefficient changes. Interpret the intercept only if it has a meaningful baseline interpretation.
 :::
 
 ::: {.callout-tip}
 ## How to Interpret Coefficients
 For each predictor, write a sentence like:
 
-- **Continuous predictor**: "A one-unit increase in [X] is associated with a [b] unit increase (or decrease) in [Y], holding all other variables constant ($b = \text{value}$, $p = \text{value}$)."
+- **Continuous predictor**: "A one-unit increase in [X] is associated with a [b] unit increase (or decrease) in [Y], holding all other variables constant (`b = value`, `p = value`)."
 - **Dummy variable**: "On average, [group] scored [b] units higher (or lower) on [Y] than [reference group], holding all other variables constant ($b = \text{value}$, $p = \text{value}$)."
 
 Always include the direction, the magnitude, and a reference to statistical significance.
+
+For a logged outcome, the exact percent change for coefficient $b$ is
+$100 \times [\exp(b) - 1]$. The shortcut $100 \times b$ is only an
+approximation and is best for small coefficients.
+
+Standardized coefficients may be useful when comparing continuous predictors measured on very different scales, but your main interpretation should use the unstandardized coefficient in the original outcome units.
+:::
+
+::: {.callout-tip}
+## If You Include Interactions
+Only include an interaction when it answers a specific research question. Test the interaction block before focusing on individual interaction coefficients, and interpret the results as **conditional associations**. Once an interaction is in the model, main effects are no longer unconditional "overall" effects; they are effects at the reference value or zero value of the interacting variable. A simple predicted-value plot or conditional-effect table is often the clearest way to explain the finding.
 :::
 
 ::: {.callout-tip}
 ## Regression Table Format
-A well-organized regression table might look like this:
+A well-organized regression table should be created with a reproducible table function such as `gtsummary::tbl_regression(model, intercept = TRUE)`. It might look like this:
 
-| Predictor | $\hat{\beta}$ | SE | 95% CI | *p* |
+| Predictor | `b` | SE | 95% CI | *p* |
 |-----------|---------|------|--------|-------|
 | (Intercept) | 1250.3 | 120.5 | [1013.1, 1487.5] | < .001 |
 | Education (years) | 85.2 | 12.3 | [61.1, 109.3] | < .001 |
@@ -191,15 +231,16 @@ A well-organized regression table might look like this:
 | Region: Suburban | -50.1 | 55.2 | [-158.3, 58.1] | .364 |
 | Region: Rural | -130.7 | 60.8 | [-250.0, -11.4] | .032 |
 
-Include $R^2$, adjusted $R^2$, and the overall *F*-test at the bottom of the table.
+Include $R^2$, adjusted $R^2$, $N$, and the overall or model-comparison *F*-test at the bottom of the table or in a brief note below it.
 :::
 
 ::: {.callout-warning}
 ## Common Mistakes in Part 5
 - **Skipping assumption checks.** You must address collinearity (VIF), linearity, and residual diagnostics. Even if everything looks fine, state that you checked and briefly describe what you found.
 - **Reporting only *p*-values without interpretation.** Saying "education is significant at *p* < .001" is not enough. You must interpret the coefficient in context.
-- **Ignoring non-significant predictors.** Every coefficient in your model must be interpreted, whether it is statistically significant or not.
+- **Ignoring non-significant predictors.** Every focal predictor and control in your final model should be interpreted concisely, whether it is statistically significant or not.
 - **Forgetting the overall *F*-test for multi-category predictors.** If `region` has three categories (two dummies), the individual *p*-values do not tell you whether the variable as a whole is significant. Report the *F*-test.
+- **Treating diagnostics as a box-checking exercise.** Diagnostics should lead to a short conclusion about whether the model is adequate or whether a limitation/remedy should be discussed.
 :::
 
 
@@ -212,7 +253,7 @@ The discussion ties everything together. Step back from the numbers and address 
 ::: {.callout-note}
 ## Expectations for Part 6
 - **Answer each research question** by referring to the relevant regression results from Part 5.
-- Discuss the **practical significance** of your findings --- do the effects matter in the real world?
+- Discuss the **practical significance** of your findings --- are the estimated associations or group differences meaningful in the real world?
 - Note any **limitations** of your analysis (e.g., cross-sectional data cannot establish causation, potential confounders not included).
 - Be **concise**. Do not repeat the numbers from Part 5. Instead, focus on the meaning and implications.
 :::
@@ -225,28 +266,37 @@ The discussion ties everything together. Step back from the numbers and address 
 :::
 
 
-## Part 7: Appendix {#sec-linear-part7}
+## Part 7: Appendix and Reproducibility Materials {#sec-linear-part7}
 
-The appendix contains supporting materials that are important but would interrupt the flow of the main text.
+The appendix contains supporting materials that are important but would
+interrupt the flow of the main text. Your source file is submitted with the
+report as reproducibility evidence.
+For diagnostic placement, clean-session checks, and troubleshooting templates,
+see @sec-diagnostics-reproducibility-templates.
 
 ::: {.callout-note}
 ## Expectations for Part 7
 - **Residual diagnostic graphs**: Include at minimum a residuals-vs-fitted-values plot and a Q-Q plot of residuals.
-- **Annotated R script**: Include your complete R code, organized and commented so that a reader could reproduce your analysis. Think of this as equivalent to a Stata do-file --- it should run from start to finish without errors.
+- **Supporting output**: Include bulky diagnostics, influence checks, or sensitivity checks that are important but too detailed for the main text.
+- **Annotated source file**: Submit your complete `.qmd` or `.R` source file,
+  organized and commented so that a reader could reproduce your analysis. It
+  should run from start to finish without errors in a clean R session.
 :::
 
 ::: {.callout-tip}
-## Tips for the R Script
+## Tips for the Source File
 - Use **comments** (`#`) generously to explain each step.
-- Organize the script in the same order as the project: data loading, data cleaning, descriptives, regression, diagnostics.
-- Make sure the script runs **from a clean R session** without relying on objects left in your workspace.
+- Organize the file in the same order as the project: package loading, data loading, data cleaning, complete-case dataset, descriptives, regression, diagnostics, tables, and figures.
+- Make sure the source runs **from a clean R session** without relying on objects left in your workspace.
+- Use relative paths or `here::here()` rather than absolute paths tied to your own computer.
+- Include the code that creates your tables and figures; do not rely on pasted screenshots or manually edited output.
 - Include any data transformations (e.g., log transformations, recoding) so the reader can see exactly what you did.
 :::
 
 
 ## Submission Checklist {#sec-linear-checklist}
 
-Before you submit, review every item below. A missing component is the easiest way to lose points.
+Before you submit Project 1, use the checklist below as the guide's final completeness check. Worked-example checklists show how the examples apply these expectations, but this checklist is the one to use for your own submission.
 
 ::: {.callout-important}
 ## Project 1 Submission Checklist
@@ -264,17 +314,19 @@ Before you submit, review every item below. A missing component is the easiest w
 - [ ] Every variable lists its name, type, and scale
 - [ ] Every categorical variable has a defined reference category
 - [ ] Dummy variables are explicitly defined
+- [ ] Starting N, exclusions/restrictions, missingness, and final analytic N are reported
 
 **Part 3 --- Methods: Statistical Analysis**
 
-- [ ] Regression model(s) are stated
+- [ ] Planned model sequence is stated
 - [ ] Each model is linked to specific research questions
+- [ ] All nested models use the same complete-case analysis dataset
 - [ ] Significance level ($\alpha$) is stated
 
 **Part 4 --- Results: Descriptive Analyses**
 
 - [ ] Sample size and missing data are reported
-- [ ] Means and SDs for continuous variables
+- [ ] Means, SDs, minimums, and maximums for continuous variables
 - [ ] Frequencies for categorical variables
 - [ ] Histogram of outcome variable is included
 - [ ] Scatterplots (outcome vs. continuous predictors) are included
@@ -284,12 +336,13 @@ Before you submit, review every item below. A missing component is the easiest w
 
 **Part 5 --- Results: Regression Analyses**
 
-- [ ] Publication-style regression table with $\hat{\beta}$, SE, CI, *p*-values
+- [ ] Publication-style regression table with `b`, SE, CI, *p*-values, $N$, $R^2$, and adjusted $R^2$
 - [ ] VIF values are reported (collinearity check)
-- [ ] Linearity is assessed (added-variable plots or polynomial terms)
+- [ ] Linearity/spread is assessed with plots or `check_model()`
 - [ ] Residual diagnostics are summarized (detailed graphs in Appendix)
+- [ ] Influence/Cook's distance and independence/design issues are addressed
 - [ ] Overall *F*-test reported for categorical predictors with 3+ categories
-- [ ] Every coefficient is interpreted substantively
+- [ ] Final-model non-intercept coefficients are interpreted substantively
 
 **Part 6 --- Discussion**
 
@@ -297,8 +350,8 @@ Before you submit, review every item below. A missing component is the easiest w
 - [ ] Results are discussed in context (not just numbers repeated)
 - [ ] Limitations are acknowledged
 
-**Part 7 --- Appendix**
+**Part 7 --- Appendix and Reproducibility Materials**
 
 - [ ] Residual diagnostic graphs are included
-- [ ] Annotated R script is included and runs without errors
+- [ ] Annotated `.qmd` or `.R` source file is included and runs without errors
 :::

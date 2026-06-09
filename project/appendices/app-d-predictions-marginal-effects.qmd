@@ -1,0 +1,366 @@
+# Prediction and Marginal-Effect Templates {#sec-prediction-templates}
+
+{{< include ../_common.qmd >}}
+
+::: {.callout-note}
+## Why This Appendix Exists
+Regression tables are not always the easiest way to communicate substantive
+meaning. Adjusted predictions, predicted probabilities, probability
+differences, and average marginal effects translate model results into the
+scale readers understand. Use these templates after you have fit the model and
+checked that it is adequate for your research question.
+:::
+
+All code below is set to `eval: false`. Replace model names, variable names,
+labels, and held-constant values with your own.
+
+::: {.callout-tip}
+## Course Review Links
+If the interpretation feels fuzzy, review [Interactions](https://joonho112.github.io/jlee-regression-course/notes/chapters/05-interactions.html), [Nonlinear Relationships](https://joonho112.github.io/jlee-regression-course/notes/chapters/06-nonlinear-relationships.html), [Multiple Logistic Regression: Predicted Probabilities](https://joonho112.github.io/jlee-regression-course/notes/chapters/10-multiple-logistic-regression.html#sec-ch10-predicted), and the matching labs: [Lab 06](https://joonho112.github.io/jlee-regression-course/labs/labs/lab06-interactions.html), [Lab 07](https://joonho112.github.io/jlee-regression-course/labs/labs/lab07-model-building.html), [Lab 10](https://joonho112.github.io/jlee-regression-course/labs/labs/lab10-logistic-extended.html), and optional [Lab 12](https://joonho112.github.io/jlee-regression-course/labs/labs/lab12-logistic-advanced.html).
+:::
+
+
+## General Rules for Predictions {#sec-prediction-rules}
+
+Before making prediction or marginal-effect tables:
+
+1. Use the same complete-case `analysis_df` used for the model.
+2. Use the primary model that answers the research question.
+3. State which predictors vary and which are held constant.
+4. If the model includes a squared term, keep the original and squared
+   variables consistent in prediction profiles. For example, if `exper_c = 0`,
+   then `exper2_c = 0`; if `exper_c = 2`, then `exper2_c = 4`.
+5. Use the outcome scale: predicted outcome for linear regression, predicted
+   probability for logistic regression.
+6. For Project 2, name the modeled event every time.
+7. When you copy a template into your own Quarto report, give the final output
+   chunk a `fig-` or `tbl-` label and a clear caption.
+
+```{r}
+#| label: prediction-template-setup
+#| eval: false
+
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(ggeffects)
+library(marginaleffects)
+library(knitr)
+
+format_pp <- function(x) {
+  sprintf("%.1f pp", 100 * x)
+}
+
+format_p <- function(p) {
+  dplyr::if_else(
+    is.na(p),
+    NA_character_,
+    dplyr::if_else(p < .001, "< .001", sprintf("%.3f", p))
+  )
+}
+```
+
+::: {.callout-tip}
+## Which Package Should I Use?
+For Project 1 linear adjusted predictions and interaction plots,
+`ggeffects::predict_response()` matches the worked example and lab workflow.
+For Project 2 logistic probability curves, probability tables, and AMEs, use
+`marginaleffects` as the default [@arel-bundock2024]. Within one table or
+figure, use one package grammar and keep the code easy to explain.
+:::
+
+
+## Template 1: Linear Adjusted Prediction Table {#sec-template-linear-pred-table}
+
+Use this template when an interaction or nonlinear term is easier to interpret
+with predicted values than with coefficients.
+
+```{r}
+#| label: template-linear-pred-table
+#| eval: false
+
+linear_predictions <- ggeffects::predict_response(
+  model3,
+  terms = c("numeracy [-2,-1,0,1,2]", "female"),
+  condition = list(
+    schyrs_c = 0,
+    exper_c = 0,
+    exper2_c = 0,
+    occupation = "Skilled"
+  )
+)
+
+linear_predictions |>
+  as_tibble() |>
+  mutate(
+    Gender = if_else(as.character(group) == "0", "Male", "Female"),
+    `Numeracy (z-score)` = x,
+    `Predicted outcome` = round(predicted, 3),
+    `95% CI` = paste0("[", round(conf.low, 3), ", ", round(conf.high, 3), "]")
+  ) |>
+  select(Gender, `Numeracy (z-score)`, `Predicted outcome`, `95% CI`) |>
+  knitr::kable(align = "lrrc")
+```
+
+**Use in report:** State the model, the varying predictors, and the
+held-constant profile. For a log-income outcome, tell the reader whether the
+predicted values are still on the log scale.
+
+
+## Template 2: Linear Interaction Plot {#sec-template-linear-interaction-plot}
+
+Use this template to show how a continuous predictor's association with the
+outcome differs across groups.
+
+```{r}
+#| label: template-linear-interaction-plot
+#| eval: false
+
+linear_predictions <- ggeffects::predict_response(
+  model3,
+  terms = c("numeracy [-2:2 by=0.5]", "female"),
+  condition = list(
+    schyrs_c = 0,
+    exper_c = 0,
+    exper2_c = 0,
+    occupation = "Skilled"
+  )
+)
+
+linear_predictions |>
+  as_tibble() |>
+  mutate(Gender = if_else(as.character(group) == "0", "Male", "Female")) |>
+  ggplot(aes(x = x, y = predicted, color = Gender, fill = Gender)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15,
+              linewidth = 0) +
+  geom_line(linewidth = 1) +
+  labs(
+    x = "Numeracy (z-score)",
+    y = "Predicted outcome",
+    color = "Gender",
+    fill = "Gender",
+    title = "Adjusted Predictions from the Linear Model"
+  )
+```
+
+**Use in report:** If the interaction test is not statistically clear, describe
+the pattern cautiously. Do not imply that different-looking lines prove a real
+group difference.
+
+
+## Template 3: Linear Conditional Slope Table {#sec-template-linear-slopes}
+
+Use this template when an interaction is central and you need a compact table
+of group-specific slopes.
+
+```{r}
+#| label: template-linear-slopes
+#| eval: false
+
+marginaleffects::avg_slopes(
+  model3,
+  variables = "numeracy",
+  by = "female"
+) |>
+  as.data.frame() |>
+  mutate(
+    Gender = if_else(as.character(female) == "0", "Male", "Female"),
+    `Slope for numeracy` = round(estimate, 3),
+    `95% CI` = paste0("[", round(conf.low, 3), ", ", round(conf.high, 3), "]"),
+    `p-value` = format_p(p.value)
+  ) |>
+  select(Gender, `Slope for numeracy`, `95% CI`, `p-value`) |>
+  knitr::kable(align = "lrcc")
+```
+
+**Use in report:** Interpret conditional slopes only after explaining the
+interaction term or planned interaction block. For an additive linear model with
+no interaction, the coefficient table is usually enough.
+
+
+## Template 4: Logistic Predicted-Probability Curve {#sec-template-logistic-prob-curve}
+
+Use this template for the required Project 2 predicted-probability figure.
+Always name the modeled event in the y-axis.
+
+```{r}
+#| label: template-logistic-prob-curve
+#| eval: false
+
+gender_profile <- marginaleffects::datagrid(
+  model = logit2,
+  exper_c = 0,
+  exper2_c = 0,
+  occupation = factor("Skilled", levels = levels(analysis_df$occupation)),
+  numeracy = 0
+)
+
+marginaleffects::plot_predictions(
+  logit2,
+  condition = list("schyrs_c" = seq(-4, 4, by = 1), "female"),
+  newdata = gender_profile,
+  type = "response"
+) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  scale_color_discrete(labels = c("0" = "Male", "1" = "Female")) +
+  scale_fill_discrete(labels = c("0" = "Male", "1" = "Female")) +
+  labs(
+    x = "Years of education (centered)",
+    y = "Predicted probability of manager = 1",
+    color = "Gender",
+    fill = "Gender",
+    title = "Predicted Probability of the Modeled Event"
+  )
+```
+
+**Use in report:** Write a probability sentence, not an odds-ratio sentence.
+For example, "At the held-constant profile, the predicted probability of
+`manager = 1` is higher for men than for women across the education range."
+
+
+## Template 5: Logistic Predicted-Probability Table {#sec-template-logistic-prob-table}
+
+Use this template for the required Project 2 predicted-probability table at
+selected values.
+
+```{r}
+#| label: template-logistic-prob-table
+#| eval: false
+
+selected_probabilities <- marginaleffects::predictions(
+  logit2,
+  newdata = marginaleffects::datagrid(
+    female = c(0, 1),
+    schyrs_c = c(-4, 0, 4),
+    exper_c = 0,
+    exper2_c = 0,
+    occupation = factor("Skilled", levels = levels(analysis_df$occupation)),
+    numeracy = 0
+  ),
+  type = "response"
+)
+
+selected_probabilities |>
+  as.data.frame() |>
+  mutate(
+    Gender = if_else(female == 0, "Male", "Female"),
+    Education = case_when(
+      schyrs_c == -4 ~ "Mean - 4 years",
+      schyrs_c == 0 ~ "Mean",
+      schyrs_c == 4 ~ "Mean + 4 years"
+    ),
+    `Predicted P(manager = 1)` = scales::percent(estimate, accuracy = 0.1),
+    `95% CI` = paste0(
+      "[", scales::percent(conf.low, accuracy = 0.1), ", ",
+      scales::percent(conf.high, accuracy = 0.1), "]"
+    )
+  ) |>
+  select(Gender, Education, `Predicted P(manager = 1)`, `95% CI`) |>
+  knitr::kable(align = "llcc")
+```
+
+**Use in report:** State what values were held constant. The table should make
+the practical size of the association easier to see than the odds-ratio table.
+
+
+## Template 6: Logistic Average Marginal Effects Table {#sec-template-logistic-ame}
+
+Use this template to summarize logistic regression results in percentage-point
+language.
+
+```{r}
+#| label: template-logistic-ame
+#| eval: false
+
+ame_table <- marginaleffects::avg_slopes(
+  logit2,
+  variables = c("female", "schyrs_c", "occupation", "numeracy"),
+  type = "response"
+)
+
+ame_table |>
+  as.data.frame() |>
+  mutate(
+    Term = case_when(
+      term == "female" ~ "Gender",
+      term == "schyrs_c" ~ "Education",
+      term == "occupation" ~ "Occupation",
+      term == "numeracy" ~ "Numeracy",
+      TRUE ~ term
+    ),
+    Contrast = case_when(
+      term == "female" ~ "Female - male",
+      term == "schyrs_c" ~ "One additional year",
+      term == "numeracy" ~ "One SD increase",
+      TRUE ~ contrast
+    ),
+    `Average change` = format_pp(estimate),
+    `95% CI` = paste0("[", format_pp(conf.low), ", ", format_pp(conf.high), "]"),
+    `p-value` = format_p(p.value)
+  ) |>
+  arrange(Term, Contrast) |>
+  select(Term, Contrast, `Average change`, `95% CI`, `p-value`) |>
+  knitr::kable(align = "llccc")
+```
+
+**Use in report:** Say "percentage points," not "percent," when interpreting
+AMEs. For example, "-28 pp" means a 28 percentage-point lower predicted
+probability, not 28% lower odds.
+
+
+## Template 7: Logistic Conditional Effect Table {#sec-template-logistic-conditional}
+
+Use this template when a logistic interaction model is central to the research
+question.
+
+```{r}
+#| label: template-logistic-conditional
+#| eval: false
+
+conditional_slopes <- marginaleffects::avg_slopes(
+  logit3,
+  variables = c("schyrs_c", "numeracy"),
+  by = "female",
+  type = "response"
+)
+
+conditional_slopes |>
+  as.data.frame() |>
+  mutate(
+    Gender = if_else(as.character(female) == "0", "Male", "Female"),
+    Predictor = case_when(
+      term == "schyrs_c" ~ "Education",
+      term == "numeracy" ~ "Numeracy",
+      TRUE ~ term
+    ),
+    `Average slope` = format_pp(estimate),
+    `95% CI` = paste0("[", format_pp(conf.low), ", ", format_pp(conf.high), "]"),
+    `p-value` = format_p(p.value)
+  ) |>
+  arrange(Predictor, Gender) |>
+  select(Gender, Predictor, `Average slope`, `95% CI`, `p-value`) |>
+  knitr::kable(align = "llccc")
+```
+
+**Use in report:** Conditional probability-scale effects are useful only if the
+interaction is part of the planned research question or diagnostic follow-up.
+They supplement, but do not replace, the likelihood-ratio test for the
+interaction block. If the interaction block does not improve model fit, say that
+clearly.
+
+
+## Prediction Writing Checklist {#sec-template-prediction-checklist}
+
+Before including a prediction, probability, or marginal-effect result, check:
+
+- [ ] The model used for the result is named.
+- [ ] The outcome scale is clear.
+- [ ] For Project 2, the modeled event is named.
+- [ ] The values held constant are stated.
+- [ ] The varying predictors are labeled clearly.
+- [ ] Confidence intervals are shown when the result is a table or figure.
+- [ ] Logistic probability differences and AMEs are interpreted in percentage
+  points.
+- [ ] Copied Quarto chunks use `fig-` or `tbl-` labels and clear captions.
+- [ ] The prose explains the substantive meaning, not only statistical
+  significance.

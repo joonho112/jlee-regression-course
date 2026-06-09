@@ -3,316 +3,591 @@
 {{< include ../_common.qmd >}}
 
 ::: {.callout-note}
-## Ready-to-Use Templates
-This appendix provides `gtsummary` code templates for the most common tables
-in a regression project. Copy, paste, and adapt for your own data. Replace
-`your_data`, variable names, and labels with your own.
+## Ready-to-Use Table Templates
+This appendix provides copy-and-adapt table templates for the final project.
+The default reporting package is `gtsummary`, because it can produce clean
+descriptive tables, cross-tabulations, regression tables, and merged model
+tables with short code. Within each project, use these templates with the same
+complete-case `analysis_df` used in your regression models.
 :::
 
-All code below is set to `eval: false` --- these are templates, not executed
-code. Each template includes a brief description, the code, and a note about
-what the output should look like.
+All code below is set to `eval: false`. Replace variable names, model names,
+labels, captions, and reference categories with your own.
 
 
-## Template 1: Descriptive Statistics (Continuous + Categorical) {#sec-template-descriptives}
+## General Rules for Tables {#sec-template-rules}
 
-Use this template when you need a single table that summarizes both
-continuous variables (mean, SD) and categorical variables (count, %).
+Before using any template:
+
+1. Create one complete-case analysis dataset for the project.
+2. Set factor reference categories before fitting models.
+3. Fit the models first; then pass model objects to table functions.
+4. Use readable labels so the reader does not see raw variable names.
+5. Interpret the table in prose. A table is not a substitute for explanation.
+
+```{r}
+#| label: template-table-setup
+#| eval: false
+
+library(dplyr)
+library(forcats)
+library(gtsummary)
+library(gt)
+library(knitr)
+library(modelsummary)
+library(performance)
+library(tibble)
+
+round_numeric <- function(x, digits = 3) {
+  dplyr::mutate(
+    x,
+    dplyr::across(dplyr::where(is.numeric), \(col) round(col, digits))
+  )
+}
+
+model_fit <- function(model, metrics = "common", ...) {
+  performance::model_performance(model, metrics = metrics, ...)
+}
+
+analysis_vars <- c("outcome", "predictor1", "predictor2", "occupation")
+
+prepared_data <- raw_data |>
+  mutate(occupation = fct_relevel(occupation, "Skilled"))
+
+analysis_df <- prepared_data |>
+  tidyr::drop_na(dplyr::all_of(analysis_vars))
+
+levels(analysis_df$occupation)
+```
+
+::: {.callout-tip}
+## Reference Categories
+Avoid putting `factor(variable)` directly inside the model formula for final
+tables. It is clearer to create a factor in the dataset, set the reference
+category intentionally, check `levels()`, and then use the factor variable in
+the model.
+:::
+
+
+## Template A: Analysis Sample Summary {#sec-template-sample}
+
+Use this compact table in Part 2 to report the starting sample, complete-case
+rule, final analytic sample, reference categories, and event counts for Project
+2.
+
+```{r}
+#| label: template-sample-summary
+#| eval: false
+
+sample_summary <- tibble(
+  `Starting N` = nrow(prepared_data),
+  `Rows excluded for missing analysis variables` =
+    sum(!complete.cases(prepared_data[analysis_vars])),
+  `Final analytic N` = nrow(analysis_df),
+  `Occupation reference` = levels(analysis_df$occupation)[1],
+  `Event count` = sum(analysis_df$binary_outcome == 1),
+  `Non-event count` = sum(analysis_df$binary_outcome == 0),
+  `Event rate` = scales::percent(mean(analysis_df$binary_outcome == 1), accuracy = 0.1)
+)
+
+knitr::kable(
+  sample_summary,
+  caption = "Analysis sample and modeled-event summary"
+)
+```
+
+**Use in report:** For Project 1, remove the event/non-event columns. For
+Project 2, replace `binary_outcome` with your actual 0/1 outcome and name the
+modeled event in the surrounding text.
+
+
+## Template B: Variable and Coding Table {#sec-template-variables}
+
+Use this table in Part 2 so the reader can see every variable, its role, type,
+coding, reference category, and definition.
+
+```{r}
+#| label: template-variable-table
+#| eval: false
+
+variable_table <- tibble::tribble(
+  ~Variable, ~Role, ~Type, ~Coding, ~Definition,
+  "`outcome`", "Outcome", "Continuous", "Original units",
+  "Brief definition of the outcome",
+  "`predictor1`", "Predictor", "Continuous", "Mean-centered",
+  "Brief definition of predictor 1",
+  "`occupation`", "Predictor", "Categorical",
+  "Skilled (ref), Semi-white, Semi-blue, Elementary",
+  "Broad occupational classification",
+  "`binary_outcome`", "Outcome", "Binary",
+  "1 = event; 0 = non-event",
+  "Brief definition of the modeled event"
+)
+
+knitr::kable(
+  variable_table,
+  align = "lllll",
+  caption = "Variables used in the regression analysis"
+)
+```
+
+**Use in report:** Delete rows that do not apply. For every categorical
+predictor, name the reference category.
+
+
+## Template 1: Descriptive Statistics {#sec-template-descriptives}
+
+Use this template for the main descriptive table in Project 1 or Project 2.
+It reports means and SDs for continuous variables and counts/percentages for
+categorical variables.
 
 ```{r}
 #| label: template-descriptives
 #| eval: false
 
-your_data |>
+analysis_df |>
   select(outcome_var, continuous_pred1, continuous_pred2,
          categorical_pred1, categorical_pred2) |>
   tbl_summary(
     statistic = list(
-      all_continuous()  ~ "{mean} ({sd})",
+      all_continuous() ~ "{mean} ({sd}); [{min}, {max}]",
       all_categorical() ~ "{n} ({p}%)"
     ),
     digits = all_continuous() ~ 2,
     label = list(
-      outcome_var       ~ "Outcome Variable Name",
-      continuous_pred1  ~ "Continuous Predictor 1",
-      continuous_pred2  ~ "Continuous Predictor 2",
+      outcome_var ~ "Outcome Variable Name",
+      continuous_pred1 ~ "Continuous Predictor 1",
+      continuous_pred2 ~ "Continuous Predictor 2",
       categorical_pred1 ~ "Categorical Predictor 1",
       categorical_pred2 ~ "Categorical Predictor 2"
     ),
     missing = "no"
   ) |>
   bold_labels() |>
-  modify_header(label = "**Variable**") |>
-  modify_caption("**Table 1.** Descriptive Statistics")
+  modify_caption("**Table 1.** Descriptive statistics for the analysis sample")
 ```
 
-**Expected output:** A single table with one row per continuous variable
-(showing mean and SD) and one row per *level* of each categorical variable
-(showing count and percentage). Continuous and categorical variables are
-automatically grouped.
-
-::: {.callout-tip}
-## Tip
-To add min/max for continuous variables, change the statistic to
-`"{mean} ({sd}); [{min}, {max}]"`. To show median and IQR instead, use
-`"{median} ({p25}, {p75})"`.
-:::
+**Use in report:** State that the table uses the complete-case `analysis_df`.
+Mention final $N$ and any important distributional features in prose.
 
 
-## Template 2: Descriptive Statistics by Group {#sec-template-by-group}
+## Template 2: Descriptives by Outcome or Group {#sec-template-by-group}
 
-Use this template when you want to compare descriptive statistics across
-groups (e.g., male vs. female, manager vs. non-manager). This is especially
-useful for the logistic regression project, where you compare continuous
-predictors across outcome groups.
+Use this template when descriptives are clearer by group. For Project 2, the
+group is usually the binary outcome status, such as `manager = 1` versus
+`manager = 0`.
 
 ```{r}
 #| label: template-by-group
 #| eval: false
 
-your_data |>
-  select(group_var, predictor1, predictor2, predictor3) |>
+analysis_df |>
+  select(group_var, predictor1, predictor2, predictor3, categorical_pred1) |>
   tbl_summary(
     by = group_var,
     statistic = list(
-      all_continuous()  ~ "{mean} ({sd})",
+      all_continuous() ~ "{mean} ({sd})",
       all_categorical() ~ "{n} ({p}%)"
     ),
     digits = all_continuous() ~ 2,
     label = list(
       predictor1 ~ "Predictor 1 Name",
       predictor2 ~ "Predictor 2 Name",
-      predictor3 ~ "Predictor 3 Name"
-    )
+      predictor3 ~ "Predictor 3 Name",
+      categorical_pred1 ~ "Categorical Predictor Name"
+    ),
+    missing = "no"
   ) |>
   add_overall() |>
-  add_p() |>
   bold_labels() |>
-  bold_p(t = 0.05) |>
-  modify_caption("**Table 2.** Descriptive Statistics by Group")
+  modify_caption("**Table 2.** Descriptive statistics by group")
 ```
 
-**Expected output:** A table with one column per group, plus an "Overall"
-column and a *p*-value column. Continuous variables show *t*-test or
-Wilcoxon *p*-values; categorical variables show chi-square *p*-values.
-Significant *p*-values are bolded.
+::: {.callout-tip}
+## Optional Group Tests
+If you include simple group-comparison p-values, add `add_p()` after
+`add_overall()`. Treat those p-values as descriptive context, not as a
+replacement for regression results.
+:::
 
 
-## Template 3: Linear Regression Table (Single Model) {#sec-template-linear-single}
+## Template 3: Logistic Cross-Tabulation and Sparse-Cell Check {#sec-template-cross}
 
-Use this template for a single multiple linear regression model. Includes
-the intercept, all predictor coefficients with 95% CIs, and model fit
-statistics in a footnote.
+Use this template in Project 2 to check whether a categorical predictor has
+both events and non-events in every important category.
+
+```{r}
+#| label: template-cross
+#| eval: false
+
+analysis_df |>
+  tbl_cross(
+    row = categorical_predictor,
+    col = binary_outcome_status,
+    percent = "row"
+  ) |>
+  bold_labels() |>
+  modify_caption(
+    "**Table 3.** Event and non-event counts by categorical predictor"
+  )
+```
+
+**Use in report:** Look for categories with very small counts or categories
+that contain only events or only non-events. Those patterns can create unstable
+logistic estimates.
+
+
+## Template 4: Linear Regression Table (Single Model) {#sec-template-linear-single}
+
+Use this template for one multiple linear regression model.
 
 ```{r}
 #| label: template-linear-single
 #| eval: false
 
-lm(outcome ~ predictor1 + predictor2 + predictor3 + factor(categorical_var),
-   data = your_data) |>
-  tbl_regression(
-    intercept = TRUE,
-    label = list(
-      predictor1             ~ "Predictor 1 Name",
-      predictor2             ~ "Predictor 2 Name",
-      predictor3             ~ "Predictor 3 Name",
-      `factor(categorical_var)` ~ "Categorical Variable"
-    )
+linear_model <- lm(
+  outcome ~ predictor1 + predictor2 + categorical_predictor,
+  data = analysis_df
+)
+
+tbl_regression(
+  linear_model,
+  intercept = TRUE,
+  label = list(
+    predictor1 ~ "Predictor 1 Name",
+    predictor2 ~ "Predictor 2 Name",
+    categorical_predictor ~ "Categorical Predictor"
+  )
+) |>
+  add_global_p(include = c(categorical_predictor), keep = TRUE) |>
+  modify_column_unhide(columns = std.error) |>
+  add_glance_source_note(
+    include = c(nobs, r.squared, adj.r.squared, statistic, p.value, sigma)
   ) |>
   bold_labels() |>
   bold_p(t = 0.05) |>
-  add_glance_source_note(
-    include = c(r.squared, adj.r.squared, statistic, p.value, nobs)
-  ) |>
-  modify_caption("**Table 3.** Multiple Linear Regression Results")
+  modify_caption("**Table 4.** Multiple linear regression results")
 ```
 
-**Expected output:** A table with columns for Variable, Beta (coefficient),
-95% CI, and *p*-value. The intercept is included. Below the table, a
-footnote reports $R^2$, adjusted $R^2$, the overall $F$-statistic, its
-*p*-value, and $N$.
-
-::: {.callout-tip}
-## Tip
-If your categorical variable is already a factor in the data frame, you do
-not need `factor()` in the formula, and the label key should match the
-variable name directly (e.g., `occupation ~ "Occupation"`).
-:::
-
-> **Note:** If your categorical variable has a specific reference category, set it with `forcats::fct_relevel(var, "reference_level")` before fitting the model.
+**Use in report:** Interpret non-intercept coefficients that matter for the
+research question. Interpret the intercept only if the reference and zero
+values are meaningful.
 
 
-## Template 4: Linear Regression Table (Multiple Models Side-by-Side) {#sec-template-linear-multi}
+## Template 5: Linear Regression Table (Multiple Models) {#sec-template-linear-multi}
 
-Use this template to compare nested linear regression models. This is the
-standard format for presenting a model-building strategy.
+Use this template for planned nested linear models. Fit all models on the same
+complete-case `analysis_df`, check matching `nobs()`, then merge the tables.
 
 ```{r}
 #| label: template-linear-multi
 #| eval: false
 
-# --- Fit models ---
-model1 <- lm(outcome ~ predictor1 + predictor2, data = your_data)
-model2 <- lm(outcome ~ predictor1 + predictor2 + predictor3,
-             data = your_data)
-model3 <- lm(outcome ~ predictor1 + predictor2 + predictor3 +
-               predictor1:moderator, data = your_data)
+model1 <- lm(outcome ~ predictor1 + predictor2, data = analysis_df)
 
-# --- Create individual tables ---
-t1 <- tbl_regression(
-  model1, intercept = TRUE,
-  label = list(
-    predictor1 ~ "Predictor 1",
-    predictor2 ~ "Predictor 2"
-  )
-) |> bold_p(t = 0.05)
+model2 <- lm(
+  outcome ~ predictor1 + predictor2 + categorical_predictor,
+  data = analysis_df
+)
 
-t2 <- tbl_regression(
-  model2, intercept = TRUE,
-  label = list(
-    predictor1 ~ "Predictor 1",
-    predictor2 ~ "Predictor 2",
-    predictor3 ~ "Predictor 3"
-  )
-) |> bold_p(t = 0.05)
+model3 <- lm(
+  outcome ~ predictor1 + predictor2 + categorical_predictor +
+    predictor1:moderator,
+  data = analysis_df
+)
 
-t3 <- tbl_regression(
-  model3, intercept = TRUE,
-  label = list(
-    predictor1              ~ "Predictor 1",
-    predictor2              ~ "Predictor 2",
-    predictor3              ~ "Predictor 3",
-    `predictor1:moderator`  ~ "Predictor 1 x Moderator"
-  )
-) |> bold_p(t = 0.05)
+model_n <- tibble(
+  Model = c("Model 1", "Model 2", "Model 3"),
+  N = c(nobs(model1), nobs(model2), nobs(model3))
+)
 
-# --- Merge into one table ---
+knitr::kable(model_n, caption = "Model sample sizes")
+
+stopifnot(
+  nobs(model1) == nobs(model2),
+  nobs(model2) == nobs(model3)
+)
+
+labels_base <- list(
+  predictor1 ~ "Predictor 1",
+  predictor2 ~ "Predictor 2"
+)
+
+labels_extended <- c(
+  labels_base,
+  list(categorical_predictor ~ "Categorical Predictor")
+)
+
+labels_interaction <- c(
+  labels_extended,
+  list(`predictor1:moderator` ~ "Predictor 1 x Moderator")
+)
+
+t1 <- tbl_regression(model1, intercept = TRUE, label = labels_base) |>
+  bold_p(t = 0.05)
+
+t2 <- tbl_regression(model2, intercept = TRUE, label = labels_extended) |>
+  add_global_p(include = c(categorical_predictor), keep = TRUE) |>
+  bold_p(t = 0.05)
+
+t3 <- tbl_regression(model3, intercept = TRUE, label = labels_interaction) |>
+  add_global_p(include = c(categorical_predictor), keep = TRUE) |>
+  bold_p(t = 0.05)
+
 tbl_merge(
   tbls = list(t1, t2, t3),
   tab_spanner = c("**Model 1**", "**Model 2**", "**Model 3**")
 ) |>
-  modify_caption("**Table 4.** Nested Linear Regression Models")
+  modify_caption("**Table 5.** Nested linear regression models")
+
+# Planned nested-model comparisons to report in text.
+anova(model1, model2)
+anova(model2, model3)
 ```
 
-**Expected output:** A wide table with three sets of columns (Beta, 95% CI,
-*p*), one set per model. Variables that appear in later models but not
-earlier ones have blank cells in the earlier model columns. This format
-makes it easy to see how coefficients change as predictors are added.
-
-::: {.callout-tip}
-## Tip
-To include $R^2$ and $N$ at the bottom of the merged table, add
-`add_glance_source_note()` to each individual `tbl_regression()` *before*
-merging. The footnotes will appear below each model column.
-:::
+**Use in report:** Use the table to compare coefficient patterns across models.
+Use the incremental F-tests in prose to summarize planned model comparisons.
 
 
-## Template 5: Logistic Regression Table with Odds Ratios {#sec-template-logistic-single}
+## Template 6: Logistic Regression Table (Single Model, Odds Ratios) {#sec-template-logistic-single}
 
-Use this template for a single logistic regression model. The key difference
-from the linear regression template is `exponentiate = TRUE`, which
-converts log-odds coefficients to odds ratios.
+Use this template for one logistic regression model. The table reports odds
+ratios, not raw log-odds.
 
 ```{r}
 #| label: template-logistic-single
 #| eval: false
 
-glm(binary_outcome ~ predictor1 + predictor2 + predictor3 +
-      factor(categorical_var),
-    data = your_data, family = binomial) |>
-  tbl_regression(
-    exponentiate = TRUE,
-    label = list(
-      predictor1             ~ "Predictor 1 Name",
-      predictor2             ~ "Predictor 2 Name",
-      predictor3             ~ "Predictor 3 Name",
-      `factor(categorical_var)` ~ "Categorical Variable"
-    )
+logit_model <- glm(
+  binary_outcome ~ predictor1 + predictor2 + categorical_predictor,
+  data = analysis_df,
+  family = binomial
+)
+
+tbl_regression(
+  logit_model,
+  exponentiate = TRUE,
+  label = list(
+    predictor1 ~ "Predictor 1 Name",
+    predictor2 ~ "Predictor 2 Name",
+    categorical_predictor ~ "Categorical Predictor"
+  )
+) |>
+  add_global_p(include = c(categorical_predictor), keep = TRUE) |>
+  add_glance_source_note(
+    include = c(nobs, AIC, BIC, logLik)
   ) |>
   bold_labels() |>
   bold_p(t = 0.05) |>
-  add_glance_source_note(
-    include = c(AIC, BIC, logLik, nobs)
-  ) |>
-  modify_caption("**Table 5.** Logistic Regression Results (Odds Ratios)")
+  modify_caption("**Table 6.** Logistic regression results (odds ratios)")
 ```
 
-**Expected output:** A table with columns for Variable, OR (odds ratio),
-95% CI, and *p*-value. Odds ratios greater than 1 indicate increased odds;
-less than 1 indicate decreased odds. CIs that include 1.00 correspond to
-nonsignificant effects. The footnote reports AIC, BIC, log-likelihood,
-and $N$.
-
 ::: {.callout-caution}
-## Common Mistake
-Forgetting `exponentiate = TRUE` will produce a table of log-odds
-coefficients, which are much harder to interpret. Always use
-`exponentiate = TRUE` for logistic regression tables in your final report.
+## Logistic Table Reminder
+Always use `exponentiate = TRUE` for final logistic regression tables. Then
+translate focal results into predicted probabilities, probability differences,
+or AMEs in the text or in the prediction templates.
 :::
 
 
-## Template 6: Logistic Regression Table (Multiple Models Side-by-Side) {#sec-template-logistic-multi}
+## Template 7: Staged Logistic Regression Table (Odds Ratios) {#sec-template-logistic-multi}
 
-Use this template to compare nested logistic regression models, all
-reported as odds ratios.
+Use this template for Project 2's staged model sequence. The stages support
+one focused logistic research question; they are not separate RQ1/RQ2/RQ3
+questions.
 
 ```{r}
 #| label: template-logistic-multi
 #| eval: false
 
-# --- Fit models ---
-logit1 <- glm(binary_outcome ~ predictor1 + predictor2,
-              data = your_data, family = binomial)
-logit2 <- glm(binary_outcome ~ predictor1 + predictor2 + predictor3,
-              data = your_data, family = binomial)
-logit3 <- glm(binary_outcome ~ predictor1 + predictor2 + predictor3 +
-                predictor1:moderator,
-              data = your_data, family = binomial)
+logit1 <- glm(
+  binary_outcome ~ predictor1 + predictor2,
+  data = analysis_df,
+  family = binomial
+)
 
-# --- Create individual tables ---
+logit2 <- glm(
+  binary_outcome ~ predictor1 + predictor2 + categorical_predictor,
+  data = analysis_df,
+  family = binomial
+)
+
+logit3 <- glm(
+  binary_outcome ~ predictor1 + predictor2 + categorical_predictor +
+    predictor1:moderator,
+  data = analysis_df,
+  family = binomial
+)
+
+stage_map <- tibble::tribble(
+  ~Stage, ~Predictors_added, ~Purpose,
+  "Stage 1", "Baseline predictors", "Establish baseline adjusted association",
+  "Stage 2", "Add predictor block", "Test whether the block improves fit",
+  "Stage 3", "Add interaction", "Check whether the focal association differs by group"
+)
+
+knitr::kable(stage_map, caption = "Purpose of the staged logistic model sequence")
+
+logit_n <- tibble(
+  Stage = c("Stage 1", "Stage 2", "Stage 3"),
+  N = c(nobs(logit1), nobs(logit2), nobs(logit3))
+)
+
+knitr::kable(logit_n, caption = "Logistic model sample sizes")
+
+stopifnot(
+  nobs(logit1) == nobs(logit2),
+  nobs(logit2) == nobs(logit3)
+)
+
+logit_labels_base <- list(
+  predictor1 ~ "Predictor 1",
+  predictor2 ~ "Predictor 2"
+)
+
+logit_labels_extended <- c(
+  logit_labels_base,
+  list(categorical_predictor ~ "Categorical Predictor")
+)
+
+logit_labels_interaction <- c(
+  logit_labels_extended,
+  list(`predictor1:moderator` ~ "Predictor 1 x Moderator")
+)
+
 t1 <- tbl_regression(
-  logit1, exponentiate = TRUE,
-  label = list(
-    predictor1 ~ "Predictor 1",
-    predictor2 ~ "Predictor 2"
-  )
-) |> bold_p(t = 0.05)
+  logit1,
+  exponentiate = TRUE,
+  label = logit_labels_base
+) |>
+  bold_p(t = 0.05)
 
 t2 <- tbl_regression(
-  logit2, exponentiate = TRUE,
-  label = list(
-    predictor1 ~ "Predictor 1",
-    predictor2 ~ "Predictor 2",
-    predictor3 ~ "Predictor 3"
-  )
-) |> bold_p(t = 0.05)
+  logit2,
+  exponentiate = TRUE,
+  label = logit_labels_extended
+) |>
+  add_global_p(include = c(categorical_predictor), keep = TRUE) |>
+  bold_p(t = 0.05)
 
 t3 <- tbl_regression(
-  logit3, exponentiate = TRUE,
-  label = list(
-    predictor1              ~ "Predictor 1",
-    predictor2              ~ "Predictor 2",
-    predictor3              ~ "Predictor 3",
-    `predictor1:moderator`  ~ "Predictor 1 x Moderator"
-  )
-) |> bold_p(t = 0.05)
+  logit3,
+  exponentiate = TRUE,
+  label = logit_labels_interaction
+) |>
+  add_global_p(include = c(categorical_predictor), keep = TRUE) |>
+  bold_p(t = 0.05)
 
-# --- Merge into one table ---
 tbl_merge(
   tbls = list(t1, t2, t3),
-  tab_spanner = c("**Model 1**", "**Model 2**", "**Model 3**")
+  tab_spanner = c("**Stage 1**", "**Stage 2**", "**Stage 3**")
 ) |>
-  modify_caption("**Table 6.** Nested Logistic Regression Models (Odds Ratios)")
+  modify_caption("**Table 7.** Staged logistic regression models (odds ratios)")
 
-# --- Likelihood ratio tests (report in text) ---
+# Planned likelihood-ratio tests to report in text.
 anova(logit1, logit2, test = "Chisq")
 anova(logit2, logit3, test = "Chisq")
 ```
 
-**Expected output:** A wide table with three sets of columns (OR, 95% CI,
-*p*), one set per model. The format is identical to the linear regression
-multi-model table except that coefficients are odds ratios instead of
-unstandardized betas.
+**Use in report:** Name the modeled event in the table title or table note, for
+example "odds ratios for `manager = 1`."
+
+
+## Template 8: Linear Model Fit Summary Table {#sec-template-fit}
+
+Use this template when linear model fit statistics are clearer in a separate
+table.
+
+```{r}
+#| label: template-fit-table
+#| eval: false
+
+fit_table <- bind_rows(
+  model_fit(model1) |> as_tibble() |> mutate(Model = "Model 1"),
+  model_fit(model2) |> as_tibble() |> mutate(Model = "Model 2"),
+  model_fit(model3) |> as_tibble() |> mutate(Model = "Model 3")
+) |>
+  select(Model, n_Obs, R2, R2_adjusted, RMSE, AIC, BIC) |>
+  round_numeric(digits = 3)
+
+knitr::kable(
+  fit_table,
+  align = "lrrrrrr",
+  caption = "Model fit statistics for the planned model sequence"
+)
+```
+
+
+## Template 9: Logistic Model Fit Summary Table {#sec-template-logistic-fit}
+
+Use this template for the Project 2 fit table. It reports required fit evidence
+such as N, log-likelihood, AIC, and pseudo-$R^2$, plus recommended indices such
+as BIC, Tjur's R2, and RMSE when available from `model_fit()`.
+
+```{r}
+#| label: template-logistic-fit-table
+#| eval: false
+
+logistic_fit_table <- tibble(
+  Model = c("Stage 1", "Stage 2", "Stage 3"),
+  N = c(nobs(logit1), nobs(logit2), nobs(logit3)),
+  `Log likelihood` = c(logLik(logit1), logLik(logit2), logLik(logit3)) |>
+    as.numeric()
+) |>
+  bind_cols(
+    bind_rows(
+      model_fit(logit1) |> as_tibble(),
+      model_fit(logit2) |> as_tibble(),
+      model_fit(logit3) |> as_tibble()
+    )
+  ) |>
+  select(Model, N, `Log likelihood`, AIC, BIC, `Tjur R2` = R2_Tjur, RMSE) |>
+  round_numeric(digits = 3)
+
+knitr::kable(
+  logistic_fit_table,
+  align = "lrrrrrr",
+  caption = "Model fit statistics for the staged logistic model sequence"
+)
+```
+
+
+## Template 10: Optional `modelsummary()` Comparison Table {#sec-template-modelsummary}
+
+`gtsummary` is the default final-project table package. `modelsummary()` is an
+acceptable optional alternative for compact side-by-side model tables.
+
+```{r}
+#| label: template-modelsummary
+#| eval: false
+
+model_list <- list(
+  "Model 1" = model1,
+  "Model 2" = model2,
+  "Model 3" = model3
+)
+
+coef_map <- c(
+  "(Intercept)" = "Intercept",
+  "predictor1" = "Predictor 1",
+  "predictor2" = "Predictor 2",
+  "categorical_predictorLevel 2" = "Category: Level 2 vs Reference",
+  "predictor1:moderator" = "Predictor 1 x Moderator"
+)
+
+modelsummary::modelsummary(
+  model_list,
+  coef_map = coef_map,
+  gof_map = c("nobs", "r.squared", "adj.r.squared", "rmse", "aic", "bic"),
+  statistic = c("SE = {std.error}", "p = {p.value}"),
+  fmt = 3,
+  output = "markdown"
+)
+```
+
+**Use in report:** If you use `modelsummary()`, check the row labels carefully.
+Interaction and factor-contrast names must match the exact term names in your
+model.
 
 
 ## Tips for Better Tables {#sec-template-tips}
@@ -320,27 +595,25 @@ unstandardized betas.
 ::: {.callout-tip}
 ## Table Formatting Best Practices
 
-1. **Always label variables.** Use the `label` argument to replace raw
-   variable names with readable labels. Your reader should never see
-   `schyrs_c` --- they should see "Education (years, centered)."
-2. **Round appropriately.** Two decimal places for most statistics; three
-   for correlations and *p*-values.
-3. **Bold key results.** Use `bold_p()` to highlight significant predictors
-   and `bold_labels()` to make variable names stand out.
-4. **Add model fit notes.** Use `add_glance_source_note()` to include $R^2$,
-   AIC, or sample size below the table.
-5. **Number your tables.** Use `modify_caption()` to add "Table 1.",
-   "Table 2.", etc. Consistent numbering helps the reader navigate your
-   report.
-6. **Be consistent.** Use the same formatting conventions across all tables
-   in your project --- same number of decimal places, same label style, same
-   significance threshold.
+1. **Use the analysis sample.** Descriptive and regression tables should use
+   the same complete-case dataset.
+2. **Label variables.** Replace raw variable names with readable labels.
+3. **State reference groups.** The table or surrounding text must identify the
+   reference category for each categorical predictor.
+4. **Use term-level tests for factors.** For categorical predictors with three
+   or more categories, add `add_global_p()` or report a planned nested-model
+   test in the text.
+5. **Do not overinterpret bold text.** `bold_p()` is a visual aid, not a
+   substitute for substantive interpretation.
+6. **Keep logistic tables on the odds-ratio scale.** Then explain practical
+   significance with probability-scale results.
 :::
 
 ::: {.callout-note}
-## Why `gtsummary`?
-The `gtsummary` package produces tables that render cleanly in HTML, PDF,
-and Word output from Quarto. It also standardizes the format across
-different model types (linear, logistic, ordinal, etc.), so once you learn
-the template for one type, you can easily adapt it for others.
+## Where Predictions and AMEs Go
+Predicted probabilities, adjusted predictions, probability tables, and average
+marginal effects are important, but they are handled in the prediction and
+marginal-effect templates in @sec-prediction-templates. Appendix B also
+includes working examples of predicted-probability and AME tables. Keep this
+appendix focused on descriptive, regression, and model-fit tables.
 :::

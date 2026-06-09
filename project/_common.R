@@ -1,17 +1,64 @@
 # _common.R -- BER 640 Final Project Guide shared configuration
 
 # --- Package loading ---
-pacman::p_load(
-  regdatasets,
-  dplyr, tidyr, forcats, stringr, purrr,
-  ggplot2, patchwork, GGally, ggrepel,
-  broom, car, lmtest, sandwich,
-  parameters, performance, effectsize,
-  see, modelbased, correlation, report,
-  datawizard, insight,
-  marginaleffects,
-  gtsummary, gt, knitr
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+if (!requireNamespace("pacman", quietly = TRUE)) {
+  install.packages("pacman")
+}
+
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+
+regdatasets_ref <- "de3e3bc40038b6d9ecc2dc46017fcc39f2df81a0"
+
+regdatasets_installed <- requireNamespace("regdatasets", quietly = TRUE)
+regdatasets_sha <- if (regdatasets_installed) {
+  sha <- packageDescription("regdatasets")[["RemoteSha"]]
+  if (is.null(sha)) NA_character_ else sha
+} else {
+  NA_character_
+}
+
+if (
+  !regdatasets_installed ||
+    is.na(regdatasets_sha) ||
+    !identical(tolower(regdatasets_sha), tolower(regdatasets_ref))
+) {
+  remotes::install_github(
+    "joonho112/regdatasets",
+    ref = regdatasets_ref,
+    upgrade = "never"
+  )
+}
+
+course_packages <- c(
+  "regdatasets",
+
+  # Rendering and paths
+  "here", "knitr",
+
+  # Data wrangling
+  "dplyr", "tidyr", "tibble",
+  "forcats", "stringr",
+
+  # Visualization
+  "ggplot2", "patchwork", "scales",
+
+  # Model extraction and diagnostics
+  "broom", "sandwich",
+
+  # Easystats spine
+  "parameters", "performance", "see",
+  "datawizard", "insight",
+
+  # Post-estimation and tables
+  "marginaleffects",
+  "gtsummary", "gt", "modelsummary", "ggeffects"
 )
+
+pacman::p_load(char = course_packages)
 
 # --- ggplot2 global theme ---
 theme_set(
@@ -42,21 +89,31 @@ ber640_palette <- scale_color_manual(values = unname(ber640_colors[1:4]))
 ber640_fill    <- scale_fill_manual(values = unname(ber640_colors[1:4]))
 
 # --- Helper functions ---
-tidy_model <- function(model, conf.int = TRUE, ...) {
-  broom::tidy(model, conf.int = conf.int, ...) |>
-    mutate(across(where(is.numeric), \(x) round(x, 4)))
+# Keep this layer intentionally small: display helpers plus thin course
+# shortcuts around parameters/performance functions used repeatedly below.
+round_numeric <- function(x, digits = 3) {
+  dplyr::mutate(
+    x,
+    dplyr::across(dplyr::where(is.numeric), \(col) round(col, digits))
+  )
 }
 
-reg_table <- function(model, ...) {
-  gtsummary::tbl_regression(model, ...) |>
-    bold_labels() |>
-    bold_p(t = 0.05)
+format_p <- function(p) {
+  dplyr::if_else(
+    is.na(p),
+    NA_character_,
+    dplyr::if_else(p < .001, "< .001", sprintf("%.3f", p))
+  )
 }
 
-# Key-terms / notation glossary table (adapts IMS make_terms_table() to a
-# term + symbol + meaning layout). Pass a tibble/data.frame; renders as a
-# Bootstrap .table so it inherits the book's table house style + .notation styling.
-# Usage in a chapter:  make_key_terms(tibble::tribble(~Term, ~Symbol, ~Meaning, ...))
-make_key_terms <- function(df) {
-  knitr::kable(df, col.names = tools::toTitleCase(names(df)))
+model_params <- function(model, exponentiate = FALSE, ...) {
+  parameters::model_parameters(model, exponentiate = exponentiate, ...)
+}
+
+model_fit <- function(model, metrics = "common", ...) {
+  performance::model_performance(model, metrics = metrics, ...)
+}
+
+compare_models <- function(..., metrics = "common", rank = FALSE) {
+  performance::compare_performance(..., metrics = metrics, rank = rank)
 }

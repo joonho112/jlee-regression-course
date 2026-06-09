@@ -12,53 +12,52 @@ begins with a guideline callout, followed by the example text.
 :::
 
 
-## Part 1: Background and Research Questions {#sec-logistic-ex-part1}
+## Part 1: Background and Research Question {#sec-logistic-ex-part1}
 
 ::: {.callout-important}
 ## Guideline Reminder --- Part 1
 Provide a brief paragraph motivating **why** the topic matters, then state
-**2--3 numbered research questions** that you will address with logistic
-regression. Do **not** describe the data or variables here --- save that for
-Part 2. (See @sec-logistic-part1 for the full expectations.)
+**one focused research question** involving a binary outcome. Name the modeled
+event explicitly: which outcome category is $Y = 1$? Do **not** describe the
+data or variables here --- save that for Part 2. (See @sec-logistic-part1 for
+the full expectations.)
 :::
 
 ### Background
 
 Beyond earnings, career advancement to supervisory positions is another
-important labor market outcome. Managers typically earn higher wages, exercise
-greater autonomy, and play a critical role in organizational decision-making.
-Understanding which individual characteristics predict who becomes a manager
-has implications for both human resource policy and educational investment.
+important labor market outcome. Supervisory roles are often associated with
+higher wages, greater autonomy, and greater influence over organizational
+decisions. Understanding which individual characteristics are associated with
+supervisory status can help us think more carefully about labor-market
+advancement and inequality.
 
 In South Korea, where educational attainment is nearly universal at the
 tertiary level, the traditional credential signal may have limited power to
 differentiate workers for promotion into supervisory roles. Cognitive skills
 measured directly --- such as numeracy --- may provide additional predictive
 value beyond years of schooling. Furthermore, a persistent gender gap in
-leadership positions raises the question of whether the pathways to
-managerial roles differ between men and women.
+leadership positions raises the question of whether education and skill
+associations with supervisory status differ between men and women.
 
-In this project, we analyze the same sample of Korean full-time workers used
-in Project 1 to examine how education, cognitive skills, work experience, and
-occupational classification relate to the likelihood of holding a supervisory
-position, and whether these relationships vary by gender.
+This project examines how human capital, cognitive skills, occupation, and
+gender relate to supervisory status within the supplied PIAAC Korea teaching
+subset.
 
-### Research Questions
+### Research Question
 
-1. **RQ1:** After controlling for gender, do education and work experience
-   predict the likelihood of holding a supervisory position among Korean
-   workers?
-2. **RQ2:** Do cognitive skills (numeracy) and occupational classification
-   add predictive power beyond the baseline human capital model?
-3. **RQ3:** Do the effects of education and cognitive skills on the
-   probability of being a manager differ by gender?
+**Research question:** Among Korean full-time workers, how are gender,
+education, work experience, occupational classification, and numeracy
+associated with the probability of holding a supervisory position
+(`manager = 1`), including whether the education or numeracy associations
+differ by gender?
 
 ::: {.callout-tip}
 ## Writing Tip
-Notice how each research question parallels those in Project 1 (linear
-regression). The conceptual logic is the same --- baseline model, extended
-model, interaction model --- but the outcome is now binary, requiring
-logistic regression instead of OLS.
+Project 2 uses **one focused logistic research question**. The planned models
+below still build in stages --- baseline model, extended model, interaction
+model --- but those stages support the same overarching question rather than
+creating separate numbered research questions.
 :::
 
 
@@ -66,10 +65,12 @@ logistic regression instead of OLS.
 
 ::: {.callout-important}
 ## Guideline Reminder --- Part 2
-Describe the **data source** and study design, the **subjects** (who, how
-sampled, sample size), and provide a table listing **every variable** with its
-name, type, and definition. For categorical predictors, list all categories and
-the reference group. (See @sec-logistic-part2 for the full expectations.)
+Describe the **data source** and study design, the **subjects** and final
+analytic sample size, the **missing-data rule**, and provide a table listing
+**every variable** with its name, type, coding, and definition. For the binary
+outcome, identify the event and non-event. For categorical predictors, list all
+categories and the reference group. (See @sec-logistic-part2 for the full
+expectations.)
 :::
 
 ### Study Design and Data Source
@@ -81,9 +82,18 @@ outcomes, including supervisory responsibilities.
 
 ### Subjects
 
-The analysis sample is identical to that used in Project 1. After restricting
-to prime working-age adults (35--54), full-time employees, and complete cases,
-the final analytic sample includes **$N$ = 1,357** Korean adults.
+The supplied analysis file is the same already-filtered Korean PIAAC subset
+used in Project 1. It contains prime working-age adults (35--54) who were
+full-time employees. After applying the complete-case rule to the planned
+logistic outcome and predictors, the final analytic sample includes
+**$N$ = 1,357** respondents in the teaching file.
+
+As in Project 1, this is an unweighted teaching subset. The logistic models do
+not use PIAAC survey weights, replicate weights, plausible values, or complex
+sample design information, so inference is limited to this teaching analysis
+file. Interpret odds ratios and predicted probabilities as sample associations
+with supervisory status in this subset, not as nationally representative
+estimates.
 
 ### Variables
 
@@ -95,12 +105,21 @@ variable table for reference.
 #| label: logistic-load-data
 #| message: false
 
-# Load the PIAAC Korea analysis dataset (same as Project 1)
-piaac <- readRDS(here::here("data", "piaac_kor.rds"))
+analysis_vars <- c(
+  "manager", "female", "schyrs_c", "exper_c",
+  "exper2_c", "occupation", "numeracy"
+)
 
-# Ensure Skilled is the reference category (same as Ch 04)
-piaac <- piaac |>
-  mutate(occupation = fct_relevel(occupation, "Skilled"))
+analysis_df <- readRDS(here::here("data", "piaac_kor.rds")) |>
+  mutate(occupation = fct_relevel(occupation, "Skilled")) |>
+  drop_na(all_of(analysis_vars))
+
+tibble(
+  final_n = nrow(analysis_df),
+  modeled_event = sum(analysis_df$manager == 1),
+  non_event = sum(analysis_df$manager == 0),
+  occupation_reference = levels(analysis_df$occupation)[1]
+)
 ```
 
 ::: {.callout-note}
@@ -108,21 +127,29 @@ As in the linear regression example (@sec-linear-proposal), we set **Skilled** a
 :::
 
 **Outcome variable.** The outcome is `manager`, a binary indicator of
-supervisory status: 1 = the respondent supervises other employees as part of
-their job, 0 = the respondent does not supervise others. This variable is
-derived from the PIAAC item asking whether the respondent manages or supervises
-other workers at their current job.
+supervisory status. The modeled event is `manager = 1`: the respondent
+supervises other employees as part of their job. The non-event is
+`manager = 0`: the respondent does not supervise other employees. This
+variable is derived from the PIAAC item asking whether the respondent manages
+or supervises other workers at their current job.
+
+@tbl-manager-distribution shows the number and percentage of workers in the
+modeled event and non-event categories.
 
 ```{r}
 #| label: tbl-manager-distribution
 #| tbl-cap: "Distribution of the outcome variable (manager)."
 
-# Frequency table of the outcome variable
-manager_freq <- table(piaac$manager)
+# Frequency table of the modeled event and non-event
+manager_freq <- table(analysis_df$manager)
 manager_pct  <- round(prop.table(manager_freq) * 100, 1)
 
 manager_tbl <- tibble::tibble(
-  `Supervisory Status` = c("Non-manager (0)", "Manager (1)", "Total"),
+  `Supervisory Status` = c(
+    "Non-manager (0, non-event)",
+    "Manager (1, event)",
+    "Total"
+  ),
   n   = c(manager_freq[1], manager_freq[2], sum(manager_freq)),
   `%` = c(manager_pct[1], manager_pct[2], 100.0)
 )
@@ -139,11 +166,11 @@ Project 1. @tbl-logistic-variables provides the complete variable table.
 
 ```{r}
 #| label: tbl-logistic-variables
-#| tbl-cap: "Variables used in the logistic regression analysis of supervisory status."
+#| tbl-cap: "Variables used in the logistic regression analysis of supervisory status in the PIAAC Korea teaching subset."
 
 var_table <- tibble::tribble(
   ~Variable,      ~Role,        ~Type,                    ~Definition,
-  "`manager`",    "Outcome",    "Binary",                 "1 = supervises other employees, 0 = does not",
+  "`manager`",    "Outcome",    "Binary",                 "1 = supervises other employees (event), 0 = does not (non-event)",
   "`female`",     "Predictor",  "Binary",                 "1 = female, 0 = male (ref)",
   "`schyrs_c`",   "Predictor",  "Continuous",             "Mean-centered years of education",
   "`exper_c`",    "Predictor",  "Continuous",             "Mean-centered work experience (in decades)",
@@ -152,7 +179,7 @@ var_table <- tibble::tribble(
   "`numeracy`",   "Predictor",  "Continuous",             "Z-scored numeracy proficiency (1 unit = 1 SD)"
 )
 
-kable(var_table, align = "lllll")
+kable(var_table, align = "llll")
 ```
 
 ::: {.callout-tip}
@@ -169,53 +196,82 @@ variable and the rationale for using logistic regression.
 ::: {.callout-important}
 ## Guideline Reminder --- Part 3
 Write out your logistic regression model(s) using proper notation. If you use a
-model comparison strategy (e.g., nested models), describe each model and explain
-which research question each model addresses. State your significance level.
-(See @sec-logistic-part3 for the full expectations.)
+model comparison strategy (e.g., nested models), describe each model stage and
+explain how it supports the single research question. State your significance
+level. (See @sec-logistic-part3 for the full expectations.)
 :::
 
 ### Analytic Strategy
 
-We estimate a series of **three nested logistic regression models**, mirroring
-the structure used in Project 1. Each successive model adds a block of
-predictors so that we can quantify the improvement in model fit and address each
-research question in turn.
+We estimate a planned sequence of **three nested logistic regression models**
+to build evidence for the single research question. Model 1 estimates a
+baseline human-capital specification, Model 2 adds cognitive skill and
+occupation, and Model 3 tests whether the education and numeracy associations
+differ by gender. All three models use the same complete-case `analysis_df`,
+so model comparisons are based on the same $N = 1{,}357$ rows.
 
 All analyses are conducted in R (version 4.4+). We set the significance level
 at $\alpha = 0.05$ for all statistical tests. Results will be presented as
 **odds ratios** with 95% confidence intervals, and we will compute **predicted
 probabilities** to illustrate practical significance.
 
-### Model 1: Baseline Human Capital Model (RQ1) {#sec-logistic-ex-model1}
+Let $Y_i = 1$ if worker $i$ supervises other employees and $Y_i = 0$
+otherwise. Let $p_i = P(Y_i = 1)$.
+
+### Model 1: Baseline Human Capital Model {#sec-logistic-ex-model1}
 
 The first model regresses supervisory status on gender, education, and work
-experience:
+experience. The baseline model is shown in @eq-logistic-model1.
 
 $$
-\text{logit}\!\big(P(\text{manager}_i = 1)\big) = \beta_0 + \beta_1 \, \text{female}_i + \beta_2 \, \text{schyrs\_c}_i + \beta_3 \, \text{exper\_c}_i + \beta_4 \, \text{exper2\_c}_i
+\begin{aligned}
+\text{logit}(p_i) ={} & \beta_0 + \beta_1 \, \text{female}_i
+  + \beta_2 \, \text{schyrs\_c}_i
+  + \beta_3 \, \text{exper\_c}_i \\
+& + \beta_4 \, \text{exper2\_c}_i
+\end{aligned}
 $$ {#eq-logistic-model1}
 
 where $\text{logit}(p) = \ln\!\big(\frac{p}{1-p}\big)$.
 
-This model addresses **RQ1**. The exponentiated coefficient $e^{\beta_2}$ gives
-the **odds ratio** for a one-year increase in education, holding all other
-variables constant. The intercept $\beta_0$ represents the log-odds of being a
-manager for a male worker with average education and average experience (because
-both predictors are mean-centered).
+This baseline stage estimates the association of gender, education, and
+experience with the odds of the modeled event, `manager = 1`. The
+exponentiated coefficient $e^{\beta_2}$ gives the **odds ratio** for a
+one-year increase in education, holding all other variables constant. The
+intercept $\beta_0$ represents the log-odds of being a manager for a male
+worker with average education and average experience because both predictors
+are mean-centered.
 
-### Model 2: Adding Cognitive Skills and Occupation (RQ2) {#sec-logistic-ex-model2}
+### Model 2: Adding Cognitive Skills and Occupation {#sec-logistic-ex-model2}
 
 The second model extends Model 1 by adding occupational classification and
-numeracy proficiency:
+numeracy proficiency. The extended model is shown in @eq-logistic-model2.
+
+For compact notation, define $D_{SW,i}$, $D_{SB,i}$, and $D_{EL,i}$ as
+indicators for the semi-white, semi-blue, and elementary occupation categories,
+respectively. Skilled workers are the reference group. In R, we use
+`occupation` as a factor and let R create these contrasts automatically; the
+course data also include equivalent 0/1 columns (`semiwhite`, `semiblue`,
+`elementary`) if you want to inspect the coding.
 
 $$
-\text{logit}\!\big(P(\text{manager}_i = 1)\big) = \beta_0 + \beta_1 \, \text{female}_i + \beta_2 \, \text{schyrs\_c}_i + \beta_3 \, \text{exper\_c}_i + \beta_4 \, \text{exper2\_c}_i + \beta_5 \, \text{semiwhite}_i + \beta_6 \, \text{semiblue}_i + \beta_7 \, \text{elementary}_i + \beta_8 \, \text{numeracy}_i
+\begin{aligned}
+\text{logit}(p_i) ={} & \beta_0 + \beta_1 \, \text{female}_i
+  + \beta_2 \, \text{schyrs\_c}_i
+  + \beta_3 \, \text{exper\_c}_i
+  + \beta_4 \, \text{exper2\_c}_i \\
+& + \beta_5 \, D_{SW,i}
+  + \beta_6 \, D_{SB,i}
+  + \beta_7 \, D_{EL,i}
+  + \beta_8 \, \text{numeracy}_i
+\end{aligned}
 $$ {#eq-logistic-model2}
 
-This model addresses **RQ2**. We compare Model 1 and Model 2 using a
-**likelihood ratio test** (the logistic regression analogue of the incremental
-$F$-test) to determine whether the additional predictors significantly improve
-model fit.
+This stage tests whether occupation and numeracy add evidence about
+supervisory status beyond the baseline human-capital variables. We compare
+Model 1 and Model 2 using a **likelihood ratio test** (the logistic regression
+analogue of the incremental $F$-test) to determine whether the additional
+predictors significantly improve model fit.
 
 Key coefficients of interest:
 
@@ -223,53 +279,78 @@ Key coefficients of interest:
   manager for a one-SD increase in numeracy, holding all other variables
   constant.
 - $e^{\beta_5}$, $e^{\beta_6}$, $e^{\beta_7}$: the odds of being a manager in
-  each occupation category relative to the skilled reference group.
+  each listed occupation category relative to the skilled reference group.
 
-### Model 3: Gender Interactions (RQ3) {#sec-logistic-ex-model3}
+### Model 3: Gender Interactions {#sec-logistic-ex-model3}
 
 The third model extends Model 2 by adding interaction terms between gender and
-two key predictors --- education and numeracy:
+two key predictors --- education and numeracy. The interaction model is shown
+in @eq-logistic-model3.
 
 $$
-\text{logit}\!\big(P(\text{manager}_i = 1)\big) = \beta_0 + \cdots + \beta_9 \, (\text{female} \times \text{schyrs\_c})_i + \beta_{10} \, (\text{female} \times \text{numeracy})_i
+\begin{aligned}
+\text{logit}(p_i) ={} & \beta_0 + \beta_1 \, \text{female}_i
+  + \beta_2 \, \text{schyrs\_c}_i
+  + \beta_3 \, \text{exper\_c}_i
+  + \beta_4 \, \text{exper2\_c}_i \\
+& + \beta_5 \, D_{SW,i}
+  + \beta_6 \, D_{SB,i}
+  + \beta_7 \, D_{EL,i}
+  + \beta_8 \, \text{numeracy}_i \\
+& + \beta_9 \, (\text{female}_i \times \text{schyrs\_c}_i)
+  + \beta_{10} \, (\text{female}_i \times \text{numeracy}_i)
+\end{aligned}
 $$ {#eq-logistic-model3}
 
-where "$\cdots$" represents all terms from Model 2.
+This stage tests whether the education and numeracy associations with the
+log-odds of the modeled event differ between men and women:
 
-This model addresses **RQ3**. The interaction coefficients tell us whether the
-effects of education and numeracy on the log-odds of being a manager differ
-between men and women:
+- $\beta_9 > 0$ would indicate that the education log-odds association is
+  larger for women than for men.
+- $\beta_{10} > 0$ would indicate that the numeracy log-odds association is
+  larger for women than for men.
 
-- $\beta_9 > 0$ would indicate that the effect of education on the odds of
-  being a manager is *stronger* for women than for men.
-- $\beta_{10} > 0$ would indicate that the effect of numeracy is *stronger*
-  for women than for men.
+Because interaction terms in logistic regression are on the log-odds scale,
+the probability-scale implications will be interpreted using predicted
+probabilities in the results chapter.
 
 We test the significance of the interaction block using a likelihood ratio
 test comparing Model 2 and Model 3.
 
-### Summary of Model--Research Question Mapping
+### Summary of Model Stages
 
-| Model | Predictors Added | Research Question |
-|-------|------------------|-------------------|
-| Model 1 | `female`, `schyrs_c`, `exper_c`, `exper2_c` | RQ1: Education and experience effects |
-| Model 2 | + `occupation` dummies, `numeracy` | RQ2: Added value of skills and occupation |
-| Model 3 | + `female` $\times$ `schyrs_c`, `female` $\times$ `numeracy` | RQ3: Gender differences in effects |
+@tbl-logistic-model-summary summarizes how the planned nested model stages
+support the single logistic research question.
 
-: Summary of the three nested logistic regression models. {#tbl-logistic-model-summary}
+| Model | Predictors Added | Purpose for the Single Research Question |
+|-------|------------------|------------------------------------------|
+| Model 1 | `female`, `schyrs_c`, `exper_c`, `exper2_c` | Baseline association of gender, education, and experience with the odds of `manager = 1` |
+| Model 2 | + `occupation` factor contrasts, `numeracy` | Tests whether cognitive skill and occupation add evidence about supervisory status |
+| Model 3 | + `female` $\times$ `schyrs_c`, `female` $\times$ `numeracy` | Tests whether education and numeracy associations differ by gender |
+
+: Summary of the planned logistic model stages. {#tbl-logistic-model-summary}
 
 ### Model Evaluation
 
 For logistic regression, we will assess model quality using the following:
 
-1. **Overall model fit:** Likelihood ratio test for each model against the null
-   (intercept-only) model.
-2. **Model comparison:** Likelihood ratio tests comparing nested models
+1. **Overall model fit:** Model $N$ and log-likelihood from `nobs()` and
+   `logLik()`, plus AIC, BIC, Tjur's $R^2$, and RMSE from `model_fit()`.
+2. **Model comparison:** Likelihood ratio tests comparing the planned nested
+   model stages
    (analogous to the incremental $F$-test in linear regression).
-3. **Pseudo-$R^2$:** McFadden's $R^2$ to quantify the proportion of
-   log-likelihood explained by the model.
-4. **Multicollinearity:** Variance inflation factors (VIF $< 5$ as a
-   guideline), computed from an equivalent linear probability model.
+3. **Sparse cells and separation:** Outcome-by-category tables, convergence
+   warnings, unusually large standard errors, and fitted probabilities close to
+   0 or 1.
+4. **Categorical predictor block:** An overall likelihood ratio test for the
+   multi-category occupation predictor.
+5. **Linearity in the logit:** A simple check for the continuous predictors
+   before relying on a linear logit specification.
+6. **Multicollinearity:** Variance inflation factors for the full logistic
+   model, using `performance::check_collinearity()`; values above 5 will be
+   flagged for discussion.
+7. **Influence:** Cook's distance or related influence screening, followed by
+   a sensitivity check if influential observations appear to drive conclusions.
 
 ::: {.callout-tip}
 ## Writing Tip
@@ -290,30 +371,34 @@ results will be reported and interpreted in @sec-logistic-results.
 #| label: logistic-model-setup
 #| eval: false
 
-# --- Model 1: Baseline human capital model (RQ1) ---
+# --- Model 1: Baseline human capital model ---
 logit1 <- glm(manager ~ female + schyrs_c + exper_c + exper2_c,
-              data = piaac, family = binomial)
+              data = analysis_df, family = binomial)
 
-# --- Model 2: + Occupation and numeracy (RQ2) ---
+# --- Model 2: Add occupation and numeracy ---
 logit2 <- glm(manager ~ female + schyrs_c + exper_c + exper2_c +
                 occupation + numeracy,
-              data = piaac, family = binomial)
+              data = analysis_df, family = binomial)
 
-# --- Model 3: + Gender interactions (RQ3) ---
+# --- Model 3: Add gender interactions ---
 logit3 <- glm(manager ~ female + schyrs_c + exper_c + exper2_c +
                 occupation + numeracy +
                 female:schyrs_c + female:numeracy,
-              data = piaac, family = binomial)
+              data = analysis_df, family = binomial)
 
-# --- Likelihood ratio tests ---
-anova(logit1, logit2, test = "Chisq")   # Tests occupation + numeracy block
-anova(logit2, logit3, test = "Chisq")   # Tests gender interaction block
+# --- Odds ratios, fit, and planned model comparisons ---
+model_params(logit3, exponentiate = TRUE)
+model_fit(logit3)
+logLik(logit3)
+performance::check_collinearity(logit3)
+anova(logit1, logit2, test = "Chisq")   # Occupation + numeracy block
+anova(logit2, logit3, test = "Chisq")   # Gender interaction block
 ```
 
 ::: {.callout-note}
 ## What Comes Next
 In @sec-logistic-results, we will fit these three models, report the odds ratios
 in a combined table, compute predicted probabilities for key comparisons,
-interpret the results in the context of each research question, and evaluate
-model fit.
+interpret the results in the context of the single research question, and
+evaluate model fit.
 :::

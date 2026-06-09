@@ -1,6 +1,6 @@
 /*-- scss:defaults --*/
 
-// BER 640 lecture-notes book theme layer — added OVER cosmo (light) / darkly (dark),
+// BER 640 final-project guide theme layer — added OVER cosmo (light) / darkly (dark),
 // never replacing them, so the whole layer reverts by deleting this file + the two
 // theme lines in _quarto.yml. Used for BOTH the light and dark theme entries; any
 // dark-specific rules live below under [data-bs-theme="dark"].
@@ -11,10 +11,10 @@
 
 // Light-surface variables — this file is the LIGHT theme layer ([cosmo, html/custom.scss]).
 // Kept out of the shared partial so the dark theme (darkly) retains its own dark surfaces.
-$body-bg:    $paper;
-$body-color: $gray-800;
-$code-bg:    $gray-100;
-$code-color: $gray-900;
+$body-bg:    #FBFAF7;
+$body-color: #1f2937;
+$code-bg:    #f3f4f6;
+$code-color: #111827;
 
 /*-- scss:rules --*/
 
@@ -28,6 +28,12 @@ $code-color: $gray-900;
   --border:      #{$gray-200};
   --muted:       #{$gray-600};
   --accent-tint: rgba(44, 110, 145, 0.05);
+  --component-primary: #{$navy};
+  --component-accent: #{$slate};
+  --component-success: #{$teal};
+  --component-danger: #{$rust};
+  --component-warning-text: #745a00;
+  --component-on-accent: #ffffff;
 }
 
 // ===== Step 1.6 — heading rhythm (light colors) =====
@@ -43,4 +49,5 @@ div.callout { margin: 1.4rem 0; border-radius: 0.3rem; }
 .callout-tip       { border-left-color: $success !important; background-color: rgba(62, 142, 138, 0.08); }  // teal
 .callout-warning   { border-left-color: $warning !important; background-color: rgba(201, 162, 39, 0.10); }  // gold
 .callout-important { border-left-color: $danger !important;  background-color: rgba(168, 67, 30, 0.07);  }  // rust
+.callout-caution   { border-left-color: $danger !important;  background-color: rgba(168, 67, 30, 0.07);  }  // rust
 // NOTE: $secondary is a neutral grey in this system, so .callout-important must use $danger.

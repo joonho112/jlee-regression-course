@@ -1,0 +1,452 @@
+# Diagnostics and Reproducibility Templates {#sec-diagnostics-reproducibility-templates}
+
+{{< include ../_common.qmd >}}
+
+::: {.callout-note}
+## Why This Appendix Exists
+Diagnostics and reproducibility are required, but they should not take over the
+main report. Use the main text to state the diagnostic conclusion, use the
+appendix for bulky plots and supporting checks, and submit the complete source
+file that recreates your work from a clean R session.
+:::
+
+::: {.callout-tip}
+## Course Review Links
+For linear diagnostic concepts, review [Model Diagnostics](https://joonho112.github.io/jlee-regression-course/notes/chapters/08-model-diagnostics.html) and [Lab 08](https://joonho112.github.io/jlee-regression-course/labs/labs/lab08-diagnostics.html). For logistic adequacy, sparse cells, separation, and optional prediction diagnostics, review [Logistic Regression Diagnostics](https://joonho112.github.io/jlee-regression-course/notes/chapters/11-logistic-diagnostics.html) and [Lab 11](https://joonho112.github.io/jlee-regression-course/labs/labs/lab11-logistic-diagnostics.html).
+:::
+
+
+## What Goes Where? {#sec-diagnostics-placement}
+
+Use this table when deciding whether a diagnostic belongs in the main text,
+appendix, or optional extra material.
+
+| Topic | Project | Required? | Main text | Appendix |
+|---|---|---:|---|---|
+| Analysis sample and missingness | Both | Yes | Final analytic $N$ and missing-data rule | Code that constructs `analysis_df` |
+| Same-sample nested models | Both | Yes | State that compared models use the same rows | `nobs()` checks before model comparisons |
+| Collinearity/VIF | Both | Yes | Short VIF conclusion and any flagged predictors | VIF table from `performance::check_collinearity()` |
+| Residuals vs fitted | Linear | Yes | Brief conclusion about linearity and spread | Plot and, if needed, sensitivity notes |
+| Q-Q plot or residual distribution | Linear | Yes | Brief conclusion about residual normality limits | Q-Q plot or histogram |
+| Influence/Cook's distance | Linear | Yes | State whether conclusions are sensitive to influential cases | Top cases or influence plot |
+| Heteroscedasticity or robust-SE sensitivity | Linear | As needed | State whether inference changes | Test output or HC3 sensitivity table |
+| Independence/design concerns | Linear | As needed | State clustering, repeated measures, or dependence limits | Notes or sensitivity checks if relevant |
+| Event/non-event counts | Logistic | Yes | Event definition and event rate | Outcome table and sparse-cell checks |
+| Sparse cells/separation | Logistic | Yes | State whether any sparse cells threaten estimation | Cross-tabs and event counts by key groups |
+| Convergence | Logistic | Yes | State whether the model converged | `model$converged` checks |
+| Linearity in the logit | Logistic | Yes | Brief conclusion for continuous predictors | Squared-term, binned, or other planned check |
+| Influence/Cook's distance | Logistic | Yes | State whether flagged cases change conclusions | Cook's-distance summary or sensitivity table |
+| Model fit summary | Logistic | Yes | AIC, log-likelihood, pseudo-$R^2$, or LR-test conclusion; BIC/Tjur's $R^2$/RMSE when useful | Fit table and nested model comparison output |
+| Classification, ROC/AUC, calibration | Logistic | Optional | Include only if the question is predictive | Supporting output and cutoff justification |
+
+::: {.callout-tip}
+## One-Sentence Rule
+Every diagnostic in the appendix should have a one-sentence conclusion in the
+main report. A plot or table without interpretation does not show that you used
+the diagnostic.
+:::
+
+Put the conclusion in the report; put the evidence trail in the appendix. In
+the report, write 2--4 sentences saying whether diagnostics support the model
+and naming any concern. In the appendix, include the plots, VIF table, influence
+summary, sparse-cell checks, and source code that produced them.
+
+
+## Setup for Diagnostic Templates {#sec-diagnostic-template-setup}
+
+These templates assume that you already created `analysis_df` and fit the
+models used in the report. Replace model names and variable names with your own.
+
+```{r}
+#| label: diagnostic-template-setup
+#| eval: false
+
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(performance)
+library(scales)
+library(tibble)
+
+round_numeric <- function(x, digits = 3) {
+  dplyr::mutate(
+    x,
+    dplyr::across(dplyr::where(is.numeric), \(col) round(col, digits))
+  )
+}
+
+format_p <- function(p) {
+  dplyr::if_else(
+    is.na(p),
+    NA_character_,
+    dplyr::if_else(p < .001, "< .001", sprintf("%.3f", p))
+  )
+}
+```
+
+
+## Template 0: Same-Sample Checks {#sec-template-same-sample-checks}
+
+Run this before nested model comparisons. If the `nobs()` values differ, rebuild
+`analysis_df` using every variable needed by the largest planned model.
+
+```{r}
+#| label: template-same-sample-check
+#| eval: false
+
+tibble(
+  Model = c("Model 1", "Model 2", "Model 3"),
+  N = c(nobs(model1), nobs(model2), nobs(model3))
+) |>
+  knitr::kable(
+    align = "lr",
+    caption = "Model sample-size check before nested comparisons"
+  )
+
+stopifnot(
+  nobs(model1) == nobs(model2),
+  nobs(model2) == nobs(model3)
+)
+```
+
+
+## Template 1: Linear Diagnostics {#sec-template-linear-diagnostics}
+
+Use the final or primary linear model for diagnostic checks. If you fit staged
+models, the diagnostic conclusion usually belongs to the final model.
+
+```{r}
+#| label: template-linear-vif
+#| eval: false
+
+# Collinearity table.
+performance::check_collinearity(model3, ci = FALSE) |>
+  as_tibble() |>
+  select(Term, VIF, `SE inflation factor` = SE_factor, Tolerance) |>
+  round_numeric(digits = 2) |>
+  knitr::kable(
+    align = "lrrr",
+    caption = "Collinearity diagnostics for the final linear model"
+  )
+```
+
+```{r}
+#| label: template-linear-residual-plot
+#| eval: false
+
+linear_diagnostics <- tibble(
+  fitted = fitted(model3),
+  residual = residuals(model3),
+  standardized_residual = rstandard(model3),
+  cooks_distance = cooks.distance(model3)
+)
+
+ggplot(linear_diagnostics, aes(x = fitted, y = residual)) +
+  geom_hline(yintercept = 0, linewidth = 0.4, color = "grey50") +
+  geom_point(alpha = 0.55) +
+  geom_smooth(se = FALSE, color = "steelblue") +
+  labs(
+    x = "Fitted values",
+    y = "Residuals",
+    title = "Residuals vs Fitted Values"
+  )
+```
+
+```{r}
+#| label: template-linear-influence
+#| eval: false
+
+# This chunk repeats the diagnostic data so it can be copied on its own.
+linear_diagnostics <- tibble(
+  fitted = fitted(model3),
+  residual = residuals(model3),
+  standardized_residual = rstandard(model3),
+  cooks_distance = cooks.distance(model3)
+)
+
+linear_diagnostics |>
+  arrange(desc(cooks_distance)) |>
+  slice_head(n = 10) |>
+  round_numeric(digits = 3) |>
+  knitr::kable(
+    align = "rrrr",
+    caption = "Largest Cook's distance values for the final linear model"
+  )
+```
+
+```{r}
+#| label: template-linear-check-model
+#| eval: false
+
+# Optional dashboard for the appendix.
+performance::check_model(
+  model3,
+  check = c("linearity", "homogeneity", "qq", "outliers")
+)
+```
+
+**Write-up template:** "The linear diagnostics were
+`[acceptable/questionable/a serious concern]`. VIF values were below
+`[cutoff]`, the residual plots showed `[pattern]`, and Cook's distance
+`[did/did not]` suggest that a small number of cases dominated the model.
+Therefore, I treat the main coefficients as `[reasonably stable/limited by ...]`."
+
+
+## Template 2: Logistic Diagnostics {#sec-template-logistic-diagnostics}
+
+Logistic diagnostics are not the same as linear diagnostics. Do not check
+residual normality or constant residual variance for logistic regression.
+
+```{r}
+#| label: template-logistic-event-count
+#| eval: false
+
+# Always name the event: here, manager = 1.
+analysis_df |>
+  count(manager, name = "n") |>
+  mutate(percent = scales::percent(n / sum(n), accuracy = 0.1)) |>
+  knitr::kable(
+    align = "lrr",
+    caption = "Event and non-event counts for the logistic outcome"
+  )
+```
+
+```{r}
+#| label: template-logistic-sparse-cells
+#| eval: false
+
+# Sparse-cell check for a key categorical predictor.
+analysis_df |>
+  count(occupation, manager, name = "n") |>
+  arrange(occupation, manager) |>
+  knitr::kable(
+    align = "llr",
+    caption = "Sparse-cell check by occupation"
+  )
+```
+
+```{r}
+#| label: template-logistic-convergence-vif
+#| eval: false
+
+# Convergence check.
+logit2$converged
+
+# Collinearity check.
+performance::check_collinearity(logit2, ci = FALSE) |>
+  as_tibble() |>
+  select(Term, VIF, `SE inflation factor` = SE_factor, Tolerance) |>
+  round_numeric(digits = 2) |>
+  knitr::kable(
+    align = "lrrr",
+    caption = "Collinearity diagnostics for the logistic model"
+  )
+```
+
+```{r}
+#| label: template-logistic-linearity-logit
+#| eval: false
+
+# Simple planned check for nonlinearity in continuous predictors.
+logit2_nonlinear <- glm(
+  manager ~ female + schyrs_c + I(schyrs_c^2) +
+    exper_c + exper2_c +
+    occupation + numeracy + I(numeracy^2),
+  data = analysis_df,
+  family = binomial
+)
+
+stopifnot(nobs(logit2) == nobs(logit2_nonlinear))
+
+anova(logit2, logit2_nonlinear, test = "Chisq")
+```
+
+```{r}
+#| label: template-logistic-influence
+#| eval: false
+
+logistic_influence <- tibble(
+  fitted_probability = fitted(logit2),
+  cooks_distance = cooks.distance(logit2),
+  leverage = hatvalues(logit2)
+)
+
+logistic_influence |>
+  arrange(desc(cooks_distance)) |>
+  slice_head(n = 10) |>
+  round_numeric(digits = 3) |>
+  knitr::kable(
+    align = "rrr",
+    caption = "Largest Cook's distance values for the logistic model"
+  )
+
+logistic_influence |>
+  summarise(
+    min_fitted = min(fitted_probability),
+    median_fitted = median(fitted_probability),
+    max_fitted = max(fitted_probability)
+  ) |>
+  round_numeric(digits = 3) |>
+  knitr::kable(
+    align = "rrr",
+    caption = "Range of fitted probabilities for the logistic model"
+  )
+```
+
+**Write-up template:** "The logistic model converged, VIF values were below the
+course threshold, and sparse-cell checks did/did not identify a major separation
+concern. The linearity-in-the-logit check did/did not suggest that the simple
+linear logit specification is adequate for the continuous predictors."
+
+Expanded version: "The logistic diagnostics were
+`[acceptable/questionable/a serious concern]`. Sparse-cell checks showed
+`[pattern]`, the model `[did/did not]` converge without warnings, VIF values
+were `[low/high]`, influence checks `[did/did not]` change the focal
+conclusions, and fitted probabilities `[did/did not]` pile up near 0 or
+1. Classification, ROC/AUC, and calibration were `[not used because the project
+is explanatory/used because the project is predictive]`."
+
+
+## Template 3: Optional Prediction Diagnostics {#sec-template-optional-prediction-diagnostics}
+
+Classification and ROC/AUC are optional unless your research question is about
+prediction or classification. If you include them, justify the cutoff and
+remember that good classification does not prove causal or explanatory validity.
+
+```{r}
+#| label: template-logistic-classification-optional
+#| eval: false
+
+threshold <- 0.50
+
+classification_df <- tibble(
+  observed = analysis_df$manager,
+  predicted_probability = fitted(logit2),
+  predicted_class = if_else(predicted_probability >= threshold, 1, 0)
+)
+
+classification_df |>
+  count(observed, predicted_class, name = "n") |>
+  knitr::kable(
+    align = "lrr",
+    caption = "Optional classification table at the chosen cutoff"
+  )
+```
+
+**Use only when:** your question asks about prediction, screening,
+classification, or decision rules. For explanatory projects, a short note that
+classification diagnostics are not central is usually enough.
+
+
+## Clean-Session Checklist {#sec-clean-session-checklist}
+
+Before submitting, restart R and run the file from top to bottom. If you use
+Quarto, render the `.qmd` file rather than only running chunks interactively.
+
+- [ ] The source file loads every package it uses.
+- [ ] The source file loads the data without an absolute path tied to one
+  computer.
+- [ ] All cleaning, recoding, factor reference levels, and `analysis_df`
+  construction happen in the submitted file.
+- [ ] Descriptive tables, models, diagnostics, predictions, tables, and figures
+  are recreated by the submitted file.
+- [ ] Nested model comparisons use the same rows and pass `nobs()` checks.
+- [ ] Every table or figure in the report is produced by code, not manually
+  edited after rendering.
+- [ ] Project 2 names the modeled event in code comments, tables, figures, and
+  prose.
+- [ ] The file runs after clearing the Environment pane or restarting R.
+- [ ] The final render has no unresolved cross-references, missing figures, or
+  chunk errors.
+- [ ] `sessionInfo()` or `sessioninfo::session_info()` is included only if your
+  instructor asks for a package/version record.
+
+
+## Quarto or R Script? {#sec-quarto-r-script-checklist}
+
+| If you submit... | Do this | Avoid this |
+|---|---|---|
+| Quarto report (`.qmd`) | Use chunk labels, captions, and cross-references for final tables and figures | Relying on objects created interactively but not in the file |
+| R script (`.R`) plus separate report | Use comments that match the report sections and save/export every final output | Pasting unexplained console output into the report |
+| Either format | Load packages, load data, create `analysis_df`, fit models, run diagnostics, and recreate outputs in order | Absolute paths, hidden global objects, raw `summary()` dumps, or code that only works on your computer |
+
+::: {.callout-tip}
+## Simple Source-File Order
+Use the same order as the project: packages, data loading, cleaning and
+complete-case construction, descriptives, models, diagnostics, tables, figures,
+predictions, and session check.
+:::
+
+For a plain R script, a minimal package setup can be as simple as:
+
+```{r}
+#| label: template-minimal-package-setup
+#| eval: false
+
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+if (!requireNamespace("pacman", quietly = TRUE)) {
+  install.packages("pacman")
+}
+
+pacman::p_load(
+  dplyr, tidyr, forcats, tibble,
+  ggplot2, scales,
+  parameters, performance,
+  marginaleffects,
+  gtsummary, gt,
+  here, knitr
+)
+```
+
+After constructing `analysis_df`, use a small preflight block:
+
+```{r}
+#| label: template-analysis-preflight
+#| eval: false
+
+names(analysis_df)
+nrow(analysis_df)
+
+analysis_df |>
+  summarise(
+    missing_values = sum(is.na(pick(everything()))),
+    final_n = n()
+  )
+```
+
+
+## Troubleshooting Notes {#sec-troubleshooting-notes}
+
+| Symptom | Common cause | First thing to check |
+|---|---|---|
+| `object not found` | The object was created interactively but not in the source file | Restart R and run from the top |
+| `could not find function` | Package not loaded | Add `library(package)` near the top |
+| `file not found` | Absolute path or wrong working directory | Use a project-relative path or `here::here()` |
+| `undefined columns selected` | Variable is not in the data frame being used | Check spelling with `names(analysis_df)` |
+| Nested `anova()` fails | Models use different rows | Build `analysis_df` with all model variables before fitting models |
+| Factor reference category is wrong | R chose alphabetical order | Use `forcats::fct_relevel()` and check `levels()` |
+| `glm.fit: fitted probabilities numerically 0 or 1 occurred` | Sparse cells or near-separation | Check event counts by key categories and interpret cautiously |
+| Very large logistic standard errors | Sparse categories or near-separation | Inspect cross-tabs and consider a simpler coding scheme |
+| VIF is high | Redundant predictors, uncentered interactions, or duplicate coding | Check whether variables encode the same information |
+| Cross-reference appears as `?@...` | Missing or duplicate label, or section not in the book | Check the label spelling and render the full book |
+| Plot/table appears in the appendix but not the report | Output was created but not interpreted | Add a one-sentence diagnostic conclusion in Part 5 or Part 6 |
+
+
+## Appendix Placement Guide {#sec-appendix-placement-guide}
+
+Keep the main report readable. Put evidence where it helps the reader most.
+
+| Put in the main report | Put in the appendix |
+|---|---|
+| Final descriptive tables and key exploratory figures | Long supporting tables, sparse-cell checks, and supplementary descriptives |
+| Publication-style regression table | Complete source file |
+| Model comparison and fit summary | Full diagnostic plots or dashboards |
+| Short diagnostic conclusion | Influence tables and sensitivity checks |
+| Predicted probability figure/table required for Project 2 | Optional classification/ROC/calibration output, if used |
+
+Do not include every failed attempt, every raw console printout, or every
+intermediate object. The appendix should show reproducibility and support the
+report, not become a code dump.

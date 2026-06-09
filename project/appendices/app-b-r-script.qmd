@@ -1,25 +1,36 @@
-# Complete R Script {#sec-r-script}
+# Complete R Script Template {#sec-r-script}
 
 {{< include ../_common.qmd >}}
 
 ::: {.callout-note}
-## All Code in One Place
-This appendix collects all R code from the worked examples (Chapters 4--7)
-into a single, annotated script. You can copy this script and adapt it for
-your own project by replacing our data, variables, and labels with yours.
+## A Clean Starting Point
+This appendix gives a student-ready R script template for the final project.
+It is not meant to be a clever programming exercise. It is meant to help you
+run a clear regression analysis from a clean R session, using the same simple
+package workflow taught in the labs and worked examples.
 :::
 
 ::: {.callout-important}
-## How to Use This Script
-1. **Copy** the entire script into a new `.R` or `.qmd` file.
-2. **Replace** the dataset, variable names, and labels with your own.
-3. **Delete** sections that do not apply (e.g., if your project is only
-   linear regression, remove the logistic regression section).
-4. **Run** the script from top to bottom to verify it works before
-   submitting.
+## How to Use This Template
+1. Copy the complete Setup section first, then copy the relevant project
+   sections into a new `.qmd` or `.R` file.
+2. Replace the dataset, variable names, labels, and model formulas with your
+   own.
+3. Within each project, keep one complete-case analysis dataset and use it for
+   descriptives, models, diagnostics, tables, and figures.
+4. Run the file from top to bottom in a clean R session before submitting.
+5. Avoid copying isolated chunks by themselves. Later chunks often depend on
+   objects created earlier, such as `analysis_df`, fitted models, helper
+   functions, and plotting settings.
 
-All code below is set to `eval: false` --- it is a reference template,
-not executed as part of this book.
+All code chunks below use `eval: false`, so this appendix is a template rather
+than executed book code.
+
+This worked example uses one shared `analysis_df` because both projects use the
+same PIAAC sample and the same predictor set. If your Project 1 and Project 2
+use different outcomes or predictor sets, create separate objects such as
+`analysis_df_linear` and `analysis_df_logistic`. The important rule is that all
+nested models within a project use the same rows.
 :::
 
 
@@ -30,643 +41,811 @@ not executed as part of this book.
 #| eval: false
 
 # ============================================================
-# BER 640 Final Project -- Complete R Script Template
+# BER 640 Final Project -- R Script Template
 # ============================================================
-# Instructions:
-#   1. Replace variable names and labels with your own
-#   2. Delete the project section you don't need
-#   3. Run from top to bottom before submitting
+# Replace data, variables, labels, and model formulas with your own.
+# Run this file from top to bottom in a clean R session before submitting.
 # ============================================================
 
-# --- Load packages ---
+# --- Install/load packages ---
+if (!requireNamespace("pacman", quietly = TRUE)) {
+  install.packages("pacman")
+}
+
 pacman::p_load(
-  dplyr, tidyr, forcats, stringr, purrr,
-  ggplot2, patchwork, GGally, ggrepel,
-  broom, car, lmtest, sandwich,
-  parameters, performance, effectsize,
-  see, modelbased, correlation, report,
-  datawizard, insight,
-  marginaleffects,
-  gtsummary, gt, knitr, here
+  dplyr, tidyr, forcats, tibble,
+  ggplot2, scales, patchwork,
+  parameters, performance, sandwich,
+  marginaleffects, ggeffects,
+  gtsummary, gt,
+  here, knitr
 )
 
-# --- Set ggplot theme ---
+# --- Small helper functions used below ---
+# These helper defaults mirror project/_common.R. The helper layer stays small:
+# display helpers plus thin course shortcuts around parameters/performance.
+round_numeric <- function(x, digits = 3) {
+  dplyr::mutate(
+    x,
+    dplyr::across(dplyr::where(is.numeric), \(col) round(col, digits))
+  )
+}
+
+format_p <- function(p) {
+  dplyr::if_else(
+    is.na(p),
+    NA_character_,
+    dplyr::if_else(p < .001, "< .001", sprintf("%.3f", p))
+  )
+}
+
+model_params <- function(model, exponentiate = FALSE, ...) {
+  parameters::model_parameters(model, exponentiate = exponentiate, ...)
+}
+
+model_fit <- function(model, metrics = "common", ...) {
+  performance::model_performance(model, metrics = metrics, ...)
+}
+
+compare_models <- function(..., metrics = "common", rank = FALSE) {
+  performance::compare_performance(..., metrics = metrics, rank = rank)
+}
+
+# --- Plot theme ---
 theme_set(
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 13) +
     theme(
-      plot.title = element_text(face = "bold", size = 16),
-      plot.subtitle = element_text(color = "grey40"),
-      axis.title = element_text(face = "bold"),
+      plot.title = element_text(face = "bold"),
       legend.position = "bottom",
       panel.grid.minor = element_blank()
     )
 )
+
+# Optional course-style colors used in the worked-example chapters.
+# Keeping this palette here helps copied plotting chunks run in a standalone script.
+ber640_colors <- c(
+  primary   = "#0B3D66",
+  secondary = "#A8431E",
+  accent    = "#2C6E91",
+  success   = "#3E8E8A",
+  warning   = "#C9A227",
+  info      = "#6B3E7A"
+)
 ```
 
 
-## Data Loading & Cleaning {#sec-script-data}
+## Load Data and Build Analysis Dataset(s) {#sec-script-data}
 
 ```{r}
 #| label: script-data
 #| eval: false
 
 # ============================================================
-# DATA LOADING & CLEANING
+# DATA LOADING AND ANALYSIS DATASET
 # ============================================================
 
-# --- Load data ---
-# Replace with your own data file
-piaac <- readRDS(here::here("data", "piaac_kor.rds"))
+# Replace this line with your own data import.
+raw_data <- readRDS(here::here("data", "piaac_kor.rds"))
 
-# --- Inspect ---
-dim(piaac)
-str(piaac)
-summary(piaac)
+# For the worked example, one shared complete-case dataset is intentional
+# because both projects use the same sample and predictors. If your two
+# projects use different variables, create separate analysis_vars_linear and
+# analysis_vars_logistic vectors instead.
+#
+# List every variable needed by the largest planned model and by the
+# descriptive tables. Using the largest model prevents same-sample problems
+# within a project.
+analysis_vars <- c(
+  "ln_inc", "manager",
+  "female", "schyrs", "schyrs_c", "exper", "exper_c", "exper2_c",
+  "occupation", "numeracy"
+)
 
-# --- Check for missing data ---
-colSums(is.na(piaac))
+prepared_data <- raw_data |>
+  mutate(
+    occupation = forcats::fct_relevel(occupation, "Skilled"),
+    Gender = factor(
+      female,
+      levels = c(0, 1),
+      labels = c("Male", "Female")
+    ),
+    Status = factor(
+      manager,
+      levels = c(0, 1),
+      labels = c("Non-manager (0, non-event)", "Manager (1, event)")
+    )
+  )
 
-# --- Select and clean variables ---
-# (Adapt variable names to your own dataset)
-df <- piaac |>
-  select(
-    # Outcome variables
-    ln_inc, manager,
-    # Predictors
-    female, schyrs, schyrs_c, exper, exper_c, exper2_c,
-    semiwhite, semiblue, elementary, occupation,
-    numeracy, fem_schyrs_c, fem_numeracy
-  ) |>
-  drop_na()
+# Report the starting N and complete-case exclusions before dropping rows.
+prepared_data |>
+  summarise(
+    starting_n = n(),
+    rows_with_missing_analysis_values =
+      sum(!complete.cases(pick(all_of(analysis_vars)))),
+    complete_case_n = sum(complete.cases(pick(all_of(analysis_vars)))),
+    occupation_reference = levels(occupation)[1],
+    modeled_event_before_drop = sum(manager == 1, na.rm = TRUE),
+    non_event_before_drop = sum(manager == 0, na.rm = TRUE)
+  )
 
-cat("Analytic sample size:", nrow(df), "\n")
+analysis_df <- prepared_data |>
+  tidyr::drop_na(dplyr::all_of(analysis_vars))
+
+# Confirm sample size, missingness, reference category, and modeled event.
+analysis_df |>
+  summarise(
+    final_n = n(),
+    missing_analysis_values = sum(is.na(pick(all_of(analysis_vars)))),
+    occupation_reference = levels(occupation)[1],
+    modeled_event = sum(manager == 1),
+    non_event = sum(manager == 0),
+    event_rate = mean(manager == 1)
+  )
 ```
+
+::: {.callout-tip}
+## Adaptation Tip
+For your own project, define the event in a sentence before fitting the model.
+For example: "The modeled event is `manager = 1`, meaning that the worker holds
+a supervisory position." Use that event definition consistently in tables,
+figures, and interpretation.
+
+The models below use `female` as a 0/1 contrast (`0 = Male`, `1 = Female`) and
+use `Gender` only for readable tables and plots. If you prefer to model a
+factor directly, replace `female` with `Gender` and check the reference level
+with `levels(analysis_df$Gender)`.
+:::
 
 
 ## Project 1: Linear Regression {#sec-script-linear}
 
-### Descriptive Statistics {#sec-script-linear-desc}
+### Descriptive Tables and Figures {#sec-script-linear-desc}
 
 ```{r}
 #| label: script-linear-descriptives
 #| eval: false
 
 # ============================================================
-# PROJECT 1: LINEAR REGRESSION -- DESCRIPTIVE STATISTICS
+# PROJECT 1 -- DESCRIPTIVE ANALYSIS
 # ============================================================
 
-# --- Continuous variables: summary statistics ---
-df |>
+# Continuous variables: mean, SD, minimum, maximum.
+analysis_df |>
   select(ln_inc, schyrs, exper, numeracy) |>
-  tbl_summary(
-    type = everything() ~ "continuous",
-    statistic = all_continuous() ~ "{mean} ({sd})",
+  gtsummary::tbl_summary(
+    statistic = all_continuous() ~ "{mean} ({sd}); [{min}, {max}]",
+    digits = all_continuous() ~ 2,
     label = list(
-      ln_inc   ~ "Log monthly income",
-      schyrs   ~ "Years of education",
-      exper    ~ "Work experience (years)",
+      ln_inc ~ "Log monthly income",
+      schyrs ~ "Years of education",
+      exper ~ "Work experience (years)",
       numeracy ~ "Numeracy (z-score)"
     ),
-    digits = everything() ~ 2
+    missing = "no"
   ) |>
-  bold_labels()
+  gtsummary::bold_labels()
 
-# --- Categorical variables: frequency tables ---
-df |>
-  select(female, occupation) |>
-  mutate(
-    female = factor(female, levels = c(0, 1),
-                    labels = c("Male", "Female"))
-  ) |>
-  tbl_summary(
+# Categorical variables: counts and percentages.
+analysis_df |>
+  select(Gender, occupation) |>
+  gtsummary::tbl_summary(
+    statistic = all_categorical() ~ "{n} ({p}%)",
     label = list(
-      female     ~ "Gender",
+      Gender ~ "Gender",
       occupation ~ "Occupation"
-    )
+    ),
+    missing = "no"
   ) |>
-  bold_labels()
+  gtsummary::bold_labels()
 
-# --- Correlation matrix (continuous predictors) ---
-df |>
-  select(ln_inc, schyrs, exper, numeracy) |>
-  ggpairs(
-    lower = list(continuous = wrap("smooth", alpha = 0.3)),
-    diag  = list(continuous = wrap("densityDiag"))
+# Outcome distribution.
+ggplot(analysis_df, aes(x = ln_inc)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  labs(
+    x = "Log monthly income",
+    y = "Count",
+    title = "Distribution of Log Monthly Income"
   )
 
-# --- Histogram of outcome variable ---
-ggplot(df, aes(x = ln_inc)) +
-  geom_histogram(bins = 30, fill = "steelblue", color = "white",
-                 alpha = 0.8) +
-  geom_vline(xintercept = mean(df$ln_inc), linetype = "dashed") +
-  labs(x = "Log monthly income", y = "Count",
-       title = "Distribution of Log Monthly Income")
-
-# --- Scatterplots of continuous predictors vs. outcome ---
-p1 <- ggplot(df, aes(x = schyrs, y = ln_inc)) +
+# Scatterplots for continuous predictors.
+p_edu <- ggplot(analysis_df, aes(x = schyrs, y = ln_inc)) +
   geom_point(alpha = 0.15) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
-  geom_smooth(method = "loess", se = FALSE, color = "blue",
-              linetype = "dashed") +
-  labs(x = "Years of education", y = "Log income",
-       title = "Education")
+  labs(x = "Years of education", y = "Log income", title = "Education")
 
-p2 <- ggplot(df, aes(x = exper, y = ln_inc)) +
+p_exp <- ggplot(analysis_df, aes(x = exper, y = ln_inc)) +
   geom_point(alpha = 0.15) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
-  geom_smooth(method = "loess", se = FALSE, color = "blue",
-              linetype = "dashed") +
-  labs(x = "Work experience (years)", y = "Log income",
-       title = "Experience")
+  labs(x = "Work experience", y = "Log income", title = "Experience")
 
-p3 <- ggplot(df, aes(x = numeracy, y = ln_inc)) +
+p_num <- ggplot(analysis_df, aes(x = numeracy, y = ln_inc)) +
   geom_point(alpha = 0.15) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
-  geom_smooth(method = "loess", se = FALSE, color = "blue",
-              linetype = "dashed") +
-  labs(x = "Numeracy (z-score)", y = "Log income",
-       title = "Numeracy")
+  labs(x = "Numeracy", y = "Log income", title = "Numeracy")
 
-p1 + p2 + p3 +
-  plot_annotation(subtitle = "Red = linear fit; Blue dashed = LOESS smooth")
+p_edu + p_exp + p_num
 
-# --- Boxplots by categorical predictors ---
-p_gender <- df |>
-  mutate(Gender = factor(female, levels = c(0, 1),
-                         labels = c("Male", "Female"))) |>
-  ggplot(aes(x = Gender, y = ln_inc, fill = Gender)) +
-  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
-  labs(x = NULL, y = "Log income", title = "Gender")
-
-p_occ <- ggplot(df, aes(x = occupation, y = ln_inc, fill = occupation)) +
-  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
-  labs(x = NULL, y = "Log income", title = "Occupation")
-
-p_gender + p_occ
+# Boxplots for categorical predictors.
+ggplot(analysis_df, aes(x = occupation, y = ln_inc, fill = occupation)) +
+  geom_boxplot(alpha = 0.75, show.legend = FALSE) +
+  labs(x = "Occupation", y = "Log income",
+       title = "Log Income by Occupation")
 ```
 
-### Regression Models {#sec-script-linear-models}
+
+### Fit Linear Models {#sec-script-linear-models}
 
 ```{r}
 #| label: script-linear-models
 #| eval: false
 
 # ============================================================
-# PROJECT 1: LINEAR REGRESSION -- MODELS
+# PROJECT 1 -- LINEAR REGRESSION MODELS
 # ============================================================
 
-# --- Model 1: Traditional Mincer model (RQ1) ---
-model1 <- lm(ln_inc ~ female + schyrs_c + exper_c + exper2_c,
-             data = df)
-summary(model1)
+# Model 1: baseline human-capital model.
+model1 <- lm(
+  ln_inc ~ female + schyrs_c + exper_c + exper2_c,
+  data = analysis_df
+)
 
-# --- Model 2: + Occupation and numeracy (RQ2) ---
-model2 <- lm(ln_inc ~ female + schyrs_c + exper_c + exper2_c +
-               semiwhite + semiblue + elementary + numeracy,
-             data = df)
-summary(model2)
+# Model 2: add occupation and numeracy.
+model2 <- lm(
+  ln_inc ~ female + schyrs_c + exper_c + exper2_c +
+    occupation + numeracy,
+  data = analysis_df
+)
 
-# --- Model 3: + Gender interactions (RQ3) ---
-model3 <- lm(ln_inc ~ female + schyrs_c + exper_c + exper2_c +
-               semiwhite + semiblue + elementary + numeracy +
-               fem_schyrs_c + fem_numeracy,
-             data = df)
-summary(model3)
+# Model 3: add gender interactions.
+model3 <- lm(
+  ln_inc ~ female + schyrs_c + exper_c + exper2_c +
+    occupation + numeracy +
+    female:schyrs_c + female:numeracy,
+  data = analysis_df
+)
 
-# --- Incremental F-tests ---
-anova(model1, model2)  # Tests occupation + numeracy block
-anova(model2, model3)  # Tests gender interaction block
+# Same-sample check for nested model comparisons.
+tibble(
+  model = c("Model 1", "Model 2", "Model 3"),
+  n = c(nobs(model1), nobs(model2), nobs(model3))
+)
+
+stopifnot(
+  nobs(model1) == nobs(model2),
+  nobs(model2) == nobs(model3)
+)
+
+# Compact coefficient tables for learning and interpretation.
+model_params(model1)
+model_params(model2)
+model_params(model3)
+
+# Planned incremental F-tests.
+anova(model1, model2)
+anova(model2, model3)
 ```
 
-### Publication-Style Regression Table {#sec-script-linear-table}
+
+### Linear Regression Tables and Fit {#sec-script-linear-tables}
 
 ```{r}
-#| label: script-linear-table
+#| label: script-linear-tables
 #| eval: false
 
 # ============================================================
-# PROJECT 1: LINEAR REGRESSION -- PUBLICATION TABLE
+# PROJECT 1 -- REPORT TABLES AND FIT
 # ============================================================
 
-t1 <- tbl_regression(
-  model1, intercept = TRUE,
-  label = list(
-    female   ~ "Female",
-    schyrs_c ~ "Education (years, centered)",
-    exper_c  ~ "Experience (decades, centered)",
-    exper2_c ~ "Experience squared"
-  )
-) |> bold_p(t = 0.05)
+linear_base_labels <- list(
+  female ~ "Female (vs male)",
+  schyrs_c ~ "Education (years, centered)",
+  exper_c ~ "Experience (decades, centered)",
+  exper2_c ~ "Experience squared"
+)
 
-t2 <- tbl_regression(
-  model2, intercept = TRUE,
-  label = list(
-    female     ~ "Female",
-    schyrs_c   ~ "Education (years, centered)",
-    exper_c    ~ "Experience (decades, centered)",
-    exper2_c   ~ "Experience squared",
-    semiwhite  ~ "Semi-white-collar",
-    semiblue   ~ "Semi-blue-collar",
-    elementary ~ "Elementary",
-    numeracy   ~ "Numeracy (z-score)"
+linear_extended_labels <- c(
+  linear_base_labels,
+  list(
+    occupation ~ "Occupation",
+    numeracy ~ "Numeracy (z-score)"
   )
-) |> bold_p(t = 0.05)
+)
 
-t3 <- tbl_regression(
-  model3, intercept = TRUE,
-  label = list(
-    female       ~ "Female",
-    schyrs_c     ~ "Education (years, centered)",
-    exper_c      ~ "Experience (decades, centered)",
-    exper2_c     ~ "Experience squared",
-    semiwhite    ~ "Semi-white-collar",
-    semiblue     ~ "Semi-blue-collar",
-    elementary   ~ "Elementary",
-    numeracy     ~ "Numeracy (z-score)",
-    fem_schyrs_c ~ "Female x Education",
-    fem_numeracy ~ "Female x Numeracy"
+linear_interaction_labels <- c(
+  linear_extended_labels,
+  list(
+    `female:schyrs_c` ~ "Female x education",
+    `female:numeracy` ~ "Female x numeracy"
   )
-) |> bold_p(t = 0.05)
+)
 
-# --- Merge into one table ---
-tbl_merge(
+t1 <- gtsummary::tbl_regression(
+  model1,
+  intercept = TRUE,
+  label = linear_base_labels
+) |>
+  gtsummary::bold_p(t = 0.05)
+
+t2 <- gtsummary::tbl_regression(
+  model2,
+  intercept = TRUE,
+  label = linear_extended_labels
+) |>
+  gtsummary::bold_p(t = 0.05)
+
+t3 <- gtsummary::tbl_regression(
+  model3,
+  intercept = TRUE,
+  label = linear_interaction_labels
+) |>
+  gtsummary::bold_p(t = 0.05)
+
+# The template calls tbl_regression() directly so you can see the table options
+# and adapt them without learning an extra wrapper.
+gtsummary::tbl_merge(
   tbls = list(t1, t2, t3),
   tab_spanner = c("**Model 1**", "**Model 2**", "**Model 3**")
 )
 
-# --- Coefficient plot (optional) ---
-model3 |>
-  tidy(conf.int = TRUE) |>
-  filter(term != "(Intercept)") |>
-  ggplot(aes(x = estimate, y = reorder(term, estimate))) +
-  geom_point(size = 3) +
-  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  labs(x = "Estimated Coefficient", y = NULL,
-       title = "Coefficient Plot (Model 3)")
+# Fit summary for the three models.
+bind_rows(
+  model_fit(model1) |> as_tibble() |> mutate(Model = "Model 1"),
+  model_fit(model2) |> as_tibble() |> mutate(Model = "Model 2"),
+  model_fit(model3) |> as_tibble() |> mutate(Model = "Model 3")
+) |>
+  select(Model, n_Obs, R2, R2_adjusted, RMSE, Sigma, AIC, BIC) |>
+  round_numeric(digits = 3) |>
+  knitr::kable(align = "lrrrrrrr")
+
+# Optional easystats comparison table.
+compare_models(model1, model2, model3)
 ```
 
-### Assumption Checks {#sec-script-linear-diagnostics}
+
+### Linear Diagnostics and Adjusted Predictions {#sec-script-linear-diagnostics}
 
 ```{r}
 #| label: script-linear-diagnostics
 #| eval: false
 
 # ============================================================
-# PROJECT 1: LINEAR REGRESSION -- DIAGNOSTICS
+# PROJECT 1 -- DIAGNOSTICS AND ADJUSTED PREDICTIONS
 # ============================================================
 
-# --- VIF (multicollinearity) ---
-car::vif(model3) |>
-  as.data.frame() |>
-  setNames("VIF") |>
-  knitr::kable(digits = 2)
+# Collinearity.
+performance::check_collinearity(model3, ci = FALSE) |>
+  as_tibble() |>
+  select(Term, VIF, `SE inflation factor` = SE_factor, Tolerance) |>
+  round_numeric(digits = 2) |>
+  knitr::kable(align = "lrrr")
 
-# --- Residual diagnostics ---
-resid_df <- data.frame(
-  residuals = residuals(model3),
-  fitted    = fitted(model3),
-  std_resid = rstandard(model3)
-)
-
-# Histogram of residuals
-p_hist <- ggplot(resid_df, aes(x = residuals)) +
-  geom_histogram(bins = 30, fill = "steelblue", color = "white",
-                 alpha = 0.8) +
-  labs(x = "Residuals", y = "Count", title = "Histogram of Residuals")
-
-# Q-Q plot
-p_qq <- ggplot(resid_df, aes(sample = std_resid)) +
-  stat_qq(alpha = 0.3) +
-  stat_qq_line(color = "red") +
-  labs(x = "Theoretical quantiles", y = "Standardized residuals",
-       title = "Q-Q Plot")
-
-p_hist + p_qq
-
-# Residuals vs. fitted values
-ggplot(resid_df, aes(x = fitted, y = residuals)) +
-  geom_point(alpha = 0.15) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_smooth(method = "loess", se = FALSE, color = "red") +
-  labs(x = "Fitted values", y = "Residuals",
-       title = "Residuals vs. Fitted Values")
-
-# --- Comprehensive diagnostics with performance ---
+# Residual and influence dashboard. Include the key plots in the appendix.
 performance::check_model(
   model3,
   check = c("linearity", "homogeneity", "qq", "outliers")
 )
+
+# Robust-SE sensitivity check if heteroscedasticity is a concern.
+model_params(model3, vcov = "HC3")
+
+# Cook's distance screen.
+tibble(
+  cutoff_4_over_n = 4 / nobs(model3),
+  max_cooks = max(cooks.distance(model3)),
+  flagged_cooks = sum(cooks.distance(model3) > 4 / nobs(model3))
+)
+
+# Adjusted predictions for an interaction, if your model includes one.
+linear_predictions <- ggeffects::predict_response(
+  model3,
+  terms = c("numeracy [-2,-1,0,1,2]", "female"),
+  condition = list(
+    schyrs_c = 0,
+    exper_c = 0,
+    exper2_c = 0,
+    occupation = "Skilled"
+  )
+)
+
+linear_predictions |>
+  as_tibble() |>
+  mutate(Gender = if_else(as.character(group) == "0", "Male", "Female")) |>
+  ggplot(aes(x = x, y = predicted, color = Gender, fill = Gender)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15,
+              linewidth = 0) +
+  geom_line(linewidth = 1) +
+  labs(
+    x = "Numeracy (z-score)",
+    y = "Predicted log monthly income",
+    color = "Gender",
+    fill = "Gender",
+    title = "Adjusted Predictions from the Linear Model"
+  )
 ```
 
 
 ## Project 2: Logistic Regression {#sec-script-logistic}
 
-### Descriptive Statistics {#sec-script-logistic-desc}
+### Logistic Descriptives and Sparse-Cell Checks {#sec-script-logistic-desc}
 
 ```{r}
 #| label: script-logistic-descriptives
 #| eval: false
 
 # ============================================================
-# PROJECT 2: LOGISTIC REGRESSION -- DESCRIPTIVE STATISTICS
+# PROJECT 2 -- DESCRIPTIVE ANALYSIS
 # ============================================================
 
-# --- Outcome distribution ---
-table(df$manager) |> addmargins()
-prop.table(table(df$manager)) |> round(3)
+# Event/non-event distribution. The modeled event is manager = 1.
+analysis_df |>
+  count(Status) |>
+  mutate(percent = scales::percent(n / sum(n), accuracy = 0.1)) |>
+  knitr::kable(align = "lr")
 
-# --- Cross-tabulation: manager by gender ---
-df |>
-  mutate(
-    Gender = factor(female, levels = c(0, 1),
-                    labels = c("Male", "Female")),
-    Status = factor(manager, levels = c(0, 1),
-                    labels = c("Non-manager", "Manager"))
-  ) |>
-  count(Gender, Status) |>
-  group_by(Gender) |>
-  mutate(pct = round(n / sum(n) * 100, 1)) |>
-  ungroup() |>
-  select(Gender, Status, pct) |>
-  tidyr::pivot_wider(names_from = Status, values_from = pct) |>
-  kable(align = "lrr",
-        col.names = c("Gender", "Non-manager (%)", "Manager (%)"))
-
-# Chi-square test
-chisq.test(table(df$manager, df$female))
-
-# --- Cross-tabulation: manager by occupation ---
-df |>
-  mutate(
-    Status = factor(manager, levels = c(0, 1),
-                    labels = c("Non-manager", "Manager"))
-  ) |>
-  count(occupation, Status) |>
-  group_by(occupation) |>
-  mutate(pct = round(n / sum(n) * 100, 1)) |>
-  ungroup() |>
-  mutate(label = paste0(n, " (", pct, "%)")) |>
-  select(occupation, Status, label) |>
-  tidyr::pivot_wider(names_from = Status, values_from = label) |>
-  kable(align = "lrr")
-
-chisq.test(table(df$manager, df$occupation))
-
-# --- Continuous variables by manager status ---
-df |>
-  mutate(
-    Status = factor(manager, levels = c(0, 1),
-                    labels = c("Non-manager", "Manager"))
-  ) |>
-  select(Status, schyrs, exper, numeracy) |>
-  tbl_summary(
+# Predictors by outcome status.
+analysis_df |>
+  select(Status, Gender, occupation, schyrs, exper, numeracy) |>
+  gtsummary::tbl_summary(
     by = Status,
-    type = everything() ~ "continuous",
-    statistic = all_continuous() ~ "{mean} ({sd})",
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    digits = all_continuous() ~ 2,
     label = list(
-      schyrs   ~ "Years of education",
-      exper    ~ "Work experience (years)",
+      Gender ~ "Gender",
+      occupation ~ "Occupation",
+      schyrs ~ "Years of education",
+      exper ~ "Work experience (years)",
       numeracy ~ "Numeracy (z-score)"
     ),
-    digits = everything() ~ 2
+    missing = "no"
   ) |>
-  add_overall() |>
-  add_p() |>
-  bold_labels() |>
-  bold_p(t = 0.05)
+  gtsummary::add_overall() |>
+  gtsummary::add_p() |>
+  gtsummary::bold_labels()
 
-# --- Bar chart: manager status by gender ---
-df |>
-  mutate(
-    Gender = factor(female, levels = c(0, 1),
-                    labels = c("Male", "Female")),
-    Status = factor(manager, levels = c(0, 1),
-                    labels = c("Non-manager", "Manager"))
-  ) |>
-  count(Gender, Status) |>
+# Sparse-cell check for a categorical predictor.
+gtsummary::tbl_cross(
+  data = analysis_df,
+  row = occupation,
+  col = Status,
+  percent = "row"
+)
+
+# Event-rate plot by gender.
+analysis_df |>
   group_by(Gender) |>
-  mutate(prop = n / sum(n)) |>
-  ggplot(aes(x = Gender, y = prop, fill = Status)) +
-  geom_col(position = "dodge", alpha = 0.85) +
-  scale_y_continuous(labels = scales::percent) +
-  labs(x = "Gender", y = "Proportion", fill = "Status",
-       title = "Supervisory Status by Gender")
-
-# --- Boxplots: continuous predictors by manager status ---
-p_edu <- df |>
-  mutate(Status = factor(manager, levels = c(0, 1),
-                         labels = c("Non-manager", "Manager"))) |>
-  ggplot(aes(x = Status, y = schyrs, fill = Status)) +
-  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
-  labs(x = NULL, y = "Years of education", title = "Education")
-
-p_exp <- df |>
-  mutate(Status = factor(manager, levels = c(0, 1),
-                         labels = c("Non-manager", "Manager"))) |>
-  ggplot(aes(x = Status, y = exper, fill = Status)) +
-  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
-  labs(x = NULL, y = "Experience (years)", title = "Experience")
-
-p_num <- df |>
-  mutate(Status = factor(manager, levels = c(0, 1),
-                         labels = c("Non-manager", "Manager"))) |>
-  ggplot(aes(x = Status, y = numeracy, fill = Status)) +
-  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
-  labs(x = NULL, y = "Numeracy (z-score)", title = "Numeracy")
-
-p_edu + p_exp + p_num
+  summarise(event_rate = mean(manager == 1), .groups = "drop") |>
+  ggplot(aes(x = Gender, y = event_rate, fill = Gender)) +
+  geom_col(show.legend = FALSE) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  labs(
+    x = NULL,
+    y = "Percent with manager = 1",
+    title = "Event Rate by Gender"
+  )
 ```
 
-### Logistic Models {#sec-script-logistic-models}
+
+### Fit Logistic Models {#sec-script-logistic-models}
 
 ```{r}
 #| label: script-logistic-models
 #| eval: false
 
 # ============================================================
-# PROJECT 2: LOGISTIC REGRESSION -- MODELS
+# PROJECT 2 -- LOGISTIC REGRESSION MODELS
 # ============================================================
 
-# --- Model 1: Baseline human capital model (RQ1) ---
-logit1 <- glm(manager ~ female + schyrs_c + exper_c + exper2_c,
-              data = df, family = binomial)
-summary(logit1)
+# Stage 1: baseline human-capital model.
+logit1 <- glm(
+  manager ~ female + schyrs_c + exper_c + exper2_c,
+  data = analysis_df,
+  family = binomial
+)
 
-# Odds ratios with 95% CI
-exp(cbind(OR = coef(logit1), confint(logit1))) |> round(3)
+# Stage 2: add occupation and numeracy.
+logit2 <- glm(
+  manager ~ female + schyrs_c + exper_c + exper2_c +
+    occupation + numeracy,
+  data = analysis_df,
+  family = binomial
+)
 
-# --- Model 2: + Occupation and numeracy (RQ2) ---
-logit2 <- glm(manager ~ female + schyrs_c + exper_c + exper2_c +
-                semiwhite + semiblue + elementary + numeracy,
-              data = df, family = binomial)
-summary(logit2)
-exp(cbind(OR = coef(logit2), confint(logit2))) |> round(3)
+# Stage 2 comparison model for the occupation block.
+logit2_no_occ <- glm(
+  manager ~ female + schyrs_c + exper_c + exper2_c + numeracy,
+  data = analysis_df,
+  family = binomial
+)
 
-# --- Model 3: + Gender interactions (RQ3) ---
-logit3 <- glm(manager ~ female + schyrs_c + exper_c + exper2_c +
-                semiwhite + semiblue + elementary + numeracy +
-                fem_schyrs_c + fem_numeracy,
-              data = df, family = binomial)
-summary(logit3)
-exp(cbind(OR = coef(logit3), confint(logit3))) |> round(3)
+# Stage 3: add gender interactions.
+logit3 <- glm(
+  manager ~ female + schyrs_c + exper_c + exper2_c +
+    occupation + numeracy +
+    female:schyrs_c + female:numeracy,
+  data = analysis_df,
+  family = binomial
+)
 
-# --- Likelihood ratio tests ---
-anova(logit1, logit2, test = "Chisq")  # Tests occupation + numeracy block
-anova(logit2, logit3, test = "Chisq")  # Tests gender interaction block
+# Same-sample check.
+tibble(
+  model = c("Stage 1", "Stage 2", "Stage 2 no occupation", "Stage 3"),
+  n = c(nobs(logit1), nobs(logit2), nobs(logit2_no_occ), nobs(logit3))
+)
+
+stopifnot(
+  nobs(logit1) == nobs(logit2),
+  nobs(logit2_no_occ) == nobs(logit2),
+  nobs(logit2) == nobs(logit3)
+)
+
+# Odds ratios for learning and interpretation.
+model_params(logit1, exponentiate = TRUE)
+model_params(logit2, exponentiate = TRUE)
+model_params(logit3, exponentiate = TRUE)
+
+# Planned likelihood-ratio tests.
+anova(logit1, logit2, test = "Chisq")
+anova(logit2_no_occ, logit2, test = "Chisq")
+anova(logit2, logit3, test = "Chisq")
 ```
 
-### Publication-Style Odds Ratio Table {#sec-script-logistic-table}
+
+### Logistic Odds-Ratio Tables {#sec-script-logistic-table}
 
 ```{r}
 #| label: script-logistic-table
 #| eval: false
 
 # ============================================================
-# PROJECT 2: LOGISTIC REGRESSION -- PUBLICATION TABLE
+# PROJECT 2 -- REPORT TABLES
 # ============================================================
 
-t1 <- tbl_regression(
-  logit1, exponentiate = TRUE,
-  label = list(
-    female   ~ "Female",
-    schyrs_c ~ "Education (years, centered)",
-    exper_c  ~ "Experience (decades, centered)",
-    exper2_c ~ "Experience squared"
-  )
-) |> bold_p(t = 0.05)
+logit_base_labels <- list(
+  female ~ "Female (vs male)",
+  schyrs_c ~ "Education (years, centered)",
+  exper_c ~ "Experience (decades, centered)",
+  exper2_c ~ "Experience squared"
+)
 
-t2 <- tbl_regression(
-  logit2, exponentiate = TRUE,
-  label = list(
-    female     ~ "Female",
-    schyrs_c   ~ "Education (years, centered)",
-    exper_c    ~ "Experience (decades, centered)",
-    exper2_c   ~ "Experience squared",
-    semiwhite  ~ "Semi-white-collar",
-    semiblue   ~ "Semi-blue-collar",
-    elementary ~ "Elementary",
-    numeracy   ~ "Numeracy (z-score)"
+logit_extended_labels <- c(
+  logit_base_labels,
+  list(
+    occupation ~ "Occupation",
+    numeracy ~ "Numeracy (z-score)"
   )
-) |> bold_p(t = 0.05)
+)
 
-t3 <- tbl_regression(
-  logit3, exponentiate = TRUE,
-  label = list(
-    female       ~ "Female",
-    schyrs_c     ~ "Education (years, centered)",
-    exper_c      ~ "Experience (decades, centered)",
-    exper2_c     ~ "Experience squared",
-    semiwhite    ~ "Semi-white-collar",
-    semiblue     ~ "Semi-blue-collar",
-    elementary   ~ "Elementary",
-    numeracy     ~ "Numeracy (z-score)",
-    fem_schyrs_c ~ "Female x Education",
-    fem_numeracy ~ "Female x Numeracy"
+logit_interaction_labels <- c(
+  logit_extended_labels,
+  list(
+    `female:schyrs_c` ~ "Female x education",
+    `female:numeracy` ~ "Female x numeracy"
   )
-) |> bold_p(t = 0.05)
+)
 
-# --- Merge into one table ---
-tbl_merge(
+t1 <- gtsummary::tbl_regression(
+  logit1,
+  exponentiate = TRUE,
+  label = logit_base_labels
+) |>
+  gtsummary::bold_p(t = 0.05)
+
+t2 <- gtsummary::tbl_regression(
+  logit2,
+  exponentiate = TRUE,
+  label = logit_extended_labels
+) |>
+  gtsummary::bold_p(t = 0.05)
+
+t3 <- gtsummary::tbl_regression(
+  logit3,
+  exponentiate = TRUE,
+  label = logit_interaction_labels
+) |>
+  gtsummary::bold_p(t = 0.05)
+
+gtsummary::tbl_merge(
   tbls = list(t1, t2, t3),
-  tab_spanner = c("**Model 1**", "**Model 2**", "**Model 3**")
+  tab_spanner = c("**Stage 1**", "**Stage 2**", "**Stage 3**")
 )
 ```
 
-### Predicted Probabilities {#sec-script-logistic-predicted}
+
+### Predicted Probabilities and Marginal Effects {#sec-script-logistic-predicted}
+
+For modular prediction, probability-table, AME, and conditional-effect
+templates, see @sec-prediction-templates.
 
 ```{r}
 #| label: script-logistic-predicted
 #| eval: false
 
 # ============================================================
-# PROJECT 2: LOGISTIC REGRESSION -- PREDICTED PROBABILITIES
+# PROJECT 2 -- PROBABILITY-SCALE RESULTS
 # ============================================================
 
-# --- Predicted probability graph: education by gender ---
-plot_predictions(logit2,
-                 condition = list("schyrs_c", "female"),
-                 type = "response") +
-  labs(
-    x = "Years of Education (centered)",
-    y = "Predicted P(Manager)",
-    color = "Gender", fill = "Gender",
-    title = "Predicted Probability of Supervisory Status",
-    subtitle = "By education level and gender (Model 2)"
-  )
+# Predicted probability graph. Always name the modeled event in the y-axis.
+gender_profile <- marginaleffects::datagrid(
+  model = logit2,
+  exper_c = 0,
+  exper2_c = 0,
+  occupation = factor("Skilled", levels = levels(analysis_df$occupation)),
+  numeracy = 0
+)
 
-# --- Predicted probability table at selected values ---
-pred_grid <- predictions(
+marginaleffects::plot_predictions(
   logit2,
-  newdata = datagrid(
-    female    = c(0, 1),
-    schyrs_c  = c(-4, 0, 4),
-    exper_c   = 0,
-    exper2_c  = 0,
-    semiwhite = 0,
-    semiblue  = 0,
-    elementary = 0,
-    numeracy  = 0
+  condition = list("schyrs_c" = seq(-4, 4, by = 1), "female"),
+  newdata = gender_profile,
+  type = "response"
+) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  labs(
+    x = "Years of education (centered)",
+    y = "Predicted probability of manager = 1",
+    color = "Gender",
+    fill = "Gender",
+    title = "Predicted Probability of the Modeled Event"
+  ) +
+  scale_color_discrete(labels = c("0" = "Male", "1" = "Female")) +
+  scale_fill_discrete(labels = c("0" = "Male", "1" = "Female"))
+
+# Predicted probability table at selected values.
+selected_probabilities <- marginaleffects::predictions(
+  logit2,
+  newdata = marginaleffects::datagrid(
+    female = c(0, 1),
+    schyrs_c = c(-4, 0, 4),
+    exper_c = 0,
+    exper2_c = 0,
+    occupation = factor("Skilled", levels = levels(analysis_df$occupation)),
+    numeracy = 0
   ),
   type = "response"
 )
 
-pred_grid |>
+selected_probabilities |>
   as.data.frame() |>
   mutate(
-    Gender    = ifelse(female == 0, "Male", "Female"),
+    Gender = if_else(female == 0, "Male", "Female"),
     Education = case_when(
-      schyrs_c == -4 ~ "Mean - 4 yrs",
-      schyrs_c ==  0 ~ "Mean",
-      schyrs_c ==  4 ~ "Mean + 4 yrs"
+      schyrs_c == -4 ~ "Mean - 4 years",
+      schyrs_c == 0 ~ "Mean",
+      schyrs_c == 4 ~ "Mean + 4 years"
     ),
-    `P(Manager)` = round(estimate, 3),
-    `95% CI` = paste0("[", round(conf.low, 3), ", ",
-                      round(conf.high, 3), "]")
+    `Predicted P(manager = 1)` = scales::percent(estimate, accuracy = 0.1),
+    `95% CI` = paste0(
+      "[", scales::percent(conf.low, accuracy = 0.1), ", ",
+      scales::percent(conf.high, accuracy = 0.1), "]"
+    )
   ) |>
-  select(Gender, Education, `P(Manager)`, `95% CI`) |>
-  kable(align = "llrr")
+  select(Gender, Education, `Predicted P(manager = 1)`, `95% CI`) |>
+  knitr::kable(align = "llcc")
 
-# --- Average marginal effects ---
-avg_slopes(logit2)
+# Average marginal effects in probability points.
+format_pp <- function(x) {
+  sprintf("%.1f pp", 100 * x)
+}
+
+marginaleffects::avg_slopes(
+  logit2,
+  variables = c("female", "schyrs_c", "occupation", "numeracy"),
+  type = "response"
+) |>
+  as.data.frame() |>
+  mutate(
+    `Average change` = format_pp(estimate),
+    `95% CI` = paste0("[", format_pp(conf.low), ", ", format_pp(conf.high), "]"),
+    `p-value` = format_p(p.value)
+  ) |>
+  select(term, contrast, `Average change`, `95% CI`, `p-value`) |>
+  knitr::kable(align = "llccc")
 ```
 
-### Model Fit & Diagnostics {#sec-script-logistic-diagnostics}
+
+### Logistic Diagnostics and Fit {#sec-script-logistic-diagnostics}
 
 ```{r}
 #| label: script-logistic-diagnostics
 #| eval: false
 
 # ============================================================
-# PROJECT 2: LOGISTIC REGRESSION -- FIT & DIAGNOSTICS
+# PROJECT 2 -- DIAGNOSTICS AND MODEL FIT
 # ============================================================
 
-# --- VIF (multicollinearity) ---
-car::vif(logit3) |>
-  as.data.frame() |>
-  setNames("VIF") |>
-  knitr::kable(digits = 2)
+# Collinearity.
+performance::check_collinearity(logit3, ci = FALSE) |>
+  as_tibble() |>
+  select(Term, VIF, `SE inflation factor` = SE_factor, Tolerance) |>
+  round_numeric(digits = 2) |>
+  knitr::kable(align = "lrrr")
 
-# --- Model fit summary ---
-logit_null <- glm(manager ~ 1, data = df, family = binomial)
-ll_null <- logLik(logit_null)
+# Linearity-in-the-logit sensitivity check for continuous predictors.
+logit2_linearity <- glm(
+  manager ~ female + schyrs_c + I(schyrs_c^2) +
+    exper_c + exper2_c + I(exper_c^3) +
+    occupation + numeracy + I(numeracy^2),
+  data = analysis_df,
+  family = binomial
+)
 
-fit_table <- tibble::tibble(
-  Model = c("Model 1", "Model 2", "Model 3"),
-  AIC = c(AIC(logit1), AIC(logit2), AIC(logit3)),
-  BIC = c(BIC(logit1), BIC(logit2), BIC(logit3)),
-  `Log-Lik` = c(as.numeric(logLik(logit1)),
-                as.numeric(logLik(logit2)),
-                as.numeric(logLik(logit3))),
-  `McFadden R2` = c(
-    1 - as.numeric(logLik(logit1)) / as.numeric(ll_null),
-    1 - as.numeric(logLik(logit2)) / as.numeric(ll_null),
-    1 - as.numeric(logLik(logit3)) / as.numeric(ll_null)
-  )
+stopifnot(nobs(logit2) == nobs(logit2_linearity))
+anova(logit2, logit2_linearity, test = "Chisq")
+
+# Influence and extreme fitted probabilities.
+logit2_fitted <- fitted(logit2)
+logit2_cooks <- cooks.distance(logit2)
+
+tibble(
+  max_fitted_probability = max(logit2_fitted),
+  min_fitted_probability = min(logit2_fitted),
+  near_zero_or_one = sum(logit2_fitted < .05 | logit2_fitted > .95),
+  cooks_cutoff_4_over_n = 4 / nobs(logit2),
+  max_cooks = max(logit2_cooks),
+  flagged_cooks = sum(logit2_cooks > 4 / nobs(logit2))
+)
+
+# Model fit summary. N and log-likelihood come from base R; AIC, BIC,
+# Tjur's R2, and RMSE come from model_fit().
+fit_table <- tibble(
+  Model = c("Stage 1", "Stage 2", "Stage 3"),
+  N = c(nobs(logit1), nobs(logit2), nobs(logit3)),
+  `Log likelihood` = c(logLik(logit1), logLik(logit2), logLik(logit3)) |>
+    as.numeric()
 ) |>
-  mutate(across(AIC:BIC, ~ round(.x, 1)),
-         `Log-Lik` = round(`Log-Lik`, 1),
-         `McFadden R2` = round(`McFadden R2`, 3))
+  bind_cols(
+    bind_rows(
+      model_fit(logit1) |> as_tibble(),
+      model_fit(logit2) |> as_tibble(),
+      model_fit(logit3) |> as_tibble()
+    )
+  ) |>
+  select(Model, N, `Log likelihood`, AIC, BIC, `Tjur R2` = R2_Tjur, RMSE) |>
+  round_numeric(digits = 3)
 
-kable(fit_table, align = "lrrrr")
+knitr::kable(fit_table, align = "lrrrrrr")
+
+# Optional only if the project is about prediction:
+# - ROC/AUC
+# - classification table at a stated cutoff
+# - calibration plot
+```
+
+
+## Clean-Session Submission Checklist {#sec-script-clean-session}
+
+Before submitting, restart R and run the file from top to bottom. Then confirm
+the checklist below.
+
+For diagnostic placement, troubleshooting, and Quarto/R script guidance, see
+@sec-diagnostics-reproducibility-templates.
+
+- [ ] Every package used in the script is loaded in the setup section.
+- [ ] The source file uses relative paths or `here::here()`.
+- [ ] Each project has a complete-case analysis dataset before descriptives and
+  models.
+- [ ] Factor reference categories are set intentionally and checked with
+  `levels()`.
+- [ ] Project 2 names the modeled event and non-event.
+- [ ] Descriptive tables and nested models within each project use the same
+  complete-case dataset.
+- [ ] Nested comparisons have matching `nobs()` values.
+- [ ] Linear results use `model_params()`, `model_fit()`,
+  `performance::check_collinearity()`, and report-ready tables.
+- [ ] Logistic results use `model_params(..., exponentiate = TRUE)`,
+  `tbl_regression(..., exponentiate = TRUE)`, predicted probabilities, and
+  average marginal effects or another probability-scale summary.
+- [ ] Diagnostics are summarized in words, not merely printed.
+- [ ] Every reported table and figure can be recreated by the submitted source
+  file.
+
+```{r}
+#| label: script-session-info
+#| eval: false
+
+# Optional reproducibility record.
+sessionInfo()
 ```

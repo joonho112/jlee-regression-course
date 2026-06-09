@@ -1,6 +1,6 @@
 /*-- scss:defaults --*/
 
-// BER 640 lecture-notes book — DARK theme layer: [darkly, html/custom-dark.scss].
+// BER 640 final-project guide — DARK theme layer: [darkly, html/custom-dark.scss].
 // Inherits the Cividis Ink brand tokens + Pairing B fonts from the shared partial, but
 // deliberately does NOT override the surface variables ($body-bg/$body-color/$code-bg/
 // $code-color) so the darkly base keeps mode genuinely dark. Dark-specific component
@@ -20,6 +20,12 @@
   --border:      #3a3f44;
   --muted:       #a8b0b8;
   --accent-tint: rgba(127, 179, 213, 0.08);
+  --component-primary: #7FB3D5;
+  --component-accent: #7FB3D5;
+  --component-success: #78d0ca;
+  --component-danger: #ff9a78;
+  --component-warning-text: #f0d05a;
+  --component-on-accent: #0f172a;
 }
 
 // ===== Step 1.6 — heading rhythm (dark colors) =====
@@ -34,3 +40,4 @@ h6 { color: #9ca3af; }
 .callout-tip       { border-left-color: #54b0aa !important; background-color: rgba(78, 170, 165, 0.16);  }  // teal (light)
 .callout-warning   { border-left-color: $warning !important; background-color: rgba(201, 162, 39, 0.16);  }  // gold
 .callout-important { border-left-color: #c45a37 !important; background-color: rgba(196, 90, 55, 0.16);   }  // rust (light)
+.callout-caution   { border-left-color: #c45a37 !important; background-color: rgba(196, 90, 55, 0.16);   }  // rust (light)

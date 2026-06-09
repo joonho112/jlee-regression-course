@@ -16,18 +16,25 @@ The BER 640 final assessment consists of two independent projects:
 
 Think of this guide as your advisor walking you through each step. Every table, figure, and interpretation you see in the worked examples is something you can adapt for your own project.
 
+Start with @sec-overview for the full roadmap. The appendices collect
+@sec-pitfalls, @sec-r-script, @sec-table-templates,
+@sec-prediction-templates, and
+@sec-diagnostics-reproducibility-templates.
+
 ## The Worked Example: PIAAC Korea Data {.unnumbered}
 
-Both worked examples use data from the Programme for the International Assessment of Adult Competencies [PIAAC; @oecd2013piaac], focusing on a sample of Korean adults. The dataset includes variables on education, work experience, numeracy proficiency, employment status, and monthly earnings --- providing a rich context for both linear and logistic regression applications.
+Both worked examples use a course-prepared teaching analysis file derived from the Programme for the International Assessment of Adult Competencies [PIAAC; @oecd2013piaac], focusing on a subset of Korean adults. The dataset includes variables on education, work experience, numeracy proficiency, employment status, and monthly earnings --- providing a rich context for both linear and logistic regression applications.
 
 The dataset file `piaac_kor.rds` is provided in the `data/` folder of this project.
+
+The supplied `piaac_kor.rds` file is an unweighted, already-filtered complete-case teaching subset. It does not include the complex survey design information, sampling weights, replicate weights, or plausible values needed for full design-based population inference. The worked examples therefore illustrate model-based regression workflow for this teaching file, not nationally representative PIAAC estimation.
 
 ## Related Resources {.unnumbered}
 
 This guide is part of a suite of materials for BER 640:
 
-- **Lecture Notes** --- Conceptual foundations and mathematical details for each topic.
-- **R Lab Manual** --- Step-by-step R tutorials aligned with each lecture.
+- **[Lecture Notes](https://joonho112.github.io/jlee-regression-course/notes/)** --- Conceptual foundations and mathematical details for each topic.
+- **[R Lab Manual](https://joonho112.github.io/jlee-regression-course/labs/)** --- Step-by-step R tutorials aligned with each lecture.
 - **Homework Solutions** --- Worked solutions for all homework assignments.
 
 ## Software Setup {.unnumbered}
@@ -44,22 +51,18 @@ Install the required packages by running:
 #| code-fold: false
 install.packages("pacman")
 pacman::p_load(
-  dplyr, tidyr, forcats, stringr, purrr,
-  ggplot2, patchwork, GGally, ggrepel,
-  broom, car, lmtest, sandwich,
-  parameters, performance, effectsize,
-  see, modelbased, correlation, report,
+  dplyr, tidyr, forcats, stringr, tibble,
+  ggplot2, patchwork, scales,
+  broom, sandwich,
+  parameters, performance, see,
   datawizard, insight,
   marginaleffects,
   regdatasets,
-  gtsummary, gt, knitr, here
+  gtsummary, gt, modelsummary, ggeffects,
+  knitr, here
 )
 ```
 
 ## Citation {.unnumbered}
 
 Lee, J. (2026). *BER 640 Final Project Guide: A Step-by-Step Guide with Complete R Examples*. University of Alabama.
-
-## Acknowledgments {.unnumbered}
-
-This guide was developed for BER 640: Advanced Statistical Methods in Education in the Department of Educational Research at the University of Alabama. The PIAAC data used in the worked examples are publicly available from the OECD.

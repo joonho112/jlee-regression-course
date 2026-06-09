@@ -6,7 +6,7 @@ book:
   title: "BER 640 Final Project Guide"
   subtitle: "A Step-by-Step Guide with Complete R Examples"
   author: "JoonHo Lee"
-  date: "2026"
+  date: "2026-01-01"
   date-format: "YYYY"
   site-url: https://joonho112.github.io/jlee-regression-course/project/
   repo-url: https://github.com/joonho112/jlee-regression-course
@@ -40,11 +40,12 @@ book:
       chapters:
         - chapters/ch06-logistic-proposal.qmd
         - chapters/ch07-logistic-results.qmd
-    - part: "Appendices"
-      chapters:
-        - appendices/app-a-pitfalls.qmd
-        - appendices/app-b-r-script.qmd
-        - appendices/app-c-table-templates.qmd
+  appendices:
+    - appendices/app-a-pitfalls.qmd
+    - appendices/app-b-r-script.qmd
+    - appendices/app-c-table-templates.qmd
+    - appendices/app-d-predictions-marginal-effects.qmd
+    - appendices/app-e-diagnostics-reproducibility.qmd
     - references.qmd
 
   page-navigation: true
@@ -60,7 +61,8 @@ format:
       dark: [darkly, html/custom-dark.scss]
     lightbox: auto
     code-fold: false
-    code-tools: true
+    code-tools: false
+    code-copy: true
     code-link: true
     code-line-numbers: true
     highlight-style: github

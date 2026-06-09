@@ -4,196 +4,291 @@
 
 ::: {.callout-warning}
 ## Learn from Others' Mistakes
-This appendix compiles the most common mistakes students make on the final
-project, drawn from years of grading both linear and logistic regression
-projects. Review this checklist before submitting each part.
+This appendix collects the mistakes that most often cost points on the final
+project. Use it while drafting, not only at the end. The safest workflow is to
+build one clear analysis dataset, fit planned models, use the course package
+helpers for tables and diagnostics, and translate results into substantive
+language.
 :::
 
-Items marked **Logistic-specific** apply only to Project 2. Everything else
-applies to both projects.
+Items marked **Logistic-specific** apply only to Project 2. Items that mention
+Project 1 or Project 2 are project-specific; the remaining items apply to both
+projects. For the full expectations, see the linear guidelines in
+@sec-guidelines-linear and the logistic guidelines in @sec-guidelines-logistic.
+Use the submission checklists in @sec-linear-checklist and
+@sec-logistic-checklist before submitting.
 
 
-## Part 1: Background & Research Questions {#sec-pitfalls-part1}
+## Part 1: Background and Research Question {#sec-pitfalls-part1}
 
-1. **Describing the data instead of motivating the research.** Part 1 should
-   explain *why* the topic matters, not *what* data you will use. Save data
-   descriptions for Part 2.
+1. **Describing the data before motivating the question.** Part 1 should
+   explain why the topic matters. Save dataset details, sample restrictions,
+   variable names, and missing-data rules for Part 2.
 
-2. **Writing vague research questions.** Bad: "What affects income?" Good: "To
-   what extent do education, experience, and literacy predict monthly earnings
-   among Korean adults, controlling for gender?" Your RQ should name the
-   outcome, key predictors, and population.
+2. **Writing a vague research question.** Bad: "What affects income?" Better:
+   "Among Korean full-time workers, how are education, experience, occupation,
+   numeracy, and gender associated with monthly earnings?" Name the outcome,
+   focal predictors, and population.
+
+3. **Logistic-specific: writing three separate RQs when the assignment asks
+   for one.** Project 2 uses one focused logistic research question. You may
+   still fit staged models, but those model stages support one overarching
+   question rather than three disconnected numbered RQs.
+
+4. **Stating only formal null hypotheses.** The project asks for substantive
+   research questions. You may test hypotheses later, but Part 1 should tell
+   the reader what relationship matters and why.
 
 ::: {.callout-caution}
 ## Critical Pitfall
-If your research questions do not specify the outcome variable and at least
-one predictor, it is impossible to tell what regression you plan to run.
-Every RQ must be answerable with a regression model.
+If the research question does not specify the outcome and at least one
+predictor, the reader cannot tell what regression you plan to run. For Project
+2, also name the modeled event, such as `manager = 1`.
 :::
 
-3. **Stating formal null hypotheses.** This project asks for substantive
-   research questions, not $H_0$ / $H_a$ pairs. Focus on the *what* and *why*,
-   not the statistical testing framework.
 
+## Part 2: Subjects and Variables {#sec-pitfalls-part2}
 
-## Part 2: Methods --- Subjects & Variables {#sec-pitfalls-part2}
+5. **Not defining categories for categorical variables.** List all categories
+   for every categorical predictor. The reader should not have to infer them
+   from a model table.
 
-4. **Not defining categories for categorical variables.** If a variable has
-   levels, list all of them. The reader should not have to guess what the
-   categories are.
+6. **Not specifying the reference category.** Every factor or dummy-coded
+   predictor needs a reference group. Without a reference group, the
+   coefficient or odds ratio cannot be interpreted.
 
-5. **Not specifying the reference category for dummy variables.** Always state
-   which group is the reference (e.g., "Male is the reference category"). The
-   interpretation of every dummy coefficient depends on this choice.
+7. **Letting R choose the reference category accidentally.** R uses the first
+   factor level as the reference. If you create a factor from character values,
+   the first level may be alphabetical unless you set it. Set the reference
+   intentionally:
 
-6. **Naming dummy variables ambiguously.** Use descriptive names like `female`
-   (1 = female, 0 = male), not generic names like `gender` or `D1`. The
-   variable name should make the coding obvious.
+```{r}
+#| eval: false
 
-::: {.callout-caution}
-## Critical Pitfall
-If you do not define your dummy variables and reference categories, the
-reader cannot interpret your regression coefficients. This is one of the
-most common reasons students lose points.
-:::
+analysis_df <- raw_data |>
+  mutate(occupation = forcats::fct_relevel(occupation, "Skilled"))
 
-7. **Omitting the variable table.** A concise table listing every variable
-   (name, role, type, definition) saves space and helps the reader quickly
-   grasp your analysis plan.
-
-
-## Part 3: Methods --- Statistical Analysis {#sec-pitfalls-part3}
-
-8. **Models that do not match the research questions.** Each model should map
-   to a specific RQ. If you have three RQs, you should have (at least) three
-   models, and each should be explicitly linked to its corresponding RQ.
-
-9. **Getting the regression direction backwards.** You regress *Y* on *X*,
-   meaning the outcome is on the left side of the equation. Saying "we
-   regressed education on income" means the opposite of what you intend.
-
-10. **Not writing out the model equation.** Even a simple equation like
-    $Y_i = \beta_0 + \beta_1 X_{1i} + \beta_2 X_{2i} + \varepsilon_i$ makes
-    your analysis plan unambiguous. Always include at least one equation.
-
-
-## Part 4: Results --- Descriptive Analyses {#sec-pitfalls-part4}
-
-11. **Reporting means and SDs for categorical variables.** The mean of a
-    binary variable is technically the proportion, but it is confusing. Report
-    frequencies and percentages for categorical variables; report means, SDs,
-    and ranges for continuous variables.
-
-12. **Using a different subsample for descriptives and regression.** If your
-    regression drops cases due to missing data, your descriptive statistics
-    should be computed on the *same* analytic sample. Mismatched sample sizes
-    confuse the reader.
-
-13. **No exploratory visualizations.** Include at least one figure (histogram,
-    scatterplot, boxplot, or bar chart) that previews the key relationships.
-    A table of numbers is not a substitute for a well-chosen graph.
-
-14. **Dropping figures without interpretation.** Every figure needs a written
-    description of what you observe. Do not include a plot and then move on
-    without discussing it.
-
-
-## Part 5: Results --- Regression Analyses {#sec-pitfalls-part5}
-
-::: {.callout-caution}
-## Critical Pitfall
-The single most common mistake across both projects is presenting regression
-output without interpreting the coefficients. Every coefficient must be
-interpreted in substantive terms: direction, magnitude, significance, and
-what it means in the real-world context of your study.
-:::
-
-15. **Pasting raw R output instead of a formatted table.** Never include
-    unformatted `summary()` output in your final report. Use `tbl_regression()`
-    from the `gtsummary` package to create publication-style tables (see
-    @sec-table-templates).
-
-16. **Not using `factor()` for categorical variables in R.** If you pass a
-    numeric variable (e.g., coded 0/1/2) directly to `lm()` or `glm()`, R
-    treats it as continuous. Always wrap categorical variables in `factor()` or
-    pre-define them as factors in your data.
-
-::: {.callout-caution}
-## The Reference Category Trap
-R defaults to **alphabetical** ordering for factor levels, which determines the reference category. If your categorical variable has levels "Assistant," "Associate," "Full," R will use "Assistant" as the reference — not because it makes theoretical sense, but because "A" comes first. Always use `fct_relevel(your_variable, "your_reference")` to set the intended reference category **before** fitting any models. Check with `levels(your_factor)` to confirm.
-:::
-
-::: {.callout-caution}
-## The Same-Sample Trap (Nested Models)
-When comparing nested models with `anova()`, all models must be fit on the **exact same observations**. If a variable added in Model 2 has missing values, R silently drops those rows, making Model 2 fit on fewer observations than Model 1. The `anova()` comparison then fails. **Solution:** Use `tidyr::drop_na()` on all analytical variables before fitting any models:
-```r
-analysis_data <- raw_data |> drop_na(y, x1, x2, x3, x4)
+levels(analysis_df$occupation)
 ```
+
+8. **Logistic-specific: not naming the event and non-event.** A binary outcome
+   must be described as `1 = event` and `0 = non-event`. Every odds ratio,
+   predicted probability, marginal effect, ROC/AUC value, sensitivity, and
+   specificity refers to the event.
+
+9. **Omitting the variable table.** A compact table with variable name, role,
+   type, coding, and definition prevents confusion and saves space.
+
+10. **Not defining the analytic sample.** Report the starting sample,
+    exclusions, missing-data rule, final analytic $N$, and, for Project 2,
+    event/non-event counts.
+
+
+## Part 3: Statistical Analysis Plan {#sec-pitfalls-part3}
+
+11. **Models that do not match the research question.** Each model should
+    support the research question. For Project 1, that may mean multiple RQs
+    and multiple planned model comparisons. For Project 2, it usually means a
+    staged model sequence supporting one logistic RQ.
+
+12. **Getting the regression direction backward.** You regress the outcome on
+    predictors. In a formula, the outcome goes on the left: `y ~ x1 + x2`.
+
+13. **Not stating the model clearly.** State the model in equation form or in
+    precise words. The reader should be able to identify the outcome,
+    predictors, interactions, and error or link function.
+
+14. **Using different samples across nested models.** Model comparisons require
+    the same rows. Build the complete-case analysis dataset before fitting the
+    models:
+
+```{r}
+#| eval: false
+
+analysis_vars <- c("y", "x1", "x2", "x3", "x4")
+
+analysis_df <- raw_data |>
+  tidyr::drop_na(dplyr::all_of(analysis_vars))
+```
+
+    Before a nested `anova()` or likelihood-ratio test, confirm that the
+    compared models have the same `nobs()`.
+
+15. **Adding terms just to search for significance.** Interactions,
+    transformations, and polynomial terms should be motivated by the research
+    question, theory, or clear diagnostic evidence.
+
+16. **Writing a complex coding plan when a simple package helper is available.**
+    The course workflow is intentionally compact: fit models with `lm()` or
+    `glm()`, inspect estimates with `model_params()`, summarize fit with
+    `model_fit()`, check collinearity with `performance::check_collinearity()`,
+    build report tables with `gtsummary::tbl_regression()` or
+    `modelsummary::modelsummary()`, use `ggeffects::predict_response()` for
+    Project 1 adjusted predictions, and use `marginaleffects` for Project 2
+    predicted probabilities, AMEs, and conditional effects.
+
+
+## Part 4: Descriptive Analysis {#sec-pitfalls-part4}
+
+17. **Using a different sample for descriptives and models.** Descriptives
+    should be based on the same complete-case `analysis_df` used in the
+    regression models.
+
+18. **Reporting means and SDs for categorical variables.** For categorical
+    variables, report counts and percentages. For a 0/1 logistic outcome, the
+    mean is the event rate, but event/non-event counts and event percentages
+    are clearer in the report. For continuous variables, report means and SDs,
+    often by group.
+
+19. **Logistic-specific: skipping sparse-cell and separation checks.** Before
+    fitting a logistic model, check whether each important group has both
+    events and non-events. Sparse cells can produce unstable estimates.
+
+20. **Dropping figures without interpretation.** Every figure needs a sentence
+    that says what the reader should notice. A plot is evidence only after you
+    explain it.
+
+21. **Using a visualization that does not match the outcome.** For continuous
+    outcomes, histograms, scatterplots, and boxplots are often useful. For
+    binary outcomes, bar charts of event rates and grouped summaries are often
+    clearer.
+
+
+## Part 5: Regression Results {#sec-pitfalls-part5}
+
+::: {.callout-caution}
+## Critical Pitfall
+Do not paste raw model output into the report and call it interpretation. Every
+model section needs a clean table, a fit or diagnostic statement, and plain
+language explaining direction, size, uncertainty, and substantive meaning.
 :::
 
-17. **Not interpreting every coefficient.** If a variable is in the model, it
-    must be interpreted. Do not skip the intercept, the control variables, or
-    the interaction terms. Each coefficient tells part of the story.
+22. **Pasting raw `summary()` output.** Use `model_params()` for inspection and
+    `gtsummary::tbl_regression()` or `modelsummary::modelsummary()` for the
+    report table. Raw console output belongs in your scratch work, not the
+    final report. See the table templates in
+    @sec-template-linear-single, @sec-template-linear-multi,
+    @sec-template-logistic-single, and @sec-template-logistic-multi.
 
-18. **Not rounding appropriately.** Two decimal places for coefficients and
-    standard errors; three for *p*-values and correlations. Reporting 10
-    decimal places from R output signals that you copied without thinking.
+23. **Manually extracting results that packages already format.** Avoid
+    hand-building coefficient, OR, or CI tables when `model_params()`,
+    `tbl_regression()`, `tbl_merge()`, `model_fit()`, or `avg_slopes()` already
+    gives the needed output.
 
-19. **Confusing statistical and practical significance.** A coefficient can
-    be statistically significant but substantively trivial. Always discuss
-    the *size* of the effect, not just whether it is significant.
+24. **Not interpreting the final model.** Interpret every non-intercept
+    coefficient that matters for the research question in the primary/final
+    model. Interpret the intercept only when the reference and zero values have
+    a meaningful baseline interpretation.
 
-20. **Not checking regression assumptions.** For linear regression: check
-    linearity, normality of residuals, homoscedasticity, and
-    multicollinearity (VIF). For logistic regression: report the likelihood
-    ratio test, AIC/BIC, and VIF. If you skip assumption checks, you cannot
-    claim your results are trustworthy.
+25. **Confusing statistical and practical significance.** A small coefficient
+    can be statistically clear but practically minor. A large estimate can be
+    uncertain. Discuss both size and uncertainty.
 
-21. **Logistic-specific: Reporting log-odds instead of odds ratios.** Odds
-    ratios are far easier to interpret. Always set `exponentiate = TRUE` in
-    `tbl_regression()` and report ORs with 95% confidence intervals.
+26. **Skipping diagnostics or treating them as a checkbox.** Diagnostics should
+    lead to a short conclusion about model adequacy. For Project 1, address
+    residual patterns, heteroscedasticity, normality, influence, and VIF. For
+    Project 2, address sparse cells/separation, convergence, VIF, linearity in
+    the logit, influence screening, and fit statistics.
 
-22. **Logistic-specific: Misinterpreting odds ratios.** OR = 1.15 does *not*
-    mean "15% more likely." It means the *odds* increase by a factor of 1.15.
-    Be precise about the distinction between odds and probability.
+27. **Forgetting the overall test for a multi-category predictor.** If a factor
+    has three or more categories, interpret individual contrasts, but also
+    report an overall block test such as a likelihood-ratio test.
 
-23. **Logistic-specific: Not including a predicted probability graph.** The
-    predicted probability plot is the *key deliverable* for Project 2. It
-    translates abstract odds ratios into an intuitive 0--1 probability scale
-    that communicates practical significance directly.
+28. **Misreading interaction terms.** Once an interaction is in the model, main
+    effects are conditional. Use predicted values, predicted probabilities, or
+    conditional-effect tables to explain the pattern.
+
+29. **Logistic-specific: reporting log-odds as the main result.** Main tables
+    should report odds ratios. Use `exponentiate = TRUE` in
+    `model_params()` and `tbl_regression()`.
+
+30. **Logistic-specific: interpreting odds ratios as probabilities.** An OR of
+    2.0 does not mean "twice as likely." It means the odds are twice as large.
+    Translate focal results to the probability scale with predicted
+    probabilities, probability differences in percentage points, or AMEs.
+
+31. **Logistic-specific: forgetting the event definition in results.** Write
+    "predicted probability of `manager = 1`" or "odds of the modeled event,"
+    not just "probability" or "odds."
+
+32. **Logistic-specific: omitting the predicted-probability deliverables.**
+    Project 2 requires a predicted-probability figure and a predicted
+    probability table. AMEs from `avg_slopes()` are often the cleanest
+    probability-scale summary.
+    For copy-and-adapt code, see @sec-prediction-templates, especially
+    @sec-template-logistic-prob-curve, @sec-template-logistic-prob-table, and
+    @sec-template-logistic-ame.
+
+33. **Logistic-specific: treating classification diagnostics as always
+    required.** ROC/AUC, classification tables, sensitivity/specificity, and
+    calibration plots are useful when the research question is about
+    prediction. For explanatory projects, they are optional; if included, say
+    what cutoff was used and what the diagnostic can and cannot show.
 
 
 ## Part 6: Discussion {#sec-pitfalls-part6}
 
-24. **Drawing causal conclusions from observational data.** Unless you have a
-    randomized experiment, say "is associated with" rather than "causes" or
-    "leads to." Cross-sectional data cannot establish causation.
+34. **Drawing causal conclusions from observational data.** Unless the design
+    supports causal inference, write "is associated with" rather than "causes,"
+    "leads to," or "proves."
 
-25. **Not answering each research question directly.** Your discussion should
-    explicitly revisit each numbered RQ and state what the analysis revealed.
-    Do not leave the reader to infer the answers.
+35. **Not answering the research question directly.** For Project 1, revisit
+    each RQ. For Project 2, answer the single logistic RQ and explain how the
+    model stages support that answer.
 
-26. **Listing zero limitations.** Every study has limitations. Discuss at
-    least 2--3 (e.g., cross-sectional design, omitted variables,
-    generalizability, measurement error).
+36. **Repeating the results table in prose.** The discussion should focus on
+    meaning, practical significance, limitations, and implications. Do not
+    re-list every coefficient.
+
+37. **Discussing odds ratios when probability-scale results are clearer.**
+    For Project 2, use predicted probabilities, probability differences, or
+    AMEs to explain practical significance.
+
+38. **Listing vague or incomplete limitations.** Every project needs 2--3
+    concrete limitations tied to the actual analysis. Common limitations
+    include cross-sectional design, omitted variables, measurement error,
+    model specification, sample restrictions, and sparse subgroup estimates.
+    For complex survey data or a supplied teaching subset, state whether
+    sampling weights, replicate weights, plausible values, or design-based
+    variance estimation were used. If not, frame ordinary standard errors,
+    confidence intervals, p-values, $F$-tests, likelihood-ratio tests, and
+    predicted probabilities as model-based summaries, and limit population
+    claims accordingly.
+
+39. **Ignoring diagnostics in the discussion.** If diagnostics are clean, say
+    they support confidence in the main patterns. If a diagnostic flags a
+    concern, describe how it limits the conclusion.
 
 
-## Appendix (R Script) {#sec-pitfalls-appendix}
+## Appendix and Reproducibility {#sec-pitfalls-appendix}
 
-27. **Not annotating the R script.** Your appendix code should include
-    comments that explain what each block does. An uncommented wall of code
-    is difficult to grade and impossible to debug.
+For appendix expectations, see @sec-linear-part7, @sec-logistic-part7, and
+@sec-diagnostics-reproducibility-templates.
 
-::: {.callout-caution}
-## Critical Pitfall
-Before submitting, restart R and run your script from top to bottom (or
-render your Quarto document from scratch). If the script does not run
-without errors, you will lose points regardless of how good the content is.
-:::
+40. **Submitting code that only works in your current R session.** Restart R
+    and run the script or render the Quarto document from top to bottom before
+    submitting.
 
-28. **Not checking that the script runs from top to bottom.** A script that
-    requires manually running chunks in a special order, or that depends on
-    objects from the global environment, is not reproducible.
+41. **Using absolute local paths.** Use project-relative paths or `here::here()`
+    so the source file can run on another machine.
+
+42. **Not loading packages in the source file.** The source file should load
+    every package it uses. Do not rely on packages that happened to be loaded
+    earlier in your session. If you use the course datasets, make sure your
+    `regdatasets` installation matches the course setup.
+
+43. **Leaving objects hidden in the global environment.** Every object used in
+    a table, figure, model, prediction, or diagnostic should be created in the
+    submitted source file.
+
+44. **Not annotating the script.** Short comments should identify major blocks:
+    load packages, construct `analysis_df`, descriptives, models, diagnostics,
+    predictions, tables, figures, and session checks.
+
+45. **Letting appendices contradict the main report.** The appendix script,
+    table templates, and diagnostic templates should use the same model names,
+    reference categories, event definitions, and package workflow as the main
+    chapters.
 
 
 ## Quick Self-Check Before Submission {#sec-pitfalls-checklist}
@@ -201,16 +296,33 @@ without errors, you will lose points regardless of how good the content is.
 Use this checklist before submitting each project:
 
 - [ ] Research question(s) are specific and clearly stated
-- [ ] Methods section describes data, sample, all variables (with categories
-  and reference groups), and analytic approach
-- [ ] At least one model equation is written out
-- [ ] Descriptive statistics are presented before regression results
-- [ ] At least one exploratory visualization is included and interpreted
-- [ ] Regression table uses proper formatting (not raw R output)
-- [ ] Every coefficient is interpreted substantively
-- [ ] Model assumptions are checked and discussed
-- [ ] Discussion answers each research question directly
-- [ ] At least 2--3 limitations are noted
-- [ ] R code is clean, commented, and runs from top to bottom
-- [ ] **Logistic only:** Odds ratios (not log-odds) are reported
-- [ ] **Logistic only:** Predicted probability graph is included
+- [ ] Project 1 states 2--3 numbered research questions
+- [ ] Project 2 states one focused binary-outcome research question
+- [ ] Data source, sample restrictions, final analytic $N$, and missing-data
+  rule are reported
+- [ ] Every variable is defined, including categories and reference groups
+- [ ] Project 2 names the modeled event and non-event
+- [ ] Survey-design status is stated when using complex survey data or a
+  supplied teaching subset
+- [ ] Model(s) are stated clearly in equation form or precise words
+- [ ] Descriptives use the same complete-case analysis dataset as the models
+- [ ] Descriptive tables and exploratory figures are interpreted in prose
+- [ ] Model code follows the planned sequence and uses the same sample
+- [ ] Nested model comparisons use matching `nobs()` values
+- [ ] Report tables are formatted with package helpers, not raw console output
+- [ ] `model_params()`, `model_fit()`, `performance::check_collinearity()`,
+  `gtsummary`, `ggeffects`, and `marginaleffects` are used where they simplify
+  the work
+- [ ] Every focal coefficient or odds ratio is interpreted substantively
+- [ ] Linear assumptions or logistic adequacy diagnostics are checked and
+  summarized, not merely printed
+- [ ] Discussion answers the research question(s) directly
+- [ ] Practical significance is explained, not only statistical significance
+- [ ] At least 2--3 concrete limitations are stated, including survey-design
+  or teaching-subset limits when relevant
+- [ ] Code runs from a clean session using relative paths or `here::here()`
+- [ ] **Logistic only:** Odds ratios, not raw log-odds, appear in the main
+  table
+- [ ] **Logistic only:** Odds and probabilities are not confused
+- [ ] **Logistic only:** Predicted probability figure, predicted probability
+  table, and probability-scale interpretation are included
