@@ -1,294 +1,470 @@
 ---
-title: "Lab 5: Multiple Regression and Partial Correlation"
+title: "Lab 5: Multiple Regression with Continuous Predictors"
 ---
 
 {{< include ../_common.qmd >}}
 
-## Goals
-
-::: {.callout-note}
+::: {.objectives}
 ## What You'll Learn in This Lab
+
 - Fit a multiple regression model with two continuous predictors
-- Interpret coefficients as effects "controlling for" other variables
-- Compute and interpret partial correlations
-- Understand the "what's left" logic behind partial correlation using residuals
-- Create added-variable plots to visualize partial relationships
-- Compute standardized regression coefficients to compare predictor importance
+- Compare bivariate and adjusted coefficients
+- Interpret coefficients with "holding constant" language
+- Use `model_fit()` to compare fit across models
+- Create a side-by-side model table with `modelsummary()`
+- Visualize a partial relationship with residuals
+- Compute standardized coefficients with `standardize_parameters()`
+- Check collinearity with `performance::check_collinearity()`
+- Compute partial correlations with `correlation::correlation(partial = TRUE)`
 - **Lecture Notes Reference:** Chapter 4: *Continuous Predictors*
+
+::: {.meta}
+Dataset: `crime`. Estimated time: 75-90 minutes.
+:::
 :::
 
-::: {.callout-tip}
-## Stata → R Translation
-| Stata | R | Notes |
-|:------|:--|:------|
-| `regress salary marketc yearsdg, beta` | `parameters::standardize_parameters()` | Standardized (beta) coefficients |
-| `pcorr salary marketc yearsdg` | `correlation::correlation(partial = TRUE)` | Partial correlations |
-| `avplots` | `car::avPlots()` | Added-variable (partial) plots |
+
+## Part 1: Prepare the Crime Data
+
+In Chapter 4, we use Florida county data to study how education and urbanization relate to crime rates.
+
+The motivating question is:
+
+> Does the relationship between education and crime change after accounting for urbanization?
+
+### Step 1: Load and Rename Variables
+
+```{r}
+#| label: lab05-load-crime-data
+
+data(crime)
+
+crime_df <- crime |>
+  rename(
+    crime_rate = c,
+    income = i,
+    high_school = hs,
+    urbanization = u
+  )
+```
+
+The original dataset uses short variable names. The renamed variables make the analysis code easier to read.
+
+### Step 2: Preflight Check
+
+```{r}
+#| label: lab05-preflight
+
+crime_df |>
+  summarise(
+    counties = n(),
+    missing_crime = sum(is.na(crime_rate)),
+    missing_education = sum(is.na(high_school)),
+    missing_urbanization = sum(is.na(urbanization)),
+    missing_income = sum(is.na(income))
+  )
+```
+
+### Step 3: Descriptive Summary
+
+```{r}
+#| label: lab05-descriptive-summary
+
+crime_df |>
+  summarise(
+    mean_crime = mean(crime_rate),
+    mean_high_school = mean(high_school),
+    mean_urbanization = mean(urbanization),
+    mean_income = mean(income)
+  ) |>
+  round_numeric(digits = 2)
+```
+
+### Step 4: Correlation Preview
+
+```{r}
+#| label: lab05-correlation-preview
+
+crime_df |>
+  select(crime_rate, high_school, urbanization, income) |>
+  correlation::correlation()
+```
+
+::: {.interpretation}
+The zero-order correlation between `high_school` and `crime_rate` is positive.
+
+That looks counterintuitive: counties with more high-school graduates seem to have higher crime.
+The rest of this lab shows why the bivariate relationship can be misleading.
 :::
 
-**Dataset:** `faculty` from the `regdatasets` package
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
+Use the correlation table to answer two questions:
 
-## Part 1: Brief Review --- Single-Predictor Models
+1. Which predictor has the strongest zero-order correlation with `crime_rate`?
+2. Why might the positive correlation between `high_school` and `crime_rate` be misleading?
 
-In Lab 4, we explored categorical predictors and planned comparisons. Before we move to multiple regression, let's reload the `faculty` data and set up the variables we need.
-
-```{r}
-#| label: lab05-setup
-
-library(regdatasets)
-data(faculty)
-glimpse(faculty)
-```
-
-Recall that `market` captures the discipline-specific market demand for faculty in each department. Since zero market demand is not meaningful, we center it:
-
-```{r}
-#| label: center-market
-
-faculty <- faculty |>
-  mutate(market_c = market - mean(market))
-```
-
-Let's quickly fit two single-predictor models to set the stage for what comes next. First, salary predicted by centered market demand:
-
-```{r}
-#| label: review-market
-
-model_market <- lm(salary ~ market_c, data = faculty)
-summary(model_market)
-```
-
-And salary predicted by years since degree:
-
-```{r}
-#| label: review-yearsdg
-
-model_years <- lm(salary ~ yearsdg, data = faculty)
-summary(model_years)
-```
-
-> Take note of the $R^2$ values from each model. We will compare them to the multiple regression model shortly.
-
-
-## Part 2: Multiple Regression with Two Continuous Predictors
-
-Now the key question: what happens when we put **both** predictors in the model at the same time?
-
-```{r}
-#| label: multiple-regression
-
-model_multi <- lm(salary ~ market_c + yearsdg, data = faculty)
-summary(model_multi)
-```
-
-This is the heart of multiple regression. Each coefficient now has a specific interpretation:
-
-- **`market_c`**: the expected change in salary for a one-unit increase in market demand, **holding years since degree constant**.
-- **`yearsdg`**: the expected change in salary for one additional year since degree, **holding market demand constant**.
-
-The phrase "holding constant" (or "controlling for") is critical. In a single-predictor model, the coefficient captures **everything** associated with that predictor --- including its overlap with other variables. In a multiple regression, each coefficient isolates the **unique** contribution of that predictor after removing the influence of the others.
-
-::: {.callout-important}
-## The "Controlling For" Interpretation
-In multiple regression, the coefficient for $X_1$ answers:
-*"If two faculty members have the same value of $X_2$, how much does salary differ for a one-unit difference in $X_1$?"*
-
-This is why multiple regression is so powerful --- it lets us separate the effects of correlated predictors.
+Write two short sentences.
 :::
 
-### Comparing $R^2$ Values
 
-Let's see how much explanatory power we gain by using both predictors:
+## Part 2: Bivariate vs. Multiple Regression
+
+### Step 1: Fit the Education-Only Model
 
 ```{r}
-#| label: compare-r-squared
+#| label: lab05-fit-bivariate
+
+model_education <- lm(crime_rate ~ high_school, data = crime_df)
+model_params(model_education)
+```
+
+This bivariate model ignores urbanization.
+
+### Step 2: Fit the Adjusted Model
+
+```{r}
+#| label: lab05-fit-adjusted
+
+model_adjusted <- lm(crime_rate ~ high_school + urbanization, data = crime_df)
+model_params(model_adjusted)
+```
+
+::: {.interpretation}
+The `high_school` coefficient now compares counties with the same urbanization level.
+
+That is the multiple-regression meaning of "holding urbanization constant."
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Interpret the `high_school` coefficient from `model_adjusted` in one sentence.
+Your sentence should use the phrase "holding urbanization constant" and should avoid causal language.
+:::
+
+### Step 3: Compare the Education Coefficient
+
+```{r}
+#| label: lab05-education-coefficient-comparison
+
+education_comparison <- bind_rows(
+  tidy_model(model_education) |>
+    mutate(model = "Education only"),
+  tidy_model(model_adjusted) |>
+    mutate(model = "Education + urbanization")
+) |>
+  filter(term == "high_school") |>
+  select(model, estimate, std.error, conf.low, conf.high, p.value)
+
+education_comparison |>
+  round_numeric(digits = 3)
+```
+
+::: {.interpretation}
+The education coefficient changes from positive to negative after adding urbanization.
+
+This is a sign reversal: the bivariate association and adjusted association point in different directions.
+:::
+
+::: {.pitfall}
+A sign reversal does not mean the first model was "wrong."
+
+It means the bivariate model and the adjusted model answer different questions.
+The bivariate coefficient describes the raw education-crime association.
+The adjusted coefficient describes the education-crime association among counties with the same urbanization level.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Use `education_comparison` to identify the direction of the `high_school` coefficient in each model.
+Then write one sentence explaining what changed after urbanization entered the model.
+:::
+
+
+## Part 3: Compare Model Fit
+
+```{r}
+#| label: lab05-model-fit-comparison
+
+fit_comparison <- bind_rows(
+  model_fit(model_education) |>
+    as_tibble() |>
+    mutate(Model = "Education only"),
+  model_fit(model_adjusted) |>
+    as_tibble() |>
+    mutate(Model = "Education + urbanization")
+) |>
+  select(Model, R2, R2_adjusted, RMSE, AIC, BIC)
+
+fit_comparison |>
+  round_numeric(digits = 3)
+```
+
+Adding urbanization substantially increases $R^2$ and lowers RMSE.
+That tells us urbanization adds important explanatory information.
+
+`fit_comparison` compares model fit.
+`modelsummary()` gives a polished side-by-side coefficient table for the same two models.
+
+```{r}
+#| label: lab05-modelsummary-comparison
+
+comparison_models <- list(
+  "Education only" = model_education,
+  "Education + urbanization" = model_adjusted
+)
+
+modelsummary::modelsummary(comparison_models, output = "markdown", fmt = 3)
+```
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Which model fits better: `model_education` or `model_adjusted`?
+Name two fit statistics from `fit_comparison` that support your answer.
+:::
+
+
+## Part 4: Visualize the Sign Reversal
+
+The bivariate plot shows the raw relationship between education and crime.
+The partial plot shows the relationship between education and crime after removing urbanization from both variables.
+
+```{r}
+#| label: lab05-sign-reversal-plot
+#| fig-cap: "Bivariate and partial relationships between education and crime."
+#| fig-alt: "Two-panel plot. The left panel shows a positive bivariate relationship between high school graduation percentage and crime rate. The right panel shows a partial residual plot after controlling for urbanization, where the relationship between residualized high school percentage and residualized crime rate is negative."
+#| fig-width: 10
+#| fig-height: 4.8
+
+partial_education <- tibble(
+  education_resid = residuals(lm(high_school ~ urbanization, data = crime_df)),
+  crime_resid = residuals(lm(crime_rate ~ urbanization, data = crime_df))
+)
+
+p_bivariate <- ggplot(crime_df, aes(x = high_school, y = crime_rate)) +
+  geom_point(alpha = 0.65, color = ber640_colors[["primary"]]) +
+  geom_smooth(method = "lm", formula = y ~ x, se = TRUE,
+              color = ber640_colors[["secondary"]]) +
+  labs(
+    title = "Bivariate relationship",
+    x = "High School Graduates (%)",
+    y = "Crime Rate"
+  )
+
+p_partial <- ggplot(partial_education,
+                    aes(x = education_resid, y = crime_resid)) +
+  geom_point(alpha = 0.65, color = ber640_colors[["primary"]]) +
+  geom_smooth(method = "lm", formula = y ~ x, se = TRUE,
+              color = ber640_colors[["success"]]) +
+  labs(
+    title = "Partial relationship",
+    x = "High School % | Urbanization",
+    y = "Crime Rate | Urbanization"
+  )
+
+p_bivariate + p_partial
+```
+
+### Check the Partial Slope
+
+```{r}
+#| label: lab05-partial-slope-check
+
+partial_slope <- lm(crime_resid ~ education_resid, data = partial_education)
 
 tibble(
-  Model   = c("market_c only", "yearsdg only", "market_c + yearsdg"),
-  R_squared = c(
-    summary(model_market)$r.squared,
-    summary(model_years)$r.squared,
-    summary(model_multi)$r.squared
+  Quantity = c(
+    "Adjusted coefficient for high_school",
+    "Slope in partial plot",
+    "Partial correlation"
+  ),
+  Value = c(
+    coef(model_adjusted)["high_school"],
+    coef(partial_slope)["education_resid"],
+    cor(partial_education$education_resid, partial_education$crime_resid)
   )
 ) |>
-  mutate(R_squared = round(R_squared, 4))
+  round_numeric(digits = 3)
 ```
 
-> Notice that the combined $R^2$ is **less than the sum** of the two individual $R^2$ values. This is because the two predictors share some explanatory power --- they are correlated with each other. Multiple regression partitions the variance in salary into the unique contribution of each predictor plus their shared overlap.
+::: {.interpretation}
+The partial-plot slope matches the `high_school` coefficient in the multiple regression model.
+
+That is the geometry behind "holding urbanization constant."
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+In the partial plot, what does `High School % | Urbanization` mean?
+Write one sentence connecting the partial plot slope to the `high_school` coefficient in `model_adjusted`.
+:::
 
 
-## Part 3: Understanding Partial Correlation
+## Part 5: Standardized Coefficients
 
-We just saw that each regression coefficient represents a "controlled" effect. Partial correlation captures the same idea in correlation form. The **partial correlation** between salary and market demand, controlling for years since degree, tells us: *how strongly are salary and market demand related, after we remove the influence of years since degree from both?*
-
-### Step 1: Regular Pearson Correlations
-
-First, let's see the zero-order (simple) correlations among our three variables:
+Raw coefficients are in original units. Standardized coefficients put the outcome and predictors on a standard-deviation scale.
 
 ```{r}
-#| label: pearson-correlations
+#| label: lab05-standardized-coefficients
 
-faculty |>
-  select(salary, market_c, yearsdg) |>
-  cor() |>
-  round(4)
+standardized_coefficients <- parameters::standardize_parameters(model_adjusted) |>
+  as_tibble() |>
+  filter(Parameter != "(Intercept)") |>
+  select(Parameter, Std_Coefficient, CI_low, CI_high)
+
+standardized_coefficients |>
+  round_numeric(digits = 3)
 ```
 
-These are the standard Pearson correlations --- each one ignores all other variables.
+::: {.interpretation}
+Use unstandardized coefficients when you want practical units.
 
-### Step 2: Partial Correlations
+Use standardized coefficients when you want to compare predictors measured on different scales.
+:::
 
-Now let's compute partial correlations using the `correlation` package:
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Use `standardized_coefficients` to decide which predictor has the stronger adjusted association with crime rate.
+Then write one sentence explaining why standardized coefficients are useful here.
+:::
+
+
+## Part 6: Check Collinearity
+
+Education and urbanization are correlated, so we should check whether the model can still separate their contributions.
 
 ```{r}
-#| label: partial-correlations
+#| label: lab05-check-collinearity
 
-# Partial correlations using easystats correlation package
-faculty |>
-  select(salary, market_c, yearsdg) |>
+performance::check_collinearity(model_adjusted, ci = FALSE) |>
+  as_tibble() |>
+  select(Term, VIF, SE_factor, Tolerance) |>
+  round_numeric(digits = 3)
+```
+
+::: {.assumption-check}
+VIF values near 1 mean little overlap among predictors.
+Larger VIF values mean more overlap and wider standard errors.
+
+As a rough rule of thumb, VIF above 5 deserves attention and VIF above 10 is serious.
+:::
+
+
+## Part 7: Partial Correlations
+
+Partial correlations summarize adjusted relationships in correlation form.
+
+```{r}
+#| label: lab05-partial-correlations
+
+crime_df |>
+  select(crime_rate, high_school, urbanization) |>
   correlation::correlation(partial = TRUE)
 ```
 
-> Compare the partial correlations to the zero-order correlations above. How do they differ? The partial correlation between salary and `market_c` is the correlation **after removing the linear effect of `yearsdg` from both variables**. Similarly, the partial correlation between salary and `yearsdg` controls for `market_c`.
+::: {.interpretation}
+The partial correlation between crime and education controls for urbanization.
 
-### Step 3: The "What's Left" Explanation
+It should match the direction of the adjusted `high_school` coefficient.
+:::
 
-Partial correlation might seem abstract, so let's build it from scratch. The logic is simple:
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
 
-1. **Remove yearsdg from salary:** Regress salary on yearsdg, save the residuals. These residuals represent the part of salary that has nothing to do with yearsdg.
-2. **Remove yearsdg from market_c:** Regress market_c on yearsdg, save the residuals. These residuals represent the part of market demand that has nothing to do with yearsdg.
-3. **Correlate the two sets of residuals:** This correlation is the partial correlation.
+Write one diagnostic note using both the VIF table and the partial correlation table.
+Your note should say whether collinearity looks acceptable and whether the partial correlation matches the adjusted coefficient direction.
+:::
 
-Let's do it step by step:
+
+## Part 8: Optional Challenge: Add Income
+
+The dataset also includes county income.
+Use this extension only after you understand the two-predictor model.
 
 ```{r}
-#| label: residual-salary
+#| label: lab05-practice-income-model
 
-# Step 1: Remove yearsdg from salary
-resid_salary <- residuals(lm(salary ~ yearsdg, data = faculty))
+model_income <- lm(
+  crime_rate ~ high_school + urbanization + income,
+  data = crime_df
+)
+
+tidy_model(model_income) |>
+  select(term, estimate, std.error, conf.low, conf.high, p.value) |>
+  round_numeric(digits = 3)
 ```
 
 ```{r}
-#| label: residual-market
+#| label: lab05-practice-income-fit
 
-# Step 2: Remove yearsdg from market_c
-resid_market <- residuals(lm(market_c ~ yearsdg, data = faculty))
+income_fit_comparison <- bind_rows(
+  model_fit(model_adjusted) |>
+    as_tibble() |>
+    mutate(Model = "Education + urbanization"),
+  model_fit(model_income) |>
+    as_tibble() |>
+    mutate(Model = "Education + urbanization + income")
+) |>
+  select(Model, R2, R2_adjusted, RMSE, AIC, BIC)
+
+income_fit_comparison |>
+  round_numeric(digits = 3)
 ```
 
-```{r}
-#| label: partial-from-residuals
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-# Step 3: Correlate the residuals
-cor(resid_salary, resid_market) |> round(4)
-```
+Does adding `income` meaningfully change the `high_school` coefficient or improve model fit?
+Write two sentences: one about the coefficient table and one about `income_fit_comparison`.
+:::
 
-> This should match the partial correlation between salary and `market_c` (controlling for `yearsdg`) from the `correlation::correlation(partial = TRUE)` output above. This is the "what's left" interpretation: after we strip out everything that yearsdg explains in both salary and market demand, how strongly are the leftovers related?
+
+::: {.exercises}
+## What to Submit
+
+1. The correlation table for `crime_rate`, `high_school`, `urbanization`, and `income`. [core]{.chip .easy}
+2. The coefficient table for `model_adjusted`. [core]{.chip .easy}
+3. One sentence interpreting the `high_school` coefficient using "holding urbanization constant." [core]{.chip .med}
+4. The `education_comparison` table and one sentence explaining the sign reversal. [core]{.chip .med}
+5. The `fit_comparison` table and one sentence naming the better-fitting model. [core]{.chip .med}
+6. The bivariate/partial plot and one sentence connecting the partial slope to the adjusted coefficient. [core]{.chip .hard}
+7. The standardized coefficient table and one sentence comparing predictor strength. [core]{.chip .med}
+8. One diagnostic note using `performance::check_collinearity()` and `correlation::correlation(partial = TRUE)`. [core]{.chip .hard}
+:::
 
 ::: {.callout-tip}
-## Why This Matters
-The residual-based explanation is not just a mathematical trick. It reveals the core logic of multiple regression: **each coefficient reflects the relationship between a predictor and the outcome after the other predictors have had their say.** When you report that market demand is significantly related to salary "controlling for years since degree," you are saying exactly this --- the leftovers are still correlated.
-:::
+## Optional Challenge
 
-### Step 4: Added-Variable Plots
-
-The `car` package provides a beautiful visualization of this residual logic. An **added-variable plot** (also called a partial regression plot) shows the residual-vs-residual scatterplot for each predictor:
-
-```{r}
-#| label: avplots
-#| fig-alt: "Two-panel added-variable plot showing the partial relationship of each predictor with salary after controlling for the other: left panel shows a positive slope for centered marketability and right panel shows a positive slope for years since degree"
-#| fig-width: 10
-#| fig-height: 5
-
-car::avPlots(model_multi)
-```
-
-> Each panel shows the relationship between one predictor and salary **after removing the effect of the other predictor from both**. The slope of the line in each panel equals the corresponding regression coefficient from the multiple regression model. These plots are a powerful diagnostic tool --- they show you the partial relationship that each coefficient is capturing.
-
-::: {.callout-note}
-## Reading Added-Variable Plots
-
-- **X-axis:** Residuals from regressing the predictor on all *other* predictors (what's left of the predictor).
-- **Y-axis:** Residuals from regressing salary on all *other* predictors (what's left of salary).
-- **Slope:** Equals the multiple regression coefficient for that predictor.
-- **Spread:** Shows how much variation in salary is explained uniquely by that predictor.
-
-If you see a clear linear trend, the predictor has a strong unique contribution. If the points are scattered with no trend, the predictor adds little after controlling for the others.
+Submit the income model and fit comparison, with a two-sentence interpretation. [challenge]{.chip .hard}
 :::
 
 
-## Part 4: Standardized Coefficients
+::: {.summary}
+## Lab Summary
 
-In our model, `market_c` and `yearsdg` are measured on different scales. Market demand might range from 0 to 10, while years since degree might range from 1 to 40. This makes it hard to compare their raw coefficients directly --- a one-unit change means very different things for each variable.
+1. Multiple regression lets us estimate the association between one predictor and the outcome while holding other predictors constant.
 
-**Standardized coefficients** (beta weights) solve this problem by putting both predictors on the same scale: standard deviations.
+2. In the crime data, the education coefficient changes sign after controlling for urbanization.
 
-::: {.panel-tabset}
+3. `model_fit()` helps compare model fit across nested or competing models.
 
-#### Simple
+4. `modelsummary()` is useful when you want a polished side-by-side regression table.
 
-```{r}
-#| label: standardized-simple
+5. Partial plots visualize the residual-vs-residual relationship behind a multiple-regression coefficient.
 
-parameters::standardize_parameters(model_multi)
-```
+6. `standardize_parameters()` puts coefficients on a standard-deviation scale.
 
-> The standardized coefficients (the `Std_Coefficient` column) tell us: "When market demand increases by **1 standard deviation**, salary increases by $\beta$ standard deviations, holding yearsdg constant." This lets us compare the relative importance of market demand and years since degree on the same scale.
+7. `performance::check_collinearity()` checks whether predictors overlap enough to inflate standard errors.
 
-#### Advanced
+8. `correlation::correlation(partial = TRUE)` reports adjusted relationships as partial correlations.
 
-Standardized coefficients are obtained by fitting the model to z-scored (standardized) versions of all variables. We can verify this manually:
+9. A third predictor should be added only when it helps answer the research question or improves the model enough to justify the extra complexity.
 
-```{r}
-#| label: standardized-manual
-
-faculty_z <- faculty |>
-  mutate(
-    salary_z   = scale(salary)   |> as.numeric(),
-    market_c_z = scale(market_c) |> as.numeric(),
-    yearsdg_z  = scale(yearsdg)  |> as.numeric()
-  )
-
-model_z <- lm(salary_z ~ market_c_z + yearsdg_z, data = faculty_z)
-tidy_model(model_z)
-```
-
-> The coefficients from the z-scored model should match the standardized parameters above. Notice that the intercept is essentially zero --- when all predictors are at their mean (z = 0), the predicted outcome is also at its mean (z = 0).
-
-:::
-
-### When to Use Standardized Coefficients
-
-Standardized coefficients are useful when:
-
-- **Predictors are on different scales** and you want to compare their relative importance.
-- **You want to communicate effect sizes** in a scale-free way.
-
-However, keep in mind:
-
-- **Unstandardized coefficients** are easier to interpret in practical terms ("$1,000 more salary per year since degree").
-- **Standardized coefficients depend on the sample variability.** If one predictor has restricted range in your sample, its standardized coefficient will be smaller even if the underlying relationship is strong.
-
-::: {.callout-tip}
-## Reporting Both
-In practice, many researchers report **unstandardized coefficients** in the main results (for practical interpretation) and include **standardized coefficients** in a supplementary table (for comparing relative importance). This gives readers both perspectives.
-:::
-
-
-## Key Takeaways
-
-::: {.callout-tip}
-## What We Learned
-
-1. **Multiple regression isolates unique effects.** Each coefficient represents the relationship between a predictor and the outcome, controlling for all other predictors in the model.
-
-2. **Combined $R^2$ is less than the sum of individual $R^2$ values.** This happens because correlated predictors share explanatory power. Multiple regression partitions variance into unique and shared components.
-
-3. **Partial correlation quantifies controlled relationships.** The partial correlation between $X$ and $Y$ controlling for $Z$ is the correlation between the residuals from regressing $X$ on $Z$ and the residuals from regressing $Y$ on $Z$. It is the "what's left" after removing $Z$'s influence from both.
-
-4. **Added-variable plots visualize partial relationships.** Each panel shows the residual-vs-residual scatterplot, and the slope equals the regression coefficient. Use `car::avPlots()` to create them.
-
-5. **Standardized coefficients allow cross-predictor comparison.** They express effects in standard deviation units, making it possible to compare the relative importance of predictors measured on different scales.
-
-**Next:** In Lab 6, we will introduce **interaction terms** --- allowing the effect of one predictor to depend on the value of another.
+**Next:** Lab 6 extends multiple regression to interaction terms.
 :::

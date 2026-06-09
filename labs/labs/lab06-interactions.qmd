@@ -4,407 +4,420 @@ title: "Lab 6: Interactions in Regression"
 
 {{< include ../_common.qmd >}}
 
-## Goals
-
-::: {.callout-note}
+::: {.objectives}
 ## What You'll Learn in This Lab
-- Fit and interpret a continuous x categorical interaction
-- Fit and interpret a categorical x categorical interaction
-- Create interaction plots to visualize moderation effects
-- Use `emmeans` and `marginaleffects` to probe interactions
+
+- Fit an interaction model with `*`
+- Compare additive and interaction models with `anova()`
+- Interpret interaction terms as conditional effects
+- Probe a continuous x categorical interaction with `modelbased::estimate_slopes()`
+- Plot fitted interaction lines with `ggeffects::predict_response()`
+- Probe a categorical x categorical interaction with `modelbased::estimate_means()` and `modelbased::estimate_contrasts()`
 - **Lecture Notes Reference:** Chapter 5: *Interactions*
+
+::: {.meta}
+Datasets: `gcse` and `faculty`. Estimated time: 75-90 minutes.
+:::
 :::
 
-**Datasets:** `faculty` and `hsbs1` from the `regdatasets` package
 
+## Part 1: What Is an Interaction?
 
-## Part 1: Continuous x Categorical Interaction (faculty)
+An interaction means "it depends."
 
-In Lab 5, we fit an additive model with `market_c` and `yearsdg` predicting salary. That model assumed each predictor had the same effect regardless of the other. But what if the return to experience differs for men and women? That is an **interaction** --- the effect of one predictor depends on the level of another.
+The effect of one predictor depends on the value or category of another predictor.
+In this lab, we practice two common cases:
 
-### Setup
+1. Continuous x categorical: does the LRT-GCSE slope differ by school?
+2. Categorical x categorical: does the gender salary gap differ by academic rank?
 
-```{r}
-#| label: lab06-setup
+::: {.pitfall}
+After you add an interaction, the main effects are conditional.
 
-library(regdatasets)
-data(faculty)
-
-faculty <- faculty |>
-  mutate(market_c = market - mean(market))
-
-glimpse(faculty)
-```
-
-### The Additive (Parallel Lines) Model
-
-Let's start with a model that includes `male` and `yearsdg` but assumes their effects are independent:
-
-```{r}
-#| label: additive-model
-
-model_add <- lm(salary ~ male + market_c + yearsdg, data = faculty)
-tidy_model(model_add)
-```
-
-In this model, the coefficient for `male` is the gender gap in salary **at every level of experience**. The lines for men and women are perfectly parallel --- same slope for `yearsdg`, just shifted up or down by the `male` coefficient.
-
-### The Interaction Model
-
-Now let's allow the slope of `yearsdg` to differ by gender. The `*` operator in R creates both main effects and their interaction:
-
-```{r}
-#| label: interaction-model
-
-model_int <- lm(salary ~ male * yearsdg + market_c, data = faculty)
-tidy_model(model_int)
-```
-
-::: {.callout-important}
-## Reading the Interaction Output
-The formula `male * yearsdg` expands to `male + yearsdg + male:yearsdg`. The four terms are:
-
-- **`(Intercept)`**: predicted salary for women (`male = 0`) with `yearsdg = 0` and average market demand.
-- **`male`**: the gender gap when `yearsdg = 0` (i.e., at degree completion).
-- **`yearsdg`**: the slope of experience **for women** (`male = 0`).
-- **`male:yearsdg`**: how much **steeper** (or flatter) the experience slope is for men compared to women. This is the interaction effect.
+They do not usually mean "the average effect overall."
+They mean the effect when the other interacting variable is at zero or at its reference category.
 :::
 
-The interaction term `male:yearsdg` tells us: *for each additional year since degree, how much does the gender gap change?* If it is positive, the gap widens with experience; if negative, the gap narrows.
 
-::: {.callout-warning}
-## Interpreting Main Effects with an Interaction
-When an interaction term is in the model, the "main effect" coefficients are **conditional** — they represent the effect of that variable only when the other interacting variable is at its **reference level** (or zero for continuous variables). They are NOT the overall average effect. This is one of the most common misinterpretations in regression analysis.
-:::
+## Part 2: Continuous x Categorical Interaction
 
-### Testing the Interaction
+We use the `gcse` data from Chapter 5 and compare two schools:
 
-We can formally test whether the interaction improves model fit by comparing the additive and interaction models:
+- Hackney: school 10
+- Chelsea: school 6
+
+The question is:
+
+> Does the relationship between prior achievement (`lrt`) and exam performance (`gcse`) differ between these two schools?
+
+### Step 1: Prepare the Data
 
 ```{r}
-#| label: test-interaction-cont
+#| label: lab06-load-gcse
 
-anova(model_add, model_int)
+data(gcse)
+
+two_schools <- gcse |>
+  filter(school %in% c(6, 10)) |>
+  mutate(
+    school_name = factor(
+      if_else(school == 10, "Hackney", "Chelsea"),
+      levels = c("Hackney", "Chelsea")
+    )
+  )
 ```
 
-> A significant F-test here means the non-parallel model fits meaningfully better --- the relationship between experience and salary genuinely differs by gender.
+```{r}
+#| label: lab06-gcse-preflight
 
-### Probing the Interaction: Gender Gap at Specific Experience Levels
+two_schools |>
+  count(school_name)
+```
 
-The `male` coefficient gives the gender gap only when `yearsdg = 0`. But what about the gender gap at 10 or 20 years? We can use `marginaleffects` to compute these:
+### Step 2: Fit the Additive Model
+
+The additive model assumes parallel regression lines.
+It allows the two schools to have different intercepts, but the same LRT slope.
 
 ```{r}
-#| label: gender-gap-at-values
+#| label: lab06-fit-parallel-model
 
-avg_comparisons(
-  model_int,
-  variables = "male",
-  newdata = datagrid(yearsdg = c(0, 10, 20, 30))
+model_parallel <- lm(gcse ~ lrt + school_name, data = two_schools)
+model_params(model_parallel)
+```
+
+### Step 3: Fit the Interaction Model
+
+The interaction model allows the LRT slope to differ by school.
+The `*` operator expands to both main effects plus their product term.
+
+```{r}
+#| label: lab06-fit-cont-cat-interaction
+
+model_interact <- lm(gcse ~ lrt * school_name, data = two_schools)
+model_params(model_interact)
+```
+
+::: {.interpretation}
+In `gcse ~ lrt * school_name`, the interaction term is `lrt:school_nameChelsea`.
+
+It tells us how much the LRT slope for Chelsea differs from the LRT slope for Hackney.
+If this coefficient is positive, the fitted LRT-GCSE slope is steeper for Chelsea.
+:::
+
+### Step 4: Test the Interaction
+
+Use a nested model comparison to ask whether the interaction improves fit enough to justify the extra parameter.
+
+```{r}
+#| label: lab06-test-cont-cat-interaction
+
+anova(model_parallel, model_interact)
+```
+
+::: {.interpretation}
+The interaction test compares the parallel-lines model against the non-parallel-lines model.
+
+In this example, the interaction is not statistically significant, so the additive model is the more cautious reporting model.
+We still probe the interaction to learn how the mechanics work.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use `anova(model_parallel, model_interact)` to answer the research question.
+Is there evidence that the LRT-GCSE slope differs by school?
+Write two short sentences: one about the interaction test and one naming the more cautious reporting model.
+:::
+
+### Step 5: Probe the School-Specific Slopes
+
+`modelbased::estimate_slopes()` gives the LRT slope separately for each school.
+
+```{r}
+#| label: lab06-slopes-by-school
+
+slopes_by_school <- modelbased::estimate_slopes(
+  model_interact,
+  trend = "lrt",
+  by = "school_name"
+) |>
+  as_tibble() |>
+  select(school_name, Slope, SE, CI_low, CI_high, p)
+
+slopes_by_school |>
+  round_numeric(digits = 3)
+```
+
+::: {.interpretation}
+The slope for Hackney is the `lrt` coefficient.
+
+The slope for Chelsea is the `lrt` coefficient plus the `lrt:school_nameChelsea` coefficient.
+The difference between those two slopes is the interaction coefficient.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use `slopes_by_school`.
+Which school has the steeper conditional LRT slope?
+Write one sentence, then explain in words how the Chelsea slope combines the Hackney slope and the interaction coefficient.
+:::
+
+### Step 6: Plot the Additive and Interaction Models
+
+`ggeffects::predict_response()` creates predicted values and confidence intervals from a model.
+We can plot those predictions with ordinary `ggplot2`.
+
+```{r}
+#| label: lab06-cont-cat-prediction-data
+
+parallel_predictions <- ggeffects::predict_response(
+  model_parallel,
+  terms = c("lrt", "school_name")
+) |>
+  as_tibble() |>
+  mutate(Model = "Additive: parallel lines")
+
+interaction_predictions <- ggeffects::predict_response(
+  model_interact,
+  terms = c("lrt", "school_name")
+) |>
+  as_tibble() |>
+  mutate(Model = "Interaction: non-parallel lines")
+
+school_predictions <- bind_rows(
+  parallel_predictions,
+  interaction_predictions
 )
 ```
 
-> Notice how the gender gap changes at each experience level. This is the interaction in action --- the effect of gender is not a single number but a function of experience.
-
-We can also use `emmeans` to get predicted means for men and women at specific experience levels:
-
 ```{r}
-#| label: emmeans-cont-interaction
-
-emmeans(model_int, ~ male | yearsdg, at = list(yearsdg = c(0, 10, 20, 30)))
-```
-
-### Interaction Plot
-
-A picture makes the interaction concrete. We plot separate regression lines for men and women:
-
-```{r}
-#| label: interaction-plot-cont
-#| fig-cap: "The experience-salary relationship differs by gender (non-parallel lines)."
-#| fig-alt: "Scatterplot of salary versus years since degree with separate regression lines for men and women that are not parallel, showing men's salary increasing more steeply with experience than women's"
-#| fig-width: 8
-#| fig-height: 5
-
-faculty <- faculty |>
-  mutate(gender_label = if_else(male == 1, "Men", "Women"))
-
-ggplot(faculty, aes(x = yearsdg, y = salary, color = gender_label)) +
-  geom_point(alpha = 0.4, size = 2) +
-  geom_smooth(method = "lm", se = FALSE, linewidth = 1.2) +
-  scale_color_manual(values = c("Men" = "#2C3E50", "Women" = "#E74C3C")) +
-  labs(
-    x = "Years Since Degree",
-    y = "Salary ($)",
-    color = NULL,
-    title = "Continuous x Categorical Interaction",
-    subtitle = "Non-parallel lines indicate the gender gap changes with experience"
-  )
-```
-
-> If the lines are not parallel, the interaction is doing real work. The steeper line for one group means that group benefits more (or less) from each additional year of experience.
-
-::: {.callout-tip}
-## The Core Idea
-**Interaction = "it depends."** The effect of experience on salary *depends on* gender, and equivalently, the effect of gender on salary *depends on* experience. An interaction is always symmetric.
-:::
-
-
-## Part 2: Additive Model with Two Categorical Variables (hsbs1)
-
-Now we switch to a different question: does the gender gap in science achievement depend on the academic program a student is enrolled in? We use the `hsbs1` dataset for this.
-
-### Setup
-
-```{r}
-#| label: hsbs1-setup
-
-data(hsbs1)
-glimpse(hsbs1)
-```
-
-The variable `gender` is coded 1 = male, 2 = female. We create a dummy variable `male` (1 = male, 0 = female). The variable `prog` is coded 1 = general, 2 = academic, 3 = vocational. We convert it to a factor with informative labels:
-
-```{r}
-#| label: recode-hsbs1
-
-hsbs1 <- hsbs1 |>
-  mutate(
-    male   = if_else(gender == 1, 1, 0),
-    prog_f = factor(prog,
-                    levels = 1:3,
-                    labels = c("General", "Academic", "Vocational"))
-  )
-
-# Verify the recoding
-hsbs1 |> count(gender, male)
-hsbs1 |> count(prog, prog_f)
-```
-
-### The Additive Model: Same Gender Gap Everywhere
-
-Let's start with an additive model --- `male` and `prog_f` as predictors, no interaction:
-
-```{r}
-#| label: additive-cat
-
-model_add_cat <- lm(sci ~ male + prog_f, data = hsbs1)
-tidy_model(model_add_cat)
-```
-
-In this additive model:
-
-- **`male`**: the gender gap in science scores, **assumed to be the same** across all three programs.
-- **`prog_fAcademic`**: how much higher academic students score compared to general students, **assumed to be the same** for both genders.
-- **`prog_fVocational`**: how much higher (or lower) vocational students score compared to general students, again the same for both genders.
-
-### Cell Means from the Additive Model
-
-Let's see the predicted means for each combination of gender and program. Because the model is additive, the gender gap is identical across programs:
-
-```{r}
-#| label: additive-cell-means
-
-emmeans(model_add_cat, ~ male | prog_f)
-```
-
-> Look at the difference between `male = 1` and `male = 0` within each program. It should be the same number everywhere --- that is what "additive" means.
-
-### Additive Interaction Plot (Parallel Segments)
-
-```{r}
-#| label: additive-plot
-#| fig-cap: "Additive model: the gender gap is the same across all programs (parallel segments)."
-#| fig-alt: "Interaction plot from the additive model showing predicted science scores for males and females across General, Academic, and Vocational programs, with perfectly parallel line segments indicating the same gender gap in every program"
-#| fig-width: 8
-#| fig-height: 5
-
-emmeans(model_add_cat, ~ male * prog_f) |>
-  as_tibble() |>
-  mutate(Gender = if_else(male == 1, "Male", "Female")) |>
-  ggplot(aes(x = prog_f, y = emmean, color = Gender, group = Gender)) +
-  geom_point(size = 3) +
-  geom_line(linewidth = 1.2) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.15) +
-  scale_color_manual(values = c("Male" = "#2C3E50", "Female" = "#E74C3C")) +
-  labs(
-    x = "Program Type",
-    y = "Predicted Science Score",
-    color = NULL,
-    title = "Additive Model: Parallel Segments",
-    subtitle = "Same gender gap in every program"
-  )
-```
-
-> The two line segments connecting the three program types are perfectly parallel. This is the hallmark of an additive model --- the effect of one variable does not depend on the level of the other.
-
-
-## Part 3: Interaction Between Two Categorical Variables
-
-### The Interaction Model
-
-Now let's allow the gender gap to differ by program:
-
-```{r}
-#| label: interaction-cat
-
-model_int_cat <- lm(sci ~ male * prog_f, data = hsbs1)
-tidy_model(model_int_cat)
-```
-
-::: {.callout-important}
-## Reading the Categorical Interaction Output
-With `male * prog_f`, the coefficients are:
-
-- **`(Intercept)`**: predicted science score for **females in the General program** (both reference categories).
-- **`male`**: the gender gap **in the General program** (the reference category for `prog_f`).
-- **`prog_fAcademic`**: the program difference (Academic vs. General) **for females**.
-- **`prog_fVocational`**: the program difference (Vocational vs. General) **for females**.
-- **`male:prog_fAcademic`**: how much the gender gap in Academic **differs from** the gender gap in General. This is the interaction.
-- **`male:prog_fVocational`**: how much the gender gap in Vocational **differs from** the gender gap in General.
-:::
-
-### Testing the Overall Interaction
-
-The individual interaction coefficients test pairwise differences in the gender gap. To test whether the gender gap differs across programs **overall**, use a Type III ANOVA:
-
-::: {.callout-important}
-## Contrast Settings for Type III Tests
-Type III sums of squares require **orthogonal contrasts** (sum-to-zero coding) to give correct results. R's default `contr.treatment` (dummy coding) does not satisfy this requirement. We temporarily switch to `contr.sum` before fitting the model used for the Type III test.
-:::
-
-```{r}
-#| label: test-interaction-cat
-
-# Set orthogonal contrasts for correct Type III SS
-old_contrasts <- options(contrasts = c("contr.sum", "contr.poly"))
-
-# Re-fit with sum contrasts for proper Type III test
-model_int_cat_t3 <- lm(sci ~ male * prog_f, data = hsbs1)
-car::Anova(model_int_cat_t3, type = 3)
-
-# Restore default contrasts
-options(old_contrasts)
-```
-
-> The row for `male:prog_f` tests the null hypothesis that the gender gap is the same in all three programs. A significant result means the pattern of gender differences genuinely varies by program type.
-
-### Cell Means from the Interaction Model
-
-Now the predicted means allow different gender gaps in each program:
-
-```{r}
-#| label: interaction-cell-means
-
-emm_int <- emmeans(model_int_cat, ~ male | prog_f)
-emm_int
-```
-
-Let's compute the gender gap (male - female) within each program:
-
-```{r}
-#| label: gender-gap-by-program
-
-contrast(emm_int, method = "revpairwise")
-```
-
-> Look at how the gender gap varies across programs. In some programs, males may score notably higher; in others, the gap might be small or even reversed. This is the interaction --- the effect of gender depends on program type.
-
-### Interaction Plot (Non-Parallel Segments)
-
-```{r}
-#| label: interaction-plot-cat
-#| fig-cap: "Interaction model: the gender gap differs by program (non-parallel segments)."
-#| fig-alt: "Interaction plot from the interaction model showing predicted science scores for males and females across General, Academic, and Vocational programs, with non-parallel line segments indicating the gender gap varies by program type"
-#| fig-width: 8
-#| fig-height: 5
-
-emmeans(model_int_cat, ~ male * prog_f) |>
-  as_tibble() |>
-  mutate(Gender = if_else(male == 1, "Male", "Female")) |>
-  ggplot(aes(x = prog_f, y = emmean, color = Gender, group = Gender)) +
-  geom_point(size = 3) +
-  geom_line(linewidth = 1.2) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.15) +
-  scale_color_manual(values = c("Male" = "#2C3E50", "Female" = "#E74C3C")) +
-  labs(
-    x = "Program Type",
-    y = "Predicted Science Score",
-    color = NULL,
-    title = "Interaction Model: Non-Parallel Segments",
-    subtitle = "The gender gap now differs across programs"
-  )
-```
-
-> Compare this plot to the additive version above. The line segments are no longer parallel --- the gender gap is wider in some programs and narrower (or reversed) in others. This visual non-parallelism is the signature of an interaction.
-
-### Side-by-Side Comparison
-
-Let's put the additive and interaction plots together to drive the point home:
-
-```{r}
-#| label: side-by-side
-#| fig-cap: "Additive (left) vs. Interaction (right) models."
-#| fig-alt: "Side-by-side faceted interaction plots comparing the additive model with parallel segments to the interaction model with non-parallel segments, highlighting how allowing an interaction changes the predicted gender gap across programs"
-#| fig-width: 12
-#| fig-height: 5
-
-plot_data_add <- emmeans(model_add_cat, ~ male * prog_f) |>
-  as_tibble() |>
-  mutate(Gender = if_else(male == 1, "Male", "Female"),
-         Model = "Additive (parallel)")
-
-plot_data_int <- emmeans(model_int_cat, ~ male * prog_f) |>
-  as_tibble() |>
-  mutate(Gender = if_else(male == 1, "Male", "Female"),
-         Model = "Interaction (non-parallel)")
-
-bind_rows(plot_data_add, plot_data_int) |>
-  ggplot(aes(x = prog_f, y = emmean, color = Gender, group = Gender)) +
-  geom_point(size = 3) +
-  geom_line(linewidth = 1.2) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.15) +
-  scale_color_manual(values = c("Male" = "#2C3E50", "Female" = "#E74C3C")) +
+#| label: lab06-cont-cat-interaction-plot
+#| fig-cap: "Additive and interaction models for LRT and school."
+#| fig-alt: "Two-panel plot of predicted GCSE scores by LRT score for Hackney and Chelsea. The additive model panel shows parallel fitted lines. The interaction model panel shows non-parallel fitted lines, allowing the LRT slope to differ by school."
+#| fig-width: 10
+#| fig-height: 4.8
+
+ggplot(
+  school_predictions,
+  aes(x = x, y = predicted, color = group, fill = group)
+) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, color = NA) +
+  geom_line(linewidth = 1.1) +
   facet_wrap(~ Model) +
+  scale_color_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]])) +
+  scale_fill_manual(values = c(ber640_colors[["primary"]], ber640_colors[["secondary"]])) +
   labs(
-    x = "Program Type",
-    y = "Predicted Science Score",
-    color = NULL
+    x = "LRT Score",
+    y = "Predicted GCSE Score",
+    color = "School",
+    fill = "School"
   )
 ```
 
-### Pairwise Comparisons of Cell Means
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-If the interaction is significant, we often want to know exactly which cell means differ. We can get all pairwise comparisons within each program:
+Look at the additive and interaction panels.
+Which panel has parallel lines, and which panel allows school-specific slopes?
+Write one sentence explaining why non-parallel lines represent a continuous x categorical interaction.
+:::
+
+
+## Part 3: Categorical x Categorical Interaction
+
+Now we ask whether the gender salary gap differs by academic rank in the `faculty` data.
+
+The question is:
+
+> Is the male-female salary difference the same for assistant, associate, and full professors?
+
+### Step 1: Prepare the Data
 
 ```{r}
-#| label: pairwise-comparisons
+#| label: lab06-load-faculty
 
-pairs(emm_int)
+data(faculty)
+
+faculty_df <- faculty |>
+  mutate(
+    gender = factor(
+      if_else(male == 1, "Male", "Female"),
+      levels = c("Female", "Male")
+    ),
+    rank_f = factor(
+      rank,
+      levels = 1:3,
+      labels = c("Assistant", "Associate", "Full")
+    )
+  )
 ```
-
-Or compare programs within each gender:
 
 ```{r}
-#| label: program-comparisons
+#| label: lab06-faculty-preflight
 
-emm_by_gender <- emmeans(model_int_cat, ~ prog_f | male)
-contrast(emm_by_gender, method = "pairwise")
+faculty_df |>
+  count(gender, rank_f)
 ```
 
+### Step 2: Fit Additive and Interaction Models
 
-## Key Takeaways
+The additive model assumes one gender gap that is constant across ranks.
+The interaction model allows the gender gap to be different at each rank.
 
-::: {.callout-tip}
-## What We Learned
+```{r}
+#| label: lab06-fit-cat-cat-models
 
-1. **Interaction means "it depends."** An interaction between $X$ and $Z$ means the effect of $X$ on $Y$ depends on the value of $Z$ --- and vice versa.
+model_rank_add <- lm(salary ~ gender + rank_f, data = faculty_df)
+model_rank_int <- lm(salary ~ gender * rank_f, data = faculty_df)
 
-2. **The `*` operator in R creates main effects plus their interaction.** Writing `male * yearsdg` is shorthand for `male + yearsdg + male:yearsdg`.
+model_params(model_rank_int)
+```
 
-3. **Non-parallel lines (or segments) signal an interaction.** In a continuous x categorical interaction, non-parallel regression lines indicate the slope differs across groups. In a categorical x categorical interaction, non-parallel line segments connecting group means indicate the gap between groups varies.
+### Step 3: Test the Overall Interaction
 
-4. **Interpret coefficients carefully in interaction models.** Each main effect coefficient is conditional on the other variable being at its reference level (0 for continuous, reference category for factors). The interaction coefficient tells you how the effect changes as the other variable changes.
+For a 2 x 3 interaction, the interaction has two coefficients.
+The nested F-test gives one overall test of whether those two coefficients improve model fit.
 
-5. **Always test the interaction before interpreting main effects.** If the interaction is significant, the main effects alone do not tell the full story. Use `emmeans` or `marginaleffects` to probe the interaction at specific values.
+```{r}
+#| label: lab06-test-cat-cat-interaction
 
-**Next:** In Lab 7, we will tackle **model building** --- strategies for choosing which predictors and interactions to include.
+anova(model_rank_add, model_rank_int)
+```
+
+::: {.interpretation}
+The `gender:rank_f` interaction asks whether the gender gap differs across ranks.
+
+In this example, the interaction is not statistically significant, so the additive model is the more cautious reporting model.
+The conditional comparisons below show how we would describe the pattern if we needed to probe it.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use `anova(model_rank_add, model_rank_int)`.
+Does the overall test suggest that the gender salary gap differs by academic rank?
+Write one sentence that starts: "The gender-by-rank interaction tests whether..."
+:::
+
+### Step 4: Estimate the Six Cell Means
+
+`modelbased::estimate_means()` gives the predicted salary for each gender-by-rank cell.
+
+```{r}
+#| label: lab06-rank-gender-cell-means
+
+rank_gender_means <- modelbased::estimate_means(
+  model_rank_int,
+  by = c("gender", "rank_f")
+) |>
+  as_tibble() |>
+  select(gender, rank_f, Mean, SE, CI_low, CI_high)
+
+rank_gender_means |>
+  round_numeric(digits = 0)
+```
+
+### Step 5: Estimate the Gender Gap at Each Rank
+
+`modelbased::estimate_contrasts()` compares Male and Female faculty within each rank.
+
+```{r}
+#| label: lab06-gender-gap-by-rank
+
+gender_gap_by_rank <- modelbased::estimate_contrasts(
+  model_rank_int,
+  contrast = "gender",
+  by = "rank_f"
+) |>
+  as_tibble() |>
+  select(rank_f, Level1, Level2, Difference, SE, CI_low, CI_high, p)
+
+gender_gap_by_rank |>
+  mutate(
+    across(c(Difference, SE, CI_low, CI_high), \(x) round(x, 0)),
+    p = round(p, 3)
+  )
+```
+
+::: {.interpretation}
+The `Difference` column is the estimated Male - Female salary gap within each rank.
+
+If those differences were clearly different across ranks, that would be evidence of a categorical x categorical interaction.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use `gender_gap_by_rank`.
+Which rank has the largest estimated Male - Female salary gap?
+Write one cautious sentence connecting the three conditional gender gaps to the overall interaction test.
+:::
+
+### Step 6: Plot the Cell Means
+
+```{r}
+#| label: lab06-cat-cat-interaction-plot
+#| fig-cap: "Predicted faculty salary by gender and academic rank."
+#| fig-alt: "Line plot of predicted salary by academic rank for female and male faculty. Points and error bars show model-estimated cell means and confidence intervals. The vertical male-female gap varies somewhat by rank, but the overall interaction test is not statistically significant."
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(
+  rank_gender_means,
+  aes(x = rank_f, y = Mean, color = gender, group = gender)
+) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1.1) +
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.12) +
+  scale_color_manual(values = c(ber640_colors[["secondary"]], ber640_colors[["accent"]])) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  labs(
+    x = "Academic Rank",
+    y = "Predicted Salary",
+    color = "Gender"
+  )
+```
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Look at the cell-means plot.
+Do the gender gaps look exactly constant across ranks?
+Then explain why the overall interaction test still matters before making a strong claim.
+:::
+
+
+::: {.exercises}
+## What to Submit
+
+1. The continuous x categorical interaction test from `anova(model_parallel, model_interact)` and one sentence answering whether the LRT-GCSE slope differs by school. [core]{.chip .med}
+2. The `slopes_by_school` table and one sentence comparing the school-specific LRT slopes. [core]{.chip .med}
+3. The additive-vs-interaction prediction plot and one sentence explaining what parallel vs. non-parallel lines mean. [core]{.chip .med}
+4. The categorical x categorical interaction test from `anova(model_rank_add, model_rank_int)` and one sentence answering whether the gender salary gap differs by rank. [core]{.chip .med}
+5. The `rank_gender_means` table or the cell-means plot. [core]{.chip .easy}
+6. The `gender_gap_by_rank` table and one sentence naming the largest conditional gender gap. [core]{.chip .hard}
+7. A 3-4 sentence mini-report that tests each interaction first, then summarizes the conditional effects without causal language. [core]{.chip .hard}
+:::
+
+
+::: {.summary}
+## Lab Summary
+
+1. The `*` operator fits both main effects and the interaction term.
+
+2. A continuous x categorical interaction means the slope of the continuous predictor differs across groups.
+
+3. A categorical x categorical interaction means the group difference on one factor differs across levels of the other factor.
+
+4. `anova(additive_model, interaction_model)` gives a simple nested test of whether the interaction improves model fit.
+
+5. `modelbased::estimate_slopes()` is useful for probing continuous x categorical interactions.
+
+6. `modelbased::estimate_means()` and `modelbased::estimate_contrasts()` are useful for probing categorical x categorical interactions.
+
+7. `ggeffects::predict_response()` gives simple prediction data for interaction plots.
+
+**Next:** Lab 7 turns to nonlinear relationships.
 :::

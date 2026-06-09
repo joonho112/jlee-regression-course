@@ -1,444 +1,713 @@
 ---
-title: "Lab 11: Review --- Logistic Regression & Linear Diagnostics"
+title: "Lab 11: Logistic Diagnostics and Classification"
 ---
 
 {{< include ../_common.qmd >}}
 
-## Goals
-
-::: {.callout-note}
+::: {.objectives}
 ## What You'll Learn in This Lab
-- Review logistic regression with categorical predictors (3+ levels)
-- Fit and interpret a multiple logistic regression model
-- Create predicted probability curves for male vs. female passengers
-- Review the complete linear regression diagnostic checklist from Lab 8
-- Use `performance::check_model()` as a one-stop diagnostic dashboard
-- **Lecture Notes Reference:** Chapters 8–11 (Review)
+
+- Explain why linear regression diagnostics do not directly transfer to logistic regression
+- Compute grouped goodness-of-fit checks for categorical predictor patterns
+- Report McFadden and Tjur pseudo R-squared measures
+- Build a classification table and compute sensitivity/specificity
+- Plot an ROC curve and report AUC with `pROC`
+- Check calibration with grouped predicted probabilities
+- Inspect residuals, Cook's distance, and possible separation
+- **Lecture Notes Reference:** Chapter 11: *Logistic Regression Diagnostics*
+
+::: {.meta}
+Datasets: `penalty` and `titanic`. Estimated time: 75-90 minutes.
+:::
 :::
 
-**Datasets:** `titanic` and `hsbs1` from the `regdatasets` package
 
-This is a **review lab**. We revisit two major topics from the course --- logistic regression (Labs 9--10) and linear regression diagnostics (Lab 8) --- and tie them together. Think of it as a dress rehearsal for your final analysis.
+## Part 1: Prepare the Data
 
-
-## Setup
+We begin with the `penalty` data.
+The outcome is `death_pe`, coded 1 if the death penalty was imposed and 0 otherwise.
 
 ```{r}
-#| label: lab11-setup
+#| label: lab11-load-penalty
 
-library(regdatasets)
-data(titanic)
-data(hsbs1)
+data(penalty)
 
-# Rename sex to female (already coded 0 = male, 1 = female)
-titanic <- titanic |>
-  rename(female = sex)
-
-# Prepare hsbs1 variables (same as Lab 8)
-hsbs1 <- hsbs1 |>
+penalty_lab <- penalty |>
   mutate(
-    male   = if_else(gender == 1, 1L, 0L),
-    prog_f = factor(prog,
-                    levels = 1:3,
-                    labels = c("General", "Academic", "Vocational"))
+    def_f = factor(
+      def_bl,
+      levels = c(0, 1),
+      labels = c("White defendant", "Black defendant")
+    ),
+    vic_f = factor(
+      vic_bl,
+      levels = c(0, 1),
+      labels = c("White victim", "Black victim")
+    ),
+    death_f = factor(
+      death_pe,
+      levels = c(0, 1),
+      labels = c("No death penalty", "Death penalty")
+    )
   )
 
-glimpse(titanic)
-glimpse(hsbs1)
 ```
-
-
-## Part 1: Logistic Regression Review (Titanic)
-
-Let's warm up by revisiting a few models from Labs 9 and 10. We will move quickly here since you have seen all of this before.
-
-### Step 1: Gender and Survival
 
 ```{r}
-#| label: review-female
+#| label: lab11-penalty-preflight
 
-model_female <- glm(survived ~ female, data = titanic, family = binomial)
-exp(coef(model_female))
-exp(confint(model_female))
+tibble(
+  Rows = nrow(penalty_lab),
+  Death_penalty_rate = mean(penalty_lab$death_pe),
+  Black_defendant_rate = mean(penalty_lab$def_bl),
+  Black_victim_rate = mean(penalty_lab$vic_bl),
+  Missing_values = sum(is.na(penalty_lab))
+) |>
+  round_numeric(digits = 3)
 ```
 
-> Females had roughly `r round(exp(coef(model_female)[2]), 1)` times the odds of surviving compared to males, and the 95% CI is comfortably above 1. No surprise --- we have seen this result several times now.
+::: {.pitfall}
+The event is `death_pe = 1`.
 
-### Step 2: Fare (Standardized)
-
-Remember the interpretation problem with fare? A one-pound change is tiny. Standardizing makes the OR meaningful:
-
-```{r}
-#| label: review-fare-std
-
-titanic <- titanic |>
-  mutate(z_fare = (fare - mean(fare, na.rm = TRUE)) / sd(fare, na.rm = TRUE))
-
-model_z_fare <- glm(survived ~ z_fare, data = titanic, family = binomial)
-exp(coef(model_z_fare))
-exp(confint(model_z_fare))
-```
-
-> A one SD increase in fare (about `r round(sd(titanic$fare, na.rm = TRUE), 0)` pounds) is associated with an OR of roughly `r round(exp(coef(model_z_fare)[2]), 2)`. Higher fare, higher odds of survival.
-
-### Step 3: Passenger Class (3 Levels)
-
-```{r}
-#| label: review-pclass
-
-titanic <- titanic |>
-  mutate(pclass_f = factor(pclass, labels = c("1st", "2nd", "3rd")))
-
-model_pclass <- glm(survived ~ pclass_f, data = titanic, family = binomial)
-```
-
-:::: {.panel-tabset}
-
-#### Simple
-
-```{r}
-#| label: lab11-pclass-summary
-
-summary(model_pclass)
-exp(coef(model_pclass))
-```
-
-#### Advanced
-
-```{r}
-#| label: lab11-pclass-gtsummary
-
-model_pclass |>
-  tbl_regression(exponentiate = TRUE) |>
-  bold_labels() |>
-  bold_p(t = 0.05)
-```
-
-::::
-
-> With 1st class as the reference, both 2nd and 3rd class passengers had significantly lower odds of survival. Third class passengers fared the worst.
-
-### Step 4: Predicted Probabilities by Class
-
-```{r}
-#| label: pclass-pred-plot
-#| fig-alt: "Point-and-error-bar plot showing predicted survival probabilities decreasing steeply from 1st to 2nd to 3rd class with non-overlapping confidence intervals"
-#| fig-cap: "Predicted survival probability by passenger class"
-
-em_pclass <- emmeans(model_pclass, ~ pclass_f, type = "response")
-em_df <- as.data.frame(em_pclass)
-
-ggplot(em_df, aes(x = pclass_f, y = prob)) +
-  geom_point(size = 4, color = ber640_colors["secondary"]) +
-  geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL),
-                width = 0.15, linewidth = 1, color = ber640_colors["secondary"]) +
-  labs(x = "Passenger Class",
-       y = "Predicted P(Survived)",
-       title = "Survival Probability by Passenger Class",
-       subtitle = "Error bars show 95% confidence intervals") +
-  scale_y_continuous(limits = c(0, 1), labels = scales::percent)
-```
-
-> The gradient is steep: roughly 63% for 1st class, 47% for 2nd, and 24% for 3rd. These non-overlapping CIs confirm the differences are statistically significant.
-
-
-## Part 2: Multiple Logistic Regression
-
-Now let's combine everything into a single model. This is where logistic regression gets interesting --- we can ask: **controlling for age and class, did gender still matter?**
-
-### Step 1: Fit the Full Model
-
-```{r}
-#| label: full-logistic
-
-model_full <- glm(survived ~ female + age + pclass_f,
-                  data = titanic, family = binomial)
-```
-
-:::: {.panel-tabset}
-
-#### Simple
-
-```{r}
-#| label: full-summary
-
-summary(model_full)
-```
-
-#### Advanced
-
-```{r}
-#| label: full-gtsummary
-
-model_full |>
-  tbl_regression(exponentiate = TRUE) |>
-  bold_labels() |>
-  bold_p(t = 0.05)
-```
-
-::::
-
-### Step 2: Interpret the Odds Ratios
-
-```{r}
-#| label: full-or
-
-exp(coef(model_full))
-exp(confint(model_full))
-```
-
-> Let's walk through each predictor:
->
-> - **female:** Controlling for age and class, females had about `r round(exp(coef(model_full)["female"]), 1)` times the odds of survival compared to males. Gender mattered enormously even after accounting for other factors.
-> - **age:** Each additional year of age is associated with an OR of about `r round(exp(coef(model_full)["age"]), 3)`. Older passengers had slightly lower odds of survival, all else equal.
-> - **2nd class vs. 1st class:** The OR of `r round(exp(coef(model_full)["pclass_f2nd"]), 2)` tells us 2nd class passengers had lower odds than 1st class, controlling for gender and age.
-> - **3rd class vs. 1st class:** An OR of `r round(exp(coef(model_full)["pclass_f3rd"]), 2)` --- third class passengers had dramatically lower odds of survival than first class, even after adjusting for gender and age.
-
-::: {.callout-tip}
-## The "Controlling For" Interpretation
-In multiple logistic regression, each OR represents the effect of that predictor **holding all other predictors constant**. So when we say females had higher odds of survival, we mean comparing a female and male passenger of the same age and same class.
+Classification, sensitivity, specificity, ROC, and calibration all refer to predicting the death penalty event.
 :::
 
-### Step 3: Predicted Probability Curves --- Male vs. Female
 
-This is the payoff plot. We show how the predicted probability of survival changes with age, separately for males and females, within each passenger class.
+## Part 2: Fit the Diagnostic Model
+
+Fit the logistic model from the lecture notes.
+The predictors are defendant race and victim race.
 
 ```{r}
-#| label: pred-curves-gender
-#| fig-alt: "Three-panel faceted plot by passenger class showing S-shaped survival probability curves for females and males, with females consistently higher and the class gradient showing dramatic decline from 1st to 3rd class"
-#| fig-cap: "Predicted probability of survival by age, gender, and passenger class"
-#| fig-width: 10
-#| fig-height: 5
+#| label: lab11-fit-penalty-model
 
-# Create prediction grid
-new_data <- expand.grid(
-  age      = seq(1, 70, length.out = 100),
-  female   = c(0, 1),
-  pclass_f = factor(c("1st", "2nd", "3rd"))
+model_penalty <- glm(
+  death_pe ~ def_f + vic_f,
+  data = penalty_lab,
+  family = binomial
+)
+```
+
+```{r}
+#| label: lab11-penalty-or-table
+
+model_params(model_penalty, exponentiate = TRUE) |>
+  as_tibble() |>
+  rename(Odds_ratio = Coefficient) |>
+  mutate(p = format_p(p)) |>
+  select(Parameter, Odds_ratio, CI_low, CI_high, p) |>
+  round_numeric(digits = 3)
+```
+
+::: {.interpretation}
+Diagnostics start after the model is fit.
+
+The odds-ratio table tells us the substantive association.
+The rest of this lab asks whether the model predicts, calibrates, and behaves in a trustworthy way.
+:::
+
+
+## Part 3: Goodness of Fit for Grouped Data
+
+For categorical predictors, we can group observations by covariate pattern.
+Here there are four patterns: defendant race crossed with victim race.
+
+```{r}
+#| label: lab11-grouped-gof-table
+
+penalty_gof <- penalty_lab |>
+  mutate(pi_hat = fitted(model_penalty)) |>
+  group_by(def_f, vic_f) |>
+  summarise(
+    n = n(),
+    observed = sum(death_pe),
+    pi_hat = first(pi_hat),
+    .groups = "drop"
+  ) |>
+  mutate(
+    expected = n * pi_hat,
+    expected_nonevent = n * (1 - pi_hat),
+    pearson_component = (observed - expected)^2 /
+      (expected * (1 - pi_hat)),
+    deviance_component = 2 * (
+      if_else(observed > 0, observed * log(observed / expected), 0) +
+        if_else(
+          n - observed > 0,
+          (n - observed) * log((n - observed) / expected_nonevent),
+          0
+        )
+    )
+  )
+
+penalty_gof |>
+  select(
+    def_f, vic_f, n, observed,
+    expected, expected_nonevent,
+    pearson_component, deviance_component
+  ) |>
+  round_numeric(digits = 3)
+```
+
+```{r}
+#| label: lab11-gof-summary
+
+X2 <- sum(penalty_gof$pearson_component)
+G2 <- sum(penalty_gof$deviance_component)
+df_gof <- nrow(penalty_gof) - length(coef(model_penalty))
+
+tibble(
+  Statistic = c("Pearson X2", "Deviance G2"),
+  Value = c(X2, G2),
+  df = df_gof,
+  p = 1 - pchisq(c(X2, G2), df_gof)
+) |>
+  mutate(p = format_p(p)) |>
+  round_numeric(digits = 3)
+```
+
+::: {.pitfall}
+Grouped goodness-of-fit tests require non-sparse grouped data.
+
+If expected event counts are very small, or if continuous predictors create many one-person patterns, the chi-square p-values are not reliable.
+Use these tests as one diagnostic, not as a final pass/fail rule.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use the grouped goodness-of-fit table.
+Write two sentences:
+
+1. Identify the smallest expected event count.
+
+2. Explain why small expected counts make the chi-square p-values fragile.
+:::
+
+
+## Part 4: Pseudo R-Squared
+
+Logistic regression has no single equivalent of OLS R-squared.
+Report the name of the measure whenever you report a pseudo R-squared value.
+
+```{r}
+#| label: lab11-pseudo-r2
+
+null_model <- glm(
+  death_pe ~ 1,
+  data = penalty_lab,
+  family = binomial
 )
 
-# Get predictions on the link scale for proper CIs
-preds <- predict(model_full, newdata = new_data, type = "link", se.fit = TRUE)
+mcfadden_r2 <- (deviance(null_model) - deviance(model_penalty)) /
+  deviance(null_model)
 
-new_data <- new_data |>
+penalty_pred <- penalty_lab |>
+  mutate(predicted_probability = fitted(model_penalty))
+
+tjur_components <- penalty_pred |>
+  group_by(death_pe) |>
+  summarise(mean_probability = mean(predicted_probability), .groups = "drop")
+
+tjur_r2 <- diff(tjur_components$mean_probability)
+
+tibble(
+  Measure = c("McFadden R2", "Tjur R2"),
+  Value = c(mcfadden_r2, tjur_r2)
+) |>
+  round_numeric(digits = 4)
+```
+
+```{r}
+#| label: lab11-performance-r2
+
+performance::r2(model_penalty)
+```
+
+::: {.interpretation}
+Pseudo R-squared values are usually smaller than OLS R-squared values.
+
+McFadden R-squared describes deviance improvement over the null model.
+Tjur R-squared describes how much the model separates event and non-event predicted probabilities.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use the pseudo R-squared output.
+Write two sentences:
+
+1. Report McFadden R2 and Tjur R2 by name.
+
+2. Explain why a small pseudo R2 does not automatically make an inference-focused model useless.
+:::
+
+
+## Part 5: Classification at a Cutoff
+
+A logistic model returns probabilities.
+To make classifications, we must choose a cutoff.
+Here we use the common cutoff of 0.50.
+
+```{r}
+#| label: lab11-classification-table
+
+penalty_pred <- penalty_pred |>
   mutate(
-    prob    = plogis(preds$fit),
-    ci_low  = plogis(preds$fit - 1.96 * preds$se.fit),
-    ci_high = plogis(preds$fit + 1.96 * preds$se.fit),
-    gender_label = if_else(female == 1, "Female", "Male")
+    predicted_class = if_else(predicted_probability >= .50, 1L, 0L),
+    observed_f = factor(death_pe, levels = c(0, 1)),
+    predicted_f = factor(predicted_class, levels = c(0, 1))
   )
 
-ggplot(new_data, aes(x = age, y = prob, color = gender_label, fill = gender_label)) +
-  geom_ribbon(aes(ymin = ci_low, ymax = ci_high), alpha = 0.15, color = NA) +
-  geom_line(linewidth = 1.2) +
-  facet_wrap(~ pclass_f) +
-  scale_color_manual(values = c("Female" = ber640_colors["secondary"],
-                                "Male"   = ber640_colors["accent"])) +
-  scale_fill_manual(values = c("Female" = ber640_colors["secondary"],
-                               "Male"   = ber640_colors["accent"])) +
-  labs(x = "Age", y = "Predicted P(Survived)",
-       color = "Gender", fill = "Gender",
-       title = "Survival Probability by Age, Gender, and Class",
-       subtitle = "Shaded bands show 95% confidence intervals") +
-  scale_y_continuous(limits = c(0, 1), labels = scales::percent)
+conf_matrix <- table(
+  Observed = penalty_pred$observed_f,
+  Predicted = penalty_pred$predicted_f
+)
+
+conf_matrix |>
+  addmargins()
 ```
 
-> Three things jump out. First, females had much higher survival probabilities than males at every age and in every class. Second, older passengers had lower probabilities than younger ones. Third, the class gradient is massive --- a young female in 1st class had near-certain survival odds, while an older male in 3rd class had very low odds.
-
-
-## Part 3: Linear Regression Diagnostics Review (hsbs1)
-
-Now we switch gears entirely. We return to the `hsbs1` dataset from Lab 8 and run through the **complete diagnostic checklist** one more time. Think of this as a compact reference you can come back to for any regression analysis.
-
-**Research Question:** *Is there a difference in science achievement between males and females, controlling for math, reading, and course track?*
-
-### Step 1: Fit the Model
-
 ```{r}
-#| label: lm-fit
+#| label: lab11-classification-metrics
 
-model_lm <- lm(sci ~ math + read + male + prog_f, data = hsbs1)
-tidy_model(model_lm)
+TP <- conf_matrix["1", "1"]
+TN <- conf_matrix["0", "0"]
+FP <- conf_matrix["0", "1"]
+FN <- conf_matrix["1", "0"]
+
+classification_metrics <- tibble(
+  Metric = c(
+    "Accuracy",
+    "Base rate accuracy",
+    "Sensitivity",
+    "Specificity"
+  ),
+  Value = c(
+    (TP + TN) / sum(conf_matrix),
+    max(table(penalty_pred$death_pe)) / nrow(penalty_pred),
+    TP / (TP + FN),
+    TN / (TN + FP)
+  )
+)
+
+classification_metrics |>
+  round_numeric(digits = 3)
 ```
 
-> Same model as Lab 8. Now let's blitz through the diagnostics.
+::: {.interpretation}
+High accuracy can be misleading when the event is rare.
 
-### Step 2: Compute Residuals
+In this example, a 0.50 cutoff predicts no death penalty for every case.
+Accuracy looks high because the event is rare, but sensitivity is zero.
+:::
 
 ```{r}
-#| label: lm-residuals
+#| label: lab11-threshold-comparison
 
-hsbs1 <- hsbs1 |>
-  mutate(
-    resid_rstud = rstudent(model_lm),
-    fitted_vals = fitted(model_lm)
+make_cutoff_row <- function(cutoff) {
+  predicted <- if_else(penalty_pred$predicted_probability >= cutoff, 1L, 0L)
+
+  TP <- sum(penalty_pred$death_pe == 1 & predicted == 1)
+  TN <- sum(penalty_pred$death_pe == 0 & predicted == 0)
+  FP <- sum(penalty_pred$death_pe == 0 & predicted == 1)
+  FN <- sum(penalty_pred$death_pe == 1 & predicted == 0)
+
+  tibble(
+    cutoff = cutoff,
+    TP = TP,
+    FP = FP,
+    FN = FN,
+    TN = TN,
+    Accuracy = (TP + TN) / nrow(penalty_pred),
+    Sensitivity = TP / (TP + FN),
+    Specificity = TN / (TN + FP)
+  )
+}
+
+threshold_comparison <- map_dfr(
+  c(.05, .10, .20, .50),
+  make_cutoff_row
+)
+
+threshold_comparison |>
+  round_numeric(digits = 3)
+```
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use the threshold comparison table.
+Choose one cutoff that would be better if missing death-penalty cases were very costly.
+Then choose one cutoff that would be better if false alarms were very costly.
+
+Write two sentences and mention sensitivity and specificity.
+:::
+
+
+## Part 6: ROC Curve and AUC
+
+The ROC curve summarizes classification performance across all possible cutoffs.
+AUC summarizes the ranking ability of the model.
+
+```{r}
+#| label: lab11-roc-data
+
+roc_penalty <- pROC::roc(
+  response = penalty_pred$death_pe,
+  predictor = penalty_pred$predicted_probability,
+  quiet = TRUE
+)
+
+auc_penalty <- as.numeric(pROC::auc(roc_penalty))
+
+roc_data <- tibble(
+  specificity = roc_penalty$specificities,
+  sensitivity = roc_penalty$sensitivities
+) |>
+  mutate(false_positive_rate = 1 - specificity) |>
+  arrange(false_positive_rate, sensitivity)
+
+tibble(AUC = auc_penalty) |>
+  round_numeric(digits = 3)
+```
+
+```{r}
+#| label: lab11-roc-plot
+#| fig-cap: "ROC curve for the death penalty logistic model."
+#| fig-alt: "ROC curve plotting sensitivity against false positive rate for the death penalty logistic model. The curve is above the diagonal reference line but not close to the upper-left corner, indicating modest discrimination."
+#| fig-width: 6.5
+#| fig-height: 5
+
+ggplot(roc_data, aes(x = false_positive_rate, y = sensitivity)) +
+  geom_abline(linetype = "dashed", color = "grey55") +
+  geom_path(color = ber640_colors[["primary"]], linewidth = 1.2) +
+  coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(
+    x = "False Positive Rate",
+    y = "Sensitivity",
+    subtitle = paste("AUC =", round(auc_penalty, 3))
   )
 ```
 
-We use **studentized deleted residuals** (`rstudent`) because they are the best at catching outliers --- each residual is computed from a model that excludes that observation.
+::: {.pitfall}
+AUC does not choose a classification cutoff.
 
-### Diagnostic 1: Normality
+It describes how well the model ranks event cases above non-event cases.
+Calibration and cutoff choice are separate questions.
+:::
 
-::: {.panel-tabset}
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-#### Histogram
+Use the AUC value and ROC plot.
+Write one sentence interpreting discrimination.
+Then write one sentence explaining why AUC does not choose a cutoff for you.
+:::
+
+
+## Part 7: Calibration with Continuous Predictors
+
+Calibration asks whether predicted probabilities match observed event rates.
+For a calibration plot, the Titanic data give a more useful example because the model has a continuous predictor.
+This section is a worked extension on a different model and dataset; do not use the Titanic calibration results as evidence about the death-penalty model.
 
 ```{r}
-#| label: diag-normality-hist
-#| fig-alt: "Histogram of studentized deleted residuals with normal density overlay, showing approximately bell-shaped distribution consistent with normality"
-#| fig-cap: "Histogram of studentized deleted residuals"
-#| fig-width: 7
-#| fig-height: 4
+#| label: lab11-load-titanic-diagnostics
 
-ggplot(hsbs1, aes(x = resid_rstud)) +
-  geom_histogram(aes(y = after_stat(density)),
-                 bins = 25, fill = ber640_colors["primary"], color = "white") +
-  stat_function(fun = dnorm, color = ber640_colors["secondary"],
-                linewidth = 1.2) +
-  labs(x = "Studentized Deleted Residual", y = "Density",
-       title = "Normality Check: Histogram")
+data(titanic)
+
+titanic_diag <- titanic |>
+  drop_na(age) |>
+  mutate(
+    sex_f = factor(sex, levels = c(0, 1), labels = c("Male", "Female")),
+    pclass_f = factor(pclass, levels = c(1, 2, 3), labels = c("1st", "2nd", "3rd"))
+  )
+
+model_titanic <- glm(
+  survived ~ sex_f + age + pclass_f,
+  data = titanic_diag,
+  family = binomial
+)
+
+titanic_diag <- titanic_diag |>
+  mutate(
+    pi_hat = fitted(model_titanic),
+    linear_pred = predict(model_titanic, type = "link"),
+    resid_deviance = residuals(model_titanic, type = "deviance"),
+    resid_pearson = residuals(model_titanic, type = "pearson"),
+    cooks_d = cooks.distance(model_titanic),
+    obs_id = row_number()
+  )
 ```
 
-#### QQ Plot
+```{r}
+#| label: lab11-calibration-data
+
+calibration_table <- titanic_diag |>
+  mutate(decile = ntile(pi_hat, 10)) |>
+  group_by(decile) |>
+  summarise(
+    mean_predicted = mean(pi_hat),
+    observed_probability = mean(survived),
+    n = n(),
+    se_observed = sqrt(
+      observed_probability * (1 - observed_probability) / n
+    ),
+    .groups = "drop"
+  )
+
+calibration_table |>
+  round_numeric(digits = 3)
+```
 
 ```{r}
-#| label: diag-normality-qq
-#| fig-alt: "QQ plot of studentized deleted residuals with points falling close to the diagonal reference line, indicating approximate normality"
-#| fig-cap: "QQ plot of studentized deleted residuals"
-#| fig-width: 6
+#| label: lab11-calibration-plot
+#| fig-cap: "Calibration plot for the Titanic logistic model."
+#| fig-alt: "Calibration plot comparing mean predicted survival probability and observed survival probability across ten groups of Titanic passengers. A dashed diagonal reference line marks perfect calibration."
+#| fig-width: 6.5
 #| fig-height: 5
 
-ggplot(hsbs1, aes(sample = resid_rstud)) +
-  stat_qq(alpha = 0.4, color = ber640_colors["primary"]) +
-  stat_qq_line(color = ber640_colors["secondary"], linewidth = 1.2) +
-  labs(x = "Theoretical Quantiles", y = "Sample Quantiles",
-       title = "Normality Check: QQ Plot")
+ggplot(
+  calibration_table,
+  aes(x = mean_predicted, y = observed_probability)
+) +
+  geom_abline(linetype = "dashed", color = "grey55") +
+  geom_errorbar(
+    aes(
+      ymin = observed_probability - 2 * se_observed,
+      ymax = observed_probability + 2 * se_observed
+    ),
+    width = 0,
+    color = ber640_colors[["accent"]]
+  ) +
+  geom_point(size = 2.8, color = ber640_colors[["primary"]]) +
+  coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(
+    x = "Mean Predicted Probability",
+    y = "Observed Survival Probability"
+  )
 ```
 
+::: {.interpretation}
+Points near the diagonal indicate good calibration.
+
+Points above the line mean the model under-predicts the event.
+Points below the line mean the model over-predicts the event.
 :::
 
-> Points fall close to the diagonal line in the QQ plot, and the histogram looks roughly bell-shaped. Normality looks fine.
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-### Diagnostic 2: Constant Variance
+Use the calibration table and plot.
+Choose one decile where the model appears to under-predict or over-predict survival.
+Write two sentences using predicted probability and observed probability language.
+:::
 
-```{r}
-#| label: diag-variance
-#| fig-alt: "Residuals versus fitted values plot with LOWESS curve near zero and roughly constant spread, indicating no severe heteroscedasticity"
-#| fig-cap: "Residuals vs. fitted values"
-#| fig-width: 8
-#| fig-height: 5
 
-ggplot(hsbs1, aes(x = fitted_vals, y = resid_rstud)) +
-  geom_point(alpha = 0.3, size = 2, color = ber640_colors["primary"]) +
-  geom_hline(yintercept = 0, color = ber640_colors["secondary"], linewidth = 1) +
-  geom_smooth(method = "loess", se = FALSE, color = ber640_colors["accent"],
-              linewidth = 1.2, linetype = "dashed") +
-  labs(x = "Fitted Values", y = "Studentized Deleted Residual",
-       title = "Constant Variance Check",
-       subtitle = "Look for a fan or funnel shape")
-```
+## Part 8: Residuals and Influence
 
-> No obvious megaphone pattern. The LOWESS line hovers near zero. Constant variance looks reasonable.
-
-### Diagnostic 3: Linearity (Added-Variable Plots)
+Logistic residual plots do not look like OLS residual plots.
+With binary outcomes, residuals naturally form bands.
+The goal is to look for systematic patterns and influential observations.
+As in the calibration section, the Titanic model is used here because it gives a clearer teaching example for continuous-predictor residual and influence displays.
 
 ```{r}
-#| label: diag-linearity
-#| fig-alt: "Multi-panel added-variable plots for math, read, male, and program type showing roughly linear partial relationships with science scores"
-#| fig-cap: "Added-variable plots for continuous predictors"
+#| label: lab11-residual-influence-plot
+#| fig-cap: "Deviance residuals and Cook's distance for the Titanic logistic model."
+#| fig-alt: "Two-panel diagnostic plot for the Titanic logistic model. The first panel plots deviance residuals against the linear predictor and shows the characteristic banded pattern of binary outcomes. The second panel plots Cook's distance by observation index and highlights a small number of more influential observations."
 #| fig-width: 10
-#| fig-height: 8
+#| fig-height: 4.8
 
-car::avPlots(model_lm)
+residual_plot <- ggplot(
+  titanic_diag,
+  aes(x = linear_pred, y = resid_deviance)
+) +
+  geom_point(alpha = 0.25, color = ber640_colors[["primary"]]) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
+  geom_smooth(
+    method = "loess",
+    formula = y ~ x,
+    se = FALSE,
+    color = ber640_colors[["secondary"]],
+    linewidth = 0.9
+  ) +
+  labs(
+    x = "Linear Predictor",
+    y = "Deviance Residual",
+    title = "Residuals"
+  )
+
+cook_plot <- ggplot(
+  titanic_diag,
+  aes(x = obs_id, y = cooks_d)
+) +
+  geom_point(alpha = 0.3, color = ber640_colors[["primary"]]) +
+  geom_hline(
+    yintercept = 4 / nrow(titanic_diag),
+    linetype = "dashed",
+    color = ber640_colors[["secondary"]]
+  ) +
+  labs(
+    x = "Observation Index",
+    y = "Cook's Distance",
+    title = "Influence"
+  )
+
+residual_plot + cook_plot
 ```
-
-> Each panel should show a roughly linear cloud. If you see bending or curvature, the linearity assumption for that predictor may be violated. Here, the relationships look linear.
-
-### Diagnostic 4: Collinearity (VIF)
 
 ```{r}
-#| label: diag-vif
+#| label: lab11-top-influence
 
-car::vif(model_lm)
+titanic_diag |>
+  slice_max(cooks_d, n = 5) |>
+  select(
+    obs_id, survived, sex_f, age, pclass_f,
+    pi_hat, resid_pearson, cooks_d
+  ) |>
+  round_numeric(digits = 3)
 ```
 
-> All VIF values are well below 5. Math and reading are correlated, but not enough to cause any problems. No collinearity concerns.
+::: {.interpretation}
+Influential cases are not automatically wrong.
 
-### Diagnostic 5: Outliers
-
-```{r}
-#| label: diag-outliers
-
-hsbs1 |>
-  filter(abs(resid_rstud) > 3) |>
-  select(id, sci, math, read, male, prog_f, resid_rstud, fitted_vals)
-```
-
-> Observations with $|\text{rstudent}| > 3$ are potential outliers. Investigate them --- do not automatically delete. Check whether they are data entry errors or genuinely unusual cases.
-
-::: {.callout-important}
-## The Five-Point Checklist
-Every linear regression analysis should check:
-
-1. **Normality** --- histogram + QQ plot of studentized deleted residuals
-2. **Constant variance** --- residuals vs. fitted values plot
-3. **Linearity** --- added-variable plots (or residual vs. each predictor)
-4. **Collinearity** --- VIF (worry if > 10, monitor if > 5)
-5. **Outliers** --- $|\text{rstudent}| > 3$
+They are cases worth investigating because they have a larger effect on the fitted model.
+For a serious report, compare the main odds ratios with and without the most influential cases.
 :::
 
-### Remedy: Robust Standard Errors
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-If constant variance looks questionable (even mildly), robust SE is a good safety net. It does not change the coefficients --- only the standard errors and p-values:
+Use the residual/influence plot and the top-influence table.
+Write two diagnostic bullets:
 
-```{r}
-#| label: robust-se
+1. Describe the overall residual pattern.
 
-# Original OLS
-tidy_model(model_lm)
-
-# Robust (HC1)
-lmtest::coeftest(model_lm, vcov = sandwich::vcovHC(model_lm, type = "HC1"))
-```
-
-> Compare the standard errors side by side. If they are similar, heteroscedasticity is not a big concern. If they differ substantially, report the robust version.
-
-### Advanced: One-Stop Dashboard
-
-The `performance` package can produce all diagnostic plots at once:
-
-```{r}
-#| label: check-model-dashboard
-#| fig-alt: "Six-panel diagnostic dashboard from performance package showing normality, homoscedasticity, linearity, influential observations, and collinearity checks for the linear regression model"
-#| fig-cap: "Complete diagnostic dashboard"
-#| fig-width: 10
-#| fig-height: 12
-
-performance::check_model(model_lm)
-```
-
-> This is handy for a quick visual scan, but we recommend understanding each individual plot (which we just did) before relying on the dashboard.
-
-
-## Key Takeaways
-
-::: {.callout-note}
-## What We Reviewed
-
-1. **Logistic regression handles binary outcomes.** Use `glm(family = binomial)` and interpret coefficients as odds ratios via `exp(coef())`. Always report CIs alongside point estimates.
-
-2. **Categorical predictors with 3+ levels** create multiple dummy variables automatically when you use `factor()`. Choose a meaningful reference group with `relevel()`.
-
-3. **Multiple logistic regression** lets you ask "controlling for" questions. Each OR represents the effect of one predictor holding all others constant.
-
-4. **Predicted probability plots** are the best way to communicate logistic regression results to a non-technical audience. Use `predict(type = "link")` with `plogis()` for proper confidence intervals.
-
-5. **The diagnostic checklist** for linear regression is always the same: normality, constant variance, linearity, collinearity, outliers. Run through all five every time.
-
-6. **Robust standard errors** are your safety net when constant variance is questionable. They adjust SE without changing the point estimates.
+2. Name one influential case characteristic you would investigate before changing the model.
 :::
 
-::: {.callout-tip}
-## Connecting Logistic and Linear Regression
-Both logistic and linear regression follow the same workflow: specify a model, fit it, interpret coefficients, check assumptions. The key difference is the outcome type (binary vs. continuous) and the scale of interpretation (odds ratios vs. raw units). The diagnostic spirit is the same --- before you trust any results, verify that the model's assumptions are reasonable.
+
+## Part 9: Separation Warning
+
+Separation occurs when a predictor pattern perfectly predicts an outcome.
+In the penalty data, one pattern has no death penalty events.
+
+```{r}
+#| label: lab11-separation-cell-check
+
+penalty_lab |>
+  count(def_f, vic_f, death_pe) |>
+  group_by(def_f, vic_f) |>
+  mutate(total = sum(n), proportion = n / total) |>
+  ungroup() |>
+  round_numeric(digits = 3)
+```
+
+```{r}
+#| label: lab11-separation-model
+
+penalty_sep <- penalty_lab |>
+  mutate(separation_pattern = as.integer(def_bl == 0 & vic_bl == 1))
+
+model_separation <- suppressWarnings(
+  glm(
+    death_pe ~ separation_pattern + def_bl,
+    data = penalty_sep,
+    family = binomial
+  )
+)
+
+model_params(model_separation) |>
+  as_tibble() |>
+  mutate(p = format_p(p)) |>
+  select(Parameter, Coefficient, SE, CI_low, CI_high, p) |>
+  round_numeric(digits = 3)
+```
+
+::: {.pitfall}
+The `glm()` warning is suppressed above only to keep the rendered lab clean.
+In an interactive R session, that warning is itself useful diagnostic evidence.
+
+A huge coefficient with a huge standard error is a separation warning sign.
+
+The model is not discovering a precise effect.
+It is struggling because one predictor pattern nearly or perfectly separates the outcome.
+Possible remedies include combining sparse categories, collecting more data, or using penalized logistic regression.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use the separation cell table and separation-model output.
+Write two sentences:
+
+1. Identify the cell pattern with no events.
+
+2. Identify the coefficient/SE pattern that signals separation trouble.
+:::
+
+
+## Part 10: OLS Diagnostics Do Not Transfer Directly
+
+The diagnostic mindset carries over from OLS, but the tools change.
+
+```{r}
+#| label: lab11-diagnostic-map
+
+tibble::tribble(
+  ~OLS_question, ~Logistic_analogue,
+  "How much variation is explained?", "Pseudo R-squared; deviance improvement",
+  "Are residuals centered with constant spread?", "Binned residuals; calibration",
+  "Are predictions accurate?", "Classification metrics; ROC/AUC",
+  "Are probabilities numerically trustworthy?", "Calibration plot",
+  "Do a few cases drive the model?", "Cook's distance; DFBETAS",
+  "Are estimates stable?", "Sparse cells and separation checks"
+)
+```
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Write a short diagnostic memo for the penalty model.
+Use 5-7 sentences and address grouped goodness of fit, pseudo R-squared, classification threshold, ROC/AUC, and separation.
+Mention that calibration and residual/influence plots were demonstrated with the Titanic model, so they should not be cited as direct evidence about the penalty model unless you compute those diagnostics for the penalty model.
+End with one recommendation about how cautiously the model should be used.
+:::
+
+::: {.exercises}
+## What to Submit
+
+Submit the following core items:
+
+1. The grouped GOF table and two-sentence sparse-cell warning. [core]{.chip .med}
+
+2. The pseudo R-squared table plus two sentences reporting McFadden R2 and Tjur R2. [core]{.chip .med}
+
+3. The classification table, classification metrics, and threshold comparison table plus two cutoff-choice sentences. [core]{.chip .hard}
+
+4. The ROC plot and AUC value plus two sentences about discrimination and cutoff choice. [core]{.chip .med}
+
+5. The Titanic calibration table and plot plus two sentences about one over-predicted or under-predicted decile. Label this as a worked example, not evidence about the penalty model. [core]{.chip .hard}
+
+6. One diagnostic extension: either the Titanic residual/influence plot and top-influence table plus two diagnostic bullets, or the penalty separation cell table and separation-model output plus two sentences diagnosing separation risk. [core]{.chip .hard}
+
+7. A short diagnostic memo that states whether the model is mainly useful for inference, classification, calibration, or none of these. [core]{.chip .hard}
+:::
+
+::: {.summary}
+## Lab Summary
+
+1. Logistic diagnostics focus on fit, classification, calibration, influence, and separation.
+
+2. Grouped goodness-of-fit tests work best for categorical predictor patterns with adequate expected counts.
+
+3. Pseudo R-squared values are useful only when the specific measure is named.
+
+4. Classification requires a cutoff; accuracy can be misleading when the event is rare.
+
+5. ROC/AUC evaluates ranking, while calibration evaluates predicted probability accuracy.
+
+6. Residual and influence diagnostics exist for logistic regression, but they do not look like OLS residual diagnostics.
+
+**Next:** Lab 12 extends generalized linear models beyond the logit link.
 :::

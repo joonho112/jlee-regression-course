@@ -1,415 +1,550 @@
 ---
-title: "Lab 7: Model Building and Nonlinear Relationships"
+title: "Lab 7: Nonlinear Relationships"
 ---
 
 {{< include ../_common.qmd >}}
 
-## Goals
-
-::: {.callout-note}
+::: {.objectives}
 ## What You'll Learn in This Lab
-- Compare nested models using F-tests (`anova()` and `car::linearHypothesis()`)
-- Detect nonlinearity with LOWESS smoothing curves
-- Apply log and square-root transformations to address skewness
-- Fit polynomial regression models (quadratic, cubic)
-- Model piecewise constant relationships using `cut()`
-- **Lecture Notes Reference:** Chapter 6: *Nonlinear Relationships* and Chapter 7: *Model Building*
+
+- Use LOWESS curves to detect nonlinearity
+- Fit log-transformed regression models
+- Center a predictor before adding polynomial terms
+- Compare linear, quadratic, and cubic models with `anova()` and `model_fit()`
+- Fit a piecewise constant model with `cut()`
+- Fit a natural spline with `splines::ns()`
+- Plot nonlinear fitted values with `ggeffects::predict_response()`
+- **Lecture Notes Reference:** Chapter 6: *Nonlinear Relationships*
+
+::: {.meta}
+Datasets: `gcse` and `crime`. Estimated time: 75-90 minutes.
+:::
 :::
 
-**Dataset:** `hsbs1` from the `regdatasets` package
 
+## Part 1: Prepare the Data
 
-## Setup
+This lab uses two examples from the lecture notes:
+
+1. `gcse`: LRT score and GCSE exam performance.
+2. `crime`: crime rate and urbanization.
 
 ```{r}
-#| label: lab07-setup
+#| label: lab07-load-data
 
-library(regdatasets)
-data(hsbs1)
+data(gcse)
+data(crime)
 
-hsbs1 <- hsbs1 |>
+gcse_lab <- gcse |>
+  filter(!is.na(gcse), !is.na(lrt)) |>
   mutate(
-    prog_f = factor(prog,
-                    levels = 1:3,
-                    labels = c("General", "Academic", "Vocational")),
-    race_f = factor(race,
-                    levels = 1:4,
-                    labels = c("Hispanic", "Asian", "African-Am", "White"))
+    lrt_c = lrt - mean(lrt, na.rm = TRUE)
   )
 
-glimpse(hsbs1)
-```
-
-
-## Part 1: Model Comparison --- Testing Sets of Predictors
-
-So far, every time we wanted to test whether a predictor matters, we looked at its individual *t*-test. But what about categorical variables with more than two levels? A 3-category variable like `prog` uses **two** dummy indicators, and we need a **joint** test that asks: "Do these two dummies, taken together, improve the model?"
-
-The tool for this is the **incremental F-test** --- compare a reduced model (without the predictors in question) to a full model (with them), and see whether the improvement in $R^2$ is statistically significant.
-
-### Fitting the Reduced and Full Models
-
-```{r}
-#| label: reduced-full-models
-
-model_reduced <- lm(write ~ read, data = hsbs1)
-model_full    <- lm(write ~ read + prog_f, data = hsbs1)
-```
-
-The reduced model predicts writing from reading alone. The full model adds program type (`prog_f`), which requires two dummy variables (Academic vs. General, Vocational vs. General).
-
-### The F-Test with `anova()`
-
-```{r}
-#| label: anova-comparison
-
-anova(model_reduced, model_full)
-```
-
-> The null hypothesis is $H_0$: all coefficients for `prog_f` equal zero --- meaning program type adds nothing beyond reading score. A significant *p*-value tells us the full model fits meaningfully better.
-
-Let's also look at what the full model actually estimates:
-
-```{r}
-#| label: full-model-output
-
-tidy_model(model_full)
-```
-
-### Alternative: `car::linearHypothesis()`
-
-The `linearHypothesis()` function from the `car` package lets you test the same hypothesis directly on the full model, without fitting the reduced model separately. You specify which coefficients should equal zero:
-
-```{r}
-#| label: linear-hypothesis-prog
-
-linearHypothesis(model_full, c("prog_fAcademic = 0", "prog_fVocational = 0"))
-```
-
-> You should get the same F-statistic and *p*-value as `anova()`. The two approaches are equivalent --- `linearHypothesis()` is simply more convenient when you want to test a subset of coefficients without re-fitting a reduced model.
-
-### Another Example: Testing Race
-
-Let's test whether race contributes beyond reading and program:
-
-```{r}
-#| label: test-race
-
-model_no_race   <- lm(write ~ read + prog_f, data = hsbs1)
-model_with_race <- lm(write ~ read + prog_f + race_f, data = hsbs1)
-
-anova(model_no_race, model_with_race)
-```
-
-::: {.callout-tip}
-## When to Use Incremental F-Tests
-Use them whenever you want to test a **set** of predictors simultaneously: a multi-category factor, a block of control variables, or an interaction that involves multiple terms. Individual *t*-tests only test one coefficient at a time.
-:::
-
-
-## Part 2: Detecting Nonlinearity
-
-Before we fit more complex models, we need a way to *see* whether the linear assumption holds. The key visual tool is the **LOWESS** (Locally Weighted Scatterplot Smoother) curve --- a flexible, data-driven curve that reveals the shape of the relationship without assuming linearity.
-
-### Linear Fit vs. LOWESS: Read and Concept
-
-```{r}
-#| label: lowess-linear-concept
-#| fig-alt: "Scatterplot with linear and LOWESS curves showing reading score versus self-concept, where both curves nearly overlap indicating a linear relationship"
-#| fig-cap: "Reading vs. self-concept: the linear fit tracks the LOWESS curve well."
-#| fig-width: 8
-#| fig-height: 5
-
-ggplot(hsbs1, aes(x = concept, y = read)) +
-  geom_point(alpha = 0.3, size = 2, color = ber640_colors["primary"]) +
-  geom_smooth(method = "lm", se = FALSE, color = ber640_colors["secondary"],
-              linewidth = 1.2) +
-  geom_smooth(method = "loess", se = FALSE, color = ber640_colors["accent"],
-              linewidth = 1.2, linetype = "dashed") +
-  labs(
-    x = "Self-Concept", y = "Reading Score",
-    title = "Read vs. Concept: Linear Looks Fine",
-    subtitle = "Solid red = linear fit | Dashed blue = LOWESS"
-  )
-```
-
-Here, the LOWESS curve and the straight line nearly overlap --- a good sign that linearity is reasonable.
-
-### Linear Fit vs. LOWESS: Write and Read
-
-```{r}
-#| label: lowess-linear-write
-#| fig-alt: "Scatterplot with linear and LOWESS curves showing reading score versus writing score, with slight curvature visible at the extremes of the LOWESS curve"
-#| fig-cap: "Writing vs. reading: is there curvature the linear fit misses?"
-#| fig-width: 8
-#| fig-height: 5
-
-ggplot(hsbs1, aes(x = write, y = read)) +
-  geom_point(alpha = 0.3, size = 2, color = ber640_colors["primary"]) +
-  geom_smooth(method = "lm", se = FALSE, color = ber640_colors["secondary"],
-              linewidth = 1.2) +
-  geom_smooth(method = "loess", se = FALSE, color = ber640_colors["accent"],
-              linewidth = 1.2, linetype = "dashed") +
-  labs(
-    x = "Writing Score", y = "Reading Score",
-    title = "Read vs. Write: Any Curvature?",
-    subtitle = "Solid red = linear fit | Dashed blue = LOWESS"
-  )
-```
-
-> Look carefully: if the LOWESS curve bends away from the straight line at the extremes, that is a clue that a nonlinear specification (polynomial, transformation) might be warranted. We will address this in Parts 4 and 5.
-
-
-## Part 3: Data Transformations
-
-When a variable is heavily skewed, a transformation can make the distribution more symmetric and the relationship with other variables more linear. The two most common transformations are:
-
-- **Log transformation** `log(x)`: best for strong positive skew (long right tail).
-- **Square-root transformation** `sqrt(x)`: a gentler option for moderate skew.
-
-### Creating a Skewed Variable
-
-The `hsbs1` variables are fairly well-behaved, so let's simulate a positively skewed variable to see transformations in action. We exponentiate `career` (which is roughly normal) to create something that mimics income or reaction time:
-
-```{r}
-#| label: create-skewed
-
-hsbs1 <- hsbs1 |>
-  mutate(career_exp = exp(career / 10))
-
-summary(hsbs1$career_exp)
-```
-
-### Before and After: Histograms
-
-```{r}
-#| label: transformation-histograms
-#| fig-alt: "Three-panel histogram showing original right-skewed distribution, log-transformed distribution approaching symmetry, and square-root-transformed distribution with moderate correction"
-#| fig-cap: "Left: original skewed variable. Middle: log-transformed. Right: sqrt-transformed."
-#| fig-width: 10
-#| fig-height: 4
-
-p_raw <- ggplot(hsbs1, aes(x = career_exp)) +
-  geom_histogram(bins = 25, fill = ber640_colors["primary"], color = "white") +
-  labs(title = "Original (Skewed)", x = "career_exp", y = "Count")
-
-p_log <- ggplot(hsbs1, aes(x = log(career_exp))) +
-  geom_histogram(bins = 25, fill = ber640_colors["accent"], color = "white") +
-  labs(title = "Log-Transformed", x = "log(career_exp)", y = "Count")
-
-p_sqrt <- ggplot(hsbs1, aes(x = sqrt(career_exp))) +
-  geom_histogram(bins = 25, fill = ber640_colors["success"], color = "white") +
-  labs(title = "Sqrt-Transformed", x = "sqrt(career_exp)", y = "Count")
-
-p_raw + p_log + p_sqrt
-```
-
-> The log transformation pulls in the long right tail dramatically. The square-root transformation is more moderate. Choose whichever produces a roughly symmetric distribution.
-
-::: {.callout-important}
-## When to Transform
-- **Log:** the variable spans several orders of magnitude or has strong positive skew. Common for income, population, reaction times. Requires all values to be positive.
-- **Square root:** moderate positive skew, or count data. Also requires non-negative values.
-- **Interpretation changes:** a one-unit increase in log(x) corresponds to a multiplicative change in x (roughly a percentage change), not an additive change.
-:::
-
-
-## Part 4: Polynomial Regression
-
-When the LOWESS curve suggests a bend, one approach is to add polynomial terms --- $x^2$ for a quadratic, $x^3$ for a cubic. This keeps the model within the linear regression framework (polynomial terms are just additional predictors).
-
-### Quadratic Model
-
-Let's fit a quadratic model predicting reading from writing:
-
-```{r}
-#| label: quadratic-model
-
-model_linear    <- lm(read ~ write, data = hsbs1)
-model_quadratic <- lm(read ~ write + I(write^2), data = hsbs1)
-
-tidy_model(model_quadratic)
-```
-
-> The `I()` function tells R to treat `write^2` as an arithmetic operation rather than a formula operator. Alternatively, you can use `poly(write, 2, raw = TRUE)` to get the same result.
-
-### Testing the Quadratic Term
-
-Is the quadratic term significant? We compare the linear and quadratic models:
-
-```{r}
-#| label: test-quadratic
-
-anova(model_linear, model_quadratic)
-```
-
-If the *p*-value is small, the curvature is statistically meaningful. If not, the straight line was good enough.
-
-### Adding a Cubic Term
-
-We can go further and test whether a cubic term helps:
-
-```{r}
-#| label: cubic-model
-
-model_cubic <- lm(read ~ write + I(write^2) + I(write^3), data = hsbs1)
-
-anova(model_quadratic, model_cubic)
-```
-
-> If the cubic term is not significant, stop at the quadratic. This is the standard strategy: start simple, add complexity only when the data demand it.
-
-::: {.callout-important}
-## The Hierarchy Principle
-If a higher-order term (e.g., $x^2$) is in the model, **always keep all lower-order terms** ($x$) regardless of their individual significance. Removing $x$ while keeping $x^2$ changes the meaning of the quadratic term and makes the model uninterpretable.
-:::
-
-### Visualizing the Polynomial Fit
-
-```{r}
-#| label: polynomial-plot
-#| fig-alt: "Scatterplot of reading versus writing scores with three overlaid curves: linear, quadratic, and cubic fits that are nearly indistinguishable, suggesting minimal curvature"
-#| fig-cap: "Comparing linear, quadratic, and cubic fits."
-#| fig-width: 8
-#| fig-height: 5
-
-# Generate predictions on a grid
-write_grid <- tibble(write = seq(min(hsbs1$write), max(hsbs1$write), length.out = 200))
-
-write_grid <- write_grid |>
-  mutate(
-    linear    = predict(model_linear,    newdata = write_grid),
-    quadratic = predict(model_quadratic, newdata = write_grid),
-    cubic     = predict(model_cubic,     newdata = write_grid)
+crime_lab <- crime |>
+  rename(
+    crime_rate = c,
+    high_school = hs,
+    urbanization = u
   ) |>
-  pivot_longer(cols = c(linear, quadratic, cubic),
-               names_to = "model", values_to = "predicted") |>
-  mutate(model = factor(model, levels = c("linear", "quadratic", "cubic")))
+  filter(crime_rate > 0, urbanization > 0)
+```
 
-ggplot(hsbs1, aes(x = write, y = read)) +
-  geom_point(alpha = 0.3, size = 2, color = "grey60") +
-  geom_line(data = write_grid, aes(y = predicted, color = model),
-            linewidth = 1.2) +
-  scale_color_manual(
-    values = c("linear" = ber640_colors["secondary"],
-               "quadratic" = ber640_colors["accent"],
-               "cubic" = ber640_colors["success"]),
-    labels = c("Linear", "Quadratic", "Cubic")
+```{r}
+#| label: lab07-preflight
+
+tibble(
+  Dataset = c("gcse", "crime"),
+  Rows = c(nrow(gcse_lab), nrow(crime_lab)),
+  Main_outcome = c("gcse", "crime_rate"),
+  Main_predictor = c("lrt", "urbanization")
+)
+```
+
+
+## Part 2: Detect Nonlinearity with LOWESS
+
+Before fitting a nonlinear model, plot the data.
+The LOWESS curve is a flexible smooth curve that helps us see whether a straight line misses the shape of the relationship.
+
+```{r}
+#| label: lab07-lowess-gcse-lrt
+#| fig-cap: "Linear and LOWESS fits for the GCSE-LRT relationship."
+#| fig-alt: "Scatter plot of GCSE score versus LRT score with a straight linear fit and a dashed LOWESS curve. The two curves mostly overlap, with small departures near the extremes."
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(gcse_lab, aes(x = lrt, y = gcse)) +
+  geom_point(alpha = 0.05, color = "grey50") +
+  geom_smooth(
+    method = "lm", formula = y ~ x, se = FALSE,
+    color = ber640_colors[["primary"]], linewidth = 1.1
+  ) +
+  geom_smooth(
+    method = "loess", formula = y ~ x, se = FALSE,
+    color = ber640_colors[["secondary"]], linewidth = 1.1,
+    linetype = "dashed"
   ) +
   labs(
-    x = "Writing Score", y = "Reading Score", color = "Model",
-    title = "Polynomial Regression: Read ~ Write",
-    subtitle = "Does adding curvature improve the fit?"
+    x = "LRT Score",
+    y = "GCSE Score",
+    color = NULL
   )
 ```
 
-> Look at whether the curves separate meaningfully. If the quadratic and linear lines are nearly identical, the extra complexity was unnecessary.
+::: {.interpretation}
+If the LOWESS curve closely follows the straight line, a linear model may be enough.
 
+If the LOWESS curve bends away from the straight line, consider a transformation, polynomial, piecewise model, or spline.
+:::
 
-## Part 5: Piecewise Constant Relationships
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-Sometimes the relationship is not smooth at all --- instead, the outcome jumps up at certain thresholds. A **piecewise constant** model captures this by cutting a continuous predictor into groups and using those groups as dummy variables.
-
-### Cutting Reading into Quartile Groups
-
-```{r}
-#| label: create-quartile-groups
-
-hsbs1 <- hsbs1 |>
-  mutate(
-    read_q = cut(read,
-                 breaks = quantile(read, probs = c(0, .25, .50, .75, 1)),
-                 include.lowest = TRUE,
-                 labels = c("Q1", "Q2", "Q3", "Q4"))
-  )
-
-hsbs1 |> count(read_q)
-```
-
-### Regression with Quartile Dummies
-
-```{r}
-#| label: piecewise-model
-
-model_piecewise <- lm(write ~ read_q, data = hsbs1)
-tidy_model(model_piecewise)
-```
-
-> The intercept is the mean writing score for Q1 (the reference group). Each coefficient is the difference in mean writing between that quartile and Q1.
-
-### Comparing All Approaches Visually
-
-Let's put the linear, polynomial, and piecewise fits side by side:
-
-```{r}
-#| label: comparison-plot
-#| fig-alt: "Three-panel comparison showing linear fit as a straight line, quadratic fit with slight curvature, and piecewise constant fit as horizontal segments at quartile group means"
-#| fig-cap: "Three ways to model the read-write relationship."
-#| fig-width: 10
-#| fig-height: 5
-
-# Piecewise predictions (step function)
-piecewise_means <- hsbs1 |>
-  group_by(read_q) |>
-  summarise(
-    read_min  = min(read),
-    read_max  = max(read),
-    predicted = mean(write),
-    .groups   = "drop"
-  )
-
-p_linear <- ggplot(hsbs1, aes(x = read, y = write)) +
-  geom_point(alpha = 0.3, size = 1.5, color = "grey60") +
-  geom_smooth(method = "lm", se = FALSE,
-              color = ber640_colors["secondary"], linewidth = 1.2) +
-  labs(title = "Linear", x = "Reading", y = "Writing")
-
-p_poly <- ggplot(hsbs1, aes(x = read, y = write)) +
-  geom_point(alpha = 0.3, size = 1.5, color = "grey60") +
-  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE,
-              color = ber640_colors["accent"], linewidth = 1.2) +
-  labs(title = "Quadratic", x = "Reading", y = "Writing")
-
-p_piece <- ggplot(hsbs1, aes(x = read, y = write)) +
-  geom_point(alpha = 0.3, size = 1.5, color = "grey60") +
-  geom_segment(data = piecewise_means,
-               aes(x = read_min, xend = read_max,
-                   y = predicted, yend = predicted),
-               color = ber640_colors["success"], linewidth = 1.5) +
-  labs(title = "Piecewise Constant", x = "Reading", y = "Writing")
-
-p_linear + p_poly + p_piece
-```
-
-> The linear model assumes a constant slope everywhere. The quadratic allows curvature. The piecewise model makes no shape assumption at all --- it just estimates a separate mean for each group. The tradeoff: piecewise is the most flexible but throws away information about *where within* each quartile a student falls.
-
-::: {.callout-tip}
-## Choosing a Nonlinear Strategy
-
-| Strategy | Best When | Drawback |
-|---|---|---|
-| **Polynomial** | Smooth curvature visible in LOWESS | Unstable at extremes (high-order) |
-| **Transformation** | Skewed predictors or outcomes | Changes the scale of interpretation |
-| **Piecewise constant** | Known meaningful thresholds | Loses within-group variation |
-
-Start with LOWESS to *see* the relationship, then choose the simplest specification that captures the pattern.
+Compare the straight line and LOWESS curve in the GCSE-LRT plot.
+Does the relationship look mostly linear, or is there meaningful curvature?
+Write two short sentences: one describing the visual pattern and one naming a reasonable next model to try.
 :::
 
 
-## Key Takeaways
+## Part 3: Log Transformations
 
-::: {.callout-note}
-## What to Remember
+Log transformations are useful when a relationship is multiplicative or when the variables have strong positive skew.
 
-1. **Incremental F-tests** let you test whether a *set* of predictors (e.g., all dummies for a multi-category factor) jointly improve the model. Use `anova(reduced, full)` or `car::linearHypothesis()`.
+The `crime` example compares four common specifications.
 
-2. **LOWESS curves** are your best diagnostic for nonlinearity. Overlay them on scatterplots and compare with the linear fit --- if they diverge, consider a nonlinear specification.
+```{r}
+#| label: lab07-fit-log-models
 
-3. **Log and sqrt transformations** address skewness. Log is stronger; sqrt is gentler. Both require positive values and change the interpretation of coefficients.
+model_level_level <- lm(crime_rate ~ urbanization, data = crime_lab)
+model_log_level <- lm(log(crime_rate) ~ urbanization, data = crime_lab)
+model_level_log <- lm(crime_rate ~ log(urbanization), data = crime_lab)
+model_log_log <- lm(log(crime_rate) ~ log(urbanization), data = crime_lab)
+```
 
-4. **Polynomial regression** adds $x^2$, $x^3$, etc. as predictors. Always follow the **hierarchy principle**: keep lower-order terms when higher-order terms are significant.
+```{r}
+#| label: lab07-log-coefficient-table
 
-5. **Piecewise constant models** use `cut()` to turn a continuous variable into groups. Maximum flexibility, but they discard within-group information.
+log_model_slopes <- bind_rows(
+  tidy_model(model_level_level) |>
+    filter(term == "urbanization") |>
+    mutate(Model = "Level-level"),
+  tidy_model(model_log_level) |>
+    filter(term == "urbanization") |>
+    mutate(Model = "Log-level"),
+  tidy_model(model_level_log) |>
+    filter(term == "log(urbanization)") |>
+    mutate(Model = "Level-log"),
+  tidy_model(model_log_log) |>
+    filter(term == "log(urbanization)") |>
+    mutate(Model = "Log-log")
+) |>
+  select(Model, term, estimate, std.error, conf.low, conf.high, p.value)
 
-6. **Model building is iterative:** visualize first, then formalize with a test. Let the data guide complexity --- add it when needed, not by default.
+log_model_slopes |>
+  mutate(p.value = format_p(p.value)) |>
+  round_numeric(digits = 3)
+```
+
+::: {.interpretation}
+The coefficient meaning depends on which side is logged.
+
+- Level-level: raw-unit change in `crime_rate`.
+- Log-level: approximate percent change in `crime_rate`.
+- Level-log: raw-unit change in `crime_rate` for a percent change in urbanization.
+- Log-log: elasticity, or percent change in `crime_rate` for a percent change in urbanization.
+:::
+
+### Visual Check for Log Specifications
+
+```{r}
+#| label: lab07-log-specification-plot
+#| fig-cap: "Four log transformation choices for crime rate and urbanization."
+#| fig-alt: "Four-panel plot comparing level-level, log-level, level-log, and log-log specifications. The log-log panel has the closest overlap between the straight linear fit and dashed LOWESS curve across most of the urbanization range; the level-log panel bends upward most strongly at high urbanization."
+#| fig-width: 10
+#| fig-height: 8
+
+p_level_level <- ggplot(crime_lab, aes(x = urbanization, y = crime_rate)) +
+  geom_point(alpha = 0.5, color = "grey50") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE,
+              color = ber640_colors[["primary"]]) +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE,
+              color = ber640_colors[["secondary"]], linetype = "dashed") +
+  labs(title = "Level-level", x = "Urbanization", y = "Crime Rate")
+
+p_log_level <- ggplot(crime_lab, aes(x = urbanization, y = log(crime_rate))) +
+  geom_point(alpha = 0.5, color = "grey50") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE,
+              color = ber640_colors[["primary"]]) +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE,
+              color = ber640_colors[["secondary"]], linetype = "dashed") +
+  labs(title = "Log-level", x = "Urbanization", y = "log(Crime Rate)")
+
+p_level_log <- ggplot(crime_lab, aes(x = log(urbanization), y = crime_rate)) +
+  geom_point(alpha = 0.5, color = "grey50") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE,
+              color = ber640_colors[["primary"]]) +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE,
+              color = ber640_colors[["secondary"]], linetype = "dashed") +
+  labs(title = "Level-log", x = "log(Urbanization)", y = "Crime Rate")
+
+p_log_log <- ggplot(crime_lab, aes(x = log(urbanization), y = log(crime_rate))) +
+  geom_point(alpha = 0.5, color = "grey50") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE,
+              color = ber640_colors[["primary"]]) +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE,
+              color = ber640_colors[["secondary"]], linetype = "dashed") +
+  labs(title = "Log-log", x = "log(Urbanization)", y = "log(Crime Rate)")
+
+(p_level_level + p_log_level) / (p_level_log + p_log_log)
+```
+
+::: {.pitfall}
+Do not compare R2 across models with different outcome scales.
+
+A model with `crime_rate` as the outcome and a model with `log(crime_rate)` as the outcome explain variance on different scales.
+Use residual patterns, prediction error on the original scale, and substantive interpretability.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use `log_model_slopes` and the four-panel log plot.
+
+Pick one logged specification and interpret its slope in the correct units.
+Then write one sentence about which plot makes the linear fit and LOWESS curve look most similar.
+Your answer should also explain why R2 should not be the only criterion here.
+:::
+
+
+## Part 4: Centered Polynomial Regression
+
+Polynomial regression adds powers of a predictor.
+We center `lrt` first so the linear and squared terms are less redundant and the lower-order terms are easier to interpret.
+
+```{r}
+#| label: lab07-fit-polynomial-models
+
+model_linear <- lm(gcse ~ lrt_c, data = gcse_lab)
+model_quadratic <- lm(gcse ~ lrt_c + I(lrt_c^2), data = gcse_lab)
+model_cubic <- lm(gcse ~ lrt_c + I(lrt_c^2) + I(lrt_c^3), data = gcse_lab)
+
+model_params(model_quadratic) |>
+  as_tibble() |>
+  mutate(p = format_p(p)) |>
+  round_numeric(digits = 3)
+```
+
+### Test Added Polynomial Terms
+
+```{r}
+#| label: lab07-polynomial-anova
+
+polynomial_tests <- anova(model_linear, model_quadratic, model_cubic) |>
+  as_tibble() |>
+  mutate(
+    Model = c("Linear", "Quadratic", "Cubic"),
+    p.value = format_p(`Pr(>F)`)
+  ) |>
+  select(Model, Res.Df, RSS, Df, `Sum of Sq`, F, p.value)
+
+polynomial_tests |>
+  round_numeric(digits = 3)
+```
+
+```{r}
+#| label: lab07-polynomial-fit-table
+
+polynomial_fit <- bind_rows(
+  model_fit(model_linear) |>
+    as_tibble() |>
+    mutate(Model = "Linear"),
+  model_fit(model_quadratic) |>
+    as_tibble() |>
+    mutate(Model = "Quadratic"),
+  model_fit(model_cubic) |>
+    as_tibble() |>
+    mutate(Model = "Cubic")
+) |>
+  select(Model, R2, R2_adjusted, RMSE, AIC, BIC)
+
+polynomial_fit |>
+  round_numeric(digits = 3)
+```
+
+::: {.interpretation}
+Polynomial terms can be statistically significant even when the visual improvement is small.
+
+Use the F-tests, fit statistics, plots, and theory together.
+Do not choose a higher-degree polynomial just because R2 increases.
+:::
+
+### Plot Polynomial Predictions
+
+```{r}
+#| label: lab07-polynomial-prediction-data
+
+lrt_mean <- mean(gcse_lab$lrt, na.rm = TRUE)
+
+polynomial_predictions <- bind_rows(
+  ggeffects::predict_response(model_linear, terms = "lrt_c [all]") |>
+    as_tibble() |>
+    mutate(Model = "Linear"),
+  ggeffects::predict_response(model_quadratic, terms = "lrt_c [all]") |>
+    as_tibble() |>
+    mutate(Model = "Quadratic"),
+  ggeffects::predict_response(model_cubic, terms = "lrt_c [all]") |>
+    as_tibble() |>
+    mutate(Model = "Cubic")
+) |>
+  mutate(lrt = x + lrt_mean)
+```
+
+```{r}
+#| label: lab07-polynomial-prediction-plot
+#| fig-cap: "Linear, quadratic, and cubic predictions for the GCSE-LRT relationship."
+#| fig-alt: "Scatter plot of GCSE score versus LRT score with three fitted prediction curves. The linear, quadratic, and cubic curves are similar, with small differences near the extremes."
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(gcse_lab, aes(x = lrt, y = gcse)) +
+  geom_point(alpha = 0.04, color = "grey55") +
+  geom_line(
+    data = polynomial_predictions,
+    aes(x = lrt, y = predicted, color = Model),
+    linewidth = 1.1
+  ) +
+  scale_color_manual(values = c(
+    "Linear" = ber640_colors[["primary"]],
+    "Quadratic" = ber640_colors[["secondary"]],
+    "Cubic" = ber640_colors[["success"]]
+  )) +
+  labs(
+    x = "LRT Score",
+    y = "Predicted GCSE Score",
+    color = "Model"
+  )
+```
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use `anova(model_linear, model_quadratic, model_cubic)`, `polynomial_fit`, and the prediction plot.
+
+Which model would you choose for the GCSE-LRT relationship?
+Write two sentences: one sentence about statistical or fit evidence, and one sentence about whether the added curve is substantively useful.
+:::
+
+
+## Part 5: Piecewise Constant Model
+
+A piecewise constant model cuts a continuous predictor into groups.
+This is easy to interpret, but it throws away within-group information.
+
+```{r}
+#| label: lab07-create-lrt-groups
+
+gcse_piece <- gcse_lab |>
+  mutate(
+    lrt_group = cut(
+      lrt,
+      breaks = quantile(lrt, probs = c(0, .25, .50, .75, 1), na.rm = TRUE),
+      include.lowest = TRUE,
+      labels = c("Q1 Low", "Q2", "Q3", "Q4 High")
+    )
+  ) |>
+  filter(!is.na(lrt_group))
+```
+
+```{r}
+#| label: lab07-piecewise-model
+
+model_piecewise <- lm(gcse ~ lrt_group, data = gcse_piece)
+model_params(model_piecewise)
+```
+
+```{r}
+#| label: lab07-piecewise-means
+
+piecewise_means <- modelbased::estimate_means(
+  model_piecewise,
+  by = "lrt_group"
+) |>
+  as_tibble() |>
+  select(lrt_group, Mean, SE, CI_low, CI_high)
+
+piecewise_means |>
+  round_numeric(digits = 2)
+```
+
+```{r}
+#| label: lab07-piecewise-means-plot
+#| fig-cap: "Predicted GCSE means by LRT quartile."
+#| fig-alt: "Point-and-interval plot showing predicted GCSE means for four LRT quartile groups. Mean GCSE increases from the lowest LRT quartile to the highest LRT quartile."
+#| fig-width: 7
+#| fig-height: 4.5
+
+ggplot(piecewise_means, aes(x = lrt_group, y = Mean)) +
+  geom_point(size = 3, color = ber640_colors[["primary"]]) +
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.12,
+                color = ber640_colors[["primary"]]) +
+  labs(
+    x = "LRT Quartile",
+    y = "Predicted GCSE Mean"
+  )
+```
+
+::: {.pitfall}
+Cutting a continuous predictor into groups can make communication easier, but it loses information.
+
+Two students just above and just below a cutoff may receive different predicted means even if their LRT scores are almost identical.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use `piecewise_means` and the quartile plot.
+
+Describe how predicted GCSE changes across LRT quartiles.
+Then write one benefit and one cost of replacing continuous LRT with quartile groups.
+:::
+
+
+## Part 6: Natural Spline
+
+A natural spline is a smooth flexible curve fit inside an ordinary linear model.
+The coefficients are not directly interpretable, so we focus on predictions.
+
+```{r}
+#| label: lab07-fit-spline-model
+
+model_spline <- lm(gcse ~ splines::ns(lrt_c, df = 4), data = gcse_lab)
+model_params(model_spline)
+```
+
+```{r}
+#| label: lab07-model-fit-comparison
+
+nonlinear_fit <- bind_rows(
+  model_fit(model_linear) |>
+    as_tibble() |>
+    mutate(Model = "Linear"),
+  model_fit(model_quadratic) |>
+    as_tibble() |>
+    mutate(Model = "Quadratic"),
+  model_fit(model_piecewise) |>
+    as_tibble() |>
+    mutate(Model = "Piecewise constant"),
+  model_fit(model_spline) |>
+    as_tibble() |>
+    mutate(Model = "Natural spline")
+) |>
+  select(Model, R2, R2_adjusted, RMSE, AIC, BIC)
+
+nonlinear_fit |>
+  round_numeric(digits = 3)
+```
+
+### Compare Smooth Prediction Curves
+
+```{r}
+#| label: lab07-spline-comparison-data
+
+smooth_predictions <- bind_rows(
+  polynomial_predictions |>
+    filter(Model %in% c("Linear", "Quadratic")) |>
+    select(lrt, predicted, conf.low, conf.high, Model),
+  ggeffects::predict_response(model_spline, terms = "lrt_c [all]") |>
+    as_tibble() |>
+    mutate(
+      lrt = x + lrt_mean,
+      Model = "Natural spline"
+    ) |>
+    select(lrt, predicted, conf.low, conf.high, Model)
+)
+```
+
+```{r}
+#| label: lab07-spline-comparison-plot
+#| fig-cap: "Linear, quadratic, and natural spline fits compared with LOWESS."
+#| fig-alt: "Scatter plot of GCSE score versus LRT score with linear, quadratic, and natural spline prediction curves. All three fitted curves nearly overlap through the middle of the LRT range; the quadratic line rises slightly above the others at the high end, while the natural spline remains close to the linear curve."
+#| fig-width: 9
+#| fig-height: 5
+
+ggplot(gcse_lab, aes(x = lrt, y = gcse)) +
+  geom_point(alpha = 0.035, color = "grey55") +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE,
+              color = "grey30", linetype = "dashed", linewidth = 0.9) +
+  geom_line(
+    data = smooth_predictions,
+    aes(x = lrt, y = predicted, color = Model),
+    linewidth = 1.1
+  ) +
+  scale_color_manual(values = c(
+    "Linear" = ber640_colors[["primary"]],
+    "Quadratic" = ber640_colors[["secondary"]],
+    "Natural spline" = ber640_colors[["success"]]
+  )) +
+  labs(
+    x = "LRT Score",
+    y = "Predicted GCSE Score",
+    color = "Model"
+  )
+```
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use `nonlinear_fit` and the spline comparison plot.
+
+Does the natural spline improve the substantive story enough to justify its extra flexibility?
+Write two sentences comparing the linear, quadratic, and spline fits.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Choose one final model strategy for this lab: linear, quadratic, piecewise constant, or natural spline.
+
+Use your comparison from the previous prompt as evidence.
+Write a short 3--4 sentence recommendation.
+Your recommendation should mention visual fit, fit statistics, interpretability, and model complexity.
+:::
+
+::: {.exercises}
+## What to Submit
+
+Submit the following items:
+
+1. The GCSE-LRT plot with the linear fit and LOWESS curve, plus two sentences diagnosing nonlinearity. [core]{.chip .med}
+
+2. The `log_model_slopes` table, plus one logged coefficient interpretation. [core]{.chip .med}
+
+3. One sentence using the four-panel log plot to choose the most linear-looking crime specification. [core]{.chip .med}
+
+4. The polynomial nested F-test output and `polynomial_fit` table, plus two sentences choosing a polynomial degree. [core]{.chip .hard}
+
+5. The `piecewise_means` table or quartile plot, plus one benefit and one cost of grouping LRT. [core]{.chip .med}
+
+6. The `nonlinear_fit` table and spline comparison plot, plus two sentences comparing the linear, quadratic, and natural spline models. [core]{.chip .hard}
+
+7. The 3--4 sentence recommendation from the final Your turn block. [core]{.chip .hard}
+:::
+
+::: {.summary}
+## Lab Summary
+
+1. LOWESS is a visual diagnostic for nonlinearity.
+
+2. Log transformations change coefficient interpretation and should be guided by theory and residual patterns.
+
+3. Center predictors before adding polynomial terms.
+
+4. Use nested F-tests and fit statistics to compare linear, quadratic, and cubic models.
+
+5. Piecewise constant models are easy to explain but discard within-group variation.
+
+6. Natural splines are flexible, so interpret them through prediction plots rather than individual coefficients.
+
+**Next:** Lab 8 checks regression diagnostics and model-building decisions.
 :::

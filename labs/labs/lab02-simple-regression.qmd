@@ -4,243 +4,225 @@ title: "Lab 2: Simple Linear Regression"
 
 {{< include ../_common.qmd >}}
 
-## Goals
-
-::: {.callout-note}
+::: {.objectives}
 ## What You'll Learn in This Lab
-- Prepare and subset data for analysis
-- Create exploratory visualizations (boxplots, histograms, scatterplots)
-- Fit a simple linear regression model using `lm()`
-- Interpret regression output (coefficients, R-squared, p-values)
-- Compute fitted values and residuals
-- Check regression assumptions (linearity, normality, constant variance)
+
+- Prepare a clean analysis dataset without overwriting the raw data
+- Fit a simple linear regression model with `lm()`
+- Inspect coefficients with `model_params()`
+- Inspect model fit with `model_fit()` and `performance::r2()`
+- Use the model to make simple predictions
+- Compute fitted values and residuals with minimal code
+- Use `performance::check_model()` for a quick visual diagnostic panel
 - **Lecture Notes Reference:** Chapter 1: *Simple Linear Regression*
+
+::: {.meta}
+Dataset: `instruction`. Estimated time: 75-90 minutes.
 :::
-
-**Dataset:** `instruction` from the `regdatasets` package
-
-## Setup
-
-```{r}
-#| label: lab02-setup
-
-library(regdatasets)
-data(instruction)
-```
+:::
 
 
 ## Part 1: Data Preparation
 
-Before diving into regression, let's get comfortable with our data. We will explore the full `instruction` dataset, then create a subset for one school that we will use throughout the lab.
+In Lab 1, we learned the basic R workflow: load data, inspect it, create a clean working dataset, and then analyze. We will use the same pattern here.
 
-### Step 1: Explore the Data
+### Step 1: Load the Data
+
+The course setup has already loaded the packages we need. The first code you run is the data-loading code:
 
 ```{r}
-#| label: explore-data
+#| label: lab02-load-data
 
-glimpse(instruction)
+data(instruction)
+instruction_raw <- instruction
 ```
 
-> The `instruction` dataset contains **`r nrow(instruction)` students** nested within classrooms and schools. Key variables include math achievement gain (`mathgain`), kindergarten math scores (`mathkind`), socioeconomic status (`ses`), and demographic indicators.
+We keep the original dataset in `instruction_raw`. All changes for analysis will go into a separate object.
 
-### Step 2: Rename the Gender Variable
+### Step 2: Create a Clean Working Dataset
 
-The dataset uses `girl` as the gender variable. In social science research, we more commonly use `female` as the variable name for a 0/1 indicator. Let's rename it.
+For readable tables and plots, we will rename `girl` to `female`, add labeled group variables, and create a first-grade math score.
 
 ```{r}
-#| label: rename-girl
+#| label: lab02-clean-data
 
-instruction <- instruction |>
-  rename(female = girl)
+instruction_clean <- instruction_raw |>
+  rename(female = girl) |>
+  mutate(
+    gender = factor(female,
+                    levels = c(0, 1),
+                    labels = c("Male", "Female")),
+    minority_group = factor(minority,
+                            levels = c(0, 1),
+                            labels = c("Non-minority", "Minority")),
+    newteach = if_else(yearstea < 5, 1, 0),
+    mathfirst = mathkind + mathgain
+  )
 ```
 
-> We use `rename(new_name = old_name)` to change variable names. Now `female = 1` for girls and `female = 0` for boys.
+> `instruction_clean` is the dataset we will use for analysis. `instruction_raw` remains unchanged.
 
-### Step 3: Create a Subset for School 11
+### Step 3: Focus on One School
 
-For our first regression analysis, we will focus on a single school. This makes interpretation simpler and keeps our examples clean.
+To learn the mechanics of simple regression, we will start with a small subset: students in School 11.
 
 ```{r}
-#| label: create-school11
+#| label: lab02-create-school11
 
-school11 <- instruction |>
+school11 <- instruction_clean |>
   filter(schoolid == 11)
 
-nrow(school11)
+tibble(
+  students = nrow(school11),
+  classrooms = n_distinct(school11$classid)
+)
 ```
 
-> School 11 has `r nrow(school11)` students. Working with a single school eliminates between-school variation so we can focus on understanding regression mechanics.
+Working with one school keeps the first regression example small and concrete. Later in the lab, we will return to the full dataset.
 
-### Step 4: Create a New Variable
+### Step 4: Preflight Check
 
-Let's practice creating a new variable. We will make a dummy variable indicating "new teachers" (those with fewer than 5 years of experience).
-
-```{r}
-#| label: create-newteach
-
-school11 <- school11 |>
-  mutate(newteach = if_else(yearstea < 5, 1, 0))
-```
-
-Let's verify our coding worked correctly:
+Before fitting a model, check the variables that will enter the model:
 
 ```{r}
-#| label: check-newteach
+#| label: lab02-preflight
 
 school11 |>
-  count(newteach)
+  summarise(
+    n = n(),
+    missing_mathgain = sum(is.na(mathgain)),
+    missing_mathkind = sum(is.na(mathkind)),
+    min_mathkind = min(mathkind, na.rm = TRUE),
+    max_mathkind = max(mathkind, na.rm = TRUE),
+    min_mathgain = min(mathgain, na.rm = TRUE),
+    max_mathgain = max(mathgain, na.rm = TRUE)
+  )
 ```
 
-> `count()` is a quick way to get frequency tables. We can see how many students have new vs. experienced teachers.
+The outcome will be `mathgain`, and the predictor will be `mathkind`.
 
 ### Step 5: Descriptive Statistics
 
-Let's compute some basic descriptive statistics for our key variables.
+Here are simple summaries for the key continuous variables:
 
 ```{r}
-#| label: descriptives-continuous
+#| label: lab02-descriptives
 
 school11 |>
   summarise(
-    across(
-      c(ses, mathkind, mathgain),
-      list(mean = mean, sd = sd, median = median),
-      .names = "{.col}_{.fn}"
-    )
-  ) |>
-  pivot_longer(everything(),
-               names_to = c("variable", "stat"),
-               names_sep = "_",
-               values_to = "value") |>
-  pivot_wider(names_from = stat, values_from = value) |>
-  mutate(across(where(is.numeric), \(x) round(x, 2)))
+    mean_ses = round(mean(ses, na.rm = TRUE), 2),
+    sd_ses = round(sd(ses, na.rm = TRUE), 2),
+    mean_mathkind = round(mean(mathkind, na.rm = TRUE), 2),
+    sd_mathkind = round(sd(mathkind, na.rm = TRUE), 2),
+    mean_mathgain = round(mean(mathgain, na.rm = TRUE), 2),
+    sd_mathgain = round(sd(mathgain, na.rm = TRUE), 2)
+  )
 ```
 
-> This table gives us the mean, standard deviation, and median for SES, kindergarten math, and math gain. Notice the range and spread of each variable.
-
-We can also get descriptive statistics by group:
+And here are the same regression variables summarized by gender:
 
 ```{r}
-#| label: descriptives-by-gender
+#| label: lab02-descriptives-by-gender
 
 school11 |>
-  group_by(female) |>
+  group_by(gender) |>
   summarise(
     n = n(),
-    mean_ses = mean(ses, na.rm = TRUE),
-    mean_mathkind = mean(mathkind, na.rm = TRUE),
-    mean_mathgain = mean(mathgain, na.rm = TRUE),
+    mean_mathkind = round(mean(mathkind, na.rm = TRUE), 2),
+    mean_mathgain = round(mean(mathgain, na.rm = TRUE), 2),
     .groups = "drop"
-  ) |>
-  mutate(across(where(is.numeric) & !n, \(x) round(x, 2)))
+  )
 ```
 
-> Compare the means for boys (`female = 0`) and girls (`female = 1`). Are there noticeable differences in SES, kindergarten math scores, or math gain?
-
-Let's also look at a cross-tabulation:
-
 ```{r}
-#| label: crosstab
+#| label: lab02-count-gender-minority
 
 school11 |>
-  count(female, minority)
+  count(gender, minority_group)
 ```
 
 
-## Part 2: Exploring the Data Visually
+## Part 2: Explore the Relationship
 
-Good data analysis always starts with visualization. Let's explore the distributions and relationships in our data before fitting any models.
+Regression starts with a visual question: do the two variables appear to move together?
 
-### Boxplots
-
-Boxplots are great for comparing distributions across groups.
+### Boxplot
 
 ```{r}
-#| label: boxplot-mathkind
-#| fig-cap: "Distribution of kindergarten math scores by gender"
-#| fig-alt: "Boxplot comparing kindergarten math scores for males and females in School 11, showing similar medians and interquartile ranges with a few outliers"
+#| label: lab02-boxplot-mathkind
+#| fig-cap: "Distribution of kindergarten math scores by gender in School 11"
+#| fig-alt: "Boxplot comparing kindergarten math scores for male and female students in School 11, with similar medians and overlapping interquartile ranges"
 
-ggplot(school11, aes(x = factor(female, labels = c("Male", "Female")),
-                     y = mathkind)) +
-  geom_boxplot(fill = c("#2C3E50", "#E74C3C"), alpha = 0.7) +
+ggplot(school11, aes(x = gender, y = mathkind, fill = gender)) +
+  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
+  ber640_fill +
   labs(x = "Gender", y = "Math Score at Kindergarten Entry")
 ```
 
-> The boxplot shows the median (thick line), interquartile range (box), and potential outliers (dots). Compare the distributions for males and females.
-
-### Histograms
-
-Histograms reveal the shape of a distribution.
+### Histogram
 
 ```{r}
-#| label: histogram-ses
+#| label: lab02-histogram-ses
 #| fig-cap: "Distribution of SES in School 11"
-#| fig-alt: "Histogram of SES in School 11 showing a roughly symmetric distribution with most values clustered near the center"
+#| fig-alt: "Histogram of socioeconomic status in School 11, showing values distributed around the center with moderate spread"
 
 ggplot(school11, aes(x = ses)) +
-  geom_histogram(bins = 10, fill = "#3498DB", color = "white", alpha = 0.8) +
+  geom_histogram(bins = 10, fill = ber640_colors["accent"],
+                 color = "white", alpha = 0.8) +
   labs(x = "Socioeconomic Status (SES)", y = "Count")
 ```
 
-> What does the shape of this distribution tell us? Is SES roughly symmetric, or is it skewed?
+### Scatterplot
 
-### Scatterplots
-
-Scatterplots show the relationship between two continuous variables. This is the most important plot for regression analysis.
+The most important plot for simple regression is a scatterplot of the outcome and predictor.
 
 ```{r}
-#| label: scatter-basic
-#| fig-cap: "Math gain vs. kindergarten math score"
-#| fig-alt: "Scatterplot of math gain versus kindergarten math score in School 11 showing a negative trend where students with higher initial scores tend to gain fewer points"
+#| label: lab02-scatter-mathkind-mathgain
+#| fig-cap: "Math gain vs. kindergarten math score in School 11"
+#| fig-alt: "Scatterplot of math gain versus kindergarten math score in School 11, showing a negative relationship where students with higher initial scores tend to gain fewer points"
 
 ggplot(school11, aes(x = mathkind, y = mathgain)) +
-  geom_point(alpha = 0.6, size = 2, color = "#2C3E50") +
+  geom_point(alpha = 0.65, size = 2, color = ber640_colors["primary"]) +
   labs(x = "Math Score at Kindergarten Entry",
        y = "Math Achievement Gain")
 ```
 
-> Notice the general trend. Does there appear to be a relationship between kindergarten math scores and math gain? What direction?
-
-We can also color points by group to explore subgroup patterns:
+We can color the same relationship by gender:
 
 ```{r}
-#| label: scatter-by-gender
-#| fig-cap: "Math gain vs. kindergarten math score, colored by gender"
-#| fig-alt: "Scatterplot of math gain versus kindergarten math score colored by gender, showing the same negative trend for both males and females with overlapping point distributions"
+#| label: lab02-scatter-by-gender
+#| fig-cap: "Math gain vs. kindergarten math score by gender"
+#| fig-alt: "Scatterplot of math gain versus kindergarten math score colored by gender, showing similar negative trends for male and female students"
 
-ggplot(school11, aes(x = mathkind, y = mathgain,
-                     color = factor(female, labels = c("Male", "Female")))) +
-  geom_point(alpha = 0.6, size = 2) +
-  scale_color_manual(values = c("#2C3E50", "#E74C3C")) +
+ggplot(school11, aes(x = mathkind, y = mathgain, color = gender)) +
+  geom_point(alpha = 0.65, size = 2) +
+  ber640_palette +
   labs(x = "Math Score at Kindergarten Entry",
        y = "Math Achievement Gain",
        color = "Gender")
 ```
 
-### Adding a Fitted Line
-
-We can overlay a regression line on the scatterplot using `geom_smooth(method = "lm")`. This gives us a visual preview of the regression we are about to fit.
+Finally, add a fitted regression line:
 
 ```{r}
-#| label: scatter-with-line
+#| label: lab02-scatter-with-line
 #| fig-cap: "Math gain vs. kindergarten math score with fitted regression line"
-#| fig-alt: "Scatterplot of math gain versus kindergarten math score with a downward-sloping fitted regression line and 95 percent confidence band, illustrating the ceiling effect where higher initial scores predict less gain"
+#| fig-alt: "Scatterplot of math gain versus kindergarten math score with a downward-sloping fitted regression line and confidence band"
 
 ggplot(school11, aes(x = mathkind, y = mathgain)) +
-  geom_point(alpha = 0.6, size = 2, color = "#2C3E50") +
-  geom_smooth(method = "lm", se = TRUE, color = "#E74C3C", linewidth = 1) +
+  geom_point(alpha = 0.65, size = 2, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", se = TRUE,
+              color = ber640_colors["secondary"], linewidth = 1) +
   labs(x = "Math Score at Kindergarten Entry",
        y = "Math Achievement Gain")
 ```
 
-> The shaded band around the line represents the 95% confidence interval for the regression line. The downward slope suggests a **negative** relationship: students who entered with higher math scores tended to gain fewer points. This is a classic "ceiling effect."
+The downward line suggests a **negative relationship**: students who entered with higher math scores tended to gain fewer points.
 
 
-## Part 3: Fitting a Simple Linear Regression
+## Part 3: Fit a Simple Linear Regression
 
-Now let's formally fit a simple linear regression. We want to predict math achievement gain (`mathgain`) from kindergarten math scores (`mathkind`) for students in School 11.
-
-The model is:
+Now we fit the same relationship formally:
 
 $$
 \text{mathgain}_i = \beta_0 + \beta_1 \cdot \text{mathkind}_i + \varepsilon_i
@@ -249,372 +231,360 @@ $$
 ### Step 1: Fit the Model
 
 ```{r}
-#| label: fit-model1
+#| label: lab02-fit-model1
 
 model1 <- lm(mathgain ~ mathkind, data = school11)
 ```
 
-### Step 2: Examine the Output
+The formula `mathgain ~ mathkind` reads as: "predict math gain from kindergarten math score."
 
-::: {.panel-tabset}
-
-#### Simple
+### Step 2: Inspect the Coefficients
 
 ```{r}
-#| label: model1-summary
+#| label: lab02-model1-parameters
 
-summary(model1)
+model_params(model1)
 ```
 
-#### Advanced
+> `model_params()` prints the coefficient estimate, standard error, confidence interval, test statistic, and p-value in a compact table.
 
-```{r}
-#| label: model1-tidy
+::: {.interpretation}
+The intercept is the predicted math gain for a student with `mathkind = 0`.
+That value is outside the observed range here, so it is mostly a mathematical anchor for the line.
 
-tidy_model(model1)
-```
-
-```{r}
-#| label: model1-table
-
-reg_table(model1)
-```
-
+The slope is the main result: for each 1-point higher kindergarten math score, the model predicts about `r abs(round(coef(model1)[2], 2))` fewer math-gain points.
+Use "predicts" or "is associated with" here; this simple model alone does not prove a causal effect.
 :::
 
-### Step 3: Interpret the Results
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
 
-> **Intercept ($\hat{\beta}_0$):** The estimated intercept represents the predicted `mathgain` when `mathkind = 0`. While a kindergarten math score of 0 is not realistic, the intercept anchors the regression line.
+Write one plain-language sentence interpreting the slope for `mathkind`.
+Your sentence should include the direction, the unit of the predictor, and the unit of the outcome.
 
-> **Slope ($\hat{\beta}_1$):** The estimated slope for `mathkind` tells us that for each 1-point increase in kindergarten math score, the predicted math gain **decreases** by approximately `r round(coef(model1)[2], 2)` points. This negative relationship reflects a **ceiling effect** --- students who already score high at kindergarten entry have less room to grow.
+<details><summary>Hint</summary>
+Start with: "In School 11, each 1-point higher kindergarten math score is associated with..."
+</details>
+:::
 
-> **R-squared ($R^2$):** The $R^2$ value tells us what proportion of the variance in `mathgain` is explained by `mathkind`. Check the `summary()` output to see this value.
+::: {.pitfall}
+Do not write that a higher kindergarten score **causes** lower math gain.
+At this point, the model describes an association in one school.
+:::
 
-> **F-test:** The F-statistic tests whether the model as a whole is statistically significant --- that is, whether `mathkind` explains a significant amount of variance in `mathgain`.
+### Step 3: Inspect Model Fit
+
+```{r}
+#| label: lab02-model1-fit
+
+model_fit(model1)
+performance::r2(model1)
+```
+
+> `model_fit()` gives common model-fit statistics. `performance::r2()` focuses on $R^2$, the proportion of outcome variation explained by the model.
+
+::: {.interpretation}
+$R^2$ is about `r round(performance::r2(model1)$R2, 3)`.
+This means the model explains about `r round(100 * performance::r2(model1)$R2, 1)`% of the variation in math gain among students in School 11.
+Do not read $R^2$ as "percent correct"; it is about variation explained, not classification accuracy.
+:::
 
 ### Step 4: Write the Regression Equation
 
-Based on the output, we can write the estimated regression equation:
+Based on the fitted model, the estimated regression equation is:
 
 $$
 \widehat{\text{mathgain}} = `r round(coef(model1)[1], 2)` + (`r round(coef(model1)[2], 2)`) \times \text{mathkind}
 $$
 
-For example, a student who entered kindergarten with a math score of 450 would have a predicted math gain of:
-
-```{r}
-#| label: manual-prediction
-
-predict(model1, newdata = data.frame(mathkind = 450))
-```
+The slope is negative. Students with kindergarten math scores 1 point higher are predicted to have math gain about `r abs(round(coef(model1)[2], 2))` points lower, on average.
 
 
 ## Part 4: Predictions and Residuals
 
-After fitting a regression model, we often want to examine the **fitted values** (predicted $\hat{Y}$) and **residuals** ($e = Y - \hat{Y}$) for each observation. These are essential for understanding how well the model fits and for checking assumptions.
+After fitting a model, we often ask two practical questions:
 
-### Step 1: Compute Fitted Values and Residuals
+- What does the model predict for specific predictor values?
+- How far away are the observed values from the fitted line?
+
+### Step 1: Make Simple Predictions
 
 ```{r}
-#| label: compute-fitted-resid
+#| label: lab02-prediction-grid
 
-school11 <- school11 |>
+prediction_grid <- tibble(mathkind = c(450, 500, 550))
+
+prediction_grid |>
   mutate(
-    mathgain_hat = predict(model1),
-    resid        = residuals(model1)
+    predicted_mathgain = round(predict(model1, newdata = prediction_grid), 2)
   )
 ```
 
-> `predict(model1)` returns the fitted value $\hat{Y}_i$ for each observation, and `residuals(model1)` returns $e_i = Y_i - \hat{Y}_i$.
+This table answers: "What math gain does the model predict for students with these kindergarten math scores?"
 
-### Step 2: Verify the Residuals
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
 
-The residuals should equal the observed value minus the fitted value. Let's confirm:
+Add `600` to `prediction_grid` and rerun the prediction code.
+What happens to predicted math gain as the kindergarten score gets larger?
+
+<details><summary>Hint</summary>
+Change the first line to `prediction_grid <- tibble(mathkind = c(450, 500, 550, 600))`.
+</details>
+:::
+
+### Step 2: Add Fitted Values and Residuals
 
 ```{r}
-#| label: verify-resid
+#| label: lab02-add-fitted-residuals
 
-school11 |>
+school11_aug <- school11 |>
+  mutate(
+    mathgain_hat = predict(model1),
+    resid = residuals(model1)
+  )
+```
+
+The fitted value is the model's prediction. The residual is:
+
+$$
+e_i = Y_i - \widehat{Y}_i
+$$
+
+### Step 3: Check the Residual Calculation
+
+```{r}
+#| label: lab02-check-residuals
+
+school11_aug |>
   select(mathgain, mathgain_hat, resid) |>
   mutate(check = mathgain - mathgain_hat) |>
   head(8)
 ```
 
-> The `resid` column and the `check` column should be identical (within rounding). This confirms that $e_i = Y_i - \hat{Y}_i$.
+The `resid` column and the `check` column should match, up to small rounding differences.
 
-### Step 3: Summary of Fitted Values and Residuals
+### Step 4: Summarize Residuals
 
 ```{r}
-#| label: fitted-resid-summary
+#| label: lab02-residual-summary
 
-school11 |>
+school11_aug |>
   summarise(
-    mean_resid = mean(resid),
-    sd_resid   = sd(resid),
-    min_resid  = min(resid),
-    max_resid  = max(resid)
-  ) |>
-  mutate(across(everything(), \(x) round(x, 4)))
+    mean_resid = round(mean(resid), 4),
+    sd_resid = round(sd(resid), 4),
+    min_resid = round(min(resid), 4),
+    max_resid = round(max(resid), 4)
+  )
 ```
 
-> The mean of the residuals should be (approximately) zero. This is a mathematical property of OLS regression. The standard deviation of the residuals is related to the Root MSE reported in the regression output.
+In an ordinary least squares regression with an intercept, the mean residual is essentially zero.
 
-### Step 4: Scatter Plot with Fitted Line and Residuals Visualized
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Find one student with a positive residual and one student with a negative residual.
+In one sentence for each student, describe whether the observed math gain was above or below the model prediction.
+
+<details><summary>Hint</summary>
+Use `arrange(desc(resid))` to find a large positive residual and `arrange(resid)` to find a large negative residual.
+</details>
+:::
+
+### Step 5: Visualize Residuals
 
 ```{r}
-#| label: scatter-fitted-resid
+#| label: lab02-scatter-fitted-residuals
 #| fig-cap: "Observed data, fitted line, and residuals"
-#| fig-alt: "Scatterplot with observed data points, a fitted regression line, and vertical grey line segments connecting each point to the fitted line to visualize residuals"
+#| fig-alt: "Scatterplot with observed math gain values, a fitted regression line, and vertical grey line segments showing residuals from each observed value to the fitted line"
 
-ggplot(school11, aes(x = mathkind, y = mathgain)) +
+ggplot(school11_aug, aes(x = mathkind, y = mathgain)) +
   geom_segment(aes(xend = mathkind, yend = mathgain_hat),
                color = "grey60", linewidth = 0.4) +
-  geom_point(alpha = 0.7, size = 2, color = "#2C3E50") +
-  geom_line(aes(y = mathgain_hat), color = "#E74C3C", linewidth = 1) +
+  geom_point(alpha = 0.7, size = 2, color = ber640_colors["primary"]) +
+  geom_line(data = school11_aug |> arrange(mathkind),
+            aes(y = mathgain_hat),
+            color = ber640_colors["secondary"], linewidth = 1) +
   labs(x = "Math Score at Kindergarten Entry",
        y = "Math Achievement Gain",
-       subtitle = "Vertical grey lines show residuals (observed - fitted)")
+       subtitle = "Vertical grey lines show residuals")
 ```
 
-> Each grey vertical line segment represents a residual. The regression line minimizes the sum of squared lengths of these segments --- that is the "least squares" criterion.
+Each grey line is one residual. The regression line is the line that minimizes the sum of squared residuals.
 
 
-## Part 5: Checking Regression Assumptions
+## Part 5: Quick Model Diagnostics
 
-Simple linear regression relies on several assumptions. Let's check them using our model.
-
-::: {.callout-important}
-## The Key Assumptions
-1. **Linearity:** The relationship between $X$ and $Y$ is linear.
-2. **Normality of residuals:** The residuals are approximately normally distributed.
-3. **Constant variance (homoscedasticity):** The spread of residuals is roughly the same across all values of $X$.
-4. **Independence:** Observations are independent of each other.
-:::
-
-### Assumption 1: Linearity
-
-We check linearity by looking at the scatterplot of $Y$ vs. $X$ with the fitted line. If the relationship is linear, the points should scatter randomly around the line with no systematic curvature.
+After fitting a model, inspect whether the model's assumptions look reasonable enough for the classroom analysis.
+For linear regression, start with a visual diagnostic panel:
 
 ```{r}
-#| label: check-linearity
-#| fig-cap: "Checking linearity: mathgain vs. mathkind with fitted line"
-#| fig-alt: "Scatterplot of math gain versus kindergarten math with a fitted line for checking linearity, showing points scattered around the line without obvious curvature"
-
-ggplot(school11, aes(x = mathkind, y = mathgain)) +
-  geom_point(alpha = 0.6, size = 2, color = "#2C3E50") +
-  geom_smooth(method = "lm", se = FALSE, color = "#E74C3C", linewidth = 1) +
-  labs(x = "Math Score at Kindergarten Entry",
-       y = "Math Achievement Gain",
-       subtitle = "Look for systematic curvature around the line")
-```
-
-> Does the relationship look reasonably linear? If you see a clear curve or bend, the linearity assumption may be violated.
-
-### Assumption 2: Normality of Residuals
-
-We check this assumption with a histogram and a Q-Q plot of the residuals.
-
-```{r}
-#| label: check-normality-hist
-#| fig-cap: "Histogram of residuals with normal curve"
-#| fig-alt: "Histogram of residuals overlaid with a normal density curve, showing the residual distribution is roughly bell-shaped and approximately normal"
-
-ggplot(school11, aes(x = resid)) +
-  geom_histogram(aes(y = after_stat(density)),
-                 bins = 12, fill = "#3498DB", color = "white", alpha = 0.8) +
-  stat_function(fun = dnorm,
-                args = list(mean = mean(school11$resid),
-                            sd = sd(school11$resid)),
-                color = "#E74C3C", linewidth = 1) +
-  labs(x = "Residual", y = "Density",
-       subtitle = "Residuals should roughly follow the normal curve")
-```
-
-```{r}
-#| label: check-normality-qq
-#| fig-cap: "Q-Q plot of residuals"
-#| fig-alt: "Normal Q-Q plot of residuals showing points falling close to the diagonal reference line, indicating approximate normality with minor deviations in the tails"
-
-ggplot(school11, aes(sample = resid)) +
-  stat_qq(alpha = 0.6, color = "#2C3E50") +
-  stat_qq_line(color = "#E74C3C", linewidth = 1) +
-  labs(x = "Theoretical Quantiles", y = "Sample Quantiles",
-       subtitle = "Points should fall close to the diagonal line")
-```
-
-> In the Q-Q plot, if the residuals are normally distributed, the points will fall approximately along the diagonal reference line. Deviations at the tails suggest heavier or lighter tails than a normal distribution.
-
-### Assumption 3: Constant Variance (Homoscedasticity)
-
-We check this by plotting residuals against fitted values. The spread of residuals should be roughly constant across the range of fitted values.
-
-```{r}
-#| label: check-constant-variance
-#| fig-cap: "Residuals vs. fitted values"
-#| fig-alt: "Residuals versus fitted values plot with a horizontal dashed line at zero, showing a roughly constant spread of residuals across fitted values consistent with homoscedasticity"
-
-ggplot(school11, aes(x = mathgain_hat, y = resid)) +
-  geom_point(alpha = 0.6, size = 2, color = "#2C3E50") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "#E74C3C") +
-  labs(x = "Fitted Values",
-       y = "Residuals",
-       subtitle = "Look for a constant spread around the horizontal line at y = 0")
-```
-
-> If the spread of residuals fans out (gets wider) or narrows as fitted values increase, the constant variance assumption is violated. We want to see a roughly even band of points around the dashed line.
-
-### All-in-One Diagnostic (Advanced)
-
-::: {.panel-tabset}
-
-#### Manual Plots
-
-The three plots above give us the key diagnostic checks. Let's combine them in one figure:
-
-```{r}
-#| label: diagnostic-combined
-#| fig-cap: "Combined diagnostic plots"
-#| fig-alt: "Three-panel diagnostic display showing a residual histogram with normal curve, a Q-Q plot, and a residuals-versus-fitted-values plot, all suggesting the regression assumptions are reasonably met"
-#| fig-height: 4
+#| label: lab02-check-model
+#| fig-cap: "Quick diagnostic checks for the simple regression model"
+#| fig-alt: "Four diagnostic plots for the simple regression model. The residual smooth is mostly near zero with some waviness, the variance smooth rises in the middle, one labeled point has the largest standardized residual, and the normality panel shows most points near the reference line with one upper-tail point."
 #| fig-width: 10
-
-p1 <- ggplot(school11, aes(x = resid)) +
-  geom_histogram(aes(y = after_stat(density)),
-                 bins = 12, fill = "#3498DB", color = "white", alpha = 0.8) +
-  stat_function(fun = dnorm,
-                args = list(mean = mean(school11$resid),
-                            sd = sd(school11$resid)),
-                color = "#E74C3C", linewidth = 1) +
-  labs(x = "Residual", y = "Density", title = "Normality")
-
-p2 <- ggplot(school11, aes(sample = resid)) +
-  stat_qq(alpha = 0.6, color = "#2C3E50") +
-  stat_qq_line(color = "#E74C3C", linewidth = 1) +
-  labs(x = "Theoretical", y = "Sample", title = "Q-Q Plot")
-
-p3 <- ggplot(school11, aes(x = mathgain_hat, y = resid)) +
-  geom_point(alpha = 0.6, size = 2, color = "#2C3E50") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "#E74C3C") +
-  labs(x = "Fitted Values", y = "Residuals", title = "Constant Variance")
-
-p1 + p2 + p3
-```
-
-#### `performance::check_model()`
-
-The `performance` package provides a convenient function that produces a comprehensive set of diagnostic plots:
-
-```{r}
-#| label: check-model-performance
-#| fig-alt: "Comprehensive model diagnostic plots from the performance package showing checks for linearity, normality of residuals, homoscedasticity, and influential observations"
 #| fig-height: 8
-#| fig-width: 10
+#| out-width: "100%"
 
-check_model(model1)
+performance::check_model(
+  model1,
+  check = c("linearity", "homogeneity", "outliers", "qq"),
+  base_size = 9
+)
 ```
 
-> `check_model()` from the `performance` package generates multiple diagnostic plots at once. This is a great quick check, but understanding each individual plot (as we did above) is important for knowing what you are looking at.
+::: {.assumption-check}
+Use the diagnostic panel to make a decision:
 
+1. **Linearity:** Is the smooth line roughly flat, or does it curve strongly?
+2. **Equal variance:** Does the spread of residuals look fairly even, or does it fan out?
+3. **Influential observations:** Are any points marked as unusually influential?
+4. **Normality:** Do most points in the Q-Q plot follow the reference line?
+
+For this lab, write a short diagnostic note rather than trying to "fix" the model.
+Later labs will show targeted tools for nonlinearity, robust standard errors, and influential observations.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Look at the diagnostic panel and choose one label: **acceptable**, **questionable**, or **serious concern**.
+Write one sentence naming the plot that most influenced your decision.
+
+<details><summary>Hint</summary>
+A good diagnostic sentence has this shape: "I would label the model as ___ because the ___ plot shows ___."
+</details>
 :::
 
 
-## Part 6: More Regression Examples
+## Part 6: Additional Simple Regression Examples
 
-Now that we understand the mechanics of simple regression, let's practice with several more examples using the **full** `instruction` dataset. Each example highlights a different type of predictor.
+The same workflow applies to other simple regression questions. The pattern is:
 
-### Example 1: Math at Kindergarten Entry by Minority Status
+1. Fit the model with `lm()`.
+2. Inspect coefficients with `model_params()`.
+3. Inspect fit with `model_fit()` when fit matters.
+4. Interpret the slope in substantive units.
 
-Is there a difference in kindergarten math scores between minority and non-minority students? We can answer this with a two-sample t-test **or** a simple regression with a dummy predictor. Let's show both and see that they give the same result.
+### Example 1: A Binary Predictor
+
+Is there a difference in kindergarten math scores between minority and non-minority students?
 
 ```{r}
-#| label: example1-ttest
+#| label: lab02-example-minority-ttest
 
-t.test(mathkind ~ minority, data = instruction, var.equal = TRUE)
+t.test(mathkind ~ minority_group,
+       data = instruction_clean,
+       var.equal = TRUE)
 ```
 
 ```{r}
-#| label: example1-regression
+#| label: lab02-example-minority-regression
 
-model2 <- lm(mathkind ~ minority, data = instruction)
-summary(model2)
+model2 <- lm(mathkind ~ minority, data = instruction_clean)
+model_params(model2)
 ```
 
-> **Key insight:** Compare the t-statistic from the regression output with the t-statistic from the t-test. They should be identical (up to sign). When the predictor is a binary (0/1) variable, a simple linear regression is equivalent to a two-sample t-test (with equal variances assumed).
+When the predictor is binary, the slope is the mean difference between the two groups.
 
-> The slope for `minority` represents the **mean difference** in `mathkind` between minority students (minority = 1) and non-minority students (minority = 0). The intercept is the mean for the reference group (minority = 0).
+### Example 2: A Continuous Predictor
 
-### Example 2: Math Gain Predicted by SES
-
-SES is a continuous predictor, so this example is a more "typical" regression scenario.
+Does SES predict math gain in the full dataset?
 
 ```{r}
-#| label: example2-regression
+#| label: lab02-example-ses-regression
 
-model3 <- lm(mathgain ~ ses, data = instruction)
-summary(model3)
+model3 <- lm(mathgain ~ ses, data = instruction_clean)
+model_params(model3)
+model_fit(model3)
 ```
 
 ```{r}
-#| label: example2-plot
+#| label: lab02-example-ses-plot
 #| fig-cap: "Math gain vs. SES with fitted regression line"
-#| fig-alt: "Scatterplot of math gain versus SES for the full dataset with a slightly positive fitted regression line and confidence band, showing a weak positive association between SES and math gain"
+#| fig-alt: "Scatterplot of math gain versus socioeconomic status for the full dataset with a nearly flat fitted regression line and confidence band, showing little association"
 
-ggplot(instruction, aes(x = ses, y = mathgain)) +
-  geom_point(alpha = 0.3, size = 1.5, color = "#2C3E50") +
-  geom_smooth(method = "lm", se = TRUE, color = "#E74C3C", linewidth = 1) +
+ggplot(instruction_clean, aes(x = ses, y = mathgain)) +
+  geom_point(alpha = 0.3, size = 1.5, color = ber640_colors["primary"]) +
+  geom_smooth(method = "lm", se = TRUE,
+              color = ber640_colors["secondary"], linewidth = 1) +
   labs(x = "Socioeconomic Status (SES)",
        y = "Math Achievement Gain")
 ```
 
-> **Interpretation:** For each 1-unit increase in SES, the predicted math gain increases by approximately `r round(coef(model3)[2], 2)` points. What is the $R^2$? Is SES a strong predictor of math gain?
+### Example 3: A Gender Difference
 
-### Example 3: Math Gain Predicted by Gender
-
-Finally, let's predict math gain from gender. Remember, we renamed `girl` to `female` earlier but only in the `school11` subset. Let's do it for the full dataset too.
+Does average math gain differ by gender?
 
 ```{r}
-#| label: example3-regression
+#| label: lab02-example-gender-regression
 
-# instruction already has 'female' from our rename in Part 1
-model4 <- lm(mathgain ~ female, data = instruction)
-summary(model4)
+model4 <- lm(mathgain ~ female, data = instruction_clean)
+model_params(model4)
 ```
 
 ```{r}
-#| label: example3-means
+#| label: lab02-example-gender-means
 
-instruction |>
-  group_by(female) |>
+instruction_clean |>
+  group_by(gender) |>
   summarise(
     n = n(),
-    mean_mathgain = mean(mathgain),
-    sd_mathgain   = sd(mathgain),
+    mean_mathgain = round(mean(mathgain, na.rm = TRUE), 2),
+    sd_mathgain = round(sd(mathgain, na.rm = TRUE), 2),
     .groups = "drop"
-  ) |>
-  mutate(across(where(is.numeric) & !n, \(x) round(x, 2)))
+  )
 ```
 
-> **Interpretation:** The intercept is the mean `mathgain` for boys (`female = 0`). The slope is the difference in mean `mathgain` between girls and boys. Is this difference statistically significant? Compare the intercept to the mean for boys and the sum of coefficients to the mean for girls in the table above.
+The intercept is the mean for boys (`female = 0`). The slope is the difference in mean math gain between girls and boys.
 
 
-## Key Takeaways
+## Part 7: Mini Regression Report
 
-::: {.callout-tip}
-## What We Learned
+A compact regression report should answer the research question, name the model, interpret the main coefficient, summarize fit, and mention one diagnostic check.
 
-1. **Data preparation** is an essential first step: subsetting, renaming variables, creating new variables, and computing descriptive statistics before modeling.
+::: {.interpretation}
+Example report:
 
-2. **Exploratory visualization** (boxplots, histograms, scatterplots) reveals patterns and potential issues before we fit any model.
+> In School 11, kindergarten math score was negatively associated with math gain.
+> A simple linear regression estimated that each 1-point higher kindergarten score predicted about `r abs(round(coef(model1)[2], 2))` fewer gain points.
+> The model explained about `r round(performance::r2(model1)$R2, 3)` of the variation in math gain.
+> The quick diagnostic panel should be checked for curvature, unequal residual spread, influential observations, and Q-Q plot departures before treating this as a final analysis.
+:::
 
-3. **Simple linear regression** with `lm()` estimates the relationship between one predictor ($X$) and one outcome ($Y$): $\hat{Y} = \hat{\beta}_0 + \hat{\beta}_1 X$.
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-4. **Interpreting output:** The slope tells us the predicted change in $Y$ for a 1-unit increase in $X$. The intercept is the predicted $Y$ when $X = 0$. $R^2$ tells us the proportion of variance explained.
+Write your own 4-sentence mini report for `model1`.
+Use the example above as a template, but use your own words.
+:::
 
-5. **Fitted values** ($\hat{Y}$) and **residuals** ($e = Y - \hat{Y}$) are computed with `predict()` and `residuals()`. The mean of residuals is always zero in OLS.
+::: {.exercises}
+## What to Submit
 
-6. **Assumption checking** is critical: linearity (scatter plot), normality (histogram/Q-Q plot of residuals), and constant variance (residuals vs. fitted plot).
+1. A coefficient table for `model1` from `model_params(model1)`. [core]{.chip .easy}
+2. A prediction table with at least four `mathkind` values. [core]{.chip .easy}
+3. One residual check: one positive residual and one negative residual, with a sentence interpreting each. [core]{.chip .med}
+4. One diagnostic note using the `performance::check_model()` panel. [core]{.chip .med}
+5. A 4-sentence mini regression report answering the School 11 research question. [core]{.chip .med}
+:::
 
-7. **Regression with a dummy predictor** is equivalent to a two-sample t-test --- the slope is the group mean difference.
+::: {.summary}
+## Lab Summary
 
-**Next:** In Lecture Notes Chapter 1, these concepts are covered in more detail with formal notation and proofs. The lab gives you the hands-on practice to complement that theory.
+1. Simple linear regression starts with a clear outcome, one predictor, and an `lm()` formula.
+
+2. `model_params()` is the default coefficient table for this course.
+
+3. `model_fit()` and `performance::r2()` summarize how well the model fits.
+
+4. `predict()` turns a fitted model into predicted values for new or existing cases.
+
+5. Residuals are the differences between observed outcomes and fitted values.
+
+6. The same `lm()` workflow works for continuous predictors and binary predictors.
+
+7. `performance::check_model()` gives a quick visual diagnostic panel; your job is to make a reasoned decision, not just paste the plot.
+
+**Next:** Lab 3 moves from simple regression to ANCOVA: comparing groups while adjusting for another variable.
 :::

@@ -1,470 +1,434 @@
 ---
-title: "Lab 3: ANOVA and ANCOVA"
+title: "Lab 3: ANCOVA and Statistical Control"
 ---
 
 {{< include ../_common.qmd >}}
 
-## Goals
-
-::: {.callout-note}
+::: {.objectives}
 ## What You'll Learn in This Lab
-- See the equivalence between a t-test and regression with a dummy predictor
-- Conduct one-way ANOVA using both `aov()` and `lm()`
-- Understand why `factor()` matters for categorical predictors
-- Fit an ANCOVA model to control for a confounder
-- Interpret adjusted means and parallel regression lines
-- **Lecture Notes Reference:** Chapters 2--3: *ANOVA and ANCOVA*
+
+- Prepare a two-group analysis dataset from `gcse`
+- Compare raw group means with a simple regression model
+- Fit an ANCOVA model with one categorical predictor and one continuous covariate
+- Interpret "holding a covariate constant" in plain language
+- Compute adjusted means with `modelbased::estimate_means()`
+- Compare unadjusted and adjusted group differences
+- Check collinearity with `performance::check_collinearity()`
+- **Lecture Notes Reference:** Chapter 2: *ANCOVA*
+
+::: {.meta}
+Dataset: `gcse`. Estimated time: 75-90 minutes.
+:::
 :::
 
-**Dataset:** `faculty` from the `regdatasets` package (with a brief revisit of `instruction`)
 
+## Part 1: Data Preparation
 
-## Part 1: Quick Review --- Simple Regression and the T-Test
+In Chapter 2, the motivating question is:
 
-Before introducing ANOVA, let's revisit two ideas from Lab 2: simple regression and the connection between a t-test and regression with a binary predictor.
+> Do two schools differ in GCSE scores after accounting for students' earlier LRT scores?
 
-### Regression with School 11
+We will focus on two schools from the `gcse` dataset:
+
+- **Battersea**: school code `15`
+- **Chelsea**: school code `6`
+
+### Step 1: Load the Data
 
 ```{r}
-#| label: lab03-review-setup
+#| label: lab03-load-data
 
-data(instruction)
-
-instruction <- instruction |>
-  rename(female = girl)
-
-school11 <- instruction |>
-  filter(schoolid == 11)
+data(gcse)
+gcse_raw <- gcse
 ```
 
-A quick regression of math gain on kindergarten math scores, just to warm up:
+As in the earlier labs, we keep the original data in a raw object and create a clean analysis object separately.
+
+### Step 2: Create the Two-School Dataset
 
 ```{r}
-#| label: review-slr
+#| label: lab03-create-two-schools
 
-review_model <- lm(mathgain ~ mathkind, data = school11)
-summary(review_model)
+two_schools <- gcse_raw |>
+  filter(school %in% c(15, 6)) |>
+  mutate(
+    school_name = factor(
+      if_else(school == 15, "Battersea", "Chelsea"),
+      levels = c("Battersea", "Chelsea")
+    )
+  )
 ```
 
-```{r}
-#| label: review-scatter
-#| fig-cap: "Quick review: math gain vs. kindergarten math score in School 11"
-#| fig-alt: "Scatterplot of math gain versus kindergarten math score in School 11 with a downward-sloping regression line and confidence band, showing the ceiling effect from Lab 2"
+The reference group is Battersea because it is the first factor level.
 
-ggplot(school11, aes(x = mathkind, y = mathgain)) +
-  geom_point(alpha = 0.6, size = 2, color = "#2C3E50") +
-  geom_smooth(method = "lm", se = TRUE, color = "#E74C3C", linewidth = 1) +
-  labs(x = "Math Score at Kindergarten Entry",
-       y = "Math Achievement Gain")
+### Step 3: Preflight Check
+
+```{r}
+#| label: lab03-preflight
+
+two_schools |>
+  summarise(
+    students = n(),
+    schools = n_distinct(school_name),
+    missing_gcse = sum(is.na(gcse)),
+    missing_lrt = sum(is.na(lrt)),
+    min_lrt = round(min(lrt, na.rm = TRUE), 2),
+    max_lrt = round(max(lrt, na.rm = TRUE), 2),
+    mean_lrt = round(mean(lrt, na.rm = TRUE), 2)
+  )
 ```
 
-> Nothing new here --- this is exactly what we did in Lab 2. The negative slope reflects the ceiling effect: students who enter with higher scores tend to gain less.
+The outcome is `gcse`, the age-16 exam score. The covariate is `lrt`, an earlier reading test score measured at age 11.
 
-### T-Test vs. Regression: Same Test, Different Outfit
-
-Now let's compare a t-test and a regression where the predictor is a binary (0/1) variable. We will test whether kindergarten math scores differ by minority status using the full `instruction` dataset.
+### Step 4: Raw Means by School
 
 ```{r}
-#| label: ttest-vs-regression
+#| label: lab03-raw-school-summary
 
-# T-test (equal variances)
-t.test(mathkind ~ minority, data = instruction, var.equal = TRUE)
-```
-
-```{r}
-#| label: ttest-as-regression
-
-# Regression with binary predictor
-model_ttest <- lm(mathkind ~ minority, data = instruction)
-summary(model_ttest)
-```
-
-> Compare the t-statistics. They are the same (up to sign). The regression slope is the **mean difference** between the two groups, and the intercept is the mean of the reference group (`minority = 0`). A t-test with equal variances assumed is just a simple regression in disguise.
-
-This insight is the foundation for everything in today's lab: ANOVA and ANCOVA are both regression models. The only difference is how many predictors we include and whether they are categorical or continuous.
-
-
-## Part 2: Meet the Faculty Data
-
-Time for a new dataset! The `faculty` data come from a salary equity study conducted at Bowling Green State University. Researchers wanted to know: are there gender differences in faculty salary, and if so, can those differences be explained by other factors?
-
-```{r}
-#| label: load-faculty
-
-data(faculty)
-glimpse(faculty)
-```
-
-> We have **`r nrow(faculty)` professors**. Key variables for today:
->
-> - `salary` --- annual salary (the outcome)
-> - `male` --- 1 for men, 0 for women
-> - `market` --- marketability score (how competitive the professor's field is)
-> - `yearsdg` --- years since earning the doctoral degree
-> - `rank` --- academic rank (1 = Assistant, 2 = Associate, 3 = Full Professor)
-
-### Quick Descriptives
-
-```{r}
-#| label: faculty-descriptives
-
-faculty |>
+two_schools |>
+  group_by(school_name) |>
   summarise(
     n = n(),
-    mean_salary = mean(salary),
-    sd_salary   = sd(salary),
-    mean_market = mean(market),
-    sd_market   = sd(market),
-    mean_yearsdg = mean(yearsdg),
-    sd_yearsdg   = sd(yearsdg)
-  ) |>
+    mean_gcse = round(mean(gcse, na.rm = TRUE), 2),
+    mean_lrt = round(mean(lrt, na.rm = TRUE), 2),
+    .groups = "drop"
+  )
+```
+
+This table shows the core confounding pattern: Chelsea has a higher raw GCSE mean, but Chelsea also has a higher mean LRT score at intake.
+
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Use the raw summary table to write two short sentences:
+
+1. Which school has the higher raw GCSE mean?
+2. Which school has the higher mean LRT score?
+
+<details><summary>Hint</summary>
+The second sentence is the clue that LRT may be a confounder.
+</details>
+:::
+
+
+## Part 2: Visualize the Confounding Pattern
+
+### Raw GCSE Scores
+
+```{r}
+#| label: lab03-boxplot-gcse-school
+#| fig-cap: "Raw GCSE scores by school"
+#| fig-alt: "Boxplot comparing raw GCSE scores for Battersea and Chelsea, with Chelsea having a higher median GCSE score"
+
+ggplot(two_schools, aes(x = school_name, y = gcse, fill = school_name)) +
+  geom_boxplot(alpha = 0.75, show.legend = FALSE) +
+  ber640_fill +
+  labs(x = "School", y = "GCSE Score")
+```
+
+### GCSE and LRT Together
+
+```{r}
+#| label: lab03-scatter-lrt-gcse-by-school
+#| fig-cap: "GCSE vs. LRT by school"
+#| fig-alt: "Scatterplot of GCSE versus LRT for Battersea and Chelsea, with separate upward-sloping regression lines; Chelsea students tend to have higher LRT scores and higher GCSE scores"
+
+ggplot(two_schools, aes(x = lrt, y = gcse, color = school_name)) +
+  geom_point(alpha = 0.55, size = 2) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 1) +
+  ber640_palette +
+  labs(x = "LRT Score at Age 11",
+       y = "GCSE Score at Age 16",
+       color = "School")
+```
+
+The two lines are roughly parallel. That makes ANCOVA a reasonable first model: one common slope for LRT, plus one adjusted school difference.
+
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Look at the scatterplot and decide whether the lines look roughly parallel.
+Write one sentence saying whether the ANCOVA equal-slopes assumption seems reasonable as a starting point.
+:::
+
+
+## Part 3: Fit the Models
+
+ANCOVA compares schools while holding LRT constant. To see what adjustment changes, we fit two models:
+
+1. An **unadjusted** model with school only.
+2. An **adjusted** ANCOVA model with school and LRT.
+
+### Step 1: Unadjusted School Difference
+
+```{r}
+#| label: lab03-fit-unadjusted
+
+model_unadjusted <- lm(gcse ~ school_name, data = two_schools)
+model_params(model_unadjusted)
+```
+
+The Chelsea coefficient is the raw mean difference in GCSE scores between Chelsea and Battersea.
+
+### Step 2: Adjusted School Difference
+
+```{r}
+#| label: lab03-fit-ancova
+
+model_ancova <- lm(gcse ~ lrt + school_name, data = two_schools)
+model_params(model_ancova)
+```
+
+::: {.interpretation}
+In the ANCOVA model, `lrt` is the covariate.
+
+The `school_nameChelsea` coefficient compares Chelsea and Battersea students with the **same LRT score**.
+That is what "holding LRT constant" means in this model.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Interpret the `school_nameChelsea` coefficient from `model_ancova` in one sentence.
+Your sentence should use the phrase "after accounting for LRT" or "holding LRT constant."
+
+<details><summary>Hint</summary>
+Start with: "After accounting for LRT, Chelsea students are predicted to..."
+</details>
+:::
+
+::: {.pitfall}
+Do not write that Chelsea **causes** higher GCSE scores.
+This is observational school data, so the adjusted difference is a model-adjusted comparison.
+It is not automatic proof of a causal school effect.
+:::
+
+### Step 3: Model Fit
+
+```{r}
+#| label: lab03-ancova-fit
+
+model_fit(model_ancova)
+performance::r2(model_ancova)
+```
+
+The ANCOVA model should explain more variation in GCSE than the school-only model because LRT is strongly related to later GCSE performance.
+
+### Step 4: Compare the School Coefficient
+
+```{r}
+#| label: lab03-gap-comparison
+
+gap_comparison <- bind_rows(
+  tidy_model(model_unadjusted) |>
+    filter(term == "school_nameChelsea") |>
+    mutate(model = "Unadjusted"),
+  tidy_model(model_ancova) |>
+    filter(term == "school_nameChelsea") |>
+    mutate(model = "Adjusted for LRT")
+) |>
+  select(model, estimate, std.error, conf.low, conf.high, p.value) |>
+  mutate(
+    across(c(estimate, std.error, conf.low, conf.high), \(x) round(x, 3)),
+    p.value = if_else(p.value < .001, "< .001", as.character(round(p.value, 3)))
+  )
+
+gap_comparison
+```
+
+::: {.interpretation}
+The adjusted estimate is smaller than the unadjusted estimate.
+This tells us that part of the raw Chelsea-Battersea GCSE gap reflects differences in LRT scores at intake.
+
+This is a model-adjusted comparison, not automatic proof that school attendance caused the remaining gap.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Use `gap_comparison` to compute how much the Chelsea-Battersea estimate changed after adding LRT.
+Then write one sentence explaining what the change suggests.
+
+<details><summary>Hint</summary>
+Subtract the adjusted estimate from the unadjusted estimate. A positive difference means the raw gap was larger than the adjusted gap.
+</details>
+:::
+
+
+## Part 4: Adjusted Means
+
+Adjusted means answer this question:
+
+> What GCSE score does the model predict for each school if both schools are compared at the same representative LRT value?
+
+### Step 1: Estimate Adjusted Means
+
+```{r}
+#| label: lab03-adjusted-means
+
+adjusted_means <- modelbased::estimate_means(model_ancova, by = "school_name")
+adjusted_means
+```
+
+The adjusted means are model-predicted means for each school after accounting for LRT.
+Here, both schools are evaluated at the same representative LRT value: the sample mean, about `r round(mean(two_schools$lrt, na.rm = TRUE), 2)`.
+
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Compare the adjusted means with the raw means.
+Which school moved upward or downward after adjustment?
+
+<details><summary>Hint</summary>
+Use the raw school summary from Part 1 and the `adjusted_means` output above; compare `mean_gcse` with the adjusted mean within each school.
+</details>
+:::
+
+### Step 2: Estimate the Adjusted Contrast
+
+```{r}
+#| label: lab03-adjusted-contrast
+
+modelbased::estimate_contrasts(model_ancova, contrast = "school_name")
+```
+
+The adjusted contrast equals the `school_nameChelsea` coefficient from `model_ancova`.
+Because `Level1` is Chelsea and `Level2` is Battersea, the contrast is Chelsea minus Battersea.
+
+### Step 3: Raw vs. Adjusted Means
+
+```{r}
+#| label: lab03-raw-adjusted-table
+
+raw_means <- two_schools |>
+  group_by(school_name) |>
+  summarise(raw_mean = mean(gcse, na.rm = TRUE), .groups = "drop")
+
+adjusted_means_tbl <- adjusted_means |>
+  as_tibble() |>
+  select(school_name, adjusted_mean = Mean)
+
+left_join(raw_means, adjusted_means_tbl, by = "school_name") |>
   mutate(across(where(is.numeric), \(x) round(x, 2)))
 ```
 
-```{r}
-#| label: faculty-by-gender
-
-faculty |>
-  group_by(male) |>
-  summarise(
-    n = n(),
-    mean_salary = mean(salary),
-    sd_salary   = sd(salary),
-    mean_market = mean(market),
-    .groups = "drop"
-  ) |>
-  mutate(across(where(is.numeric) & !n, \(x) round(x, 2)))
-```
-
-> Notice two things in the table above. First, male professors earn higher salaries on average. Second, male professors also have higher marketability scores. This second point will become very important later --- it suggests that part of the salary gap may be explained by differences in marketability, not gender alone.
-
-
-## Part 3: One-Way ANOVA
-
-ANOVA stands for **Analysis of Variance**. At its core, a one-way ANOVA asks: do the means of a continuous outcome differ across groups? If you know regression, you already know ANOVA --- it is just regression with a categorical predictor.
-
-### Example 1: Salary by Gender (Two Groups)
-
-Let's test whether salary differs between male and female professors. With only two groups, this is equivalent to a t-test, but we will set it up as an ANOVA for practice.
-
-::: {.panel-tabset}
-
-#### Using `aov()`
-
-```{r}
-#| label: anova-gender-aov
-
-anova_gender <- aov(salary ~ factor(male), data = faculty)
-summary(anova_gender)
-```
-
-#### Using `lm()`
-
-```{r}
-#| label: anova-gender-lm
-
-model_gender <- lm(salary ~ male, data = faculty)
-summary(model_gender)
-```
-
+::: {.interpretation}
+The raw means are observed school averages.
+The adjusted means are model predictions at the same representative LRT value.
+They answer a comparison question, not a causal question.
 :::
 
-> Compare the F-statistic from `aov()` with the F-statistic from `lm()`. They are identical. The regression slope tells us the mean difference in salary between men and women, and the intercept is the mean salary for women (`male = 0`).
-
-::: {.callout-tip}
-## ANOVA = Regression
-A one-way ANOVA with two groups is equivalent to a t-test, which is equivalent to a simple regression with a dummy predictor. Three names for the same analysis.
-:::
-
-### Example 2: Salary by Rank (Three Groups)
-
-Now let's look at salary differences across three ranks: Assistant (1), Associate (2), and Full Professor (3). This is where things get interesting --- and where `factor()` becomes essential.
-
-#### The `factor()` Trap
-
-Watch what happens if we forget to use `factor()`:
+### Step 4: Plot Raw and Adjusted Means
 
 ```{r}
-#| label: rank-wrong
+#| label: lab03-raw-adjusted-plot
+#| fig-cap: "Raw and LRT-adjusted mean GCSE scores"
+#| fig-alt: "Dot and line plot comparing raw and LRT-adjusted mean GCSE scores for Battersea and Chelsea, showing that the school gap becomes smaller after adjustment"
 
-# WRONG: treats rank as a continuous number
-model_rank_wrong <- lm(salary ~ rank, data = faculty)
-summary(model_rank_wrong)
-```
-
-> This model treats `rank` as a continuous variable, fitting a single straight line through ranks 1, 2, and 3. It assumes the salary jump from Assistant to Associate is the same as from Associate to Full. That is a strong (and probably wrong) assumption.
-
-Now let's do it correctly:
-
-```{r}
-#| label: rank-correct
-
-# CORRECT: treats rank as a categorical variable
-model_rank <- lm(salary ~ factor(rank), data = faculty)
-summary(model_rank)
-```
-
-> With `factor(rank)`, R creates **two dummy variables**: `factor(rank)2` (Associate vs. Assistant) and `factor(rank)3` (Full vs. Assistant). The reference category is rank 1 (Assistant Professor). Each coefficient tells us the mean difference from the reference group.
-
-::: {.callout-important}
-## Always Use `factor()` for Categorical Variables
-When a categorical variable is coded with numbers (like `rank` = 1, 2, 3), R will treat it as continuous by default. You must wrap it in `factor()` to tell R it represents groups, not a numeric scale. This is one of the most common mistakes in R.
-:::
-
-Let's confirm with the ANOVA table:
-
-::: {.panel-tabset}
-
-#### Simple
-
-```{r}
-#| label: anova-rank-aov
-
-anova_rank <- aov(salary ~ factor(rank), data = faculty)
-summary(anova_rank)
-```
-
-#### Advanced
-
-```{r}
-#| label: anova-rank-anova-table
-
-anova(model_rank)
-```
-
-```{r}
-#| label: anova-rank-tidy
-
-tidy_model(model_rank)
-```
-
-:::
-
-Let's verify the coefficients by computing the group means directly:
-
-```{r}
-#| label: rank-means
-
-faculty |>
-  group_by(rank) |>
-  summarise(
-    n = n(),
-    mean_salary = mean(salary),
-    .groups = "drop"
-  ) |>
-  mutate(mean_salary = round(mean_salary, 2))
-```
-
-> The intercept from `lm()` should match the mean salary for rank 1 (Assistant). The coefficient for `factor(rank)2` should be the difference between the Associate mean and the Assistant mean. The coefficient for `factor(rank)3` should be the difference between the Full Professor mean and the Assistant mean.
-
-
-## Part 4: ANCOVA --- Controlling for a Confounder
-
-We have established that male professors earn more on average. But we also noticed that male professors have higher marketability scores. Could the salary gap be partly due to differences in marketability rather than gender per se?
-
-This is the classic **confounding** problem. ANCOVA (Analysis of Covariance) addresses it by including a continuous covariate alongside a categorical predictor.
-
-::: {.callout-note}
-## What Is Confounding?
-A confounder is a variable that is related to **both** the predictor and the outcome. If male professors tend to be in higher-marketability fields, and higher-marketability fields pay more, then marketability **confounds** the relationship between gender and salary. Controlling for the confounder lets us see the gender effect "holding marketability constant."
-:::
-
-### Step 1: Mean-Center the Covariate
-
-Before fitting the model, let's **mean-center** the marketability variable. This does not change the slope, but it makes the intercept interpretable: after centering, the intercept represents the predicted salary at the **average** level of marketability.
-
-```{r}
-#| label: mean-center
-
-faculty <- faculty |>
-  mutate(market_c = market - mean(market))
-
-# Verify: the mean of the centered variable should be (approximately) zero
-mean(faculty$market_c)
-```
-
-### Step 2: Fit the ANCOVA Model
-
-```{r}
-#| label: ancova-model
-
-model_ancova <- lm(salary ~ male + market_c, data = faculty)
-summary(model_ancova)
-```
-
-> **Interpretation:**
->
-> - **Intercept:** The predicted salary for a **female** professor (`male = 0`) with **average** marketability (`market_c = 0`).
-> - **male:** The estimated salary difference between men and women, **after controlling for marketability**. This is the adjusted gender gap.
-> - **market_c:** For each 1-unit increase in marketability, salary increases by this amount, **holding gender constant**.
-
-### Step 3: Compare With and Without the Control
-
-Let's put the unadjusted and adjusted models side by side.
-
-```{r}
-#| label: compare-models
-
-# Unadjusted: gender only
-model_unadj <- lm(salary ~ male, data = faculty)
-
-# Adjusted: gender + marketability
-# (model_ancova from above)
-
-bind_rows(
-  tidy_model(model_unadj) |> mutate(model = "Unadjusted"),
-  tidy_model(model_ancova) |> mutate(model = "Adjusted (+ market)")
+means_plot <- bind_rows(
+  raw_means |>
+    rename(mean_score = raw_mean) |>
+    mutate(type = "Raw mean"),
+  adjusted_means_tbl |>
+    rename(mean_score = adjusted_mean) |>
+    mutate(type = "Adjusted mean")
 ) |>
-  select(model, term, estimate, std.error, p.value) |>
-  filter(term == "male")
+  mutate(type = factor(type, levels = c("Raw mean", "Adjusted mean")))
+
+ggplot(means_plot, aes(x = type, y = mean_score,
+                       color = school_name, group = school_name)) +
+  geom_line(linetype = "dashed", linewidth = 0.8, alpha = 0.7) +
+  geom_point(size = 4) +
+  ber640_palette +
+  labs(x = NULL, y = "Mean GCSE Score", color = "School")
 ```
 
-> Look at how the coefficient for `male` changes once we control for marketability. The unadjusted gap is the raw difference in means. The adjusted gap is smaller (or larger) depending on how much of the original difference was confounded by marketability.
 
-::: {.callout-tip}
-## The Takeaway
-If the gender coefficient **shrinks** after adding marketability, that means part of the raw salary gap was due to men being in higher-marketability fields. If it stays roughly the same, then marketability was not much of a confounder for the gender effect.
+## Part 5: Model Comparison and Collinearity
+
+### Step 1: Compare Model Performance
+
+```{r}
+#| label: lab03-compare-performance
+
+compare_models(model_unadjusted, model_ancova)
+```
+
+The ANCOVA model should have higher $R^2$ and lower AIC/BIC than the school-only model.
+
+### Step 2: Nested Model Test
+
+```{r}
+#| label: lab03-nested-test
+
+anova(model_unadjusted, model_ancova)
+```
+
+This test asks whether adding LRT improves the model beyond school alone.
+
+### Step 3: Check the Parallel-Slopes Assumption
+
+The ANCOVA model assumes that the LRT slope is the same in both schools.
+We can check that assumption by comparing the ANCOVA model with an interaction model:
+
+```{r}
+#| label: lab03-parallel-slopes-test
+
+model_interaction <- lm(gcse ~ lrt * school_name, data = two_schools)
+anova(model_ancova, model_interaction)
+```
+
+This test asks whether allowing the LRT slope to differ by school improves the model.
+A non-significant result does not prove the slopes are exactly equal, but it supports using the simpler parallel-lines ANCOVA model for this lab.
+
+### Step 4: Check Collinearity
+
+```{r}
+#| label: lab03-check-collinearity
+
+performance::check_collinearity(model_ancova)
+```
+
+::: {.assumption-check}
+Low VIF values mean that `lrt` and `school_name` are not so redundant that they make the coefficients unstable.
+In later labs with more predictors, collinearity checks will become more important.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Use the parallel-slopes test and the collinearity table to write one diagnostic note.
+Your note should mention whether the interaction test and VIF table support the simple ANCOVA model as a reasonable working model.
+:::
+
+::: {.exercises}
+## What to Submit
+
+1. The raw school summary table with `mean_gcse` and `mean_lrt`. [core]{.chip .easy}
+2. The coefficient table for `model_ancova`. [core]{.chip .easy}
+3. The `gap_comparison` table comparing the unadjusted and LRT-adjusted school coefficient. [core]{.chip .med}
+4. The raw vs. adjusted means table or plot. [core]{.chip .med}
+5. One diagnostic note using the parallel-slopes test and `performance::check_collinearity()` output. [core]{.chip .med}
+6. A 4-sentence interpretation answering the research question. Use model-adjusted language and avoid causal claims. [core]{.chip .hard}
 :::
 
 
-## Part 5: Visualizing ANCOVA --- Parallel Lines
+::: {.summary}
+## Lab Summary
 
-One of the most powerful ways to understand ANCOVA is through visualization. The ANCOVA model with one binary predictor and one continuous covariate produces **two parallel lines** --- one for each gender group.
+1. ANCOVA is a regression model with both a categorical predictor and a continuous covariate.
 
-### Step 1: Create Predicted Values
+2. The unadjusted school coefficient is the raw group mean difference.
 
-```{r}
-#| label: ancova-fitted
+3. The adjusted school coefficient compares schools at the same LRT level.
 
-faculty <- faculty |>
-  mutate(salary_hat = predict(model_ancova))
-```
+4. `modelbased::estimate_means()` gives adjusted means, and `modelbased::estimate_contrasts()` gives adjusted group differences.
 
-### Step 2: Plot the Parallel Lines
+5. `compare_models()` and `anova()` show whether the covariate improves model fit.
 
-```{r}
-#| label: parallel-lines
-#| fig-cap: "ANCOVA: salary vs. marketability, with parallel fitted lines by gender"
-#| fig-alt: "Scatterplot of salary versus centered marketability with two parallel regression lines for males and females, both sloping upward with males consistently higher, illustrating the adjusted gender gap from the ANCOVA model"
-#| fig-height: 5
-#| fig-width: 8
+6. A quick interaction test checks whether the parallel-slopes ANCOVA is a reasonable working model.
 
-# Extract coefficients for geom_abline (avoids zigzag from unsorted data)
-b <- coef(model_ancova)
+7. `performance::check_collinearity()` checks whether predictors are too redundant for stable coefficient interpretation.
 
-ggplot(faculty, aes(x = market_c, y = salary,
-                    color = factor(male, labels = c("Female", "Male")))) +
-  geom_point(alpha = 0.3, size = 1.5) +
-  geom_abline(intercept = b[1], slope = b[3],
-              linetype = "dashed", color = "#E74C3C", linewidth = 1.2) +
-  geom_abline(intercept = b[1] + b[2], slope = b[3],
-              color = "#2C3E50", linewidth = 1.2) +
-  scale_color_manual(values = c("#E74C3C", "#2C3E50")) +
-  labs(x = "Marketability (centered)",
-       y = "Salary",
-       color = "Gender",
-       subtitle = "Parallel lines: same slope for marketability, different intercepts for gender")
-```
-
-> The two lines are **parallel** because our model assumes the effect of marketability on salary is the same for men and women (equal slopes). The **vertical distance** between the two lines is the adjusted gender gap --- the coefficient for `male` in our ANCOVA model.
-
-::: {.callout-note}
-## Why Parallel?
-The model `salary ~ male + market_c` has no interaction term. Without an interaction, the slope of `market_c` is identical for both groups. Only the intercept shifts. In Lab 6, we will learn how to relax this assumption by adding an interaction term, which would allow the lines to have different slopes.
-:::
-
-
-## Part 6: Adjusted Means
-
-Raw group means can be misleading when groups differ on a confounder. **Adjusted means** (also called **marginal means** or **least-squares means**) give us the predicted outcome for each group, evaluated at the mean of the covariates.
-
-### What Are Adjusted Means?
-
-Think of it this way: if male and female professors had the **same average marketability**, what would their predicted salaries be? That is what adjusted means tell us.
-
-### Computing Adjusted Means
-
-::: {.panel-tabset}
-
-#### Simple: `marginaleffects`
-
-```{r}
-#| label: adjusted-means-marginaleffects
-
-avg_predictions(model_ancova, by = "male")
-```
-
-> The `estimate` column gives the adjusted mean salary for each gender, evaluated at the mean of `market_c` (which is zero, since we centered it). Compare these adjusted means with the raw means we computed earlier.
-
-#### Advanced: Manual Calculation
-
-We can verify this by hand. Because `market_c` is mean-centered, the adjusted mean for each group is simply the model prediction when `market_c = 0`:
-
-```{r}
-#| label: adjusted-means-manual
-
-coefs <- coef(model_ancova)
-
-# Adjusted mean for women (male = 0, market_c = 0)
-adj_mean_female <- coefs["(Intercept)"]
-
-# Adjusted mean for men (male = 1, market_c = 0)
-adj_mean_male <- coefs["(Intercept)"] + coefs["male"]
-
-tibble(
-  gender = c("Female", "Male"),
-  adjusted_mean = round(c(adj_mean_female, adj_mean_male), 2)
-)
-```
-
-> When we mean-center, the adjusted means are simply the intercept (for the reference group) and the intercept plus the slope (for the other group). This is why mean-centering makes the intercept directly interpretable.
-
-:::
-
-### Raw vs. Adjusted Means
-
-Let's put raw and adjusted means together for a clear comparison:
-
-```{r}
-#| label: raw-vs-adjusted
-
-raw_means <- faculty |>
-  group_by(male) |>
-  summarise(raw_mean = mean(salary), .groups = "drop")
-
-adj_means <- avg_predictions(model_ancova, by = "male") |>
-  as_tibble() |>
-  select(male, adjusted_mean = estimate)
-
-left_join(raw_means, adj_means, by = "male") |>
-  mutate(
-    gender = if_else(male == 1, "Male", "Female"),
-    across(where(is.numeric) & !male, \(x) round(x, 2))
-  ) |>
-  select(gender, raw_mean, adjusted_mean)
-```
-
-> The raw means reflect **all** differences between groups, including those due to confounders. The adjusted means reflect the group difference **after holding marketability constant**. If the raw and adjusted means differ substantially, the confounder was playing a meaningful role.
-
-
-## Key Takeaways
-
-::: {.callout-tip}
-## What We Learned
-
-1. **ANOVA is regression with categorical predictors.** The `aov()` and `lm()` functions give the same F-statistic and the same conclusions.
-
-2. **Always use `factor()` for categorical variables** coded as numbers. Without `factor()`, R treats the variable as continuous and fits a single slope rather than separate group means.
-
-3. **A t-test = simple regression with a binary predictor.** The regression slope is the mean difference between groups.
-
-4. **ANCOVA controls for confounders** by including a continuous covariate alongside a categorical predictor. This lets us estimate group differences "holding the covariate constant."
-
-5. **Mean-centering** the covariate does not change the slopes or the overall model fit, but it makes the intercept interpretable as the predicted value at the average level of the covariate.
-
-6. **Parallel lines** visualize the ANCOVA model: same slope for the covariate, different intercepts for the groups. The vertical gap is the adjusted group difference.
-
-7. **Adjusted means** (via `marginaleffects::avg_predictions()`) give us the predicted outcome for each group at the mean of the covariates. These are more informative than raw means when groups differ on the covariate.
-
-**Next:** In Lab 4, we will dig deeper into categorical predictors --- dummy coding, effect coding, and planned contrasts --- to gain full control over how R handles group comparisons.
+**Next:** Lab 4 moves the one-way ANOVA and categorical-predictor material into its own focused workflow.
 :::

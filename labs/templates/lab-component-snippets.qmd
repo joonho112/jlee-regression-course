@@ -1,0 +1,147 @@
+---
+title: "Lab Component Snippets"
+description: "Copy-ready fenced-div patterns for BER 640 lab rewrites."
+---
+
+This file is a source reference for authors. It is not listed in `_quarto.yml`, so it is not part of the student-facing book navigation.
+
+## Objectives
+
+Use once near the top of every lab.
+
+````markdown
+::: {.objectives}
+#### What you'll be able to do
+
+- Fit the model used in this lab.
+- Inspect coefficients with `model_params()`.
+- Evaluate fit or assumptions with `model_fit()` and `check_model()`.
+- Translate the model into a prediction, contrast, slope, or diagnostic decision.
+
+::: {.meta}
+Lecture notes: Chapter X. Dataset: `dataset_name`. Estimated time: 60-90 minutes.
+:::
+:::
+````
+
+## Worked Example
+
+Use for the main model output or a major post-estimation output. Keep the tabs short.
+
+````markdown
+::: {.worked-example}
+::: {.wex-header}
+[Worked example]{.wex-tag} - Inspect the model
+:::
+
+::: {.panel-tabset}
+### Output
+
+```{r}
+#| label: labxx-model-parameters
+model_params(model1)
+```
+
+### Output Interpretation
+
+Write one or two sentences that interpret the main coefficient in substantive units.
+
+### Code Explanation
+
+- `lm()` or `glm()` fits the model.
+- `model_params()` prints estimates, confidence intervals, test statistics, and p-values.
+:::
+:::
+````
+
+## Interpretation
+
+Use immediately after an output that students need to translate.
+
+````markdown
+::: {.interpretation}
+For students with the reference value of `group`, the predicted outcome is about X units.
+The focal group differs by about Y units, holding the covariates in the model constant.
+:::
+````
+
+## Your Turn
+
+Use after a worked example. Keep it small enough to complete in a few minutes.
+
+````markdown
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Change one predictor value, refit one model, or compute one additional prediction.
+Write one sentence describing what changed.
+
+<details><summary>Hint</summary>
+Start by copying the previous code chunk and changing one formula term or one value.
+</details>
+:::
+````
+
+## Assumption Check
+
+Use in diagnostics sections. Require a decision, not just a plot.
+
+````markdown
+::: {.assumption-check}
+State whether the diagnostic pattern is acceptable, questionable, or a serious concern.
+Name the one plot or statistic that supports your decision, and say what you would do next.
+:::
+````
+
+## Pitfall
+
+Use for one concrete mistake and one corrected habit.
+
+````markdown
+::: {.pitfall}
+Do not interpret a logistic-regression coefficient as an odds ratio unless it has been exponentiated.
+Use `model_params(model, exponentiate = TRUE)` when you want odds ratios.
+:::
+````
+
+## What To Submit
+
+Use once near the end of every lab.
+
+````markdown
+::: {.exercises}
+### What to submit
+
+1. A coefficient table for the main model. [core]{.chip .med}
+2. One prediction, contrast, slope, or diagnostic table/figure. [core]{.chip .med}
+3. A 3-5 sentence interpretation that answers the research question. [core]{.chip .med}
+4. One diagnostic note that names the main assumption or fit concern. [warm-up]{.chip .easy}
+:::
+````
+
+## Summary
+
+Use at the end of every lab. Do not introduce new content here.
+
+````markdown
+::: {.summary}
+### Lab summary
+
+::: {.summary-grid}
+::: {}
+##### Key takeaways
+- Fit:
+- Inspect:
+- Predict or compare:
+- Diagnose:
+:::
+::: {}
+##### Functions used
+- `lm()` or `glm()`
+- `model_params()`
+- `model_fit()`
+- `check_model()`
+:::
+:::
+:::
+````

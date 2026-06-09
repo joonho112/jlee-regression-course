@@ -1,403 +1,495 @@
 ---
-title: "Lab 9: Introduction to Logistic Regression"
+title: "Lab 9: Simple Logistic Regression"
 ---
 
 {{< include ../_common.qmd >}}
 
-## Goals
-
-::: {.callout-note}
+::: {.objectives}
 ## What You'll Learn in This Lab
-- Understand why we need logistic regression for binary outcomes
-- Compute probabilities, odds, and odds ratios from a cross-tabulation
-- Fit a logistic regression using `glm()` with `family = binomial`
-- Interpret coefficients on the log-odds, odds, and probability scales
-- Fit logistic regression with a continuous predictor
-- **Lecture Notes Reference:** Chapter 9: *Introduction to Logistic Regression*
+
+- Use logistic regression for a binary outcome
+- Convert among probability, odds, and log-odds
+- Fit a logistic regression with `glm(..., family = binomial)`
+- Read coefficients on the log-odds scale
+- Report odds ratios with `model_params(..., exponentiate = TRUE)`
+- Convert fitted values back to predicted probabilities
+- Distinguish odds-ratio interpretations from probability interpretations
+- Plot predicted probabilities with `ggeffects::predict_response()`
+- **Lecture Notes Reference:** Chapter 9: *Simple Logistic Regression*
+
+::: {.meta}
+Dataset: `titanic`. Estimated time: 75-90 minutes.
+:::
 :::
 
-::: {.callout-tip}
-## Stata → R Translation
-| Stata | R | Notes |
-|:------|:--|:------|
-| `logit survived female` | `glm(survived ~ female, family = binomial)` | Log-odds coefficients |
-| `logit survived female, or` | `exp(coef(model))` | Odds ratios |
-| `logistic survived female` | `tbl_regression(exponentiate = TRUE)` | OR with pretty table |
-| `cs survived female, or` | Manual calculation | Cohort study odds ratio |
-:::
 
-**Dataset:** `titanic` from the `regdatasets` package
+## Part 1: Prepare the Data
 
-## Setup
+We use the Titanic passenger data from the lecture notes.
+The outcome is `survived`, coded 1 if the passenger survived and 0 otherwise.
 
 ```{r}
-#| label: lab09-setup
+#| label: lab09-load-data
 
-library(regdatasets)
 data(titanic)
-glimpse(titanic)
+
+titanic_lab <- titanic |>
+  mutate(
+    sex_f = factor(sex, levels = c(0, 1), labels = c("Male", "Female")),
+    survived_f = factor(survived, levels = c(0, 1), labels = c("Died", "Survived")),
+    first_class = if_else(pclass == 1, 1L, 0L)
+  )
+
 ```
 
-
-## Part 1: Meet the Titanic Data
-
-The `titanic` dataset describes the survival status of individual passengers on the Titanic. Our goal today is to model **who survived** --- a binary outcome (0 = died, 1 = survived).
-
-### Step 1: Explore the Variables
-
 ```{r}
-#| label: explore-titanic
+#| label: lab09-preflight
 
-titanic |>
-  summarise(
-    n = n(),
-    survived_mean = mean(survived, na.rm = TRUE),
-    age_mean = mean(age, na.rm = TRUE),
-    fare_mean = mean(fare, na.rm = TRUE)
-  ) |>
-  mutate(across(where(is.numeric), \(x) round(x, 2)))
+tibble(
+  Rows = nrow(titanic_lab),
+  Survival_rate = mean(titanic_lab$survived),
+  Female_rate = mean(titanic_lab$sex),
+  Mean_age = mean(titanic_lab$age, na.rm = TRUE),
+  Missing_age = sum(is.na(titanic_lab$age))
+) |>
+  round_numeric(digits = 3)
 ```
 
-> The variable `survived` is coded 0/1, so its mean gives us the overall survival rate. What proportion of passengers survived?
+::: {.pitfall}
+Logistic regression expects a binary outcome.
 
-### Step 2: Create the Female Dummy Variable
+In this lab, `survived = 1` is the event we model.
+Every coefficient describes how a predictor changes the log-odds, odds, or probability of survival.
+:::
 
-The `sex` variable is already coded as 0 (male) and 1 (female). We'll rename it to `female` for clarity.
 
-```{r}
-#| label: create-female
+## Part 2: Start with a Cross-Tabulation
 
-# The 'sex' variable is already coded as 0 = male, 1 = female
-# Rename it to 'female' for clarity
-titanic <- titanic |>
-  rename(female = sex)
-```
-
-Let's verify the coding:
+Before fitting a model, compute the observed survival rate by sex.
+Because `survived` is coded 0/1, its mean is the survival probability.
 
 ```{r}
-#| label: verify-female
+#| label: lab09-survival-by-sex
 
-titanic |>
-  count(female)
-```
-
-> We created `female` so that 1 = female and 0 = male. This makes males the reference group, which will be important when we interpret logistic regression coefficients.
-
-### Step 3: Cross-Tabulation of Survival by Gender
-
-Before fitting any model, let's look at the raw data. A cross-tabulation tells us everything we need.
-
-```{r}
-#| label: crosstab-survive-female
-
-titanic |>
-  count(female, survived) |>
-  pivot_wider(names_from = survived, values_from = n, names_prefix = "survived_")
-```
-
-Now let's add row percentages to see survival rates within each gender:
-
-```{r}
-#| label: crosstab-proportions
-
-titanic |>
-  group_by(female) |>
+survival_by_sex <- titanic_lab |>
+  group_by(sex_f) |>
   summarise(
     n = n(),
     n_survived = sum(survived),
-    prop_survived = mean(survived),
+    n_died = n - n_survived,
+    probability = n_survived / n,
+    odds = probability / (1 - probability),
+    log_odds = qlogis(probability),
     .groups = "drop"
+  )
+
+stopifnot(all(is.finite(survival_by_sex$probability)))
+stopifnot(all(survival_by_sex$probability >= 0, survival_by_sex$probability <= 1))
+
+survival_by_sex |>
+  round_numeric(digits = 3)
+```
+
+```{r}
+#| label: lab09-survival-bar
+#| fig-cap: "Titanic survival probability by passenger sex."
+#| fig-alt: "Bar chart showing the observed probability of survival for male and female Titanic passengers. Female passengers have a much higher survival probability than male passengers."
+#| fig-width: 7
+#| fig-height: 4.5
+
+ggplot(survival_by_sex, aes(x = sex_f, y = probability, fill = sex_f)) +
+  geom_col(width = 0.65) +
+  geom_text(
+    aes(label = scales::percent(probability, accuracy = 0.1)),
+    vjust = -0.4,
+    fontface = "bold"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  scale_fill_manual(values = c(
+    "Male" = ber640_colors[["primary"]],
+    "Female" = ber640_colors[["secondary"]]
+  )) +
+  labs(
+    x = "Passenger Sex",
+    y = "Observed Survival Probability"
+  ) +
+  guides(fill = "none")
+```
+
+::: {.interpretation}
+The table shows the same information on three scales.
+
+The probability scale is intuitive.
+The odds scale is what odds ratios compare.
+The log-odds scale is where logistic regression is linear.
+:::
+
+
+## Part 3: Convert Between Scales
+
+These three functions are the main conversion tools:
+
+- Probability to odds: `p / (1 - p)`
+- Probability to log-odds: `qlogis(p)`
+- Log-odds to probability: `plogis(log_odds)`
+
+```{r}
+#| label: lab09-scale-conversions
+
+scale_examples <- tibble(
+  probability = c(.10, .25, .50, .75, .90)
+) |>
+  mutate(
+    odds = probability / (1 - probability),
+    log_odds = qlogis(probability),
+    probability_check = plogis(log_odds)
+  )
+
+scale_examples |>
+  round_numeric(digits = 3)
+```
+
+```{r}
+#| label: lab09-three-scales-plot
+#| fig-cap: "Probability, odds, and log-odds scales."
+#| fig-alt: "Three-panel line plot showing how probability maps to probability, odds, and log-odds. Probability is bounded between zero and one, odds are bounded below by zero, and log-odds are unbounded."
+#| fig-width: 10
+#| fig-height: 4.5
+
+scale_plot_data <- tibble(probability = seq(.01, .99, by = .01)) |>
+  mutate(
+    Probability = probability,
+    Odds = probability / (1 - probability),
+    `Log-odds` = qlogis(probability)
   ) |>
-  mutate(prop_survived = round(prop_survived, 4))
+  pivot_longer(-probability, names_to = "Scale", values_to = "Value")
+
+ggplot(scale_plot_data, aes(x = probability, y = Value)) +
+  geom_line(color = ber640_colors[["primary"]], linewidth = 1.1) +
+  facet_wrap(~ Scale, scales = "free_y") +
+  labs(
+    x = "Probability",
+    y = "Scale Value"
+  )
 ```
 
-> Compare the survival rates. Females had a much higher survival rate than males. This is the pattern we will model with logistic regression.
+::: {.pitfall}
+Odds and probabilities are not the same.
 
-
-## Part 2: Understanding Odds and Odds Ratios
-
-Before jumping into logistic regression, let's build intuition about **probabilities**, **odds**, and **odds ratios**. These three quantities are all different ways of describing the same information, and converting between them is the key skill for this lab.
-
-### Step 1: Probabilities from the Cross-Tab
-
-Let's extract the survival probabilities we just computed:
-
-```{r}
-#| label: probs-from-table
-
-# Store the survival proportions
-surv_stats <- titanic |>
-  group_by(female) |>
-  summarise(prob_survived = mean(survived), .groups = "drop")
-
-prob_male   <- surv_stats$prob_survived[surv_stats$female == 0]
-prob_female <- surv_stats$prob_survived[surv_stats$female == 1]
-
-cat("P(survived | male)   =", round(prob_male, 4), "\n")
-cat("P(survived | female) =", round(prob_female, 4), "\n")
-```
-
-### Step 2: From Probabilities to Odds
-
-**Odds** express the ratio of the probability of an event happening to the probability of it not happening:
-
-$$\text{Odds} = \frac{p}{1 - p}$$
-
-```{r}
-#| label: compute-odds
-
-odds_male   <- prob_male / (1 - prob_male)
-odds_female <- prob_female / (1 - prob_female)
-
-cat("Odds(survived | male)   =", round(odds_male, 4), "\n")
-cat("Odds(survived | female) =", round(odds_female, 4), "\n")
-```
-
-> An odds of 0.24 for males means that for every male who survived, roughly 4 died. An odds greater than 1 for females means more females survived than died.
-
-### Step 3: The Odds Ratio
-
-The **odds ratio (OR)** compares the odds between two groups:
-
-$$\text{OR} = \frac{\text{Odds(female)}}{\text{Odds(male)}}$$
-
-```{r}
-#| label: compute-or
-
-or_manual <- odds_female / odds_male
-
-cat("Odds Ratio (female vs. male) =", round(or_manual, 4), "\n")
-```
-
-> This tells us that the odds of survival for females were about `r round(or_manual, 1)` times the odds of survival for males. This is a huge difference --- and it is exactly what logistic regression will estimate for us.
-
-::: {.callout-tip}
-## The Three Scales
-Keep this conversion chain in mind --- you will use it throughout the rest of the course:
-
-**Log-odds** $\xrightarrow{\exp()}$ **Odds** $\xrightarrow{p = \text{odds}/(1+\text{odds})}$ **Probability**
-
-Going back: **Probability** $\xrightarrow{p/(1-p)}$ **Odds** $\xrightarrow{\log()}$ **Log-odds**
+An odds ratio of 2 does not usually mean "twice as likely."
+That shortcut is only close when the event is rare.
 :::
 
 
-## Part 3: Your First Logistic Regression
+## Part 4: Fit a Logistic Regression Model
 
-Now let's fit the same analysis as a logistic regression. We use `glm()` with `family = binomial` (which uses the logit link by default).
-
-### Step 1: Fit the Model
-
-```{r}
-#| label: logit-female
-
-model_female <- glm(survived ~ female, data = titanic, family = binomial)
-```
-
-:::: {.panel-tabset}
-
-#### Simple
+Use `glm()` with `family = binomial`.
+The default link is the logit link, so the coefficients are log-odds coefficients.
 
 ```{r}
-#| label: logit-female-summary
+#| label: lab09-fit-sex-model
 
-summary(model_female)
+model_sex <- glm(
+  survived ~ sex_f,
+  data = titanic_lab,
+  family = binomial
+)
 ```
-
-#### Advanced
 
 ```{r}
-#| label: logit-female-gtsummary
+#| label: lab09-log-odds-table
 
-model_female |>
-  tbl_regression(exponentiate = TRUE) |>
-  bold_labels() |>
-  bold_p(t = 0.05)
+log_odds_table <- model_params(model_sex) |>
+  as_tibble() |>
+  mutate(p = format_p(p))
+
+log_odds_table |>
+  round_numeric(digits = 3)
 ```
 
-> The `exponentiate = TRUE` option displays odds ratios instead of log-odds coefficients. This is typically what we report in applied research.
+::: {.interpretation}
+The intercept is the log-odds of survival for the reference group: male passengers.
 
-::::
-
-### Step 2: Interpret the Log-Odds Coefficients
-
-The default output is on the **log-odds scale**:
-
-```{r}
-#| label: logit-coefs
-
-coef(model_female)
-```
-
-> - **Intercept** (`r round(coef(model_female)[1], 4)`): This is the log-odds of survival for the reference group (males, when `female = 0`).
-> - **female** (`r round(coef(model_female)[2], 4)`): This is the difference in log-odds of survival between females and males.
-
-Log-odds are hard to interpret directly. Let's convert them.
-
-::: {.callout-warning}
-## R Reports Log-Odds, Not Odds Ratios
-R's `glm()` with `family = binomial` always reports coefficients on the **log-odds** scale. To get **odds ratios** (which is what Stata's `logistic` command reports by default), you need to exponentiate: `exp(coef(model))` or use `parameters::model_parameters(model, exponentiate = TRUE)`. Don't interpret log-odds coefficients as odds ratios!
-:::
-
-### Step 3: Transform to Odds
-
-Apply `exp()` to convert from log-odds to odds:
-
-```{r}
-#| label: logit-to-odds
-
-# Odds of survival for males (reference group)
-odds_male_model <- exp(coef(model_female)[1])
-
-# Odds of survival for females
-odds_female_model <- exp(coef(model_female)[1] + coef(model_female)[2])
-
-cat("Estimated odds (male)   =", round(odds_male_model, 4), "\n")
-cat("Estimated odds (female) =", round(odds_female_model, 4), "\n")
-```
-
-> Compare these to the odds we calculated by hand in Part 2. They should match exactly!
-
-### Step 4: Get the Odds Ratio Directly
-
-The odds ratio is simply `exp()` of the slope coefficient:
-
-```{r}
-#| label: odds-ratio
-
-exp(coef(model_female))
-```
-
-> The odds ratio for `female` is `r round(exp(coef(model_female)[2]), 2)`. This means the estimated odds of surviving for females are about `r round(exp(coef(model_female)[2]), 1)` times the odds for males --- exactly what we calculated by hand.
-
-### Step 5: Transform to Probabilities
-
-Finally, let's convert to the probability scale using the inverse logit function:
-
-```{r}
-#| label: logit-to-prob
-
-# Predicted probability of survival for males
-prob_male_model <- plogis(coef(model_female)[1])
-
-# Predicted probability of survival for females
-prob_female_model <- plogis(coef(model_female)[1] + coef(model_female)[2])
-
-cat("P(survived | male)   =", round(prob_male_model, 4), "\n")
-cat("P(survived | female) =", round(prob_female_model, 4), "\n")
-```
-
-> Again, these match our hand calculations from Part 2. With a single dummy predictor, logistic regression simply reproduces the group proportions from the cross-tabulation.
-
-::: {.callout-important}
-## Why Not Just Use Linear Regression?
-With a binary outcome, linear regression (OLS) can predict probabilities below 0 or above 1, which makes no sense. Logistic regression constrains predicted probabilities to stay between 0 and 1 by modeling the **log-odds** as a linear function of the predictors.
+The `sex_fFemale` coefficient is the difference in log-odds between female and male passengers.
+Most applied reports convert this difference to an odds ratio.
 :::
 
 
-## Part 4: Logistic Regression with a Continuous Predictor
+## Part 5: Report Odds Ratios
 
-The real power of logistic regression emerges when we use continuous predictors. Let's model survival as a function of ticket fare.
-
-### Step 1: Fit the Model
+Set `exponentiate = TRUE` to convert log-odds coefficients into odds ratios.
 
 ```{r}
-#| label: logit-fare
+#| label: lab09-odds-ratio-table
 
-model_fare <- glm(survived ~ fare, data = titanic, family = binomial)
+odds_ratio_table <- model_params(model_sex, exponentiate = TRUE) |>
+  as_tibble() |>
+  rename(Odds_ratio = Coefficient) |>
+  mutate(p = format_p(p))
+
+odds_ratio_table |>
+  round_numeric(digits = 3)
 ```
-
-:::: {.panel-tabset}
-
-#### Simple
 
 ```{r}
-#| label: logit-fare-summary
+#| label: lab09-manual-or-check
 
-summary(model_fare)
+manual_or <- survival_by_sex |>
+  summarise(odds_ratio = odds[sex_f == "Female"] / odds[sex_f == "Male"])
+
+model_or <- odds_ratio_table |>
+  filter(Parameter == "sex_fFemale") |>
+  transmute(odds_ratio = Odds_ratio)
+
+tibble(
+  Source = c("Manual cross-tab", "Logistic model"),
+  Odds_ratio = c(manual_or$odds_ratio, model_or$odds_ratio)
+) |>
+  round_numeric(digits = 3)
 ```
 
-#### Advanced
+::: {.interpretation}
+With one binary predictor, the logistic regression odds ratio matches the cross-tab odds ratio.
 
-```{r}
-#| label: logit-fare-gtsummary
-
-model_fare |>
-  tbl_regression(exponentiate = TRUE) |>
-  bold_labels() |>
-  bold_p(t = 0.05)
-```
-
-::::
-
-### Step 2: Interpret the Odds Ratio
-
-```{r}
-#| label: fare-or
-
-exp(coef(model_fare))
-```
-
-> The odds ratio for `fare` is approximately `r round(exp(coef(model_fare)[2]), 4)`. For each additional British pound of fare, the odds of survival increase by about `r round((exp(coef(model_fare)[2]) - 1) * 100, 2)`%. Passengers who paid more for their tickets had higher odds of surviving.
-
-::: {.callout-tip}
-## Interpreting OR for Continuous Predictors
-- **OR > 1**: each unit increase in the predictor is associated with *higher* odds of the outcome.
-- **OR < 1**: each unit increase is associated with *lower* odds.
-- **OR = 1**: no association.
-
-For small effects close to 1, the interpretation is: (OR - 1) x 100 = percentage change in odds per unit increase.
+The model is doing the same comparison, but it expresses it in the regression framework that we can extend to more predictors later.
 :::
 
-### Step 3: Predicted Probability Curve
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-Unlike linear regression, the relationship between a continuous predictor and the predicted probability is **curved** (S-shaped):
+Use the odds-ratio table to write one sentence interpreting `sex_fFemale`.
+
+Use this structure:
+
+> Female passengers had about ___ times the odds of survival compared with male passengers.
+
+Then add one sentence explaining what the odds ratio does not mean.
+:::
+
+
+## Part 6: Predicted Probabilities for Groups
+
+Odds ratios are compact, but predicted probabilities are easier to communicate.
+`ggeffects::predict_response()` returns predicted probabilities on the response scale.
 
 ```{r}
-#| label: predicted-prob-curve
-#| fig-alt: "S-shaped predicted probability curve showing survival probability increasing with ticket fare, with jittered observed outcomes at 0 and 1"
-#| fig-cap: "Predicted probability of survival as a function of ticket fare"
+#| label: lab09-predicted-sex-probabilities
 
-# Create prediction data
-pred_data <- tibble(fare = seq(0, 300, length.out = 200))
+sex_predictions <- ggeffects::predict_response(model_sex, terms = "sex_f") |>
+  as_tibble() |>
+  transmute(
+    sex_f = x,
+    predicted_probability = predicted,
+    conf.low,
+    conf.high
+  )
 
-pred_data <- pred_data |>
-  mutate(prob = predict(model_fare, newdata = pred_data, type = "response"))
-
-ggplot() +
-  geom_jitter(data = titanic, aes(x = fare, y = survived),
-              height = 0.03, alpha = 0.2, size = 1, color = "#2C3E50") +
-  geom_line(data = pred_data, aes(x = fare, y = prob),
-            color = "#E74C3C", linewidth = 1.2) +
-  labs(x = "Ticket Fare (British Pounds)",
-       y = "Predicted P(Survived)",
-       title = "Logistic Regression: Survival by Fare",
-       subtitle = "S-shaped curve keeps predictions between 0 and 1") +
-  scale_y_continuous(limits = c(0, 1))
+sex_predictions |>
+  round_numeric(digits = 3)
 ```
 
-> The jittered dots at 0 and 1 are the actual outcomes. The red S-shaped curve shows the predicted probability from our logistic model. Notice how the curve stays between 0 and 1 --- this is the advantage of logistic over linear regression for binary outcomes.
+```{r}
+#| label: lab09-sex-probability-contrast
+
+sex_probability_contrast <- sex_predictions |>
+  select(sex_f, predicted_probability) |>
+  pivot_wider(names_from = sex_f, values_from = predicted_probability) |>
+  mutate(probability_difference = Female - Male)
+
+sex_probability_contrast |>
+  round_numeric(digits = 3)
+```
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Write two sentences on the probability scale.
+
+1. State the predicted probability of survival for male passengers and female passengers.
+
+2. State the difference in predicted probabilities using percentage points.
+:::
+
+```{r}
+#| label: lab09-predicted-sex-plot
+#| fig-cap: "Predicted probability of Titanic survival by passenger sex."
+#| fig-alt: "Point-and-interval plot showing predicted survival probabilities for male and female Titanic passengers. Female passengers have a substantially higher predicted probability of survival."
+#| fig-width: 7
+#| fig-height: 4.5
+
+ggplot(sex_predictions, aes(x = sex_f, y = predicted_probability)) +
+  geom_point(size = 3, color = ber640_colors[["primary"]]) +
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high),
+    width = 0.12,
+    color = ber640_colors[["primary"]]
+  ) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  labs(
+    x = "Passenger Sex",
+    y = "Predicted Survival Probability"
+  )
+```
+
+::: {.interpretation}
+The odds ratio and predicted probabilities answer related but different questions.
+
+The odds ratio compares survival on the odds scale.
+The predicted probabilities describe survival on the probability scale.
+A large odds ratio can correspond to a smaller probability difference because probabilities are bounded between 0 and 1.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Explain why these two statements can both be true:
+
+- Female passengers had much higher odds of survival than male passengers.
+- The predicted probabilities are still numbers between 0 and 1.
+
+Use the words **odds**, **probability**, and **bounded**.
+:::
 
 
-## Key Takeaways
+## Part 7: A Continuous Predictor
 
-::: {.callout-note}
-## What We Learned
+Logistic regression also works with continuous predictors.
+Here we fit a simple model using passenger age.
 
-1. **Why logistic regression?** When the outcome is binary (0/1), linear regression can produce impossible predictions (below 0 or above 1). Logistic regression solves this by modeling the log-odds as a linear function of predictors.
+```{r}
+#| label: lab09-fit-age-model
 
-2. **The log-odds to odds to probability pipeline:**
-   - `glm()` estimates coefficients on the **log-odds** scale
-   - `exp(coef)` converts to the **odds** scale (odds ratios)
-   - `plogis(linear predictor)` converts to the **probability** scale
+titanic_age <- titanic_lab |>
+  drop_na(age)
 
-3. **Odds ratio interpretation:**
-   - **OR > 1** means higher odds of the outcome
-   - **OR < 1** means lower odds of the outcome
-   - For a **dummy variable**: OR compares the odds between two groups
-   - For a **continuous variable**: OR is the multiplicative change in odds for each one-unit increase
+model_age <- glm(
+  survived ~ age,
+  data = titanic_age,
+  family = binomial
+)
 
-4. **In our Titanic example:**
-   - Females had roughly 11 times the odds of survival compared to males
-   - Each additional pound of fare increased the odds of survival by about 1.25%
+model_params(model_age, exponentiate = TRUE) |>
+  as_tibble() |>
+  mutate(p = format_p(p)) |>
+  round_numeric(digits = 3)
+```
+
+::: {.interpretation}
+For a continuous predictor, the odds ratio is the multiplicative change in odds for a one-unit increase.
+
+For `age`, that means the change in odds of survival for each additional year of age.
+If a one-year unit feels too small, rescale the predictor before fitting the model.
+:::
+
+```{r}
+#| label: lab09-age-prediction-data
+
+age_predictions <- ggeffects::predict_response(model_age, terms = "age [all]") |>
+  as_tibble()
+```
+
+```{r}
+#| label: lab09-age-probability-plot
+#| fig-cap: "Predicted probability of Titanic survival by passenger age."
+#| fig-alt: "Scatter plot of Titanic survival status by passenger age with a fitted logistic regression curve. The predicted survival probability slopes downward from roughly the mid-40 percent range for children to about one-third by age 80, with the confidence band widest at older ages."
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(titanic_age, aes(x = age, y = survived)) +
+  geom_jitter(height = 0.035, width = 0, alpha = 0.18,
+              color = "grey45") +
+  geom_ribbon(
+    data = age_predictions,
+    aes(x = x, ymin = conf.low, ymax = conf.high),
+    inherit.aes = FALSE,
+    fill = ber640_colors[["accent"]],
+    alpha = 0.18
+  ) +
+  geom_line(
+    data = age_predictions,
+    aes(x = x, y = predicted),
+    inherit.aes = FALSE,
+    color = ber640_colors[["primary"]],
+    linewidth = 1.1
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(),
+    limits = c(-0.05, 1.05),
+    breaks = seq(0, 1, by = .25)
+  ) +
+  labs(
+    x = "Passenger Age",
+    y = "Survival"
+  )
+```
+
+```{r}
+#| label: lab09-selected-age-probabilities
+
+age_predictions_selected <- ggeffects::predict_response(
+  model_age,
+  terms = "age [10, 30, 50, 70]"
+) |>
+  as_tibble() |>
+  transmute(
+    age = x,
+    predicted_probability = predicted,
+    conf.low,
+    conf.high
+  )
+
+age_predictions_selected |>
+  round_numeric(digits = 3)
+```
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Choose two ages from the table.
+Write one sentence comparing their predicted probabilities of survival.
+
+Use probability language, not classification language.
+:::
+
+::: {.pitfall}
+Logistic regression predicts probabilities, not classifications.
+
+The curve gives `P(survived = 1)`.
+Turning those probabilities into "survived" or "died" requires a separate decision threshold, which belongs to diagnostics and classification.
+:::
+
+::: {.exercises}
+## What to Submit
+
+Submit the following items:
+
+1. The odds-ratio table for `model_sex`. [core]{.chip .easy}
+
+2. One sentence interpreting the `sex_fFemale` odds ratio using odds language. [core]{.chip .med}
+
+3. The predicted-probability table for `sex_f`. [core]{.chip .easy}
+
+4. Two sentences interpreting the predicted probabilities and probability difference. [core]{.chip .med}
+
+5. One short explanation of why an odds ratio and a probability difference are not the same quantity. [core]{.chip .med}
+
+6. The selected-age predicted-probability table and one sentence comparing two ages. [core]{.chip .med}
+:::
+
+::: {.summary}
+## Lab Summary
+
+1. Logistic regression is for binary outcomes.
+
+2. `glm(..., family = binomial)` estimates coefficients on the log-odds scale.
+
+3. `exp(coef)` or `model_params(..., exponentiate = TRUE)` converts log-odds coefficients to odds ratios.
+
+4. Probability, odds, and log-odds are different scales for the same event probability.
+
+5. `plogis()` converts log-odds to probabilities.
+
+6. `ggeffects::predict_response()` gives simple predicted probability tables and plots.
+
+**Next:** Lab 10 extends logistic regression to multiple predictors and adjusted predictions.
 :::

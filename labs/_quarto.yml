@@ -27,6 +27,8 @@ book:
 
   chapters:
     - index.qmd
+    # Keep lab filenames stable: these slugs are published URLs and freeze keys.
+    # Change display titles in each qmd file; rename files only with redirects.
     - part: "Part I: Foundations"
       chapters:
         - labs/lab01-intro-to-r.qmd
@@ -41,12 +43,13 @@ book:
       chapters:
         - labs/lab07-model-building.qmd
         - labs/lab08-diagnostics.qmd
-    - part: "Part IV: Logistic Regression"
+    - part: "Part IV: Logistic Regression and GLMs"
       chapters:
         - labs/lab09-logistic-intro.qmd
         - labs/lab10-logistic-extended.qmd
         - labs/lab11-logistic-diagnostics.qmd
         - labs/lab12-logistic-advanced.qmd
+        - labs/lab13-ordinal-outcomes.qmd
     - references.qmd
 
   page-navigation: true

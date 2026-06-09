@@ -2,5 +2,6 @@
 #| label: common-setup
 #| include: false
 
-source(here::here("_common.R"), local = TRUE)
+common_file <- if (file.exists("_common.R")) "_common.R" else file.path("..", "_common.R")
+source(common_file, local = TRUE)
 ```

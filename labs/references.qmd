@@ -1,4 +1,6 @@
-# References {.unnumbered}
+---
+nocite: |
+  @agresti2018, @langton1994, @kalmijn1994, @fox2015, @hosmer2013, @arel-bundock2024, @ludecke2022, @bickel1975, @wickham2023
+---
 
-::: {#refs}
-:::
+# References {.unnumbered}

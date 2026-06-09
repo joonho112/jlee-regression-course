@@ -1,0 +1,378 @@
+---
+title: "Lab 13: Ordinal Outcomes"
+---
+
+{{< include ../_common.qmd >}}
+
+::: {.objectives}
+## What You'll Learn in This Lab
+
+- Recognize when an outcome is ordinal rather than continuous or unordered categorical
+- Create an ordered factor for an ordinal response
+- Fit an ordinal logistic regression model with `ordinal::clm()`
+- Interpret cumulative odds ratios for a proportional-odds model
+- Check the proportional-odds assumption with `ordinal::nominal_test()`
+- Compute and plot predicted probabilities for each outcome category
+- **Lecture Notes Reference:** Chapter 13: *Models for Ordinal Responses*
+
+::: {.meta}
+Dataset: `satisfaction` from `regdatasets`. Estimated time: 60-75 minutes.
+:::
+:::
+
+## Part 1: Inspect the Ordered Outcome
+
+Ordinal outcomes have categories with a meaningful order, but the distances between categories are not guaranteed to be equal. A satisfaction response with four levels is a typical example: "not satisfied" is below "slightly satisfied," which is below "satisfied," which is below "very satisfied." An ordinal model respects that order without pretending the scale is truly continuous.
+
+::: {.callout-tip}
+## Stata to R Translation
+
+| Stata | R | Notes |
+|:--|:--|:--|
+| `ologit satisfaction income i.gender` | `ordinal::clm(satisfaction_f ~ income + gender_f, data = satisfaction_lab, link = "logit")` | Actual lab ordinal logit model |
+| `ologit satisfaction income i.gender, or` | `model_params(ordinal_model, exponentiate = TRUE)` with `Component == "location"` | Cumulative odds ratios for predictor effects |
+| `brant` / assumption checks | `ordinal::nominal_test(ordinal_model)` | Likelihood-ratio screen for proportional odds |
+| `margins, predict(outcome(#))` | `marginaleffects::predictions(ordinal_model, type = "prob")` | Category-specific predicted probabilities |
+:::
+
+### Setup
+
+```{r}
+#| label: lab13-setup
+
+data(satisfaction)
+
+satisfaction_lab <- satisfaction |>
+  mutate(
+    satisfaction_f = ordered(
+      satisfaction,
+      levels = 1:4,
+      labels = c(
+        "Not satisfied",
+        "Slightly satisfied",
+        "Satisfied",
+        "Very satisfied"
+      )
+    ),
+    income_f = factor(
+      income,
+      levels = 1:4,
+      labels = c("Low", "Medium-low", "Medium-high", "High"),
+      ordered = TRUE
+    ),
+    gender_f = factor(
+      gender,
+      levels = c("F", "M"),
+      labels = c("Female", "Male")
+    )
+  )
+
+glimpse(satisfaction_lab)
+```
+
+### Outcome Distribution
+
+Always begin by checking the outcome distribution. Ordinal models can become unstable if a category has very few observations.
+
+```{r}
+#| label: lab13-outcome-counts
+
+satisfaction_lab |>
+  count(satisfaction_f) |>
+  mutate(percent = n / sum(n)) |>
+  mutate(percent = scales::percent(percent, accuracy = 0.1)) |>
+  knitr::kable(col.names = c("Satisfaction", "n", "Percent"))
+```
+
+```{r}
+#| label: lab13-income-gender-counts
+
+satisfaction_lab |>
+  count(income_f, gender_f) |>
+  knitr::kable(col.names = c("Income", "Gender", "n"))
+```
+
+```{r}
+#| label: lab13-observed-distribution
+#| fig-cap: "Observed satisfaction distribution by income level."
+#| fig-alt: "Stacked bar chart showing observed satisfaction categories within four income levels. Higher income levels show relatively more very satisfied responses and fewer low satisfaction responses."
+#| fig-width: 8
+#| fig-height: 5
+
+satisfaction_lab |>
+  count(income_f, satisfaction_f) |>
+  group_by(income_f) |>
+  mutate(proportion = n / sum(n)) |>
+  ungroup() |>
+  ggplot(aes(x = income_f, y = proportion, fill = satisfaction_f)) +
+  geom_col(color = "white", linewidth = 0.2) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    x = "Income level",
+    y = "Observed proportion",
+    fill = "Satisfaction"
+  )
+```
+
+::: {.callout-note}
+## Why Not Use Linear Regression?
+
+The numbers 1, 2, 3, and 4 are ordered labels. They do not prove that the distance from 1 to 2 is the same as the distance from 3 to 4. Ordinal regression models the ordered categories directly.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use the outcome table and observed distribution plot.
+
+1. Explain why `satisfaction` is ordinal.
+2. Name one reason linear regression would be hard to justify here.
+3. Identify whether any satisfaction category looks sparse enough to make you cautious.
+:::
+
+## Part 2: Fit an Ordinal Logistic Model
+
+The proportional-odds model is the most common ordinal logistic model. In R, `ordinal::clm()` fits a cumulative link model.
+
+::: {.callout-note}
+## `MASS::polr()` in the Notes, `ordinal::clm()` in the Lab
+
+The lecture notes introduce `MASS::polr()`, while this lab uses `ordinal::clm()`. With the same ordered outcome, the same formula, and a logit link, they fit the same proportional-odds cumulative logit model. The thresholds may be printed with different labels, but the predictor coefficients have the same direction: a positive coefficient means higher odds of being in a higher outcome category. We use `ordinal::clm()` here so the same fitted model can go directly into `ordinal::nominal_test()` for the proportional-odds check.
+:::
+
+```{r}
+#| label: lab13-fit-clm
+
+ordinal_model <- ordinal::clm(
+  satisfaction_f ~ income + gender_f,
+  data = satisfaction_lab,
+  link = "logit"
+)
+
+model_params(ordinal_model)
+```
+
+Here `income` is entered as the numeric code 1 through 4.
+That creates one coefficient for a one-bracket increase and assumes the same log-odds shift from Low to Medium-low, Medium-low to Medium-high, and Medium-high to High.
+If that equal-step assumption is not credible, fit income as a factor and compare the category-specific estimates.
+
+The model includes two kinds of estimates:
+
+- **Thresholds:** cut-points separating adjacent outcome categories on the latent scale.
+- **Location coefficients:** predictor effects. These are the coefficients we usually interpret.
+
+## Part 3: Cumulative Odds Ratios
+
+For the location coefficients, exponentiating gives cumulative odds ratios. A positive coefficient means higher values of the predictor shift probability toward higher satisfaction categories.
+
+```{r}
+#| label: lab13-odds-ratios
+
+ordinal_or <- model_params(
+  ordinal_model,
+  exponentiate = TRUE
+) |>
+  as_tibble() |>
+  filter(Component == "location") |>
+  transmute(
+    term = Parameter,
+    odds_ratio = Coefficient,
+    conf.low = CI_low,
+    conf.high = CI_high,
+    p.value = p
+  ) |>
+  round_numeric(digits = 3)
+
+ordinal_or |>
+  knitr::kable(
+    col.names = c("Term", "Cumulative odds ratio", "CI low", "CI high", "p-value")
+  )
+```
+
+::: {.interpretation}
+The income odds ratio compares adjacent income levels because `income` is coded 1 through 4.
+It is a compact one-number summary, not a claim that income labels are literally equally spaced in the real world.
+
+If the income odds ratio is greater than 1, moving up one income level is associated with higher cumulative odds of being in a higher satisfaction category, holding gender constant.
+:::
+
+::: {.callout-warning}
+## "Higher" Means Across All Cut-points
+
+In a proportional-odds model, one odds ratio applies to every cumulative split:
+
+- Slightly satisfied or higher vs. not satisfied
+- Satisfied or higher vs. lower categories
+- Very satisfied vs. lower categories
+
+That shared odds ratio is useful only if the proportional-odds assumption is reasonable.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use the cumulative odds ratio table.
+
+1. Write one sentence interpreting the income odds ratio.
+2. State whether the confidence interval includes 1.
+3. Explain why this odds ratio is called **cumulative**.
+:::
+
+## Part 4: Check Proportional Odds
+
+The proportional-odds assumption says that each predictor has the same slope across the cumulative cut-points. `ordinal::nominal_test()` compares the proportional-odds model to a more flexible model with threshold-specific effects.
+
+```{r}
+#| label: lab13-nominal-test
+
+ordinal::nominal_test(ordinal_model)
+```
+
+::: {.interpretation}
+Read this as a diagnostic, not a verdict. Large p-values mean the data do not provide clear evidence against the proportional-odds assumption. Small p-values suggest the single-odds-ratio summary may be too simple for at least one predictor.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use the `nominal_test()` output.
+
+1. Which predictor has the smaller p-value?
+2. Does the test provide clear evidence against proportional odds?
+3. Write one sentence explaining why this diagnostic matters before reporting a single odds ratio.
+:::
+
+## Part 5: Predicted Probabilities
+
+Predicted probabilities are usually the clearest way to communicate ordinal models. For `ordinal::clm()` models, use `type = "prob"` with `marginaleffects::predictions()`.
+
+```{r}
+#| label: lab13-predicted-probabilities
+
+predicted_probs <- marginaleffects::predictions(
+  ordinal_model,
+  newdata = marginaleffects::datagrid(
+    income = 1:4,
+    gender_f = c("Female", "Male")
+  ),
+  type = "prob"
+) |>
+  as.data.frame() |>
+  transmute(
+    income,
+    income_f = factor(
+      income,
+      levels = 1:4,
+      labels = c("Low", "Medium-low", "Medium-high", "High"),
+      ordered = TRUE
+    ),
+    gender_f,
+    satisfaction_level = factor(
+      group,
+      levels = levels(satisfaction_lab$satisfaction_f),
+      ordered = TRUE
+    ),
+    predicted_probability = estimate
+  )
+
+predicted_probs |>
+  filter(gender_f == "Female") |>
+  mutate(predicted_probability = round(predicted_probability, 3)) |>
+  knitr::kable(
+    col.names = c("Income code", "Income", "Gender", "Satisfaction", "Predicted probability")
+  )
+```
+
+The probabilities for a given income and gender profile should sum to 1 across the four satisfaction categories.
+
+```{r}
+#| label: lab13-probability-sums
+
+predicted_probs |>
+  group_by(income_f, gender_f) |>
+  summarise(total_probability = sum(predicted_probability), .groups = "drop") |>
+  mutate(total_probability = round(total_probability, 3)) |>
+  knitr::kable(col.names = c("Income", "Gender", "Total probability"))
+```
+
+```{r}
+#| label: lab13-predicted-probability-plot
+#| fig-cap: "Predicted satisfaction probabilities by income level and gender."
+#| fig-alt: "Faceted stacked bar chart showing predicted probabilities for four satisfaction categories across income levels for female and male respondents. The probability of very satisfied increases at higher income levels, while lower satisfaction categories shrink."
+#| fig-width: 8
+#| fig-height: 5
+
+ggplot(predicted_probs, aes(x = income_f, y = predicted_probability, fill = satisfaction_level)) +
+  geom_col(color = "white", linewidth = 0.2) +
+  facet_wrap(~ gender_f) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    x = "Income level",
+    y = "Predicted probability",
+    fill = "Satisfaction"
+  )
+```
+
+::: {.interpretation}
+The plot shows the full predicted probability distribution, not just one fitted value.
+
+As income rises, the model shifts probability away from lower satisfaction categories and toward the highest category. This is often easier to explain than cumulative odds ratios.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
+
+Modify the prediction table.
+
+1. Filter the table to `gender_f == "Male"` instead of `"Female"`.
+2. Keep all four income levels.
+3. Compare the probability of being `Very satisfied` at low income and high income.
+
+Write two sentences describing how the predicted probability distribution changes as income rises.
+:::
+
+## Part 6: Ordinal Model Workflow
+
+```{r}
+#| label: lab13-workflow-summary
+
+tibble::tribble(
+  ~Task, ~Code, ~Purpose,
+  "Create ordered response", "ordered(y, levels = ...)", "Tell R the outcome has ranked categories",
+  "Fit ordinal logit", "ordinal::clm(y_ord ~ x1 + x2)", "Estimate a proportional-odds model",
+  "Report odds ratios", "model_params(model, exponentiate = TRUE)", "Summarize location effects",
+  "Check assumption", "ordinal::nominal_test(model)", "Screen proportional odds",
+  "Predict categories", "marginaleffects::predictions(type = 'prob')", "Get probabilities for each category"
+) |>
+  knitr::kable()
+```
+
+::: {.exercises}
+## What to Submit
+
+Submit the following items:
+
+1. A three-sentence explanation of why the satisfaction outcome should be treated as ordinal. [core]{.chip .easy}
+
+2. The cumulative odds ratio table plus a two-sentence interpretation of the income effect. [core]{.chip .med}
+
+3. The `nominal_test()` output plus a two-sentence proportional-odds diagnostic interpretation. [core]{.chip .hard}
+
+4. A predicted probability table for male respondents plus two sentences describing how the probability distribution changes from low to high income. [core]{.chip .med}
+
+5. The predicted probability plot and one plain-language sentence you would use with a non-technical audience. [core]{.chip .med}
+:::
+
+::: {.summary}
+## Lab Summary
+
+1. Ordinal outcomes are ordered categories, not continuous measurements.
+
+2. `ordered()` marks the outcome scale before fitting the model.
+
+3. `ordinal::clm()` fits a cumulative logit model with thresholds and location effects.
+
+4. Cumulative odds ratios summarize shifts toward higher or lower categories.
+
+5. Predicted probabilities are often the clearest communication tool for ordinal models.
+:::

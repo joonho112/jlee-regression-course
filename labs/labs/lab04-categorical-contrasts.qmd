@@ -1,432 +1,471 @@
 ---
-title: "Lab 4: Categorical Variables and Planned Comparisons"
+title: "Lab 4: One-Way ANOVA and Categorical Predictors"
 ---
 
 {{< include ../_common.qmd >}}
 
-## Goals
-
-::: {.callout-note}
+::: {.objectives}
 ## What You'll Learn in This Lab
-- Understand why `factor()` is essential for categorical predictors
-- Interpret dummy-coded regression coefficients with a three-level predictor
-- Use `emmeans` for planned comparisons and custom contrasts
-- Apply the Sidak correction for pairwise comparisons
-- Change the reference group and see how coefficients change
+
+- Create a three-level factor for a one-way ANOVA
+- See why numbered categories must be treated as factors
+- Fit ANOVA as a regression model with `lm()`
+- Interpret the intercept and dummy-variable coefficients
+- Use `modelbased::estimate_means()` to recover group means from the model
+- Use `anova()`, `performance::r2()`, and `effectsize::eta_squared()` to summarize the omnibus group effect
+- Compare unadjusted and adjusted pairwise contrasts
+- Run a small set of planned comparisons with `emmeans`
 - **Lecture Notes Reference:** Chapter 3: *One-Way ANOVA*
+
+::: {.meta}
+Dataset: `instruction`. Estimated time: 70-85 minutes.
+:::
 :::
 
-::: {.callout-tip}
-## Stata → R Translation
-| Stata | R | Notes |
-|:------|:--|:------|
-| `regress salary i.rank` | `lm(salary ~ factor(rank))` | Use `factor()` for categorical variables |
-| `lincom full-assoc` | `emmeans::contrast()` | Linear combinations via estimated marginal means |
-| `oneway salary rank, sidak` | `emmeans::pairs(adjust = "sidak")` | Pairwise comparisons with multiplicity correction |
-:::
 
-**Dataset:** `faculty` from the `regdatasets` package
+## Part 1: Prepare the ANOVA Dataset
 
+In Chapter 3, the core idea is:
 
-## Part 1: Quick Review --- ANOVA with the Faculty Data
+> One-way ANOVA is regression with a categorical predictor.
 
-In Lab 3, we explored the `faculty` dataset and tested whether salary differs by gender. Let's reload the data and briefly revisit that result before moving on to the main topic: using **rank** as a categorical predictor.
+We will use the `instruction` dataset. The outcome is `mathgain`, a student's math achievement gain. The grouping variable is teacher math preparation, which we will turn into three levels.
+
+### Step 1: Load the Data
 
 ```{r}
-#| label: lab04-setup
+#| label: lab04-load-data
 
-library(regdatasets)
-data(faculty)
-glimpse(faculty)
+data(instruction)
+instruction_raw <- instruction
 ```
 
-A quick reminder of what we found last time --- a one-way ANOVA of salary by gender:
+We keep the original dataset in `instruction_raw` and create a separate analysis dataset.
+
+### Step 2: Create the Factor
 
 ```{r}
-#| label: review-gender-anova
+#| label: lab04-create-prep-factor
 
-model_gender <- lm(salary ~ male, data = faculty)
-summary(model_gender)
+instruction_anova <- instruction_raw |>
+  mutate(
+    prep_code = case_when(
+      mathprep <= 3 ~ 1,
+      mathprep <= 4 ~ 2,
+      mathprep > 4 ~ 3
+    ),
+    prep_level = factor(
+      prep_code,
+      levels = c(1, 2, 3),
+      labels = c("Low", "Medium", "High")
+    )
+  ) |>
+  filter(!is.na(mathgain), !is.na(prep_level))
 ```
 
-> The coefficient for `male` is the mean salary difference between men and women. We established in Lab 3 that ANOVA and regression with a dummy predictor give identical results. Today, we extend this idea to a predictor with **three** levels: academic rank.
+`prep_code` is a numbered category. `prep_level` is the factor version that we want for ANOVA.
 
-
-## Part 2: Regression with a Categorical Predictor (Rank)
-
-The variable `rank` has three levels:
-
-- **1** = Assistant Professor
-- **2** = Associate Professor
-- **3** = Full Professor
-
-We want to test whether salary differs across these three ranks. Sounds straightforward --- but there is a trap waiting for us.
-
-### The Wrong Way: Treating Rank as Continuous
-
-Watch what happens if we simply plug `rank` into `lm()` without telling R it is categorical:
+### Step 3: Check the Analysis Data
 
 ```{r}
-#| label: rank-wrong
+#| label: lab04-preflight
 
-model_wrong <- lm(salary ~ rank, data = faculty)
-summary(model_wrong)
+instruction_anova |>
+  summarise(
+    students = n(),
+    groups = n_distinct(prep_level),
+    missing_mathgain = sum(is.na(mathgain)),
+    missing_prep = sum(is.na(prep_level))
+  )
 ```
 
-> This model treats rank as a **continuous number** and fits a single straight line through ranks 1, 2, and 3. It forces the salary jump from Assistant to Associate to be **exactly the same** as from Associate to Full. That is a very strong assumption --- and almost certainly wrong.
-
-### The Right Way: Using `factor()`
-
-When we wrap `rank` in `factor()`, R creates dummy variables automatically:
+### Step 4: Group Summary
 
 ```{r}
-#| label: rank-factor
+#| label: lab04-group-summary
 
-faculty <- faculty |>
-  mutate(rank_f = factor(rank,
-                         levels = c(1, 2, 3),
-                         labels = c("Assistant", "Associate", "Full")))
-```
-
-Now let's fit the model properly:
-
-```{r}
-#| label: rank-correct
-
-model_rank <- lm(salary ~ rank_f, data = faculty)
-summary(model_rank)
-```
-
-> With `factor()`, R creates **two dummy variables** automatically:
->
-> - `rank_fAssociate`: compares Associate to the reference group (Assistant)
-> - `rank_fFull`: compares Full to the reference group (Assistant)
->
-> The **intercept** is the mean salary for **Assistant Professors** (the reference group). Each coefficient is a **difference from that reference group**.
-
-::: {.callout-important}
-## Always Use `factor()` for Categorical Variables
-When a categorical variable is coded as numbers (1, 2, 3), R treats it as continuous by default. You **must** use `factor()` to tell R these are group labels, not a numeric scale. This is one of the most common mistakes in applied regression.
-:::
-
-::: {.callout-warning}
-## Factor Level Ordering: R vs. Stata
-R orders factor levels **alphabetically** by default (e.g., "Assistant" < "Associate" < "Full"). Stata orders them by their **numeric code** (e.g., 1, 2, 3). This means the reference group may differ between the two programs. Always check with `levels(your_factor)` to confirm which level is the reference.
-:::
-
-### Verify with Group Means
-
-Let's confirm the coefficients by computing group means directly:
-
-```{r}
-#| label: rank-means
-
-faculty |>
-  group_by(rank_f) |>
+prep_summary <- instruction_anova |>
+  group_by(prep_level) |>
   summarise(
     n = n(),
-    mean_salary = mean(salary),
-    sd_salary   = sd(salary),
+    mean_gain = mean(mathgain),
+    sd_gain = sd(mathgain),
     .groups = "drop"
-  ) |>
-  mutate(across(where(is.numeric) & !n, \(x) round(x, 2)))
+  )
+
+prep_summary |>
+  round_numeric(digits = 2)
 ```
 
-> Check: the intercept should match the Assistant mean. The Associate coefficient should equal the Associate mean minus the Assistant mean. The Full coefficient should equal the Full mean minus the Assistant mean.
+This table gives the raw mean math gain for each preparation group.
 
-### Equivalence with ANOVA
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-The regression F-test and the ANOVA F-test are identical:
+Use the summary table to answer two questions:
 
-::: {.panel-tabset}
+1. Which preparation group has the highest raw mean math gain?
+2. Which group has the largest sample size?
 
-#### Simple
-
-```{r}
-#| label: anova-rank-aov
-
-anova_rank <- aov(salary ~ rank_f, data = faculty)
-summary(anova_rank)
-```
-
-#### Advanced
-
-```{r}
-#| label: anova-rank-lm
-
-anova(model_rank)
-```
-
-```{r}
-#| label: anova-rank-tidy
-
-tidy_model(model_rank)
-```
-
+Write one sentence explaining why both mean differences and sample sizes matter.
 :::
 
-> The F-statistic from `aov()` and `anova()` is the same. This confirms: one-way ANOVA is just regression with dummy variables.
 
-
-## Part 3: Planned Comparisons with `emmeans`
-
-The regression output gives us comparisons to the **reference group** (Assistant). But what if we want other comparisons? For example:
-
-- Associate vs. Full?
-- The average of Associate and Full vs. Assistant?
-
-This is where `emmeans` (Estimated Marginal Means) comes in. It lets us extract group means and test **any** comparison we want.
-
-### Step 1: Estimated Marginal Means
+## Part 2: Visualize the Group Means
 
 ```{r}
-#| label: emmeans-rank
+#| label: lab04-boxplot-prep-level
+#| fig-cap: "Math gains by teacher preparation level."
+#| fig-alt: "Boxplots with jittered points showing math gain for Low, Medium, and High teacher preparation groups. The Medium and High groups have slightly higher central values than the Low group, but all three distributions overlap substantially."
 
-emm_rank <- emmeans(model_rank, "rank_f")
-emm_rank
+ggplot(instruction_anova, aes(x = prep_level, y = mathgain, fill = prep_level)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA, show.legend = FALSE) +
+  geom_jitter(width = 0.15, alpha = 0.18, size = 0.9, show.legend = FALSE) +
+  ber640_fill +
+  labs(x = "Teacher Preparation Level", y = "Math Gain")
 ```
 
-> These are the predicted means for each rank. Because we have no covariates, they are identical to the raw group means.
+::: {.interpretation}
+The group means differ, but the distributions also overlap a lot.
 
-::: {.callout-note}
-## Two Post-Estimation Packages
-The Lecture Notes use the `marginaleffects` package for predicted values and comparisons. In this lab, we use the `emmeans` package, which provides a particularly intuitive interface for **custom contrasts** and **planned comparisons**. Both packages produce the same results for standard tasks like pairwise comparisons. Think of `marginaleffects` as the "general-purpose" tool and `emmeans` as the "contrast specialist."
+ANOVA asks whether the differences among group means are large relative to the within-group variation.
 :::
 
-### Step 2: Associate vs. Assistant
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-This comparison is already in the regression output (the `rank_fAssociate` coefficient). But let's see how to get it from `emmeans`:
-
-::: {.panel-tabset}
-
-#### Simple
-
-```{r}
-#| label: contrast-assoc-assist
-
-contrast(emm_rank, method = list("Associate - Assistant" = c(-1, 1, 0)))
-```
-
-#### Advanced
-
-The weights `c(-1, 1, 0)` mean: subtract the first group (Assistant) from the second (Associate), and ignore the third (Full). The estimate should match the `rank_fAssociate` coefficient from the regression output.
-
-```{r}
-#| label: contrast-assoc-assist-confint
-
-contrast(emm_rank, method = list("Associate - Assistant" = c(-1, 1, 0))) |>
-  confint()
-```
-
+Look at the boxplots and jittered points.
+Do the groups look completely separated, or do they overlap?
+Write one short sentence.
 :::
 
-> The estimate and p-value should match the `rank_fAssociate` coefficient from `summary(model_rank)`. The `emmeans` approach is more explicit about what we are comparing.
 
-### Step 3: Full vs. Associate
+## Part 3: Fit ANOVA as Regression
 
-This comparison is **not** directly available from the regression output (which only compares to the reference group). With `emmeans`, it is easy:
-
-```{r}
-#| label: contrast-full-assoc
-
-contrast(emm_rank, method = list("Full - Associate" = c(0, -1, 1)))
-```
-
-> The weights `c(0, -1, 1)` subtract the Associate mean from the Full mean. Is the salary jump from Associate to Full statistically significant?
-
-### Step 4: A Custom Contrast --- Higher Ranks vs. Assistant
-
-Suppose we want to compare the **average salary of Associate and Full Professors** to the salary of Assistant Professors. This is a custom planned comparison:
+### Step 1: The Numeric-Coding Trap
 
 ```{r}
-#| label: contrast-higher-vs-assist
+#| label: lab04-numeric-trap
 
-contrast(emm_rank,
-         method = list("Avg(Assoc, Full) - Assistant" = c(-1, 0.5, 0.5)))
+model_numeric <- lm(mathgain ~ prep_code, data = instruction_anova)
+model_params(model_numeric)
 ```
 
-> The weights `c(-1, 0.5, 0.5)` take the average of Associate and Full (each weighted 0.5) and subtract the Assistant mean (weighted -1). Notice the weights sum to zero --- this is a requirement for a valid contrast.
+This model treats preparation level as a one-unit numeric scale. It forces the Low-to-Medium difference to be the same kind of step as the Medium-to-High difference.
 
-::: {.callout-tip}
-## Contrast Weights Must Sum to Zero
-For any valid contrast, the weights must sum to zero. This ensures we are comparing one group (or combination of groups) **against** another, rather than just computing a weighted average.
+::: {.pitfall}
+If a variable is a category, make it a factor.
+
+Numbered labels like 1, 2, and 3 are still categories unless you truly want to assume a straight numeric trend.
 :::
 
-### Step 5: Multiple Planned Contrasts at Once
+::: {.your-turn}
+[Your turn]{.yt-title} [R]{.badge-r}
 
-We can test several planned contrasts in a single call:
+Compare `model_numeric` to the factor model below.
+What assumption does the numeric model make that the factor model does not make?
+:::
+
+### Step 2: Fit the Factor Model
 
 ```{r}
-#| label: contrast-all-planned
+#| label: lab04-fit-anova-model
 
-my_contrasts <- list(
-  "Associate - Assistant"          = c(-1,  1,   0),
-  "Full - Associate"               = c( 0, -1,   1),
-  "Avg(Assoc, Full) - Assistant"   = c(-1,  0.5, 0.5)
+levels(instruction_anova$prep_level)
+
+model_anova <- lm(mathgain ~ prep_level, data = instruction_anova)
+model_params(model_anova)
+```
+
+R uses the first factor level, `Low`, as the reference group.
+
+::: {.interpretation}
+The intercept is the estimated mean math gain for the Low preparation group.
+
+`prep_levelMedium` is the Medium minus Low difference.
+
+`prep_levelHigh` is the High minus Low difference.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Interpret the `prep_levelMedium` coefficient in one sentence.
+Your sentence should say "Medium minus Low" or "compared with Low."
+:::
+
+
+## Part 4: Recover the Group Means
+
+In a one-way ANOVA with no covariates, the model-estimated means are the same as the raw group means.
+
+```{r}
+#| label: lab04-estimate-means
+
+estimated_means <- modelbased::estimate_means(model_anova, by = "prep_level")
+estimated_means
+```
+
+Now compare the raw means and model means side by side.
+
+```{r}
+#| label: lab04-raw-vs-model-means
+
+estimated_means_tbl <- estimated_means |>
+  as_tibble() |>
+  select(prep_level, model_mean = Mean, SE, CI_low, CI_high)
+
+prep_summary |>
+  select(prep_level, n, raw_mean = mean_gain, sd_gain) |>
+  left_join(estimated_means_tbl, by = "prep_level") |>
+  round_numeric(digits = 2)
+```
+
+### Plot the Estimated Means
+
+```{r}
+#| label: lab04-estimated-means-plot
+#| fig-cap: "Model-estimated mean math gains with 95% confidence intervals."
+#| fig-alt: "Point-range plot showing estimated mean math gain and 95 percent confidence intervals for Low, Medium, and High teacher preparation groups. Medium and High are above Low, but the confidence intervals overlap."
+
+ggplot(estimated_means_tbl,
+       aes(x = prep_level, y = model_mean, color = prep_level)) +
+  geom_pointrange(aes(ymin = CI_low, ymax = CI_high),
+                  linewidth = 0.8, size = 1.1, show.legend = FALSE) +
+  ber640_palette +
+  labs(x = "Teacher Preparation Level", y = "Estimated Mean Math Gain")
+```
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Use the raw-vs-model-means table.
+Why are the raw means and model means identical in this one-way ANOVA?
+:::
+
+
+## Part 5: Omnibus ANOVA Test and Effect Size
+
+The coefficient table compares each non-reference group to the Low group.
+The ANOVA table answers a different question:
+
+> Is there evidence that at least one group mean differs from at least one other group mean?
+
+### Step 1: Omnibus F-Test
+
+```{r}
+#| label: lab04-omnibus-anova
+
+anova(model_anova)
+```
+
+::: {.interpretation}
+A significant F-test does not tell us that every pair of groups differs.
+
+It only tells us that the set of group means is not perfectly equal.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Write one sentence interpreting the omnibus F-test.
+Your sentence should include the phrase "at least one group mean."
+:::
+
+### Step 2: R-Squared
+
+```{r}
+#| label: lab04-r2
+
+performance::r2(model_anova)
+```
+
+In one-way ANOVA, $R^2$ is the proportion of outcome variance explained by group membership.
+
+### Step 3: Eta-Squared
+
+```{r}
+#| label: lab04-eta-squared
+
+effectsize::eta_squared(
+  model_anova,
+  partial = FALSE,
+  alternative = "two.sided",
+  ci = 0.90
+)
+```
+
+::: {.interpretation}
+For one-way ANOVA, $R^2$ and $\eta^2$ are the same quantity: the share of total variation explained by group membership.
+
+A statistically significant F-test can still have a small practical effect size.
+:::
+
+
+## Part 6: Pairwise Group Contrasts
+
+The omnibus F-test says whether group means differ somewhere.
+Contrasts ask which differences we want to inspect.
+
+### Step 1: Unadjusted Pairwise Contrasts
+
+```{r}
+#| label: lab04-pairwise-preview
+
+modelbased::estimate_contrasts(model_anova, contrast = "prep_level")
+```
+
+These are unadjusted pairwise contrasts. They answer specific group-difference questions, but they do not yet account for the fact that we are testing three differences.
+
+### Step 2: Sidak-Adjusted Pairwise Contrasts
+
+```{r}
+#| label: lab04-pairwise-sidak
+
+modelbased::estimate_contrasts(
+  model_anova,
+  contrast = "prep_level",
+  p_adjust = "sidak"
+)
+```
+
+::: {.pitfall}
+The more pairwise tests you run, the easier it is to get at least one false positive.
+
+For exploratory "compare everything" work, use an adjustment such as Sidak, Holm, Bonferroni, or Tukey.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Compare the unadjusted and Sidak-adjusted tables.
+Which p-values changed, and did the substantive conclusion change?
+:::
+
+
+## Part 7: Planned Comparisons
+
+Planned comparisons are contrasts chosen before looking at the results.
+They should come from the research question, not from chasing the biggest observed difference.
+
+For custom planned contrasts, `emmeans` gives a direct way to specify contrast weights.
+The weights below follow the order of the levels:
+
+```{r}
+#| label: lab04-level-order-for-contrasts
+
+levels(instruction_anova$prep_level)
+```
+
+### Step 1: Estimated Means for Planned Contrasts
+
+```{r}
+#| label: lab04-emmeans-prep
+
+prep_emm <- emmeans::emmeans(model_anova, "prep_level")
+prep_emm
+```
+
+### Step 2: Define Planned Contrasts
+
+```{r}
+#| label: lab04-planned-contrasts
+
+stopifnot(identical(
+  levels(instruction_anova$prep_level),
+  c("Low", "Medium", "High")
+))
+
+planned_contrasts <- list(
+  "Medium - Low" = c(-1, 1, 0),
+  "High - Low" = c(-1, 0, 1),
+  "Avg(Medium, High) - Low" = c(-1, 0.5, 0.5)
 )
 
-contrast(emm_rank, method = my_contrasts)
+emmeans::contrast(
+  prep_emm,
+  method = planned_contrasts,
+  adjust = "none"
+)
 ```
 
-> All three planned comparisons are tested simultaneously. Each row gives the estimated difference, standard error, t-statistic, and p-value.
+::: {.interpretation}
+The contrast weights must match the level order: Low, Medium, High.
 
-
-## Part 4: Pairwise Comparisons with Sidak Correction
-
-Sometimes you want to compare **all pairs** of groups. With three ranks, there are three pairwise comparisons:
-
-- Assistant vs. Associate
-- Assistant vs. Full
-- Associate vs. Full
-
-The danger of testing all pairs is **inflated Type I error** --- the more tests you run, the greater the chance of a false positive. The **Sidak correction** adjusts p-values to control this.
-
-### All Pairwise Comparisons
-
-```{r}
-#| label: pairwise-sidak
-
-pairs(emm_rank, adjust = "sidak")
-```
-
-> The `adjust = "sidak"` argument applies the Sidak correction to the p-values. Compare these adjusted p-values to the unadjusted ones from our planned contrasts above. The Sidak-corrected p-values are larger (more conservative) because they account for the multiple testing problem.
-
-### Unadjusted vs. Sidak-Adjusted
-
-Let's see the difference side by side:
-
-```{r}
-#| label: pairwise-comparison
-
-bind_rows(
-  pairs(emm_rank, adjust = "none") |>
-    as_tibble() |>
-    mutate(correction = "None"),
-  pairs(emm_rank, adjust = "sidak") |>
-    as_tibble() |>
-    mutate(correction = "Sidak")
-) |>
-  select(contrast, estimate, SE, p.value, correction) |>
-  mutate(across(where(is.numeric), \(x) round(x, 4)))
-```
-
-> Notice how the Sidak correction increases the p-values. In this case, with large salary differences across ranks, all comparisons remain significant even after correction. In other datasets with smaller effects, the correction can change your conclusions.
-
-::: {.callout-note}
-## Other Corrections
-The Sidak correction is just one option. Common alternatives include:
-
-- **Bonferroni**: multiply each p-value by the number of tests. Slightly more conservative than Sidak.
-- **Tukey**: specifically designed for all pairwise comparisons. Use `adjust = "tukey"`.
-- **None**: no correction. Only appropriate for a small number of **pre-planned** comparisons.
-
-For most exploratory pairwise comparisons, Sidak or Tukey are good default choices.
+For `Avg(Medium, High) - Low`, the weights `c(-1, 0.5, 0.5)` subtract Low and add the average of Medium and High.
+The weights sum to zero, so this is a valid contrast.
 :::
 
-### Connection to the Overall F-Test
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
 
-The overall ANOVA F-test tells us whether **any** group differs from any other. The pairwise comparisons tell us **which specific** pairs differ. They complement each other:
-
-```{r}
-#| label: overall-f-test
-
-anova(model_rank)
-```
-
-> The significant F-test tells us that rank is related to salary overall. The pairwise comparisons (above) tell us that all three rank pairs differ significantly --- even after the Sidak correction.
-
-
-## Part 5: Changing the Reference Group
-
-So far, R has used **Assistant Professor** (the first level) as the reference group. Every regression coefficient is a comparison to Assistant. But what if we want **Full Professor** as the reference? Then the coefficients would tell us how much less the other ranks earn compared to Full Professors.
-
-### Relevel the Factor
-
-```{r}
-#| label: relevel-rank
-
-faculty <- faculty |>
-  mutate(rank_f2 = relevel(rank_f, ref = "Full"))
-
-# Check the new level order
-levels(faculty$rank_f2)
-```
-
-### Re-run the Regression
-
-```{r}
-#| label: model-relevel
-
-model_rank2 <- lm(salary ~ rank_f2, data = faculty)
-summary(model_rank2)
-```
-
-> Now the **intercept** is the mean salary for **Full Professors**. The coefficients for Assistant and Associate are **negative** --- they tell us how much less each group earns compared to Full Professors.
-
-### Side-by-Side Comparison
-
-::: {.panel-tabset}
-
-#### Reference = Assistant
-
-```{r}
-#| label: compare-ref-assistant
-
-tidy_model(model_rank)
-```
-
-#### Reference = Full
-
-```{r}
-#| label: compare-ref-full
-
-tidy_model(model_rank2)
-```
-
+Pick one planned contrast from the table and interpret it in one sentence.
+Your sentence should name the two groups or group combinations being compared.
 :::
 
-> Compare the two tables. The **model is the same** --- same F-statistic, same $R^2$, same residual standard error. Only the **parameterization** changes. Changing the reference group does not change what the model says about the data; it changes how the story is told through the coefficients.
 
-::: {.callout-tip}
-## Choosing a Reference Group
-Pick the reference group that makes interpretation easiest. Common choices:
+## Part 8: Change the Reference Group
 
-- **The largest group** (for stability of the intercept estimate)
-- **A control or baseline group** (for treatment comparisons)
-- **The group of theoretical interest** (the group others are compared against)
-
-There is no "correct" choice --- it depends on your research question.
-:::
-
-### The `emmeans` Results Do Not Change
-
-Regardless of which reference group we use, `emmeans` gives the same estimated means and contrasts:
+Changing the reference group changes the coefficient table, but it does not change the fitted group means or the omnibus F-test.
 
 ```{r}
-#| label: emmeans-relevel
+#| label: lab04-relevel-high
 
-emmeans(model_rank2, "rank_f2")
+instruction_anova <- instruction_anova |>
+  mutate(prep_level_high_ref = relevel(prep_level, ref = "High"))
+
+model_high_ref <- lm(mathgain ~ prep_level_high_ref, data = instruction_anova)
+model_params(model_high_ref)
 ```
 
-> The estimated marginal means are identical to what we got earlier. The reference group affects only the regression coefficients, not the underlying group means or contrasts. This is one reason `emmeans` is so useful --- it gives you interpretable results that do not depend on the coding scheme.
+::: {.interpretation}
+With High as the reference, the intercept is the High group mean.
+
+The coefficients compare Low and Medium to High.
+The underlying fitted means are the same as before.
+:::
+
+::: {.your-turn}
+[Your turn]{.yt-title} [Write]{.badge-r}
+
+Compare `model_anova` and `model_high_ref`.
+Which quantities changed, and which quantities stayed the same?
+:::
 
 
-## Key Takeaways
+::: {.exercises}
+## What to Submit
 
-::: {.callout-tip}
-## What We Learned
+1. The group summary table for `prep_level`. [core]{.chip .easy}
+2. The factor-model coefficient table from `model_params(model_anova)`. [core]{.chip .easy}
+3. One sentence interpreting the `prep_levelMedium` coefficient. [core]{.chip .med}
+4. The omnibus ANOVA table and one sentence explaining what the F-test does and does not tell us. [core]{.chip .med}
+5. The `performance::r2()` and `effectsize::eta_squared()` outputs, plus one sentence about practical effect size. [core]{.chip .med}
+6. The unadjusted and Sidak-adjusted pairwise contrast tables, with one sentence comparing them. [core]{.chip .hard}
+7. One planned contrast table and one planned-contrast interpretation. [core]{.chip .hard}
+:::
 
-1. **Always use `factor()` for categorical predictors.** Without it, R treats numbered categories (1, 2, 3) as a continuous scale, fitting a single slope instead of separate group means.
 
-2. **Reference group determines coefficient interpretation.** The intercept equals the reference group mean, and each coefficient is a difference from that reference. Use `relevel()` to change the reference group.
+::: {.summary}
+## Lab Summary
 
-3. **`emmeans` is your best friend for group comparisons.** It extracts estimated marginal means and lets you test any contrast --- planned comparisons, pairwise comparisons, or custom contrasts with user-defined weights.
+1. One-way ANOVA is regression with a categorical predictor.
 
-4. **Contrast weights must sum to zero.** This ensures you are comparing one group (or combination) against another.
+2. Use `factor()` for numbered categories so R creates dummy variables.
 
-5. **The Sidak correction protects against multiple testing.** When you test all pairwise comparisons, use `adjust = "sidak"` (or `"tukey"`) to control the family-wise error rate.
+3. In treatment coding, the intercept is the reference group mean.
 
-6. **Changing the reference group changes the coefficients but not the model.** The F-statistic, $R^2$, and all group means remain identical. Only the interpretation of the intercept and slopes changes.
+4. Each dummy coefficient is a difference from the reference group.
 
-**Next:** In Lab 5, we will add continuous covariates alongside categorical predictors to build multiple regression models --- and learn how to interpret coefficients when several variables are in the model simultaneously.
+5. `modelbased::estimate_means()` recovers the model-estimated mean for every group.
+
+6. `anova()` gives the omnibus F-test, while `modelbased::estimate_contrasts()` gives pairwise group differences.
+
+7. In one-way ANOVA, $R^2$ equals $\eta^2$.
+
+8. Planned contrasts should be chosen from research questions before looking at the results.
+
+9. Exploratory pairwise comparisons need multiple-comparison adjustment.
+
+**Next:** Lab 5 moves into multiple regression with several predictors in the same model.
 :::
