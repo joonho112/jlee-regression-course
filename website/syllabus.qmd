@@ -72,7 +72,7 @@ All course materials are **open-access** and free. You will also need R, RStudio
 | Material | Description |
 |----------|-------------|
 | {{< fa book-open >}} [**Lecture Notes**]({{< var books.lecture_notes >}}){target="_blank"} | Primary textbook: 13 chapters covering theory, math, and R code |
-| {{< fa laptop-code >}} [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | 12 hands-on tutorials for applied practice |
+| {{< fa laptop-code >}} [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | 13 hands-on tutorials for applied practice |
 | {{< fa clipboard-list >}} [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines, examples, and rubrics for the course projects |
 | {{< fa database >}} [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package with 24 curated educational datasets |
 

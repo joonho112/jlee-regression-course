@@ -18,12 +18,12 @@ Homework is graded on **completion**. Submit a good-faith effort for full credit
 
 ## Context
 
-The problems below refer to results from Langton (1994), who examined the effect of organizational characteristics on individual income using survey data. The table from this study includes two regression models predicting (log) individual income:
+The problems below refer to results from Langton (1994), who studied salary determinants among tenured and tenure-track faculty at U.S. colleges and universities. The table from this study includes two regression models predicting faculty salary:
 
-- **Model 1**: Main effects only (Sex, Size, Salary variation, and other controls)
-- **Model 2**: Adds an interaction between Sex and Salary variation
+- **Model 1**: Main effects model with faculty characteristics, productivity, and Sex
+- **Model 2**: Adds Salary variation and the Sex $\times$ Salary variation interaction
 
-In the data, Sex is coded 1 = male, 0 = female. Salary variation measures within-organization wage dispersion.
+In the data, Sex is coded 1 = female, 0 = male. Salary variation measures wage dispersion within the professor's field.
 
 ## Problems
 
@@ -41,7 +41,7 @@ c. Interpret the coefficient for the **Sex $\times$ Salary variation** interacti
 
 ### Problem 3
 
-Based on the interaction model (Model 2), does the male--female wage differential **increase** as there is more wage dispersion within an organization? Explain how you can tell from the regression results, and discuss the substantive implications.
+Based on the interaction model (Model 2), does the male--female wage differential **increase** as there is more wage dispersion within the professor's field? Explain how you can tell from the regression results, and discuss the substantive implications.
 
 
 ## Submission

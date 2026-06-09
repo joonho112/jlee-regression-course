@@ -118,7 +118,7 @@ All course materials are open-access and published on GitHub Pages:
 | Material | Description |
 |----------|-------------|
 | [**Lecture Notes**]({{< var books.lecture_notes >}}){target="_blank"} | Primary textbook with theory, math, and R code (13 chapters) |
-| [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | Hands-on R tutorials for each topic (12 labs) |
+| [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | Hands-on R tutorials for each topic (13 labs) |
 | [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines and examples for the two course projects |
 | [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package with 24 curated datasets |
 

@@ -23,7 +23,7 @@ By the end of this week, you will be able to:
 
 ## R Lab
 
-- {{< fa laptop-code >}} [Lab 12: Advanced Logistic Regression]({{< var books.r_lab_book >}}/labs/lab12-logistic-advanced.html){target="_blank"}
+- {{< fa laptop-code >}} [Lab 12: GLM Extensions]({{< var books.r_lab_book >}}/labs/lab12-logistic-advanced.html){target="_blank"}
 
 ## Key Concepts
 

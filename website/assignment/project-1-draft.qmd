@@ -11,16 +11,16 @@ title: "Project 1 Draft"
 
 ::: {.callout-tip}
 ## {{< fa book >}} Project Guide
-Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for worked examples of each section, including model specification, diagnostics, and interpretation.
+Use the [Project 1 guidelines]({{< var books.project_guide >}}/chapters/ch02-guidelines-linear.html){target="_blank"}, [worked Project 1 proposal]({{< var books.project_guide >}}/chapters/ch04-linear-proposal.html){target="_blank"}, and [worked Project 1 results chapter]({{< var books.project_guide >}}/chapters/ch05-linear-results.html){target="_blank"} while drafting. Before submitting, compare your draft with the [Project 1 checklist]({{< var books.project_guide >}}/chapters/ch02-guidelines-linear.html#sec-linear-checklist){target="_blank"}.
 :::
 
 ## Purpose
 
-The draft is a complete working version of your linear regression analysis. It should include all major sections of the final report, though the writing may still be rough. The instructor will provide feedback to help you strengthen the analysis and interpretation before the final submission.
+The draft is a complete working version of your linear regression analysis. It should include a working version of Parts 1--6 of the 7-part final report, plus any preliminary appendix or reproducibility materials needed to support your diagnostics. The writing may still be rough. The instructor will provide feedback to help you strengthen the analysis and interpretation before the final submission.
 
 ## Requirements
 
-Your draft should include all of the following sections:
+Your draft should include all of the following sections. These are a milestone checklist; the Project Guide remains the detailed source for the final 7-part report structure.
 
 ### 1. Introduction
 

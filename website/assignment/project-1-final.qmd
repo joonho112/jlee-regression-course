@@ -11,7 +11,7 @@ title: "Project 1 Final Report"
 
 ::: {.callout-tip}
 ## {{< fa book >}} Project Guide
-Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for the complete rubric, formatting guidelines, and examples of polished final reports.
+Use the [Project 1 guidelines]({{< var books.project_guide >}}/chapters/ch02-guidelines-linear.html){target="_blank"} for the 7-part structure and page budgets, the [Project 1 checklist]({{< var books.project_guide >}}/chapters/ch02-guidelines-linear.html#sec-linear-checklist){target="_blank"} before submitting, and the [worked Project 1 results chapter]({{< var books.project_guide >}}/chapters/ch05-linear-results.html){target="_blank"} as a model for polished tables, diagnostics, interpretation, and discussion.
 :::
 
 ## Purpose
@@ -20,57 +20,57 @@ The final report is a polished, complete linear regression analysis that demonst
 
 ## Requirements
 
-Your final report should include all of the following sections:
+Your final report should follow the 7-part structure in the Project Guide. Use the checklist below as a short website summary; the guide is the detailed source for what each part should contain.
 
-### 1. Introduction
+### 1. Background and Research Questions
 
-- Clear statement of the research question
-- Motivation and context for the analysis
-- Overview of the analytical approach
+- Motivate the topic
+- State 2--3 numbered research questions
+- Keep dataset details for Part 2
 
-### 2. Data and Variables
+### 2. Methods: Subjects and Variables
 
-- Complete dataset description with source and sample information
-- Variable definitions, coding, and measurement scales
-- Descriptive statistics (tables and/or figures)
+- Describe the data source, study design, sample, exclusions, missingness, and final analytic sample size
+- Define the outcome, predictors, coding decisions, reference categories, and transformations
 
-### 3. Exploratory Data Analysis
+### 3. Methods: Statistical Analysis
 
-- Visualizations of key relationships (scatterplots, boxplots, etc.)
-- Discussion of patterns, outliers, and potential issues
+- State the planned linear regression model or model sequence
+- Link each model to specific research questions
+- State that nested models use the same complete-case analysis dataset
 
-### 4. Model Specification and Results
+### 4. Results: Descriptive Analyses
 
-- Clearly stated regression model(s)
-- Complete regression output with coefficient estimates, standard errors, *t*-statistics, and $p$-values
-- Model fit statistics ($R^2$, adjusted $R^2$, residual standard error)
-- Substantive interpretation of all key coefficients
-- Hypothesis tests for research questions
+- Present descriptive tables and targeted figures using the complete-case analysis dataset
+- Describe distributions, group differences, missingness, and potential issues
 
-### 5. Model Diagnostics
+### 5. Results: Regression Analyses
 
-- Residual analysis (residuals vs. fitted, Q-Q plot, scale-location plot)
-- Assessment of regression assumptions
-- Influential observations analysis (Cook's distance, leverage)
-- Any remedial actions taken
+- Present a publication-style regression table with coefficients, standard errors, confidence intervals, *p*-values, and fit statistics
+- Summarize model comparisons, diagnostics, and substantive interpretations
 
-### 6. Discussion and Conclusion
+### 6. Discussion
 
-- Summary of key findings in relation to the research question
-- Limitations of the analysis
-- Suggestions for future research
+- Answer each research question in plain language
+- Discuss practical significance, limitations, and appropriate next steps
+
+### 7. Appendix and Reproducibility Materials
+
+- Include supporting diagnostic output that would interrupt the main text
+- Submit an annotated `.qmd` or `.R` source file that recreates the analysis from a clean R session
 
 ## Formatting
 
 - Use clear headings and subheadings
 - Number all tables and figures with descriptive captions
 - Report statistics using proper notation
-- Length: approximately 8--12 pages (excluding code appendix)
+- Main text for Parts 1--6 should be approximately 6 single-spaced pages; tables, figures, and appendix materials are in addition to this limit
+- Follow the Project 1 section-by-section page budgets in the Project Guide
 
 ## Submission
 
 Submit the following to Blackboard:
 
 - A rendered PDF or HTML document
-- Your `.qmd` source file
-- The dataset (or a link to it)
+- Your annotated `.qmd` or `.R` source file
+- The dataset, a link to the dataset, or clear instructions for accessing it

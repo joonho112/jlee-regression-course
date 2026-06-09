@@ -6,12 +6,12 @@ title: "Project 2 Proposal"
 |---|---|
 | **Project** | Project 2: Logistic Regression |
 | **Due** | Week 12 |
-| **Weight** | 30% of Project 2 (which is 20% of final grade) |
+| **Weight** | 20% of Project 2 (which is 20% of final grade) |
 | **Related Guide** | [Project Guide]({{< var books.project_guide >}}){target="_blank"} |
 
 ::: {.callout-tip}
 ## {{< fa book >}} Project Guide
-Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed instructions, examples of strong proposals, and tips for choosing a dataset with a binary outcome.
+Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed instructions, examples of strong proposals, and tips for choosing a dataset with a binary outcome. The [Project 2 guidelines]({{< var books.project_guide >}}/chapters/ch03-guidelines-logistic.html){target="_blank"} provide the detailed checklist for the final report, and the [worked Project 2 proposal]({{< var books.project_guide >}}/chapters/ch06-logistic-proposal.html){target="_blank"} shows the expected level of detail.
 :::
 
 ## Purpose
@@ -24,38 +24,49 @@ Your proposal should include the following sections:
 
 ### 1. Research Question
 
-State a clear, focused research question that can be addressed with logistic regression. Your question should involve predicting or explaining a **binary outcome** (e.g., pass/fail, yes/no, admitted/rejected).
+State one clear, focused research question that can be addressed with logistic regression. Your question should involve predicting or explaining a **binary outcome** (e.g., pass/fail, yes/no, admitted/rejected), and it should name the modeled event: which outcome category is $Y = 1$?
 
 ### 2. Dataset Description
 
 - Name and source of the dataset
 - How to access the dataset (URL, R package, etc.)
-- Number of observations and a brief description of the sample
+- Starting number of observations and a brief description of the sample
 - Unit of analysis
+- Planned exclusions or restrictions
+- Expected complete-case sample size for the binary outcome and all planned predictors; aim for at least 200 usable complete cases
+- Event and non-event counts for the binary outcome on the planned analysis rows, confirming that both groups are large enough for logistic regression
+- Brief missingness summary for the outcome and planned predictors
 
 ### 3. Variable Definitions
 
 Identify and describe the following:
 
-- **Outcome variable** ($y$): A binary variable suitable for logistic regression
+- **Outcome variable** ($y$): A true binary outcome suitable for logistic regression; define both categories and code the modeled event as `1` and the comparison group as `0`. If you dichotomize a non-binary variable, justify the cutpoint.
 - **Primary predictor** ($x_1$): The main explanatory variable of interest
-- **Additional predictors**: At least one additional predictor or control variable
+- **Predictors**: At least four explanatory variables total, including at least one continuous predictor and at least one categorical predictor with three or more categories, unless the instructor approves an alternative
 
 For each variable, report:
 
 - Variable name in the dataset
 - Measurement scale (continuous, categorical, binary)
 - Brief description of what it measures
-- For the outcome variable: the coding scheme (what does 0 vs. 1 represent?)
+- For categorical predictors: all categories, the planned reference category, and whether any outcome-by-category cells appear sparse
+- Any recodes, dichotomies, merged categories, transformations, centered variables, or dummy variables you expect to create
 
-### 4. Preliminary Descriptive Statistics
+### 4. Planned Logistic Regression Model
+
+Briefly state the logistic regression model or planned model sequence you expect to fit. Link the model sequence to your one research question, state that nested models will use the same complete-case analysis dataset, and identify the significance level you plan to use (typically $\alpha = 0.05$).
+
+### 5. Preliminary Descriptive Statistics
 
 Provide basic descriptive statistics for your key variables:
 
 - Frequency table for the binary outcome (counts and percentages)
 - Summary statistics for continuous predictors
 - Frequency tables for categorical predictors
+- Cross-tabulations for categorical predictors by outcome group (`Y = 0` vs. `Y = 1`), noting cells with fewer than 5 expected counts
 - At least one visualization (bar chart, mosaic plot, or grouped comparison)
+- A short note confirming that descriptives use the same complete-case dataset planned for every nested logistic model, or explaining what still needs to be checked
 
 ## Submission
 

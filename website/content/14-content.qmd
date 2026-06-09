@@ -15,12 +15,16 @@ By the end of this week, you will be able to:
 - Describe the structure of the cumulative logit (proportional odds) model
 - Explain the proportional odds assumption and its implications for interpretation
 - Interpret regression coefficients from an ordinal logistic regression model
-- Conduct and interpret the Brant test for the proportional odds assumption
+- Conduct and interpret diagnostics for the proportional odds assumption
 - Discuss situations in which the proportional odds assumption may be violated
 
 ## Readings
 
 - {{< fa book-open >}} **Required**: [Chapter 13: Ordinal Models]({{< var books.lecture_notes >}}/chapters/13-ordinal-models.html){target="_blank"}
+
+## R Lab
+
+- {{< fa laptop-code >}} [Lab 13: Ordinal Outcomes]({{< var books.r_lab_book >}}/labs/lab13-ordinal-outcomes.html){target="_blank"}
 
 ## Key Concepts
 
@@ -31,7 +35,7 @@ By the end of this week, you will be able to:
 | **Cumulative logit** | The log-odds of being at or below a given category versus above it |
 | **Ordinal logistic regression** | A regression model for ordinal outcomes that uses cumulative logits as the response |
 | **Parallel regression assumption** | Another name for the proportional odds assumption, reflecting that regression lines are parallel across cumulative splits |
-| **Brant test** | A statistical test that evaluates whether the proportional odds assumption holds for each predictor in the model |
+| **Proportional-odds diagnostic** | A test or diagnostic that evaluates whether a predictor has a stable effect across cumulative splits |
 
 ## Project
 

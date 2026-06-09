@@ -19,23 +19,23 @@ This repository is the **single source for the entire course**. It brings togeth
 
 The course was developed with the support of the University of Alabama's **Office of Teaching Innovation and Digital Education (OTIDE)** and is first offered in **Fall 2026**. This repository is its living source: I maintain it for ongoing online delivery at UA and revise it each time the course runs.
 
-> **Status.** The five Quarto projects below are now consolidated into this repository as subfolders, and the unified site builds locally — the course website at the root, the four books at their subpaths, and the `regdatasets` documentation at `/regdatasets`. The standalone repositories are still live and linked below; automated deployment to GitHub Pages via the included workflow is the remaining step.
+> **Status.** The six Quarto projects below are now consolidated into this repository as subfolders, and the unified site builds locally — the course website at the root, the five books at their subpaths, and the `regdatasets` documentation at `/regdatasets`. The unified site at <https://joonho112.github.io/jlee-regression-course/> is the canonical public deployment; the standalone repositories/sites are retained as legacy and development references. Automated deployment to GitHub Pages via the included workflow is the remaining step.
 
 ---
 
 ## The deliverables
 
-The course is made of seven parts. Six are Quarto projects consolidated into this repository as subfolders — the course website publishes to the site root and the five books to subpaths; the seventh (`regdatasets`) stays its own installable R package, with its documentation embedded in the published site.
+The course is made of seven parts. Six are Quarto projects consolidated into this repository as subfolders — the course website publishes to the site root and the five books to subpaths; the seventh (`regdatasets`) stays its own installable R package, with its documentation embedded in the published site. For the course materials, the canonical public URLs are the unified-site paths in the final column; `regdatasets` remains a package special case, mirrored at `/regdatasets` while its standalone repository remains the package source.
 
-| # | Deliverable | What it is | Standalone site | Path in this site |
+| # | Deliverable | What it is | Legacy standalone site | Canonical path in unified site |
 |:--|:------------|:-----------|:-------------|:-------------|
 | 1 | **Lecture Notes** — *A Regression Approach with R* | A narrative textbook in 13 chapters with executable R and interactive Observable JS apps | [regression-lecture-notes](https://joonho112.github.io/regression-lecture-notes/) | `/notes` |
-| 2 | **R Lab Book** | 12 hands-on R labs paralleling the notes | [regression-labs](https://joonho112.github.io/regression-labs/) | `/labs` |
+| 2 | **R Lab Book** | 13 hands-on R labs paralleling the notes | [regression-labs](https://joonho112.github.io/regression-labs/) | `/labs` |
 | 3 | **Homework Solutions** | 8 problem sets with complete, fully explained R solutions | [regression-homework-solutions](https://joonho112.github.io/regression-homework-solutions/) | `/homework` |
 | 4 | **Final Project Guide** | Step-by-step guide with fully worked linear and logistic regression project examples | [regression-project-guide](https://joonho112.github.io/regression-project-guide/) | `/project` |
 | 5 | **Course Website** | Syllabus, 15-week schedule, weekly module pages, assignment pages, and resources | [regression-course-website](https://joonho112.github.io/regression-course-website/) | `/` (site root / hub) |
 | 6 | **`regdatasets`** | An R data package bundling 24 curated teaching datasets | [github.com/joonho112/regdatasets](https://github.com/joonho112/regdatasets) | `/regdatasets` (embedded pkgdown site) |
-| 7 | **Module Quizzes** *(instructor-facing)* | 6 auto-gradable Blackboard quizzes (90 items) with answer keys & deployment settings | — (in this repo) | `/quizzes` |
+| 7 | **Module Quizzes** *(instructor-facing)* | 8 auto-gradable Blackboard quizzes (85 items) with answer keys & deployment settings | — (in this repo) | `/quizzes` |
 
 ---
 
@@ -62,8 +62,12 @@ Each analysis is written as narrative prose, presented results-first and paired 
 The companion R package bundles all **24 curated teaching datasets** used throughout the course. Install it directly:
 
 ```r
-# install.packages("remotes")
-remotes::install_github("joonho112/regdatasets")
+if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes")
+remotes::install_github(
+  "joonho112/regdatasets",
+  ref = "de3e3bc40038b6d9ecc2dc46017fcc39f2df81a0",
+  upgrade = "never"
+)
 ```
 
 `regdatasets` keeps its **own repository** so that it stays cleanly installable (a CRAN-friendly path) and usable on its own. Its documentation — a **pkgdown** site — is rendered and embedded into this repository's published site at `/regdatasets`, so readers get one seamless experience while the package keeps its own release cycle.
@@ -101,6 +105,16 @@ Each book commits its `_freeze/` cache (the stored results of its R computations
 
 After the build, every output is collected into a single `_site/` tree that mirrors the published URL structure: the course website at the root, plus `/notes`, `/labs`, `/homework`, `/quizzes`, `/project`, and `/regdatasets`.
 
+### Stable lab URLs
+
+The R lab filenames are also the published URL slugs and `_freeze/` cache keys, so they are kept stable even when a lab title becomes more precise over time. Change the display title inside the `.qmd` file; rename the source file only as a deliberate URL migration with redirects.
+
+| Lab | Display title | Source file | Published URL |
+|:---:|:--------------|:------------|:--------------|
+| 7 | Nonlinear Relationships | `labs/labs/lab07-model-building.qmd` | `/labs/labs/lab07-model-building.html` |
+| 8 | Model Building and Diagnostics | `labs/labs/lab08-diagnostics.qmd` | `/labs/labs/lab08-diagnostics.html` |
+| 12 | GLM Extensions | `labs/labs/lab12-logistic-advanced.qmd` | `/labs/labs/lab12-logistic-advanced.html` |
+
 ### How it builds and deploys
 
 The pipeline is a two-stage process: **render**, then **assemble**.
@@ -120,8 +134,12 @@ Prerequisites: [R](https://cran.r-project.org/) (≥ 4.3), [Quarto](https://quar
 
 ```r
 install.packages("pacman")
-pacman::p_load(tidyverse, easystats, pkgdown)
-remotes::install_github("joonho112/regdatasets")
+pacman::p_load(tidyverse, easystats, pkgdown, remotes)
+remotes::install_github(
+  "joonho112/regdatasets",
+  ref = "de3e3bc40038b6d9ecc2dc46017fcc39f2df81a0",
+  upgrade = "never"
+)
 ```
 
 ```bash
@@ -148,7 +166,11 @@ python3 -m http.server --directory _site
 
 ## Acknowledgments
 
-This course was developed with the support of the University of Alabama's **Office of Teaching Innovation and Digital Education (OTIDE)** and its UA Online program. I am grateful to the OTIDE instructional design and media team for their guidance and production support in developing and delivering BER 640.
+These course materials are largely based on **EDUC 275B: Data Analysis in Education Research 2**, a graduate-level regression course taught for many years by [Professor Sophia Rabe-Hesketh](https://gse.berkeley.edu/sophia-rabe-hesketh) at the UC Berkeley Graduate School of Education. The EDUC 275B lecture notes represent years of careful content development and refinement by Professor Rabe-Hesketh and numerous Graduate Student Instructors (GSIs). I developed the BER 640 materials so that students at the University of Alabama could benefit fully from that accumulated effort, and I am grateful for that foundation.
+
+Building on it, I have also added a great deal of my own. The original EDUC 275B materials are built entirely around Stata; I rewrote every analysis example in R and added interactive Observable JS applications throughout the lecture notes to help students build intuition for key statistical concepts. I also developed the materials that accompany the notes — the hands-on R lab manual, the fully worked homework solutions, the auto-graded module quizzes, and the final-project guide — specifically for BER 640. I expect these materials will also be useful to UC Berkeley EDUC 275B students who prefer to learn the same content in R, as well as to other learners and instructors seeking an accessible, open-source regression curriculum grounded in education research.
+
+This course was developed with the support of the University of Alabama's **Office of Teaching Innovation and Digital Education (OTIDE)** and its UA Online program. I am grateful to the OTIDE instructional design and media team for their guidance and production support in developing and delivering BER 640. The datasets used throughout are available via the [`regdatasets`](https://github.com/joonho112/regdatasets) R package.
 
 ---
 

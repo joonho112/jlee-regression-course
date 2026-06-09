@@ -103,19 +103,19 @@ When reporting regression results in the body of your paper, include the unstand
 
 ## Report Structure
 
-A standard project report for this course should include the following sections:
+A standard final project report for this course follows the 7-part structure in the [Project Guide]({{< var books.project_guide >}}){target="_blank"}. Use the guide as the authoritative source for section requirements, page budgets, checklists, and worked examples.
 
-1. **Introduction** --- Research question, motivation, and brief literature context
-2. **Data and Variables** --- Dataset description, variable definitions, and any data cleaning steps
-3. **Exploratory Data Analysis** --- Descriptive statistics, visualizations, and preliminary patterns
-4. **Methods** --- Model specification and justification (why this model for this question?)
-5. **Results** --- Regression output, interpretation of coefficients, model diagnostics
-6. **Discussion** --- Substantive implications, limitations, and future directions
-7. **References** --- APA-formatted citations
+1. **Background and Research Question(s)** --- Motivation and clearly stated research question(s)
+2. **Methods: Subjects and Variables** --- Dataset, sample, missingness, variable definitions, coding, and reference groups
+3. **Methods: Statistical Analysis** --- Model specification and connection to the research question(s)
+4. **Results: Descriptive Analyses** --- Descriptive tables, figures, and preliminary patterns
+5. **Results: Regression Analyses** --- Regression table, model fit, diagnostics, and substantive interpretation
+6. **Discussion** --- Findings, practical significance, limitations, and future directions
+7. **Appendix and Reproducibility Materials** --- Supporting diagnostics and the source file that recreates the analysis
 
 ::: {.callout-important}
 ## Reproducibility requirement
-All analyses must be reproducible. Submit your `.qmd` source file alongside the rendered report so that your code and narrative are integrated.
+All analyses must be reproducible. Submit your rendered report and an annotated `.qmd` or `.R` source file that runs from a clean R session and recreates the reported tables, figures, models, and diagnostics.
 :::
 
 

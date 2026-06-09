@@ -11,42 +11,46 @@ title: "Project 2 Draft"
 
 ::: {.callout-tip}
 ## {{< fa book >}} Project Guide
-Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for worked examples of each section, including model specification, diagnostics, and interpretation.
+Use the [Project 2 guidelines]({{< var books.project_guide >}}/chapters/ch03-guidelines-logistic.html){target="_blank"}, [worked Project 2 proposal]({{< var books.project_guide >}}/chapters/ch06-logistic-proposal.html){target="_blank"}, and [worked Project 2 results chapter]({{< var books.project_guide >}}/chapters/ch07-logistic-results.html){target="_blank"} while drafting. Before submitting, compare your draft with the [Project 2 checklist]({{< var books.project_guide >}}/chapters/ch03-guidelines-logistic.html#sec-logistic-checklist){target="_blank"}.
 :::
 
 ## Purpose
 
-The draft is a complete working version of your logistic regression analysis. It should include all major sections of the final report, though the writing may still be rough. The instructor will provide feedback to help you strengthen the analysis and interpretation before the final submission.
+The draft is a complete working version of your logistic regression analysis. It should include a working version of Parts 1--6 of the 7-part final report, plus any preliminary appendix or reproducibility materials needed to support your diagnostics and predicted probabilities. The writing may still be rough. The instructor will provide feedback to help you strengthen the analysis and interpretation before the final submission.
 
 ## Requirements
 
-Your draft should include all of the following sections:
+Your draft should include all of the following sections. These are a milestone checklist; the Project Guide remains the detailed source for the final 7-part report structure.
 
 ### 1. Introduction
 
 - Research question (refined from your proposal, incorporating any instructor feedback)
 - Brief motivation for why this question matters
 - Overview of your analytical approach
+- Clear statement of the modeled event: which outcome category is $Y = 1$?
 
 ### 2. Data and Variables
 
 - Dataset description (updated from proposal)
 - Variable definitions and coding (including the binary outcome variable)
+- Event and non-event counts for the binary outcome
 - Descriptive statistics and exploratory visualizations
 
 ### 3. Analysis and Results
 
 - **Model specification**: State the logistic regression model(s) you are fitting
-- **Regression output**: Report coefficient estimates (log-odds), odds ratios, standard errors, and significance tests
-- **Model fit**: Report pseudo-$R^2$, AIC/BIC, and any other relevant fit statistics
-- **Interpretation**: Interpret key coefficients as odds ratios in context
-- **Additional analyses** (if applicable): Interactions, predicted probabilities, average marginal effects
+- **Regression output**: Report odds ratios, 95% confidence intervals, *p*-values, model $N$, and fit statistics
+- **Predicted probabilities**: Include a predicted-probability table and a predicted-probability figure with 95% confidence intervals for the modeled event
+- **Interpretation**: Interpret key odds ratios in context and explain at least one main result on the probability scale
+- **Additional analyses** (if applicable): Interactions, average marginal effects, or planned model comparisons
 
 ### 4. Model Diagnostics
 
-- Classification accuracy (confusion matrix, sensitivity, specificity)
-- Goodness-of-fit assessment (Hosmer-Lemeshow test or binned residual plot)
-- Identification of any influential observations
+- Sparse-cell, separation, and convergence checks
+- Collinearity check (VIF values)
+- Linearity-in-the-logit check for continuous predictors
+- Influence diagnostics and a brief sensitivity statement when needed
+- Classification tables, sensitivity/specificity, ROC/AUC, calibration plots, and Hosmer-Lemeshow tests are optional unless your research question is explicitly about prediction or classification. If you include them, justify the cutoff, discuss base-rate or class-imbalance limitations, and remember that AUC measures ranking, not calibration.
 
 ### 5. Preliminary Conclusions
 

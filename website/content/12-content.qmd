@@ -24,7 +24,7 @@ By the end of this week, you will be able to:
 
 ## R Lab
 
-- {{< fa laptop-code >}} [Lab 11: Logistic Regression Diagnostics]({{< var books.r_lab_book >}}/labs/lab11-logistic-diagnostics.html){target="_blank"}
+- {{< fa laptop-code >}} [Lab 11: Logistic Diagnostics and Classification]({{< var books.r_lab_book >}}/labs/lab11-logistic-diagnostics.html){target="_blank"}
 
 ## Project
 

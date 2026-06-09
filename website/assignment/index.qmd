@@ -11,7 +11,7 @@ All assignments in {{< var course.number >}} are designed to reinforce key stati
 | {{< fa pencil >}} [Homework](#homework) | **50%** | 8 assignments, completion-based |
 | {{< fa circle-check >}} [Module Quizzes](quizzes.qmd) | **10%** | 6 quizzes, mastery-based |
 | {{< fa chart-line >}} [Project 1: Linear Regression](final-project.qmd#project-1) | **20%** | Proposal, Draft, Final Report |
-| {{< fa chart-bar >}} [Project 2: Logistic Regression](final-project.qmd#project-2) | **20%** | Proposal, Final Report |
+| {{< fa chart-bar >}} [Project 2: Logistic Regression](final-project.qmd#project-2) | **20%** | Proposal, Draft, Final Report |
 | | **100%** | |
 
 
@@ -41,4 +41,4 @@ Six module quizzes assess your conceptual understanding. Quizzes are **mastery-b
 The course includes two independent research projects that together account for **40%** of your final grade. See the [Projects Overview](final-project.qmd) for full details and timelines.
 
 - **[Project 1: Linear Regression](final-project.qmd#project-1)** (20%) --- Completed in three stages: Proposal (Week 7), Draft (Week 9), Final Report (Week 12)
-- **[Project 2: Logistic Regression](final-project.qmd#project-2)** (20%) --- Completed in two stages: Proposal (Week 12), Final Report (Week 15)
+- **[Project 2: Logistic Regression](final-project.qmd#project-2)** (20%) --- Completed in three stages: Proposal (Week 12), Draft (Week 14), Final Report (Week 15)

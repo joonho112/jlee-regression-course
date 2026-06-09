@@ -23,7 +23,7 @@ By the end of this week, you will be able to:
 
 ## R Lab
 
-- {{< fa laptop-code >}} [Lab 10: Logistic Regression with Multiple Predictors]({{< var books.r_lab_book >}}/labs/lab10-logistic-extended.html){target="_blank"}
+- {{< fa laptop-code >}} [Lab 10: Multiple Logistic Regression]({{< var books.r_lab_book >}}/labs/lab10-logistic-extended.html){target="_blank"}
 
 ## Homework
 

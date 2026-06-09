@@ -11,7 +11,7 @@ title: "Project 1 Proposal"
 
 ::: {.callout-tip}
 ## {{< fa book >}} Project Guide
-Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed instructions, examples of strong proposals, and tips for choosing a dataset.
+Refer to the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed instructions, examples of strong proposals, and tips for choosing a dataset. The [Project 1 guidelines]({{< var books.project_guide >}}/chapters/ch02-guidelines-linear.html){target="_blank"} provide the detailed checklist for the final report, and the [worked Project 1 proposal]({{< var books.project_guide >}}/chapters/ch04-linear-proposal.html){target="_blank"} shows the expected level of detail.
 :::
 
 ## Purpose
@@ -24,36 +24,46 @@ Your proposal should include the following sections:
 
 ### 1. Research Question
 
-State a clear, focused research question that can be addressed with linear regression. Your question should specify the relationship you plan to investigate and why it is interesting or important.
+State two or three clear, focused research questions that can be addressed with linear regression. Number them RQ1, RQ2, and RQ3 as appropriate. Each question should involve your continuous outcome and one or more predictors, and each should specify why the relationship is interesting or important.
 
 ### 2. Dataset Description
 
 - Name and source of the dataset
 - How to access the dataset (URL, R package, etc.)
-- Number of observations and a brief description of the sample
+- Starting number of observations and a brief description of the sample
 - Unit of analysis (e.g., individuals, schools, countries)
+- Planned exclusions or restrictions
+- Expected complete-case sample size for the continuous outcome and all planned predictors; aim for at least 200 usable complete cases
+- Brief missingness summary for the outcome and planned predictors
 
 ### 3. Variable Definitions
 
 Identify and describe the following:
 
-- **Outcome variable** ($y$): A continuous variable suitable for linear regression
+- **Outcome variable** ($y$): An approximately continuous response variable with enough variation for linear regression; if you plan to transform it, explain why
 - **Primary predictor** ($x_1$): The main explanatory variable of interest
-- **Additional predictors**: At least one additional predictor or control variable you plan to include
+- **Predictors**: At least four explanatory variables total, including at least one continuous predictor and at least one categorical predictor with three or more categories, unless the instructor approves an alternative
 
 For each variable, report:
 
 - Variable name in the dataset
 - Measurement scale (continuous, categorical, binary)
 - Brief description of what it measures
+- For categorical predictors: all categories, the planned reference category, and any categories with very small counts that may need to be combined
+- Any recodes, transformations, centered variables, or dummy variables you expect to create
 
-### 4. Preliminary Descriptive Statistics
+### 4. Planned Analysis
+
+Briefly state the linear regression model or planned model sequence you expect to fit. Link each model to your research questions, state that nested models will use the same complete-case analysis dataset, and identify the significance level you plan to use (typically $\alpha = 0.05$).
+
+### 5. Preliminary Descriptive Statistics
 
 Provide basic descriptive statistics for your key variables:
 
 - Summary statistics (mean, SD, min, max) for continuous variables
 - Frequency tables for categorical variables
 - At least one visualization (histogram, scatterplot, or boxplot)
+- A short note confirming that descriptives use the same complete-case dataset planned for the largest regression model, or explaining what still needs to be checked
 
 ## Submission
 
