@@ -19,3 +19,14 @@ h6 { text-transform: uppercase; letter-spacing: 0.05em; }
 // --- Inline code (bg/color per theme) ---
 :not(pre) > code { padding: 0.15em 0.4em; border-radius: 0.2rem; }
 a code { background-color: transparent; color: inherit; padding: 0; }
+
+// --- Table column sizing (theme-agnostic) ---
+// Quarto/Pandoc renders every Markdown pipe table with a <colgroup> whose <col>
+// widths are derived from the *dash counts* in the separator row. That made
+// short-content columns (e.g. "Available After", "Difficulty", "Pts") wide and
+// long prose columns ("Topics", "Concept", "Learning target") cramped — wasting
+// space and forcing excessive wrapping. Neutralize those inline percentage
+// widths so the browser sizes every column to its CONTENT (auto table layout),
+// giving wide columns to long text and narrow columns to short values.
+table { table-layout: auto !important; width: 100%; }
+table > colgroup > col { width: auto !important; }
