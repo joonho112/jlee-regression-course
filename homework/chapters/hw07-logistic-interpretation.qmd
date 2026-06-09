@@ -8,33 +8,32 @@ title: "Homework 7: Logistic Regression Interpretation"
 
 ::: {.callout-note}
 ## Learning Objectives
-- Convert logistic regression coefficients to odds ratios using $\exp(\hat{\beta})$
-- Interpret odds ratios for both continuous and dummy predictors
-- Construct 95% confidence intervals for odds ratios (log-odds scale first, then exponentiate)
-- Calculate and interpret percentage change in odds from logistic coefficients
-- Use the reciprocal odds ratio when $\text{OR} < 1$ for clearer interpretation
-- **Related:** Chapter 9: *Simple Logistic Regression* and Chapter 10: *Multiple Logistic Regression* (in Lecture Notes)
+- Convert logistic regression coefficients to odds ratios using $\exp(\hat{\beta}_j)$
+- Interpret adjusted odds ratios for continuous and dummy predictors
+- Construct confidence intervals on the log-odds scale and then exponentiate
+- Use reciprocal odds ratios when the original odds ratio is less than 1
+- Convert odds ratios to percentage changes in odds
+- **Related notes:** [Chapter 9: Simple Logistic Regression](../../notes/chapters/09-simple-logistic-regression.html) and [Chapter 10: Multiple Logistic Regression](../../notes/chapters/10-multiple-logistic-regression.html)
+- **Related labs:** [Lab 9: Simple Logistic Regression](../../labs/labs/lab09-logistic-intro.html) and [Lab 10: Multiple Logistic Regression](../../labs/labs/lab10-logistic-extended.html)
 :::
 
-This homework is entirely **conceptual** --- no raw data, only a published logistic regression table to interpret. The table comes from @kalmijn1994, who studied intergenerational effects of family background on educational attainment.
+This homework is conceptual. We do not fit a model from raw data. Instead, we interpret a published logistic regression table from @kalmijn1994.
 
-**Data:** National Survey of Families and Households (NSFH), 1987--1988. Non-Hispanic white respondents born 1900--1963, raised by two parents ($N = 6{,}092$).
+**Data:** National Survey of Families and Households (NSFH), 1987-1988. Non-Hispanic white respondents born 1900-1963, raised by two parents ($N = 6{,}092$).
 
-**Response variable:** Whether the respondent completed high school (binary: $1 =$ yes, $0 =$ no).
+**Response variable:** whether the respondent completed high school ($1 =$ yes, $0 =$ no).
 
 
 ## The Logistic Regression Table
 
-The table below reproduces Model B from Table 2 of @kalmijn1994. All coefficients are maximum-likelihood estimates from a logistic regression predicting high school completion.
+The table below reproduces Model B from Table 2 of @kalmijn1994. The coefficients are maximum-likelihood estimates from a logistic regression predicting high school completion.
 
 ```{r}
 #| label: tbl-hw07-kalmijn
-#| tbl-cap: "Logistic Regression Coefficients for Obtaining a High School Degree [@kalmijn1994, Table 2, Model B]"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| tbl-cap: "Logistic regression coefficients for obtaining a high school degree [@kalmijn1994, Table 2, Model B]."
+#| echo: false
 
-# Reproduce the published logistic regression table (Model B only)
-kalmijn_table <- data.frame(
+kalmijn_table <- tibble(
   Variable = c(
     "Respondent's year of birth (-63 to 0)",
     "Father's education (0 to 17)",
@@ -51,36 +50,54 @@ kalmijn_table <- data.frame(
     ".126** (.016)",
     ".093** (.018)",
     ".295** (.047)",
-    ".212* (.068)",
-    "-.921* (.189)",
+    ".212** (.068)",
+    "-.921** (.189)",
     "-.162** (.016)",
     ".747** (.247)",
     "6,092"
   )
 )
 
-knitr::kable(
-  kalmijn_table,
-  col.names = c("Independent Variable", "Model B"),
-  align = c("l", "r"),
-  caption = NULL
-)
+kalmijn_table |>
+  knitr::kable(
+    col.names = c("Independent variable", "Model B"),
+    align = c("l", "r"),
+    caption = NULL
+  )
 ```
 
 **Note:** \*$p < .05$, \*\*$p < .01$ (two-tailed). Numbers in parentheses are estimated standard errors. Coefficients are maximum-likelihood estimates. Coefficients for year of birth are multiplied by 10.
 
 ::: {.callout-note}
 ## Variable Definitions
-- **Respondent's year of birth:** Year of birth minus 1963 (ranges from $-63$ to $0$).
-- **Father's/Mother's education:** Completed years of schooling (0 to 17).
-- **Father's occupation:** Socioeconomic Index (SEI) of father's occupation when respondent was 16 (scale 1 to 9).
-- **Mother's occupation:** SEI of mother's last occupation before respondent turned 18 (scale 0, 1 to 9).
-- **Mother employed:** Dummy variable ($1 =$ mother was employed between respondent's birth and age 18; $0 =$ not employed).
-- **Number of siblings:** Count of siblings.
+- **Respondent's year of birth:** year of birth minus 1963.
+- **Father's/Mother's education:** completed years of schooling, 0 to 17.
+- **Father's occupation:** socioeconomic index of father's occupation when respondent was 16, scale 1 to 9.
+- **Mother's occupation:** socioeconomic index of mother's last occupation before respondent turned 18, scale 0 and 1 to 9.
+- **Mother employed:** $1 =$ mother was employed between respondent's birth and age 18; $0 =$ not employed.
+- **Number of siblings:** count of siblings.
+:::
+
+```{r}
+#| label: hw07-reference-check
+#| include: false
+
+stopifnot(
+  kalmijn_table$Model_B[kalmijn_table$Variable == "Mother's education (0 to 17)"] == ".093** (.018)",
+  kalmijn_table$Model_B[kalmijn_table$Variable == "Mother employed (0 to 1)"] == "-.921** (.189)",
+  kalmijn_table$Model_B[kalmijn_table$Variable == "Mother's occupation (0, 1 to 9)"] == ".212** (.068)"
+)
+
+z_star <- 1.96
+```
+
+::: {.callout-warning}
+## Odds Are Not Probabilities
+An odds ratio of 1.10 does not mean the probability increases by 10%. It means the **odds** are multiplied by 1.10. For common outcomes, odds ratios and probability ratios can differ substantially, so always use odds language unless you explicitly convert to predicted probabilities.
 :::
 
 
-## Problem 1 {#sec-hw07-p1}
+## Problem 1
 
 ### Problem Statement
 
@@ -88,78 +105,61 @@ knitr::kable(
 
 ### Solution
 
-::: {.panel-tabset}
-
-#### Solution
-
-In a logistic regression, the coefficient $\hat{\beta}$ represents the change in **log-odds** for a one-unit increase in the predictor. To convert to an **odds ratio**, we exponentiate:
+For mother's education, the published coefficient is:
 
 $$
-\widehat{\text{OR}} = \exp(\hat{\beta})
+\hat{\beta}_j = 0.093.
 $$
 
-For mother's education, $\hat{\beta} = 0.093$:
-
-$$
-\widehat{\text{OR}} = \exp(0.093) = 1.10
-$$
-
-**Interpretation:** The odds of obtaining a high school degree are estimated to increase by **10%** for each extra year of mother's schooling, holding constant the other explanatory variables.
-
-In other words, comparing two respondents who are identical on all other variables but differ by one year in mother's education, the respondent with the higher maternal education has **1.10 times the odds** of completing high school.
-
-::: {.callout-important}
-## General Formula for Odds Ratio Interpretation
-For a continuous predictor with coefficient $\hat{\beta}$:
-
-$$
-\widehat{\text{OR}} = \exp(\hat{\beta})
-$$
-
-- If $\widehat{\text{OR}} > 1$: A one-unit increase in $X$ is associated with **higher odds** of the outcome.
-- If $\widehat{\text{OR}} < 1$: A one-unit increase in $X$ is associated with **lower odds** of the outcome.
-- If $\widehat{\text{OR}} = 1$: No association (equivalent to $\hat{\beta} = 0$).
-
-The phrase "holding constant the other explanatory variables" is essential --- just as in multiple linear regression.
-:::
-
-::: {.callout-warning}
-## Odds Are Not Probabilities
-An odds ratio of 1.10 does **not** mean the probability increases by 10%. Odds and probabilities are related but different quantities:
-
-- If the probability of an event is $p$, the odds are $p/(1-p)$.
-- An OR of 1.10 means the **odds** are 10% higher, which translates to a **smaller** percentage increase in probability (the exact amount depends on the baseline probability).
-- When the outcome is rare (probability $< 10\%$), the OR approximates the risk ratio. But for common outcomes, the OR exaggerates the magnitude of the association.
-
-Always say "the **odds** increase by..." rather than "the probability increases by..." when interpreting odds ratios.
-:::
-
-#### Code Explanation
+Exponentiating gives the odds ratio:
 
 ```{r}
-#| label: hw07-p1-code
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw07-p1-mother-education-or
 
-# --- Problem 1: Odds ratio for mother's education ---
+beta_mother_education <- 0.093
+or_mother_education <- exp(beta_mother_education)
 
-# Logistic regression coefficient for mother's education
-beta_mother_ed <- 0.093
+mother_education <- tibble(
+  predictor = "Mother's education",
+  beta = beta_mother_education,
+  odds_ratio = or_mother_education,
+  percent_change_in_odds = 100 * (or_mother_education - 1)
+)
 
-# Convert to odds ratio
-OR_mother_ed <- exp(beta_mother_ed)
-
-cat("Coefficient (log-odds):", beta_mother_ed, "\n")
-cat("Odds Ratio: exp(", beta_mother_ed, ") =", round(OR_mother_ed, 2), "\n")
-cat("Percentage change in odds:", round(100 * (OR_mother_ed - 1), 1), "%\n")
+mother_education |>
+  mutate(
+    odds_ratio = round(odds_ratio, 2),
+    percent_change_in_odds = round(percent_change_in_odds, 0)
+  ) |>
+  knitr::kable(
+    col.names = c("Predictor", "Coefficient", "Odds ratio", "Percent change in odds"),
+    align = c("l", "r", "r", "r"),
+    caption = "Odds ratio for mother's education."
+  )
 ```
 
-The R function `exp()` computes $e^x$. The odds ratio of $1.10$ means the odds are multiplied by $1.10$ for each additional year --- a **10% increase** in the odds.
+```{r}
+#| label: hw07-p1-check
+#| include: false
 
-:::
+stopifnot(
+  isTRUE(all.equal(round(mother_education$odds_ratio, 2), 1.10)),
+  isTRUE(all.equal(round(mother_education$percent_change_in_odds, 0), 10))
+)
+```
+
+Thus:
+
+$$
+\exp(0.093) = 1.10.
+$$
+
+The odds of obtaining a high school degree are estimated to increase by about **10%** for each additional year of mother's schooling, holding constant the other explanatory variables in Model B.
+
+In odds-ratio language: comparing two respondents who are the same on the other variables but differ by one year in mother's education, the respondent whose mother has one additional year of schooling has **1.10 times the odds** of completing high school.
 
 
-## Problem 2 {#sec-hw07-p2}
+## Problem 2
 
 ### Problem Statement
 
@@ -167,128 +167,158 @@ The R function `exp()` computes $e^x$. The odds ratio of $1.10$ means the odds a
 
 ### Solution
 
-::: {.panel-tabset}
-
-#### Solution
-
-This problem requires five steps: (1) compute the odds ratio, (2) interpret using the reciprocal, (3) construct the CI for the log-odds coefficient, (4) transform to a CI for the odds ratio, and (5) interpret the reciprocal CI.
-
-**Step 1. Compute the odds ratio.**
-
-For the "Mother employed" dummy variable, $\hat{\beta} = -0.921$ and $\text{SE}(\hat{\beta}) = 0.189$:
+For `Mother employed`, the published coefficient and standard error are:
 
 $$
-\widehat{\text{OR}} = \exp(-0.921) = 0.40
+\hat{\beta}_j = -0.921, \qquad SE = 0.189.
 $$
 
-**Step 2. Interpret using the reciprocal.**
-
-An odds ratio of $0.40$ means that students whose mothers **are** employed have only $0.40$ times the odds of completing high school compared to students whose mothers are **not** employed. Because $\text{OR} < 1$, it is clearer to take the reciprocal:
-
-$$
-\frac{1}{\widehat{\text{OR}}} = \frac{1}{0.40} = 2.5
-$$
-
-**Reciprocal interpretation:** Students whose mothers are **not** employed are estimated to have **2.5 times the odds** of graduating from high school as students whose mothers **are** employed, holding all other variables constant.
-
-::: {.callout-warning}
-## When OR < 1, Consider the Reciprocal
-An odds ratio of $0.40$ and its reciprocal $2.5$ convey the same information --- they just flip the comparison group. Saying "2.5 times the odds" is often easier for readers to grasp than "0.40 times the odds." When the OR is less than 1, consider reporting the reciprocal and reversing the direction of the comparison.
-:::
-
-**Step 3. Form a 95% CI for the log-odds coefficient.**
-
-The approximate 95% confidence interval for $\beta$ is:
-
-$$
-\hat{\beta} \pm 1.96 \times \text{SE}(\hat{\beta}) = -0.921 \pm 1.96 \times 0.189
-$$
-
-$$
-= -0.921 \pm 0.370 = [-1.291, \; -0.551]
-$$
-
-**Step 4. Transform to a 95% CI for the odds ratio.**
-
-::: {.callout-tip}
-## The CI Procedure: Log-Odds Scale First, Then Exponentiate
-To construct a confidence interval for an odds ratio:
-
-1. **Form the CI on the log-odds scale:** $\hat{\beta} \pm z^* \times \text{SE}(\hat{\beta})$
-2. **Exponentiate both endpoints:** $[\exp(\text{lower}), \; \exp(\text{upper})]$
-
-This order matters because the CI must be constructed on the **symmetric** (log-odds) scale and then transformed. You cannot form the CI directly on the odds ratio scale.
-:::
-
-$$
-\text{95\% CI for OR} = [\exp(-1.291), \; \exp(-0.551)] = [0.275, \; 0.576]
-$$
-
-**Step 5. Reciprocal CI.**
-
-Taking the reciprocal of both endpoints (and reversing their order):
-
-$$
-\text{Reciprocal CI} = \left[\frac{1}{0.576}, \; \frac{1}{0.275}\right] = [1.7, \; 3.6]
-$$
-
-**Full interpretation:** Students whose mothers are **not** employed have between **1.7 and 3.6 times the odds** of obtaining a high school degree compared to students whose mothers are employed (95% CI), with a point estimate of **2.5 times the odds**.
-
-#### Code Explanation
+We first compute the odds ratio:
 
 ```{r}
-#| label: hw07-p2-code
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw07-p2-mother-employed-or
 
-# --- Problem 2: OR and 95% CI for Mother employed ---
+beta_mother_employed <- -0.921
+se_mother_employed <- 0.189
+or_mother_employed <- exp(beta_mother_employed)
 
-# Coefficient and standard error
-beta_employed <- -0.921
-se_employed   <- 0.189
+mother_employed <- tibble(
+  predictor = "Mother employed",
+  beta = beta_mother_employed,
+  se = se_mother_employed,
+  odds_ratio = or_mother_employed,
+  reciprocal_odds_ratio = 1 / or_mother_employed
+)
 
-# Step 1: Odds ratio
-OR_employed <- exp(beta_employed)
-cat("Step 1 — Odds Ratio:\n")
-cat("  OR = exp(", beta_employed, ") =", round(OR_employed, 2), "\n\n")
-
-# Step 2: Reciprocal OR
-reciprocal_OR <- 1 / OR_employed
-cat("Step 2 — Reciprocal OR:\n")
-cat("  1 / OR = 1 /", round(OR_employed, 2), "=",
-    round(reciprocal_OR, 1), "\n\n")
-
-# Step 3: 95% CI for the log-odds coefficient
-z_star <- 1.96
-ci_lower_logit <- beta_employed - z_star * se_employed
-ci_upper_logit <- beta_employed + z_star * se_employed
-cat("Step 3 — 95% CI for coefficient (log-odds scale):\n")
-cat("  [", round(ci_lower_logit, 3), ",", round(ci_upper_logit, 3), "]\n\n")
-
-# Step 4: 95% CI for the odds ratio
-ci_lower_OR <- exp(ci_lower_logit)
-ci_upper_OR <- exp(ci_upper_logit)
-cat("Step 4 — 95% CI for OR:\n")
-cat("  [exp(", round(ci_lower_logit, 3), "), exp(",
-    round(ci_upper_logit, 3), ")]\n")
-cat("  = [", round(ci_lower_OR, 3), ",", round(ci_upper_OR, 3), "]\n\n")
-
-# Step 5: Reciprocal CI
-recip_ci_lower <- 1 / ci_upper_OR
-recip_ci_upper <- 1 / ci_lower_OR
-cat("Step 5 — Reciprocal CI:\n")
-cat("  [1/", round(ci_upper_OR, 3), ", 1/",
-    round(ci_lower_OR, 3), "]\n")
-cat("  = [", round(recip_ci_lower, 1), ",",
-    round(recip_ci_upper, 1), "]\n")
+mother_employed |>
+  transmute(
+    predictor,
+    beta,
+    odds_ratio = round(odds_ratio, 2),
+    reciprocal_odds_ratio = round(reciprocal_odds_ratio, 1)
+  ) |>
+  knitr::kable(
+    col.names = c("Predictor", "Coefficient", "Odds ratio", "Reciprocal odds ratio"),
+    align = c("l", "r", "r", "r"),
+    caption = "Odds ratio and reciprocal odds ratio for mother employed."
+  )
 ```
 
-Note that when taking the reciprocal of a confidence interval, you must **reverse the endpoints**: the reciprocal of the upper bound becomes the new lower bound, and vice versa.
+The odds ratio is:
 
+$$
+\exp(-0.921) = 0.40.
+$$
+
+Because this odds ratio is less than 1, it is often clearer to reverse the comparison:
+
+$$
+\frac{1}{0.40} = 2.5.
+$$
+
+Respondents whose mothers were **not employed** are estimated to have about **2.5 times the odds** of graduating from high school as respondents whose mothers were employed, holding the other explanatory variables constant.
+
+### Confidence Interval
+
+Construct the confidence interval on the log-odds scale first:
+
+$$
+\hat{\beta}_j \pm 1.96 \times SE
+= -0.921 \pm 1.96(0.189).
+$$
+
+The answer key reports the rounded coefficient interval and then exponentiates those endpoints.
+
+```{r}
+#| label: hw07-p2-mother-employed-ci
+
+mother_employed_beta_lower <- round(beta_mother_employed - z_star * se_mother_employed, 3)
+mother_employed_beta_upper <- round(beta_mother_employed + z_star * se_mother_employed, 3)
+
+mother_employed_ci <- tibble(
+  predictor = "Mother employed",
+  beta_lower = mother_employed_beta_lower,
+  beta_upper = mother_employed_beta_upper,
+  or_lower = exp(mother_employed_beta_lower),
+  or_upper = exp(mother_employed_beta_upper)
+) |>
+  mutate(
+    reciprocal_lower = 1 / or_upper,
+    reciprocal_upper = 1 / or_lower
+  )
+
+mother_employed_ci |>
+  transmute(
+    predictor,
+    beta_lower,
+    beta_upper,
+    or_lower = round(or_lower, 3),
+    or_upper = round(or_upper, 3),
+    reciprocal_lower = round(reciprocal_lower, 1),
+    reciprocal_upper = round(reciprocal_upper, 1)
+  ) |>
+  knitr::kable(
+    col.names = c(
+      "Predictor",
+      "Coefficient CI lower",
+      "Coefficient CI upper",
+      "OR CI lower",
+      "OR CI upper",
+      "Reciprocal CI lower",
+      "Reciprocal CI upper"
+    ),
+    align = c("l", "r", "r", "r", "r", "r", "r"),
+    caption = "Answer-key rounded log-odds, odds-ratio, and reciprocal confidence intervals for mother employed."
+  )
+```
+
+```{r}
+#| label: hw07-p2-check
+#| include: false
+
+stopifnot(
+  isTRUE(all.equal(round(mother_employed$odds_ratio, 2), 0.40)),
+  isTRUE(all.equal(round(mother_employed$reciprocal_odds_ratio, 1), 2.5)),
+  isTRUE(all.equal(mother_employed_ci$beta_lower, -1.291)),
+  isTRUE(all.equal(mother_employed_ci$beta_upper, -0.551)),
+  isTRUE(all.equal(round(mother_employed_ci$or_lower, 3), 0.275)),
+  isTRUE(all.equal(round(mother_employed_ci$or_upper, 3), 0.576)),
+  isTRUE(all.equal(round(mother_employed_ci$reciprocal_lower, 1), 1.7)),
+  isTRUE(all.equal(round(mother_employed_ci$reciprocal_upper, 1), 3.6))
+)
+```
+
+The 95% confidence interval for the log-odds coefficient is:
+
+$$
+[-1.291,\ -0.551].
+$$
+
+Exponentiating gives the odds-ratio interval:
+
+$$
+[\exp(-1.291),\ \exp(-0.551)] = [0.275,\ 0.576].
+$$
+
+For the reciprocal interpretation, reverse the endpoints:
+
+$$
+\left[\frac{1}{0.576},\ \frac{1}{0.275}\right] = [1.7,\ 3.6].
+$$
+
+So the reciprocal interpretation is: respondents whose mothers were not employed are estimated to have between **1.7 and 3.6 times the odds** of graduating from high school as respondents whose mothers were employed. As with any 95% confidence interval, the true population odds ratio could fall outside this interval in repeated sampling.
+
+::: {.callout-tip}
+## Confidence Interval Workflow
+For odds ratios, use this order:
+
+1. Build the confidence interval for the coefficient on the log-odds scale.
+2. Exponentiate both endpoints.
+3. If using a reciprocal interpretation, take reciprocals and reverse the endpoint order.
 :::
 
 
-## Problem 3 {#sec-hw07-p3}
+## Problem 3
 
 ### Problem Statement
 
@@ -298,142 +328,154 @@ Note that when taking the reciprocal of a confidence interval, you must **revers
 
 ### Solution
 
-::: {.panel-tabset}
-
-#### Solution
-
-**Part (a): Deriving the 24% increase.**
-
-For mother's occupation, $\hat{\beta} = 0.212$. The odds ratio is:
+For mother's occupation, the coefficient and standard error are:
 
 $$
-\widehat{\text{OR}} = \exp(0.212) = 1.24
+\hat{\beta}_j = 0.212, \qquad SE = 0.068.
 $$
 
-The **percentage change in odds** is computed from the odds ratio:
-
-$$
-\text{Percentage change} = 100\% \times (\widehat{\text{OR}} - 1) = 100\% \times (1.24 - 1) = 24\%
-$$
-
-::: {.callout-important}
-## Percentage Change in Odds Formula
-For a one-unit increase in a predictor with odds ratio $\widehat{\text{OR}}$:
-
-$$
-\text{Percentage change in odds} = 100\% \times (\widehat{\text{OR}} - 1)
-$$
-
-- $\widehat{\text{OR}} = 1.24$ $\Rightarrow$ 24% **increase** in odds
-- $\widehat{\text{OR}} = 0.85$ $\Rightarrow$ 15% **decrease** in odds
-- $\widehat{\text{OR}} = 2.00$ $\Rightarrow$ 100% **increase** (i.e., the odds double)
-
-This is the logistic regression analogue of interpreting a coefficient as a "percent change" in the **odds** of the outcome.
-:::
-
-**Interpretation:** Each one-point increase in mother's occupational level (SEI) is associated with a **24% increase** in the estimated odds of completing high school, holding constant the other explanatory variables.
-
-**Part (b): 95% CI for the percentage increase.**
-
-We follow the same three-stage pipeline: log-odds $\rightarrow$ odds ratio $\rightarrow$ percentage change.
-
-**Stage 1.** Form the 95% CI for the coefficient ($\hat{\beta} = 0.212$, $\text{SE} = 0.068$):
-
-$$
-0.212 \pm 1.96 \times 0.068 = 0.212 \pm 0.133 = [0.079, \; 0.345]
-$$
-
-**Stage 2.** Exponentiate to get the CI for the odds ratio:
-
-$$
-[\exp(0.079), \; \exp(0.345)] = [1.08, \; 1.41]
-$$
-
-**Stage 3.** Convert to percentage change:
-
-$$
-\text{Lower:} \quad 100\% \times (1.08 - 1) = 8\%
-$$
-
-$$
-\text{Upper:} \quad 100\% \times (1.41 - 1) = 41\%
-$$
-
-**Conclusion:** We are 95% confident that a one-point increase in mother's occupational level is associated with between an **8% and 41% increase** in the odds of completing high school, with a point estimate of **24%**.
-
-#### Code Explanation
+The odds ratio is:
 
 ```{r}
-#| label: hw07-p3-code
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw07-p3-mother-occupation-or
 
-# --- Problem 3: Mother's occupation — OR, percentage, and CI ---
+beta_mother_occupation <- 0.212
+se_mother_occupation <- 0.068
+or_mother_occupation <- exp(beta_mother_occupation)
 
-# Coefficient and standard error
-beta_mother_occ <- 0.212
-se_mother_occ   <- 0.068
+mother_occupation <- tibble(
+  predictor = "Mother's occupation",
+  beta = beta_mother_occupation,
+  se = se_mother_occupation,
+  odds_ratio = or_mother_occupation,
+  percent_change = 100 * (or_mother_occupation - 1)
+)
 
-# Part (a): OR and percentage change
-OR_mother_occ <- exp(beta_mother_occ)
-pct_change    <- 100 * (OR_mother_occ - 1)
-
-cat("Part (a):\n")
-cat("  OR = exp(", beta_mother_occ, ") =", round(OR_mother_occ, 2), "\n")
-cat("  Percentage change = 100% × (", round(OR_mother_occ, 2),
-    "- 1) =", round(pct_change, 0), "%\n\n")
-
-# Part (b): 95% CI
-z_star <- 1.96
-
-# Stage 1: CI for log-odds coefficient
-ci_lower_logit <- beta_mother_occ - z_star * se_mother_occ
-ci_upper_logit <- beta_mother_occ + z_star * se_mother_occ
-cat("Part (b):\n")
-cat("  Stage 1 — CI for coefficient: [",
-    round(ci_lower_logit, 3), ",", round(ci_upper_logit, 3), "]\n")
-
-# Stage 2: CI for OR
-ci_lower_OR <- exp(ci_lower_logit)
-ci_upper_OR <- exp(ci_upper_logit)
-cat("  Stage 2 — CI for OR: [",
-    round(ci_lower_OR, 2), ",", round(ci_upper_OR, 2), "]\n")
-
-# Stage 3: CI for percentage change
-pct_lower <- 100 * (ci_lower_OR - 1)
-pct_upper <- 100 * (ci_upper_OR - 1)
-cat("  Stage 3 — CI for % change: [",
-    round(pct_lower, 0), "%,", round(pct_upper, 0), "%]\n")
+mother_occupation |>
+  transmute(
+    predictor,
+    beta,
+    odds_ratio = round(odds_ratio, 2),
+    percent_change = round(percent_change, 0)
+  ) |>
+  knitr::kable(
+    col.names = c("Predictor", "Coefficient", "Odds ratio", "Percent change in odds"),
+    align = c("l", "r", "r", "r"),
+    caption = "Odds ratio and percentage change for mother's occupation."
+  )
 ```
 
-The key insight is that the **same three-stage pipeline** works for both the point estimate and the confidence interval: start on the log-odds scale, exponentiate to get odds ratios, then subtract 1 and multiply by 100 for percentages.
+Thus:
 
-:::
+$$
+\exp(0.212) = 1.24.
+$$
 
+The percentage increase in odds is:
 
-::: {.callout-caution}
-## Common Mistake: Treating Odds Ratios as Probability Ratios
-An odds ratio of 1.10 means the *odds* increase by 10%, NOT the *probability*. For rare outcomes, the OR approximates the risk ratio. But for common outcomes (like high school completion in this dataset), the OR substantially overstates the change in probability. When communicating results to non-technical audiences, consider converting to predicted probabilities for specific covariate profiles rather than relying solely on odds ratios.
-:::
+$$
+100\% \times (1.24 - 1) = 24\%.
+$$
+
+Each one-point increase in mother's occupational level is associated with a **24% increase in the odds** of completing high school, holding constant the other explanatory variables.
+
+### Confidence Interval for the Percentage Increase
+
+Again, start on the log-odds scale:
+
+```{r}
+#| label: hw07-p3-mother-occupation-ci
+
+mother_occupation_beta_lower <- round(beta_mother_occupation - z_star * se_mother_occupation, 3)
+mother_occupation_beta_upper <- round(beta_mother_occupation + z_star * se_mother_occupation, 3)
+
+mother_occupation_ci <- tibble(
+  predictor = "Mother's occupation",
+  beta_lower = mother_occupation_beta_lower,
+  beta_upper = mother_occupation_beta_upper,
+  or_lower = exp(mother_occupation_beta_lower),
+  or_upper = exp(mother_occupation_beta_upper)
+) |>
+  mutate(
+    percent_lower = 100 * (or_lower - 1),
+    percent_upper = 100 * (or_upper - 1)
+  )
+
+mother_occupation_ci |>
+  transmute(
+    predictor,
+    beta_lower,
+    beta_upper,
+    or_lower = round(or_lower, 2),
+    or_upper = round(or_upper, 2),
+    percent_lower = round(percent_lower, 0),
+    percent_upper = round(percent_upper, 0)
+  ) |>
+  knitr::kable(
+    col.names = c(
+      "Predictor",
+      "Coefficient CI lower",
+      "Coefficient CI upper",
+      "OR CI lower",
+      "OR CI upper",
+      "Percent lower",
+      "Percent upper"
+    ),
+    align = c("l", "r", "r", "r", "r", "r", "r"),
+    caption = "Answer-key rounded log-odds, odds-ratio, and percent-change confidence intervals for mother's occupation."
+  )
+```
+
+```{r}
+#| label: hw07-p3-check
+#| include: false
+
+stopifnot(
+  isTRUE(all.equal(round(mother_occupation$odds_ratio, 2), 1.24)),
+  isTRUE(all.equal(round(mother_occupation$percent_change, 0), 24)),
+  isTRUE(all.equal(mother_occupation_ci$beta_lower, 0.079)),
+  isTRUE(all.equal(mother_occupation_ci$beta_upper, 0.345)),
+  isTRUE(all.equal(round(mother_occupation_ci$or_lower, 2), 1.08)),
+  isTRUE(all.equal(round(mother_occupation_ci$or_upper, 2), 1.41)),
+  isTRUE(all.equal(round(mother_occupation_ci$percent_lower, 0), 8)),
+  isTRUE(all.equal(round(mother_occupation_ci$percent_upper, 0), 41))
+)
+```
+
+The coefficient interval is:
+
+$$
+[0.079,\ 0.345].
+$$
+
+Exponentiating gives:
+
+$$
+[\exp(0.079),\ \exp(0.345)] = [1.08,\ 1.41].
+$$
+
+Converting the odds-ratio interval to a percentage-change interval gives:
+
+$$
+100\% \times (1.08 - 1) = 8\%,
+\qquad
+100\% \times (1.41 - 1) = 41\%.
+$$
+
+So the 95% confidence interval for the percentage increase in the odds is approximately **8% to 41%**.
 
 
 ## Summary
 
-This homework practiced three essential skills for interpreting logistic regression output from published tables:
+This homework used one published logistic regression table to practice three transformations:
 
-1. **Odds ratio computation.** The coefficient $\hat{\beta}$ is on the log-odds scale. Exponentiate with $\exp(\hat{\beta})$ to obtain the odds ratio. For mother's education ($\hat{\beta} = 0.093$), the OR is $1.10$ --- a 10% increase in odds per additional year of schooling.
+1. **Coefficient to odds ratio:** $\exp(\hat{\beta}_j)$.
+2. **Coefficient CI to odds-ratio CI:** build $\hat{\beta}_j \pm 1.96SE$ first, then exponentiate.
+3. **Odds ratio to percentage change in odds:** $100\% \times (\text{OR} - 1)$.
 
-2. **Confidence intervals for odds ratios.** Always construct the CI on the **log-odds scale** first ($\hat{\beta} \pm 1.96 \times \text{SE}$), then exponentiate both endpoints. For the mother employed dummy, the 95% CI for the OR is $[0.275, \; 0.576]$, or in reciprocal form, $[1.7, \; 3.6]$.
-
-3. **Percentage change in odds.** The formula $100\% \times (\text{OR} - 1)$ converts an odds ratio to a percentage change. For mother's occupation ($\text{OR} = 1.24$), a one-point increase in SEI corresponds to a 24% increase in the odds of high school completion (95% CI: 8% to 41%).
-
-These three operations form a coherent **pipeline** for logistic regression interpretation:
-
-$$
-\hat{\beta} \;\xrightarrow{\;\exp(\cdot)\;}\; \widehat{\text{OR}} \;\xrightarrow{\;100\% \times (\cdot - 1)\;}\; \text{Percentage change in odds}
-$$
+For odds ratios less than 1, a reciprocal interpretation can be easier to read, but the comparison group must be reversed and the confidence-interval endpoints must be reversed.
 
 ::: {.callout-note}
 ## Looking Ahead
-In **Homework 8**, you will fit logistic regression models to real data and encounter **Simpson's Paradox** --- a situation where the direction of an association reverses after controlling for a confounding variable. The interpretation skills from this homework (odds ratios, CIs, percentage changes) will be applied in the context of model-building and variable selection.
+In **Homework 8**, you will fit logistic regression models to real data and use these same odds-ratio interpretation skills in the presence of confounding and Simpson's paradox.
 :::

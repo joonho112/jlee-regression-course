@@ -2,5 +2,10 @@
 #| label: common-setup
 #| include: false
 
-source(here::here("_common.R"), local = TRUE)
+common_candidates <- c("_common.R", file.path("..", "_common.R"), file.path("homework", "_common.R"))
+common_file <- common_candidates[file.exists(common_candidates)]
+if (length(common_file) == 0) {
+  stop("Cannot find homework/_common.R from the current render directory.")
+}
+source(common_file[1], local = TRUE)
 ```

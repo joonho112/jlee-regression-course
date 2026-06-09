@@ -8,62 +8,84 @@ title: "Homework 8: Logistic Regression and Simpson's Paradox"
 
 ::: {.callout-note}
 ## Learning Objectives
-- Construct and analyze cross-tabulations from individual-level data
-- Calculate and interpret marginal (unadjusted) odds ratios
-- Fit logistic regression models with categorical predictors
-- Understand Simpson's Paradox through comparing unadjusted and adjusted odds ratios
-- Conduct Wald tests and goodness-of-fit tests for logistic regression
-- **Related:** Chapter 9: *Simple Logistic Regression*, Chapter 10: *Multiple Logistic Regression*, and Chapter 11: *Logistic Diagnostics* (in Lecture Notes)
+- Build three-way and collapsed frequency tables from binary data
+- Compute and interpret a crude odds ratio
+- Fit a multiple logistic regression with categorical predictors
+- Compare crude and adjusted odds ratios to explain Simpson's paradox
+- Conduct a Wald test for one logistic-regression coefficient
+- Compute a grouped Pearson goodness-of-fit test for categorical predictor patterns
+- **Related notes:** [Chapter 10: *Multiple Logistic Regression*](../../notes/chapters/10-multiple-logistic-regression.html) and [Chapter 11: *Logistic Regression Diagnostics*](../../notes/chapters/11-logistic-diagnostics.html)
+- **Related labs:** [Lab 10: *Multiple Logistic Regression*](../../labs/labs/lab10-logistic-extended.html) and [Lab 11: *Logistic Diagnostics and Classification*](../../labs/labs/lab11-logistic-diagnostics.html)
 :::
 
 ::: {.callout-tip}
 ## Stata-to-R Translation
-| Stata Command | R Equivalent | Used In |
+| Stata command | R equivalent | Used in |
 |:---|:---|:---|
-| `table admitted female, by(departme)` | `table()` or `ftable()` | Problem 1 |
-| `cs admitted female, or` | Manual OR calculation | Problem 2 |
-| `logit admitted female i.departme, or` | `glm(family = binomial)` + `exp(coef())` | Problem 3 |
-| `testparm female` | `car::Anova()` (Wald test) | Problem 5 |
-| `estat gof, table` | Manual Pearson $\chi^2$ by covariate patterns | Problem 6 |
+| `table admitted female, contents(freq) by(departme)` | `count(department, admitted, female)` | Problem 1 |
+| `cs admitted female, or` | `glm(admitted ~ female, family = binomial)` or a manual odds ratio | Problem 2 |
+| `logit admitted female i.departme, or` | `glm(admitted ~ female + factor(department), family = binomial)` | Problem 3 |
+| `testparm female` | the Wald $z$ test in `model_params()` | Problem 5 |
+| `estat gof, table` | grouped observed/expected counts by covariate pattern | Problem 6 |
 :::
 
-**Dataset:** `berkeley` from the `regdatasets` package --- UC Berkeley graduate admissions data across 5 departments ($N = 3{,}593$).
+**Dataset:** `berkeley` from the `regdatasets` package, based on the UC Berkeley graduate-admissions data discussed by @bickel1975.
+
+The Stata reference uses the variable name `departme`; the R dataset uses `department`. They refer to the same five Berkeley graduate departments.
 
 **Variables:**
 
-- `department`: Department identifier (numeric: 1--5)
-- `female`: Applicant gender ($0 =$ male, $1 =$ female)
-- `admitted`: Admission outcome ($0 =$ not admitted, $1 =$ admitted)
+- `department`: department code, 1--5
+- `female`: applicant gender, where $0 =$ male and $1 =$ female
+- `admitted`: admission outcome, where $0 =$ not admitted and $1 =$ admitted
 
-This is one of the most famous datasets in statistics, originally analyzed by @bickel1975. It provides a striking example of **Simpson's Paradox**, where the direction of an association reverses after controlling for a confounding variable.
+The Berkeley admissions data are a classic example of **Simpson's paradox**: an aggregate association changes after conditioning on a confounding variable.
 
 
 ## Setup
 
 ```{r}
 #| label: hw08-setup
-#| code-fold: true
-#| code-summary: "Show R Code"
 
-# Load data
 data(berkeley)
 
-# Create factor versions for tabulation and plotting
 berk <- berkeley |>
   mutate(
-    department_f = factor(department, labels = paste("Dept", 1:5)),
+    department_f = factor(department, levels = 1:5, labels = paste("Dept", 1:5)),
     female_f = factor(female, levels = c(0, 1), labels = c("Male", "Female")),
-    admitted_f = factor(admitted, levels = c(0, 1), labels = c("Not Admitted", "Admitted"))
+    admitted_f = factor(
+      admitted,
+      levels = c(0, 1),
+      labels = c("Not admitted", "Admitted")
+    )
   )
 
-# Quick look at the data
-cat("Dimensions:", nrow(berk), "observations,", ncol(berk), "variables\n")
-cat("Variables: department (1-5), female (0/1), admitted (0/1)\n")
-str(berkeley)
+berk |>
+  summarise(
+    n = n(),
+    departments = n_distinct(department),
+    female_applicants = sum(female),
+    admitted_applicants = sum(admitted),
+    admission_rate = mean(admitted)
+  ) |>
+  round_numeric(digits = 4)
+```
+
+```{r}
+#| label: hw08-setup-check
+#| include: false
+
+stopifnot(nrow(berk) == 3593)
+stopifnot(identical(sort(unique(berk$department)), 1:5))
+stopifnot(all(berk$female %in% c(0, 1)))
+stopifnot(all(berk$admitted %in% c(0, 1)))
+stopifnot(sum(is.na(berk)) == 0)
+stopifnot(sum(berk$female) == 1727)
+stopifnot(sum(berk$admitted) == 1154)
 ```
 
 
-## Problem 1 {#sec-hw08-p1}
+## Problem 1
 
 ### Problem Statement
 
@@ -71,142 +93,92 @@ str(berkeley)
 
 ### Solution
 
-::: {.panel-tabset}
-
-#### Solution
-
-We construct a three-way frequency table crossing `admitted`, `female`, and `department`. This table reveals how the composition of applicant pools varies dramatically across departments.
-
 ```{r}
-#| label: hw08-p1-table
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw08-p1-three-way-table
 
-# Three-way frequency table: department × admitted × female
-three_way <- ftable(
-  xtabs(~ department + admitted + female, data = berk)
-)
-three_way
-```
-
-To display this more clearly as a formatted table:
-
-```{r}
-#| label: tbl-hw08-p1-formatted
-#| tbl-cap: "Three-Way Frequency Table: Admission by Gender within Each Department"
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# Build a tidy data frame from the cross-tabulation
-freq_df <- berk |>
-  count(department, admitted, female) |>
+dept_counts <- berk |>
+  count(department, admitted_f, female_f, name = "n") |>
   tidyr::pivot_wider(
-    names_from = female,
-    values_from = n,
-    names_prefix = "Female_"
+    names_from = female_f,
+    values_from = n
   ) |>
-  rename(
-    Dept = department,
-    Admitted = admitted,
-    Male = Female_0,
-    Female = Female_1
-  ) |>
-  arrange(Dept, Admitted)
+  arrange(department, admitted_f)
 
-knitr::kable(
-  freq_df,
-  col.names = c("Dept", "Admitted", "Male (0)", "Female (1)"),
-  align = c("c", "c", "r", "r")
-)
+dept_counts
 ```
 
-**Key observations from the table:**
-
-- **Department 1** has overwhelmingly male applicants (560 males vs. only 25 females) and a high overall admission rate ($353/560 = 63\%$ for males, $17/25 = 68\%$ for females).
-- **Department 2** has many more female applicants (593) than male applicants (325) and a relatively low admission rate for both genders.
-- **Departments 4 and 5** have similarly more female applicants and low admission rates.
-
-This uneven distribution of gender across departments with different admission rates is the key to understanding Simpson's Paradox in the next problems.
-
-::: {.panel-tabset group="fig-hw08-p1-composition"}
-
-##### Simple
+The same table can be summarized as admission rates within each department-by-gender cell:
 
 ```{r}
-#| label: fig-hw08-p1-composition-simple
-#| fig-cap: "Applicant Pool Composition by Department and Gender (Simple)"
-#| fig-alt: "Grouped bar chart showing number of male and female applicants by department. Department 1 has very few female applicants. Departments 2 and 4 have more female than male applicants. This unequal distribution across departments is key to understanding Simpson's Paradox."
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| fig-width: 8
-#| fig-height: 5
+#| label: hw08-p1-department-rates
 
-# Simple: Applicant counts by department and gender
-ggplot(berk, aes(x = department_f, fill = female_f)) +
-  geom_bar(position = "dodge") +
-  labs(x = "Department", y = "Number of Applicants",
-       fill = "Gender", title = "Applicant Composition by Department")
-```
-
-##### Detailed
-
-```{r}
-#| label: fig-hw08-p1-composition
-#| fig-cap: "Applicant Pool Composition by Department and Gender"
-#| fig-alt: "Grouped bar chart showing applicant counts by department and gender. Department 1 has 560 males but only 25 females. Department 2 has 325 males and 593 females. This highly unequal gender distribution across departments with different admission rates creates the conditions for Simpson's Paradox."
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| fig-width: 8
-#| fig-height: 5
-
-# Applicant counts by department and gender
-app_counts <- berk |>
-  count(department_f, female_f)
-
-ggplot(app_counts, aes(x = department_f, y = n, fill = female_f)) +
-  geom_col(position = "dodge", width = 0.7) +
-  scale_fill_manual(
-    values = c("Male" = ber640_colors["primary"],
-               "Female" = ber640_colors["secondary"]),
-    name = "Gender"
-  ) +
-  labs(
-    title = "Number of Applicants by Department and Gender",
-    x = "Department",
-    y = "Number of Applicants"
+dept_rates <- berk |>
+  group_by(department_f, female_f) |>
+  summarise(
+    n = n(),
+    admitted = sum(admitted),
+    not_admitted = n - admitted,
+    admission_rate = admitted / n,
+    odds = admission_rate / (1 - admission_rate),
+    .groups = "drop"
   )
+
+dept_rates |>
+  gt::gt() |>
+  gt::cols_label(
+    department_f = "Department",
+    female_f = "Gender",
+    n = "N",
+    admitted = "Admitted",
+    not_admitted = "Not admitted",
+    admission_rate = "Admission rate",
+    odds = "Odds"
+  ) |>
+  gt::fmt_number(columns = c(n, admitted, not_admitted), decimals = 0, use_seps = FALSE) |>
+  gt::fmt_number(columns = c(admission_rate, odds), decimals = 4) |>
+  gt::cols_align("left", columns = c(department_f, female_f)) |>
+  gt::cols_align("right", columns = c(n, admitted, not_admitted, admission_rate, odds)) |>
+  gt::cols_width(
+    department_f ~ gt::pct(17),
+    female_f ~ gt::pct(14),
+    n ~ gt::pct(8),
+    admitted ~ gt::pct(14),
+    not_admitted ~ gt::pct(16),
+    admission_rate ~ gt::pct(18),
+    odds ~ gt::pct(13)
+  ) |>
+  gt::tab_options(table.width = gt::pct(100))
 ```
 
-:::
-
-#### Code Explanation
+Department matters for two reasons. First, departments differ sharply in admission rates. Second, the gender composition of applicant pools differs across departments. That is exactly the setup in which a collapsed gender comparison can be misleading.
 
 ```{r}
-#| label: hw08-p1-explain
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| eval: false
+#| label: hw08-p1-check
+#| include: false
 
-# --- Three-way frequency tables in R ---
+count_key <- berk |>
+  mutate(key = paste(department, admitted, female, sep = "_")) |>
+  count(key) |>
+  tibble::deframe()
 
-# Method 1: ftable() produces a "flat" contingency table
-ftable(xtabs(~ department + admitted + female, data = berk))
+expected_counts <- c(
+  "1_0_0" = 207, "1_0_1" = 8,   "1_1_0" = 353, "1_1_1" = 17,
+  "2_0_0" = 205, "2_0_1" = 391, "2_1_0" = 120, "2_1_1" = 202,
+  "3_0_0" = 279, "3_0_1" = 244, "3_1_0" = 138, "3_1_1" = 131,
+  "4_0_0" = 138, "4_0_1" = 299, "4_1_0" = 53,  "4_1_1" = 94,
+  "5_0_0" = 351, "5_0_1" = 317, "5_1_0" = 22,  "5_1_1" = 24
+)
 
-# Method 2: table() with three variables
-table(berk$department, berk$admitted, berk$female)
-
-# Method 3: tidyverse approach with count()
-berk |>
-  count(department, admitted, female) |>
-  pivot_wider(names_from = female, values_from = n)
+stopifnot(identical(
+  as.integer(count_key[names(expected_counts)]),
+  as.integer(expected_counts)
+))
+stopifnot(abs(dept_rates$admission_rate[dept_rates$department_f == "Dept 1" & dept_rates$female_f == "Male"] - 353 / 560) < 1e-12)
+stopifnot(abs(dept_rates$admission_rate[dept_rates$department_f == "Dept 1" & dept_rates$female_f == "Female"] - 17 / 25) < 1e-12)
 ```
 
-The `ftable()` function wraps `xtabs()` output into a compact flat format. The formula `~ department + admitted + female` specifies the three classification variables. The `xtabs()` function creates a multi-dimensional contingency table, and `ftable()` flattens it for display.
 
-:::
-
-
-## Problem 2 {#sec-hw08-p2}
+## Problem 2
 
 ### Problem Statement
 
@@ -214,677 +186,552 @@ The `ftable()` function wraps `xtabs()` output into a compact flat format. The f
 
 ### Solution
 
-::: {.panel-tabset}
-
-#### Solution
-
-We collapse the three-way table by summing across all departments to produce a marginal two-way table of admission by gender.
-
 ```{r}
-#| label: tbl-hw08-p2-marginal
-#| tbl-cap: "Marginal Two-Way Table: Admission by Gender (Collapsed over Departments)"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw08-p2-collapsed-table
 
-# Two-way table collapsed over departments
-marginal <- berk |>
-  count(admitted_f, female_f) |>
-  tidyr::pivot_wider(
-    names_from = female_f,
-    values_from = n
-  )
-
-knitr::kable(
-  marginal,
-  col.names = c("Admission Status", "Male", "Female"),
-  align = c("l", "r", "r")
-)
-```
-
-From this table:
-
-| | Male | Female |
-|---|---:|---:|
-| Not Admitted | 1180 | 1259 |
-| Admitted | 686 | 468 |
-
-The **marginal (unadjusted) odds ratio** compares the odds of admission for females to the odds of admission for males:
-
-$$
-\widehat{\text{OR}}_{\text{marginal}} = \frac{\text{Odds for females}}{\text{Odds for males}} = \frac{468 / 1259}{686 / 1180}
-$$
-
-```{r}
-#| label: hw08-p2-or
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# Compute the marginal (unadjusted) odds ratio
-odds_female <- 468 / 1259
-odds_male   <- 686 / 1180
-
-OR_marginal <- odds_female / odds_male
-
-cat("Odds of admission (female):", round(odds_female, 4), "\n")
-cat("Odds of admission (male):  ", round(odds_male, 4), "\n")
-cat("Marginal OR = ", round(odds_female, 4), "/",
-    round(odds_male, 4), "=", round(OR_marginal, 2), "\n")
-```
-
-$$
-\widehat{\text{OR}}_{\text{marginal}} = \frac{468 / 1259}{686 / 1180} = \frac{0.3717}{0.5814} = 0.64
-$$
-
-**Interpretation:** Ignoring department, the odds of being admitted are estimated to be **36% lower** for female applicants than for male applicants ($\widehat{\text{OR}} = 0.64$). This appears to suggest substantial gender bias against women in the admissions process.
-
-::: {.callout-warning}
-## But Is This the Whole Story?
-An odds ratio of $0.64$ looks alarming --- it suggests females are substantially disadvantaged. But this is a **marginal** (unadjusted) estimate that ignores the department to which applicants applied. As we will see in Problem 3, this conclusion changes dramatically once we account for department.
-:::
-
-#### Code Explanation
-
-```{r}
-#| label: hw08-p2-explain
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| eval: false
-
-# --- Computing a marginal odds ratio from a 2x2 table ---
-
-# Step 1: Create the two-way table
-tab_2way <- table(berk$admitted, berk$female)
-#         0 (Male)   1 (Female)
-# 0         1180       1259
-# 1          686        468
-
-# Step 2: Extract cell counts
-a <- tab_2way["1", "1"]   # Admitted & Female   = 468
-b <- tab_2way["0", "1"]   # Not Admitted & Female = 1259
-c <- tab_2way["1", "0"]   # Admitted & Male     = 686
-d <- tab_2way["0", "0"]   # Not Admitted & Male = 1180
-
-# Step 3: Compute odds ratio
-OR <- (a / b) / (c / d)
-# Equivalently: OR <- (a * d) / (b * c)
-```
-
-The odds ratio from a $2 \times 2$ table can also be computed using the cross-product formula: $\text{OR} = (ad) / (bc)$.
-
-:::
-
-
-## Problem 3 {#sec-hw08-p3}
-
-### Problem Statement
-
-> Fit a logistic regression of `admitted` on `female` and `department` (as a categorical variable). Report the odds ratios and interpret the coefficient of `female`.
-
-### Solution
-
-::: {.panel-tabset}
-
-#### Solution
-
-We fit a logistic regression model predicting admission from gender and department, treating department as a **categorical** (factor) variable with dummy indicators:
-
-$$
-\text{logit}[P(\text{admitted} = 1)] = \beta_0 + \beta_1 \cdot \text{female} + \beta_2 \cdot D_2 + \beta_3 \cdot D_3 + \beta_4 \cdot D_4 + \beta_5 \cdot D_5
-$$
-
-where $D_2, D_3, D_4, D_5$ are dummy variables for departments 2--5 (department 1 is the reference category).
-
-::: {.callout-warning}
-## Department Must Be Treated as Categorical
-The `department` variable is coded 1--5, but these numbers are **labels**, not meaningful quantities. Using `department` as a continuous predictor would assume a linear trend in log-odds across departments --- a nonsensical assumption. Always use `factor(department)` to create proper dummy variables.
-:::
-
-```{r}
-#| label: hw08-p3-model
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# Fit logistic regression with department as factor
-model_adj <- glm(
-  admitted ~ female + factor(department),
-  family = binomial(link = "logit"),
-  data = berk
-)
-
-# Model summary
-summary(model_adj)
-```
-
-```{r}
-#| label: tbl-hw08-p3-or
-#| tbl-cap: "Odds Ratios from Logistic Regression: admitted ~ female + factor(department)"
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# Extract odds ratios with confidence intervals
-or_table <- model_adj |>
-  broom::tidy(conf.int = TRUE, exponentiate = TRUE) |>
-  mutate(across(where(is.numeric), \(x) round(x, 4)))
-
-knitr::kable(
-  or_table,
-  col.names = c("Term", "OR", "SE", "z", "p-value", "95% CI Lower", "95% CI Upper"),
-  align = c("l", rep("r", 6)),
-  digits = 4
-)
-```
-
-**Key results (odds ratios):**
-
-| Term | OR | $z$ | $p$ | 95% CI |
-|---|---:|---:|---:|---|
-| female | 0.9698 | $-0.35$ | 0.724 | [0.818, 1.150] |
-| department 2 | 0.3198 | $-9.35$ | $< 0.001$ | |
-| department 3 | 0.3028 | $-9.97$ | $< 0.001$ | |
-| department 4 | 0.1993 | $-11.58$ | $< 0.001$ | |
-| department 5 | 0.0405 | $-17.93$ | $< 0.001$ | |
-| (Intercept) | 1.7232 | 6.34 | $< 0.001$ | |
-
-**Model fit:** $N = 3{,}593$, LR $\chi^2(5) = 536.90$, Pseudo $R^2 = 0.1190$.
-
-**Interpretation of the female coefficient:**
-
-$$
-\widehat{\text{OR}}_{\text{female}} = 0.97, \quad z = -0.35, \quad p = 0.724
-$$
-
-After controlling for department, the odds of admission for female applicants are estimated to be **0.97 times** the odds for male applicants --- essentially identical. The $z$-statistic of $-0.35$ yields $p = 0.724$, which is far from significant at any conventional level. We **cannot reject** the null hypothesis that the odds of admission are the same for females and males, after adjusting for department.
-
-This is a dramatic reversal from the marginal OR of $0.64$ found in Problem 2!
-
-**Interpretation of department coefficients:**
-
-The department odds ratios show large differences in admission rates across departments (relative to Department 1, the reference):
-
-- Department 2: $\widehat{\text{OR}} = 0.32$ --- odds of admission are about one-third those of Department 1
-- Department 5: $\widehat{\text{OR}} = 0.04$ --- odds are only 4% of Department 1
-
-These large department effects confirm that departments vary enormously in their selectivity, which is the root cause of the confounding.
-
-```{r}
-#| label: hw08-p3-fit
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# Model fit statistics
-cat("Log-Likelihood:", round(logLik(model_adj), 2), "\n")
-
-# Null model for LR test
-model_null <- glm(admitted ~ 1, family = binomial, data = berk)
-lr_test <- anova(model_null, model_adj, test = "Chisq")
-cat("LR chi2(5):", round(lr_test$Deviance[2], 2), "\n")
-
-# Pseudo R-squared (McFadden)
-pseudo_r2 <- 1 - (logLik(model_adj) / logLik(model_null))
-cat("McFadden Pseudo R²:", round(as.numeric(pseudo_r2), 4), "\n")
-```
-
-#### Code Explanation
-
-```{r}
-#| label: hw08-p3-explain
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| eval: false
-
-# --- Logistic regression with categorical predictors in R ---
-
-# CORRECT: Use factor() for categorical variables
-model_adj <- glm(
-  admitted ~ female + factor(department),
-  family = binomial(link = "logit"),
-  data = berk
-)
-
-# Extract odds ratios (exponentiate = TRUE)
-broom::tidy(model_adj, conf.int = TRUE, exponentiate = TRUE)
-
-# WRONG: Do NOT treat department as continuous
-# model_wrong <- glm(admitted ~ female + department,
-#                     family = binomial, data = berk)
-# This assumes a linear trend in log-odds across departments,
-# which makes no sense for nominal categories.
-
-# Stata equivalent:
-# logit admitted female i.department, or
-# The i. prefix in Stata is equivalent to factor() in R.
-```
-
-The key R function is `glm()` with `family = binomial(link = "logit")`. Using `factor(department)` tells R to create dummy indicators ($k - 1 = 4$ dummies for 5 departments). Setting `exponentiate = TRUE` in `broom::tidy()` converts log-odds coefficients to odds ratios.
-
-:::
-
-
-## Problem 4 {#sec-hw08-p4}
-
-### Problem Statement
-
-> Contrast the odds ratio for `female` from Problem 3 with the odds ratio from Problem 2. Explain why they differ so dramatically.
-
-### Solution
-
-::: {.panel-tabset}
-
-#### Solution
-
-**The two odds ratios:**
-
-| | OR for Female | Interpretation |
-|---|---:|---|
-| Problem 2 (unadjusted) | 0.64 | 36% lower odds for females |
-| Problem 3 (adjusted for department) | 0.97 | No meaningful difference |
-
-This is a textbook example of **Simpson's Paradox**: the direction (or magnitude) of an association between two variables reverses or disappears when a third variable is taken into account.
-
-::: {.callout-important}
-## Simpson's Paradox
-**Simpson's Paradox** occurs when a trend that appears in aggregated data reverses or vanishes when the data are disaggregated by a confounding variable. In this case:
-
-- **Aggregated (marginal):** Females appear to have substantially lower admission odds ($\text{OR} = 0.64$).
-- **Disaggregated (conditional on department):** Females have nearly identical admission odds ($\text{OR} = 0.97$).
-
-The paradox arises because department is a **confounder** --- it is associated with both gender and the outcome (admission).
-:::
-
-**Why does department confound the gender--admission relationship?**
-
-For a variable to be a confounder, it must satisfy two conditions:
-
-1. **Departments differ in the proportion of female applicants.** Women disproportionately applied to more selective departments (Departments 2, 4, and 5), while men disproportionately applied to less selective departments (Department 1).
-
-2. **Departments differ in admission rates.** Department 1 admits about 63--68% of applicants, while Departments 4 and 5 admit only about 25% and 6%, respectively.
-
-The combination of these two facts creates the illusion of gender bias in the aggregated data. Women are not being rejected *because* they are women; they are being rejected because they applied to departments that reject most applicants regardless of gender.
-
-::: {.panel-tabset group="fig-hw08-p4-simpsons"}
-
-##### Simple
-
-```{r}
-#| label: fig-hw08-p4-simpsons-simple
-#| fig-cap: "Simpson's Paradox: Admission Rates by Department and Gender (Simple)"
-#| fig-alt: "Grouped bar chart showing admission rates by department and gender. Within most departments, male and female admission rates are similar. However, departments with high admission rates (like Department 1) have mostly male applicants, while departments with low rates (like Department 5) have more balanced gender ratios."
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| fig-width: 9
-#| fig-height: 6
-
-# Simple: Admission rates by department and gender
-admit_rates <- berk |>
-  group_by(department_f, female_f) |>
-  summarize(rate = mean(admitted), .groups = "drop")
-
-ggplot(admit_rates, aes(x = department_f, y = rate, fill = female_f)) +
-  geom_col(position = "dodge") +
-  labs(x = "Department", y = "Admission Rate",
-       fill = "Gender", title = "Admission Rates by Department and Gender") +
-  scale_y_continuous(labels = scales::percent)
-```
-
-##### Detailed
-
-```{r}
-#| label: fig-hw08-p4-simpsons
-#| fig-cap: "Simpson's Paradox: Admission Rates by Department and Gender"
-#| fig-alt: "Grouped bar chart of admission rates with horizontal reference lines showing overall rates. The marginal male rate (37 percent) exceeds the marginal female rate (27 percent), but within each department the rates are similar. This is Simpson's Paradox: the aggregate association reverses direction after conditioning on department."
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| fig-width: 9
-#| fig-height: 6
-
-# Calculate admission rates by department and gender
-admit_rates <- berk |>
-  group_by(department_f, female_f) |>
+aggregate_by_gender <- berk |>
+  group_by(female_f) |>
   summarise(
     n = n(),
     admitted = sum(admitted),
-    rate = mean(admitted),
+    not_admitted = n - admitted,
+    admission_rate = admitted / n,
+    odds = admitted / not_admitted,
     .groups = "drop"
   )
 
-# Also compute overall rates by gender
-overall_rates <- berk |>
-  group_by(female_f) |>
-  summarise(
-    rate = mean(admitted),
-    .groups = "drop"
-  )
-
-# Plot admission rates by department and gender
-ggplot(admit_rates, aes(x = department_f, y = rate, fill = female_f)) +
-  geom_col(position = "dodge", width = 0.7) +
-  geom_hline(
-    data = overall_rates,
-    aes(yintercept = rate, color = female_f, linetype = female_f),
-    linewidth = 1
-  ) +
-  scale_fill_manual(
-    values = c("Male" = ber640_colors["primary"],
-               "Female" = ber640_colors["secondary"]),
-    name = "Gender"
-  ) +
-  scale_color_manual(
-    values = c("Male" = ber640_colors["primary"],
-               "Female" = ber640_colors["secondary"]),
-    name = "Gender"
-  ) +
-  scale_linetype_manual(
-    values = c("Male" = "dashed", "Female" = "dashed"),
-    name = "Gender"
-  ) +
-  scale_y_continuous(labels = scales::percent_format(), limits = c(0, 0.75)) +
-  labs(
-    title = "Simpson's Paradox in Berkeley Admissions",
-    subtitle = "Within departments, admission rates are similar; overall, females appear disadvantaged",
-    x = "Department",
-    y = "Admission Rate",
-    caption = "Dashed lines = overall (marginal) admission rate by gender"
-  ) +
-  annotate(
-    "text", x = 5.4, y = overall_rates$rate[1] + 0.02,
-    label = paste0("Male overall: ", round(100 * overall_rates$rate[1], 1), "%"),
-    hjust = 1, size = 3.5, color = ber640_colors["primary"]
-  ) +
-  annotate(
-    "text", x = 5.4, y = overall_rates$rate[2] - 0.02,
-    label = paste0("Female overall: ", round(100 * overall_rates$rate[2], 1), "%"),
-    hjust = 1, size = 3.5, color = ber640_colors["secondary"]
-  )
+aggregate_by_gender |>
+  round_numeric(digits = 4)
 ```
 
+```{r}
+#| label: hw08-p2-crude-or
+
+odds_female <- aggregate_by_gender$odds[aggregate_by_gender$female_f == "Female"]
+odds_male <- aggregate_by_gender$odds[aggregate_by_gender$female_f == "Male"]
+crude_or <- odds_female / odds_male
+
+tibble(
+  comparison = "Female vs male, ignoring department",
+  odds_female = odds_female,
+  odds_male = odds_male,
+  odds_ratio = crude_or,
+  percent_change_in_odds = 100 * (crude_or - 1)
+) |>
+  round_numeric(digits = 4)
+```
+
+The crude odds ratio is:
+
+$$
+\widehat{\text{OR}}_{\text{crude}}
+= \frac{468 / 1259}{686 / 1180}
+= 0.64.
+$$
+
+Ignoring department, female applicants have estimated admission odds about 36% lower than male applicants. This is the aggregate comparison; it has not adjusted for the department to which applicants applied.
+
+::: {.callout-warning}
+## Why This Is Only a First Look
+The crude odds ratio compares all female applicants to all male applicants after pooling departments together. If department is associated with both gender and admission, this pooled comparison mixes the gender comparison with department composition.
 :::
 
 ```{r}
-#| label: tbl-hw08-p4-rates
-#| tbl-cap: "Admission Rates and Applicant Composition by Department"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw08-p2-check
+#| include: false
 
-# Summary table showing the confounding mechanism
-dept_summary <- berk |>
-  group_by(department_f) |>
-  summarise(
-    n_total = n(),
-    pct_female = round(100 * mean(female), 1),
-    admit_rate_male = round(100 * mean(admitted[female == 0]), 1),
-    admit_rate_female = round(100 * mean(admitted[female == 1]), 1),
-    admit_rate_overall = round(100 * mean(admitted), 1),
-    .groups = "drop"
-  )
-
-knitr::kable(
-  dept_summary,
-  col.names = c("Department", "N", "% Female", "Male Admit %",
-                "Female Admit %", "Overall Admit %"),
-  align = c("l", rep("r", 5))
-)
+stopifnot(aggregate_by_gender$not_admitted[aggregate_by_gender$female_f == "Male"] == 1180)
+stopifnot(aggregate_by_gender$not_admitted[aggregate_by_gender$female_f == "Female"] == 1259)
+stopifnot(aggregate_by_gender$admitted[aggregate_by_gender$female_f == "Male"] == 686)
+stopifnot(aggregate_by_gender$admitted[aggregate_by_gender$female_f == "Female"] == 468)
+stopifnot(abs(crude_or - 0.6394079247) < 1e-10)
 ```
 
-The table above makes the confounding mechanism transparent:
 
-- **Department 1** has the highest admission rate ($\approx 66\%$) but only about $4\%$ female applicants.
-- **Departments 2, 4, 5** have low admission rates ($\leq 37\%$) but high proportions of female applicants.
-
-When we collapse over departments, we are comparing men (who cluster in easy-to-enter departments) with women (who cluster in hard-to-enter departments). The apparent gender gap is actually a **department-selection** gap.
-
-#### Code Explanation
-
-```{r}
-#| label: hw08-p4-explain
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| eval: false
-
-# --- Diagnosing confounding: compare adjusted vs. unadjusted estimates ---
-
-# Unadjusted (marginal) model
-model_unadj <- glm(admitted ~ female, family = binomial, data = berk)
-exp(coef(model_unadj)["female"])  # OR ≈ 0.64
-
-# Adjusted model (controlling for department)
-model_adj <- glm(admitted ~ female + factor(department),
-                 family = binomial, data = berk)
-exp(coef(model_adj)["female"])    # OR ≈ 0.97
-
-# The large change in the OR from 0.64 to 0.97 upon adding department
-# is strong evidence that department confounds the gender-admission relationship.
-```
-
-The hallmark of confounding is a substantial change in the estimated effect when the confounder is included in the model. Here, the OR changes from $0.64$ to $0.97$ --- a complete reversal of the practical conclusion.
-
-:::
-
-
-## Problem 5 {#sec-hw08-p5}
+## Problem 3
 
 ### Problem Statement
 
-> Conduct a Wald test for the coefficient of `female` in the model from Problem 3. Interpret the result.
+> Fit a logistic regression of `admitted` on `female` and `department` as a categorical variable. Report the odds ratios and interpret the coefficient of `female`.
 
 ### Solution
 
-::: {.panel-tabset}
+Department is a set of labels, not a numeric scale. In R, use `factor(department)` so the model creates dummy variables for departments 2--5, with department 1 as the reference group.
 
-#### Solution
+```{r}
+#| label: hw08-p3-adjusted-model
 
-The **Wald test** for a single coefficient tests:
+model_adjusted <- glm(
+  admitted ~ female + factor(department),
+  data = berk,
+  family = binomial
+)
+
+adjusted_or_table <- model_params(
+  model_adjusted,
+  exponentiate = TRUE,
+  ci_method = "wald"
+) |>
+  as_tibble() |>
+  mutate(
+    Parameter = dplyr::recode(
+      Parameter,
+      `(Intercept)` = "Baseline odds: Dept 1 male",
+      female = "Female vs male",
+      `factor(department)2` = "Dept 2 vs Dept 1",
+      `factor(department)3` = "Dept 3 vs Dept 1",
+      `factor(department)4` = "Dept 4 vs Dept 1",
+      `factor(department)5` = "Dept 5 vs Dept 1"
+    ),
+    p = format_p(p)
+  ) |>
+  rename(Odds_ratio = Coefficient) |>
+  select(Parameter, Odds_ratio, SE, CI_low, CI_high, z, p)
+
+adjusted_or_table |>
+  round_numeric(digits = 4) |>
+  rename(`Baseline odds or odds ratio` = Odds_ratio) |>
+  knitr::kable(
+    col.names = c(
+      "Term",
+      "Baseline odds or odds ratio",
+      "Log-odds SE",
+      "CI lower",
+      "CI upper",
+      "z",
+      "p"
+    ),
+    align = c("l", "r", "r", "r", "r", "r", "r"),
+    caption = "Adjusted logistic regression odds ratios by gender and department."
+  )
+```
+
+The table above is built from `model_params()` so we can relabel terms and match the Stata-style answer key. For a report-ready regression table, `gtsummary::tbl_regression()` can format the same adjusted model in one short call:
+
+```{r}
+#| label: hw08-p3-gtsummary-table
+#| message: false
+#| warning: false
+
+gtsummary::tbl_regression(
+  model_adjusted,
+  exponentiate = TRUE,
+  label = list(female ~ "Female vs male")
+) |>
+  gtsummary::bold_labels()
+```
+
+```{r}
+#| label: hw08-p3-model-fit
+
+model_null <- glm(admitted ~ 1, data = berk, family = binomial)
+lr_chisq <- as.numeric(deviance(model_null) - deviance(model_adjusted))
+lr_df <- attr(logLik(model_adjusted), "df") - attr(logLik(model_null), "df")
+
+adjusted_fit <- tibble(
+  n = nobs(model_adjusted),
+  log_likelihood = as.numeric(logLik(model_adjusted)),
+  lr_chisq = lr_chisq,
+  df = lr_df,
+  p = format_p(pchisq(lr_chisq, df = lr_df, lower.tail = FALSE)),
+  pseudo_r2 = 1 - as.numeric(logLik(model_adjusted) / logLik(model_null))
+)
+
+adjusted_fit |>
+  round_numeric(digits = 4)
+```
+
+The adjusted odds ratio for `female` is:
 
 $$
-H_0: \beta_{\text{female}} = 0 \quad \text{vs.} \quad H_a: \beta_{\text{female}} \neq 0
+\widehat{\text{OR}}_{\text{female} \mid \text{department}} = 0.97,
+\qquad
+95\% \ \text{CI} = [0.82, 1.15],
+\qquad
+p = 0.724.
 $$
 
-The test statistic is the $z$-ratio from the logistic regression output:
+Holding department constant, the estimated odds of admission for female applicants are about 0.97 times the odds for male applicants. This is very close to 1, and the confidence interval includes 1. The adjusted model therefore does not provide evidence that female and male applicants had different admission odds after accounting for department.
+
+::: {.callout-warning}
+## Do Not Treat Department as Continuous
+The values 1, 2, 3, 4, and 5 are department codes. A model with `+ department` would assume a constant log-odds change from department 1 to 2, 2 to 3, and so on. That is not meaningful for nominal department labels.
+:::
+
+```{r}
+#| label: hw08-p3-check
+#| include: false
+
+or_key <- adjusted_or_table |>
+  select(Parameter, Odds_ratio, SE, CI_low, CI_high, z) |>
+  tibble::column_to_rownames("Parameter")
+
+stopifnot(abs(or_key["Female vs male", "Odds_ratio"] - 0.9697744) < 1e-7)
+stopifnot(abs(or_key["Female vs male", "SE"] - 0.0841372) < 1e-7)
+stopifnot(abs(or_key["Female vs male", "CI_low"] - 0.8181272) < 1e-7)
+stopifnot(abs(or_key["Female vs male", "CI_high"] - 1.149531) < 1e-6)
+stopifnot(abs(or_key["Female vs male", "z"] + 0.3537573) < 1e-7)
+stopifnot(abs(or_key["Dept 2 vs Dept 1", "Odds_ratio"] - 0.3197945) < 1e-7)
+stopifnot(abs(or_key["Dept 5 vs Dept 1", "Odds_ratio"] - 0.0405479) < 1e-7)
+stopifnot(nobs(model_adjusted) == 3593)
+stopifnot(abs(as.numeric(logLik(model_adjusted)) + 1987.0756) < 1e-4)
+stopifnot(abs(lr_chisq - 536.9016) < 1e-4)
+stopifnot(abs(adjusted_fit$pseudo_r2 - 0.1190191) < 1e-7)
+```
+
+
+## Problem 4
+
+### Problem Statement
+
+> Contrast the odds ratio from Problem 3 with the odds ratio from Problem 2 and explain why they differ so much.
+
+### Solution
+
+```{r}
+#| label: hw08-p4-or-comparison
+
+model_unadjusted <- glm(admitted ~ female, data = berk, family = binomial)
+
+crude_model_or <- model_params(
+  model_unadjusted,
+  exponentiate = TRUE,
+  ci_method = "wald"
+) |>
+  as_tibble() |>
+  filter(Parameter == "female") |>
+  transmute(
+    model = "Crude: female only",
+    odds_ratio = Coefficient,
+    CI_low,
+    CI_high,
+    p = format_p(p)
+  )
+
+adjusted_female_or <- adjusted_or_table |>
+  filter(Parameter == "Female vs male") |>
+  transmute(
+    model = "Adjusted: female + department",
+    odds_ratio = Odds_ratio,
+    CI_low,
+    CI_high,
+    p
+  )
+
+or_comparison <- bind_rows(crude_model_or, adjusted_female_or)
+
+or_comparison |>
+  round_numeric(digits = 4)
+```
+
+For a compact side-by-side report table, `modelsummary::modelsummary()` can show the crude and adjusted female odds ratios with one model list:
+
+```{r}
+#| label: hw08-p4-modelsummary-comparison
+#| message: false
+#| warning: false
+#| results: asis
+
+modelsummary::modelsummary(
+  list("Crude" = model_unadjusted, "Adjusted" = model_adjusted),
+  exponentiate = TRUE,
+  coef_map = c("female" = "Female vs male"),
+  statistic = "conf.int",
+  fmt = 3,
+  gof_omit = "AIC|BIC|Log.Lik|RMSE|F|R2",
+  output = "markdown"
+)
+```
+
+```{r}
+#| label: fig-hw08-crude-adjusted-or
+#| fig-cap: "Crude and department-adjusted odds ratios for female applicants. The crude odds ratio is below 1, while the adjusted odds ratio is close to 1."
+#| fig-alt: "Forest plot comparing two odds ratios for female applicants. The crude female odds ratio is about 0.64, below the null line at 1. The department-adjusted odds ratio is about 0.97 and its confidence interval crosses 1."
+#| fig-width: 7
+#| fig-height: 3.8
+#| echo: false
+
+ggplot(or_comparison, aes(x = odds_ratio, y = model)) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "grey45") +
+  geom_errorbarh(aes(xmin = CI_low, xmax = CI_high), height = 0.15) +
+  geom_point(size = 3, color = ber640_colors["primary"]) +
+  geom_text(
+    aes(label = sprintf("OR = %.2f", odds_ratio)),
+    nudge_y = 0.18,
+    size = 4
+  ) +
+  scale_x_log10(
+    breaks = c(0.5, 0.64, 0.8, 1, 1.15),
+    labels = scales::number_format(accuracy = 0.01),
+    limits = c(0.5, 1.25)
+  ) +
+  labs(
+    x = "Odds Ratio for Female Applicants (log scale)",
+    y = NULL
+  )
+```
+
+The crude OR is about 0.64, suggesting lower admission odds for female applicants when departments are ignored. The adjusted OR is about 0.97, suggesting nearly equal admission odds after conditioning on department.
+
+This difference is Simpson's paradox. Department is a confounder because it is associated with both:
+
+- **gender composition:** department 1 has a very small female share, while departments 2 and 4 have much larger female shares;
+- **admission probability:** department 1 has a high admission rate, while departments 4 and 5 have low admission rates.
+
+When departments are collapsed, applicant gender is partly standing in for department choice. The adjusted model separates the gender comparison from department differences.
+
+```{r}
+#| label: hw08-p4-department-summary
+
+department_summary <- berk |>
+  group_by(department_f) |>
+  summarise(
+    n = n(),
+    percent_female = 100 * mean(female),
+    admit_rate_male = 100 * mean(admitted[female == 0]),
+    admit_rate_female = 100 * mean(admitted[female == 1]),
+    admit_rate_overall = 100 * mean(admitted),
+    .groups = "drop"
+  )
+
+department_summary |>
+  round_numeric(digits = 1)
+```
+
+```{r}
+#| label: hw08-p4-check
+#| include: false
+
+stopifnot(abs(crude_model_or$odds_ratio - crude_or) < 1e-10)
+stopifnot(abs(adjusted_female_or$odds_ratio - 0.9697744) < 1e-7)
+stopifnot(abs(department_summary$percent_female[department_summary$department_f == "Dept 1"] - 100 * 25 / 585) < 1e-10)
+stopifnot(abs(department_summary$admit_rate_overall[department_summary$department_f == "Dept 5"] - 100 * 46 / 714) < 1e-10)
+```
+
+
+## Problem 5
+
+### Problem Statement
+
+> Conduct a Wald test for the coefficient of `female`. Interpret.
+
+### Solution
+
+The Wald test for a single coefficient tests:
 
 $$
-z = \frac{\hat{\beta}_{\text{female}}}{\text{SE}(\hat{\beta}_{\text{female}})} = -0.35
+H_0: \beta_{\text{female}} = 0.
 $$
 
-This $z$-statistic can equivalently be expressed as a chi-square statistic with 1 degree of freedom:
+For one coefficient, the Wald test can be reported as a $z$ test or as a one-degree-of-freedom chi-square test:
 
 $$
-X^2_{\text{Wald}}(1) = z^2 = (-0.35)^2 = 0.12, \quad p = 0.724
+X^2(1) = z^2.
 $$
 
 ```{r}
 #| label: hw08-p5-wald
-#| code-fold: true
-#| code-summary: "Show R Code"
 
-# Extract Wald z-test from model output
-coef_female <- broom::tidy(model_adj) |>
-  filter(term == "female")
+female_logit <- model_params(
+  model_adjusted,
+  exponentiate = FALSE,
+  ci_method = "wald"
+) |>
+  as_tibble() |>
+  filter(Parameter == "female")
 
-cat("Wald test for female coefficient:\n")
-cat("  z =", round(coef_female$statistic, 2), "\n")
-cat("  p =", round(coef_female$p.value, 4), "\n")
-cat("  chi2(1) = z² =", round(coef_female$statistic^2, 2), "\n")
+wald_female <- female_logit |>
+  transmute(
+    term = "female",
+    log_odds_coefficient = Coefficient,
+    SE,
+    z,
+    chi_square = z^2,
+    df = 1,
+    p = format_p(p)
+  )
+
+wald_female |>
+  round_numeric(digits = 4)
 ```
+
+The Wald test gives:
+
+$$
+z = -0.35,
+\qquad
+X^2(1) = 0.12,
+\qquad
+p = 0.724.
+$$
+
+We do not reject the null hypothesis that the adjusted log-odds coefficient for `female` is zero. This is the hypothesis-test version of the odds-ratio interpretation from Problem 3.
 
 ```{r}
-#| label: hw08-p5-car
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw08-p5-check
+#| include: false
 
-# Wald test using car::Anova (Type II)
-car::Anova(model_adj, type = "II", test.statistic = "Wald")
+stopifnot(abs(wald_female$z + 0.3537573) < 1e-7)
+stopifnot(abs(wald_female$chi_square - 0.1251442) < 1e-7)
+stopifnot(female_logit$p > 0.72 & female_logit$p < 0.73)
 ```
 
-**Interpretation:** The Wald test yields $z = -0.35$ (equivalently, $\chi^2(1) = 0.12$), with $p = 0.724$. At any conventional significance level ($\alpha = 0.05$ or $0.10$), we **cannot reject** the null hypothesis that the odds of admission are the same for females and males, after controlling for department.
 
-This result is consistent with the odds ratio of $0.97$ from Problem 3 --- the 95% confidence interval for the OR includes 1.0, indicating no statistically significant gender effect.
-
-#### Code Explanation
-
-```{r}
-#| label: hw08-p5-explain
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| eval: false
-
-# --- Wald test in R ---
-
-# Method 1: From the summary output (z-test)
-summary(model_adj)$coefficients["female", ]
-# The "z value" column is the Wald z-statistic
-# The "Pr(>|z|)" column is the two-sided p-value
-
-# Method 2: Using car::Anova for a chi-square version
-car::Anova(model_adj, type = "II", test.statistic = "Wald")
-# Reports the Wald chi-square statistic: chi2 = z²
-
-# The z-test and chi-square test are equivalent for a single coefficient:
-# chi2(1) = z² = (-0.35)² = 0.12
-# Both give p = 0.724
-```
-
-The `car::Anova()` function with `test.statistic = "Wald"` provides a Wald $\chi^2$ test for each term. For a single binary predictor like `female` (1 df), the Wald $\chi^2$ is simply the square of the $z$-statistic from the coefficient table.
-
-:::
-
-
-## Problem 6 {#sec-hw08-p6}
+## Problem 6
 
 ### Problem Statement
 
-> Test the goodness of fit of the model from Problem 3. Interpret the result.
+> Test the goodness of fit of the model. Interpret.
 
 ### Solution
 
-::: {.panel-tabset}
+Because both predictors are categorical, the data have 10 covariate patterns: 5 departments crossed with 2 gender groups. Stata's `estat gof, table` computes observed and expected admissions within those 10 patterns.
 
-#### Solution
-
-For logistic regression with categorical predictors, the **Pearson goodness-of-fit test** compares observed and expected frequencies across the **covariate patterns** (unique combinations of predictor values). When all predictors are categorical, the number of covariate patterns is small and the Pearson $\chi^2$ test is well-defined.
-
-With 5 departments $\times$ 2 genders = 10 covariate patterns and 6 estimated parameters ($\beta_0, \beta_1, \ldots, \beta_5$), the residual degrees of freedom are:
-
-$$
-\text{df} = \text{covariate patterns} - \text{parameters} = 10 - 6 = 4
-$$
-
-The null hypothesis is that the model fits the data adequately. A significant result would indicate **lack of fit**, suggesting that additional terms (such as interactions) are needed.
+Within each gender-department pattern, every applicant has the same fitted probability because the adjusted model includes only `female` and `factor(department)`. The code below therefore uses `first(predicted_probability)` to keep one fitted probability per pattern.
 
 ```{r}
-#| label: hw08-p6-gof
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw08-p6-gof-table
 
-# Pearson goodness-of-fit test (replicates Stata's estat gof)
-# With 10 covariate patterns (5 depts × 2 genders) and 6 parameters,
-# df = 10 - 6 = 4. Verified to match Stata: chi2(4) = 2.56, p = 0.6342
-pearson_chisq <- sum(residuals(model_adj, type = "pearson")^2)
-df_gof <- 10 - length(coef(model_adj))  # 10 covariate patterns - 6 parameters = 4
+gof_table <- berk |>
+  mutate(predicted_probability = fitted(model_adjusted)) |>
+  group_by(female, department) |>
+  summarise(
+    predicted_probability = first(predicted_probability),
+    observed_admitted = sum(admitted),
+    observed_not_admitted = sum(1 - admitted),
+    total = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    expected_admitted = total * predicted_probability,
+    expected_not_admitted = total * (1 - predicted_probability),
+    pearson_component =
+      (observed_admitted - expected_admitted)^2 / expected_admitted +
+      (observed_not_admitted - expected_not_admitted)^2 / expected_not_admitted
+  ) |>
+  arrange(predicted_probability) |>
+  mutate(group = row_number(), .before = 1)
+
+gof_table |>
+  mutate(
+    gender = if_else(female == 1, "Female", "Male"),
+    department_label = paste("Dept", department)
+  ) |>
+  select(
+    group,
+    department_label,
+    gender,
+    predicted_probability,
+    observed_admitted,
+    expected_admitted,
+    observed_not_admitted,
+    expected_not_admitted,
+    total
+  ) |>
+  round_numeric(digits = 4) |>
+  gt::gt() |>
+  gt::cols_label(
+    group = "Group",
+    department_label = "Dept.",
+    gender = "Gender",
+    predicted_probability = gt::md("Predicted<br>prob."),
+    observed_admitted = "Observed",
+    expected_admitted = "Expected",
+    observed_not_admitted = "Observed",
+    expected_not_admitted = "Expected",
+    total = "Total"
+  ) |>
+  gt::tab_spanner("Admitted", columns = c(observed_admitted, expected_admitted)) |>
+  gt::tab_spanner("Not admitted", columns = c(observed_not_admitted, expected_not_admitted)) |>
+  gt::fmt_number(columns = c(group, observed_admitted, observed_not_admitted, total), decimals = 0, use_seps = FALSE) |>
+  gt::fmt_number(columns = c(predicted_probability, expected_admitted, expected_not_admitted), decimals = 4) |>
+  gt::cols_align("left", columns = c(department_label, gender)) |>
+  gt::cols_align(
+    "right",
+    columns = c(
+      group,
+      predicted_probability,
+      observed_admitted,
+      expected_admitted,
+      observed_not_admitted,
+      expected_not_admitted,
+      total
+    )
+  ) |>
+  gt::cols_width(
+    group ~ gt::pct(7),
+    department_label ~ gt::pct(10),
+    gender ~ gt::pct(10),
+    predicted_probability ~ gt::pct(15),
+    observed_admitted ~ gt::pct(11),
+    expected_admitted ~ gt::pct(12),
+    observed_not_admitted ~ gt::pct(12),
+    expected_not_admitted ~ gt::pct(13),
+    total ~ gt::pct(8)
+  ) |>
+  gt::tab_options(table.width = gt::pct(100)) |>
+  gt::tab_caption("Observed and expected admissions by gender-department pattern.")
+```
+
+```{r}
+#| label: hw08-p6-gof-summary
+
+pearson_chisq <- sum(gof_table$pearson_component)
+df_gof <- nrow(gof_table) - length(coef(model_adjusted))
 p_gof <- pchisq(pearson_chisq, df = df_gof, lower.tail = FALSE)
 
-cat("Pearson Goodness-of-Fit Test:\n")
-cat("  Pearson chi2(", df_gof, ") =", round(pearson_chisq, 2), "\n")
-cat("  p-value =", round(p_gof, 4), "\n")
+gof_summary <- tibble(
+  statistic = "Grouped Pearson X2",
+  value = pearson_chisq,
+  df = df_gof,
+  p = format_p(p_gof)
+)
+
+gof_summary |>
+  round_numeric(digits = 4)
 ```
 
+The goodness-of-fit result is:
+
 $$
-\text{Pearson } \chi^2(4) = 2.56, \quad p = 0.6342
+X^2(4) = 2.56,
+\qquad
+p = 0.634.
 $$
 
-**Interpretation:** The Pearson goodness-of-fit test yields $\chi^2(4) = 2.56$ with $p = 0.6342$. Since $p > 0.05$, we have **no evidence of lack of fit**. The model with additive effects of gender and department fits the data adequately.
-
-**What would lack of fit mean?** If the goodness-of-fit test were significant, it would suggest that the additive model is insufficient --- specifically, that there is a **gender $\times$ department interaction**, meaning the gender effect varies across departments. Our non-significant result indicates no evidence for such an interaction.
+There is no evidence of lack of fit. In this categorical model, lack of fit would correspond to a gender-by-department interaction. The additive model with `female` plus department is adequate for these data.
 
 ::: {.callout-warning}
-## Degrees of Freedom Depend on How Department Is Modeled
-The degrees of freedom ($\text{df} = 4$) assume department is modeled correctly as a categorical variable with 4 dummy indicators. If we mistakenly treated department as a **continuous** predictor (only 1 parameter instead of 4), the model would have only 3 parameters, yielding $\text{df} = 10 - 3 = 7$. In that case, the Pearson $\chi^2$ would be much larger and the test would likely be significant --- not because of a real interaction, but because the model is misspecified. This underscores the importance of using `factor(department)`.
+## Grouped, Not Individual, Pearson Residuals
+For this Stata-style goodness-of-fit test, compute observed and expected counts by covariate pattern. Summing individual-level Pearson residuals is not the same test and does not reproduce `estat gof, table`.
 :::
 
 ```{r}
-#| label: hw08-p6-hosmer
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw08-p6-check
+#| include: false
 
-# Note: performance_hosmer() requires more than 10 covariate patterns
-# to form groups. With only 10 patterns (5 depts × 2 genders), we use
-# the manual Pearson chi-square instead, which is the appropriate test
-# for grouped data like this.
-
-cat("Manual Pearson goodness-of-fit test is the appropriate method\n")
-cat("for data with few covariate patterns (see code above).\n")
+stopifnot(nrow(gof_table) == 10)
+stopifnot(df_gof == 4)
+stopifnot(abs(pearson_chisq - 2.5581815) < 1e-7)
+stopifnot(abs(p_gof - 0.6342487) < 1e-7)
+stopifnot(abs(gof_table$predicted_probability[gof_table$group == 1] - 0.0635) < 1e-4)
+stopifnot(gof_table$observed_admitted[gof_table$group == 1] == 24)
+stopifnot(abs(gof_table$expected_admitted[gof_table$group == 10] - 354.4) < 0.1)
 ```
-
-#### Code Explanation
-
-```{r}
-#| label: hw08-p6-explain
-#| code-fold: true
-#| code-summary: "Show R Code"
-#| eval: false
-
-# --- Goodness-of-fit tests for logistic regression ---
-
-# Method 1: Manual Pearson chi-square
-pearson_resid <- residuals(model_adj, type = "pearson")
-pearson_chisq <- sum(pearson_resid^2)
-# df = number of covariate patterns - number of parameters
-df_gof <- 10 - 6  # 10 patterns (5 depts × 2 genders) - 6 parameters
-pchisq(pearson_chisq, df = df_gof, lower.tail = FALSE)
-
-# Method 2: Hosmer-Lemeshow test — not applicable here
-# performance::performance_hosmer() requires many covariate patterns
-# With only 10 patterns, the manual Pearson test above is correct
-
-# Method 3: Compare with interaction model (formal test of interaction)
-model_interact <- glm(
-  admitted ~ female * factor(department),
-  family = binomial, data = berk
-)
-anova(model_adj, model_interact, test = "Chisq")
-# A non-significant LR test confirms no interaction is needed.
-
-# Stata equivalent:
-# estat gof        (Pearson goodness-of-fit after logit)
-```
-
-The manual Pearson $\chi^2$ is computed as the sum of squared Pearson residuals. For grouped data (all categorical predictors), this directly tests model adequacy. The `performance::performance_hosmer()` function provides a Hosmer-Lemeshow variant that groups observations by predicted probability.
-
-:::
-
-
-::: {.callout-caution}
-## Common Mistake: Concluding "No Discrimination" from a Non-Significant Adjusted Effect
-The adjusted odds ratio of 0.97 ($p = .72$) tells us there is no *statistically detectable* gender effect after controlling for department in *these data*. This is not proof that no discrimination occurred — it means the data are consistent with equal admission odds after adjustment. Other forms of bias (e.g., discouraging women from applying to certain departments, or unmeasured confounders) are not captured by this model. Statistical non-significance is not evidence of absence.
-:::
 
 
 ## Summary
 
-This homework demonstrated one of the most important lessons in applied statistics through the UC Berkeley admissions data:
+This homework shows Simpson's paradox in a logistic-regression setting:
 
-1. **Three-way tables reveal heterogeneity.** Examining admission by gender within each department showed that departments vary enormously in both selectivity and gender composition (Problem 1).
+1. The collapsed table gives a crude female-vs-male odds ratio of about 0.64.
 
-2. **Marginal odds ratios can be misleading.** The unadjusted OR of $0.64$ suggested that females had 36% lower odds of admission --- an apparently damning finding (Problem 2).
+2. After adjusting for department, the female odds ratio is about 0.97, with $p = 0.724$.
 
-3. **Controlling for confounders changes the conclusion.** After adjusting for department in a logistic regression, the OR for gender became $0.97$ ($p = 0.724$), showing no significant gender effect (Problem 3).
+3. The difference occurs because department is associated with both applicant gender and admission probability.
 
-4. **Simpson's Paradox arises from confounding.** The reversal occurred because women disproportionately applied to more selective departments. Department was simultaneously associated with both gender and admission, satisfying the definition of a confounder (Problem 4).
+4. The Wald test does not provide evidence against equal adjusted admission odds for female and male applicants.
 
-5. **Hypothesis testing confirmed the null.** The Wald test ($z = -0.35$, $p = 0.724$) confirmed that we cannot reject equal odds of admission for males and females after accounting for department (Problem 5).
+5. The grouped Pearson goodness-of-fit test gives $X^2(4) = 2.56$, $p = 0.634$, so there is no evidence that the additive gender-plus-department model lacks fit.
 
-6. **Goodness of fit supported the model.** The Pearson $\chi^2(4) = 2.56$ ($p = 0.6342$) showed no evidence of lack of fit, meaning the additive model (no gender $\times$ department interaction) is adequate (Problem 6).
-
-::: {.callout-important}
-## The Big Picture: Simpson's Paradox and Confounding
-Simpson's Paradox is not just a statistical curiosity --- it has real consequences for policy and decision-making. The Berkeley case nearly led to a lawsuit alleging gender discrimination. Careful analysis revealed that the apparent bias was largely explained by differences in department application patterns (**confounding by department choice**). The lesson: **always consider what confounders might be lurking before drawing causal conclusions from observational data.**
-:::
-
-::: {.callout-note}
-## Course Wrap-Up
-This is the final homework of the BER 640 course. Over the semester, we have built a complete toolkit for regression analysis:
-
-- **Linear regression** (simple, multiple, diagnostics, transformations)
-- **Logistic regression** (interpretation, odds ratios, inference, goodness of fit)
-- **Key statistical concepts** (confounding, interaction, model selection, Simpson's Paradox)
-
-The skills practiced here --- computing odds ratios, testing hypotheses, diagnosing confounding, and assessing model fit --- are the core of applied regression analysis in education research.
-:::
+The core lesson is practical: always compare crude and adjusted estimates when a confounder is plausible. In this example, the aggregate gender comparison is misleading because it ignores department.

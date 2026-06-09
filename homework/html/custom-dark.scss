@@ -34,3 +34,46 @@ h6 { color: #9ca3af; }
 .callout-tip       { border-left-color: #54b0aa !important; background-color: rgba(78, 170, 165, 0.16);  }  // teal (light)
 .callout-warning   { border-left-color: $warning !important; background-color: rgba(201, 162, 39, 0.16);  }  // gold
 .callout-important { border-left-color: #c45a37 !important; background-color: rgba(196, 90, 55, 0.16);   }  // rust (light)
+
+// ===== Step 5.2 — dark-mode component label contrast =====
+// Shared component rules use brand tokens tuned for light surfaces. These dark-only
+// label colors keep the taxonomy readable without changing the light theme.
+$dark-label-blue: #7FB3D5;
+$dark-label-teal: #64c2bc;
+$dark-label-gold: #e2b84f;
+$dark-label-rust: #e18a6b;
+
+.objectives h4, .objectives .obj-title,
+.summary h3, .summary .sum-title,
+.theorem-title, .proof-title {
+  color: $dark-label-blue;
+}
+
+.objectives .ladder b,
+.your-turn .yt-title,
+.your-turn summary,
+.panel-tabset .nav-link.active,
+.exercises ol ol li::before,
+.interpretation::before {
+  color: $dark-label-blue;
+}
+
+.panel-tabset .nav-link.active {
+  border-bottom-color: $dark-label-blue;
+}
+
+.summary .glm b,
+.assumption-check::before,
+.chip.easy {
+  color: $dark-label-teal;
+}
+
+.pronunciation::before,
+.chip.med {
+  color: $dark-label-gold;
+}
+
+.pitfall::before,
+.chip.hard {
+  color: $dark-label-rust;
+}

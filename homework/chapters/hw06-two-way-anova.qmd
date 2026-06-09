@@ -8,178 +8,194 @@ title: "Homework 6: Two-Way ANOVA and Interactions"
 
 ::: {.callout-note}
 ## Learning Objectives
-- Conduct and interpret a two-way ANOVA with interaction between two categorical predictors
-- Create and interpret interaction plots using predicted cell means
-- Demonstrate the equivalence between two-way ANOVA and regression with dummy variables and interaction terms
-- **Related:** Chapter 3: *One-Way ANOVA* and Chapter 5: *Interactions* (in Lecture Notes)
+- Conduct and interpret a two-way ANOVA with two categorical predictors
+- Test a country-by-test-language interaction
+- Use estimated cell means to explain a significant interaction
+- Show that two-way ANOVA is equivalent to regression with dummies and interaction terms
+- **Related notes:** [Chapter 3: *One-Way ANOVA*](../../notes/chapters/03-one-way-anova.html) and [Chapter 5: *Interactions*](../../notes/chapters/05-interactions.html)
+- **Related labs:** [Lab 4: *One-Way ANOVA and Categorical Predictors*](../../labs/labs/lab04-categorical-contrasts.html) and [Lab 6: *Interactions in Regression*](../../labs/labs/lab06-interactions.html)
 :::
 
 ::: {.callout-tip}
 ## Stata-to-R Translation
-| Stata Command | R Equivalent | Used In |
+| Stata command | R equivalent | Used in |
 |:---|:---|:---|
-| `anova wleread i.test_lan i.country i.test_lan#i.country` | `lm()` + `car::Anova(type = "III")` with `contr.sum` | Problem 1 |
-| `margins test_lan#country` + `marginsplot` | `marginaleffects::avg_predictions()` + `ggplot()` | Problem 2 |
+| `anova wleread i.test_lan i.country i.test_lan#i.country` | `lm()` followed by `car::Anova(type = 3)` with sum contrasts | Problem 1 |
+| `margins test_lan#country` | `emmeans(model, ~ test_lan_f * country_f)` | Problem 2 |
+| `marginsplot` | `ggplot()` using the estimated-means table | Problem 2 |
 | `regress wleread uk germany test_lan lang_germ lang_uk` | `lm(wleread ~ uk + germany + test_lan + lang_germ + lang_uk)` | Problem 3 |
 :::
 
-**Dataset:** `pisa2000` from the `regdatasets` package --- reading literacy scores for 15-year-olds in three countries (USA, UK, Germany). We examine how reading scores vary by **country** and whether the student speaks the **test language** at home ($N = 4{,}528$).
+**Dataset:** `pisa2000` from the `regdatasets` package.
+
+We use students from the USA, UK, and Germany ($N = 4{,}528$). The outcome is reading literacy score (`wleread`). The two categorical predictors are country and whether the student speaks the test language at home (`test_lan`).
 
 
 ## Setup
 
 ```{r}
 #| label: hw06-setup
-#| code-fold: true
-#| code-summary: "Show R Code"
 
-# --- Load data and filter to three countries ---
 data(pisa2000)
 
 pisa_3 <- pisa2000 |>
   filter(usa == 1 | uk == 1 | germany == 1) |>
   mutate(
-    # Factor for country (USA as reference to match Stata)
     country_f = factor(
-      case_when(usa == 1 ~ "USA", uk == 1 ~ "UK", germany == 1 ~ "Germany"),
+      case_when(
+        usa == 1 ~ "USA",
+        uk == 1 ~ "UK",
+        germany == 1 ~ "Germany"
+      ),
       levels = c("USA", "UK", "Germany")
     ),
-    # Factor for test language
-    test_lan_f = factor(test_lan, levels = c(0, 1), labels = c("No", "Yes")),
-    # Interaction dummy variables for Problem 3
-    lang_germ = test_lan * germany,
-    lang_uk   = test_lan * uk
+    test_lan_f = factor(
+      test_lan,
+      levels = c(0, 1),
+      labels = c("No", "Yes")
+    )
   )
 
-cat("N =", nrow(pisa_3), "\n")
-cat("Countries:", levels(pisa_3$country_f), "\n")
-cat("test_lan distribution:\n")
-table(pisa_3$test_lan_f, pisa_3$country_f)
+pisa_3 |>
+  count(country_f, test_lan_f, name = "n")
+```
+
+```{r}
+#| label: hw06-setup-check
+#| include: false
+
+stopifnot(nrow(pisa_3) == 4528)
+stopifnot(identical(levels(pisa_3$country_f), c("USA", "UK", "Germany")))
+stopifnot(identical(levels(pisa_3$test_lan_f), c("No", "Yes")))
+stopifnot(all(rowSums(pisa_3[c("usa", "uk", "germany")] == 1) == 1L))
+
+count_key <- pisa_3 |>
+  mutate(key = paste(test_lan, country_f, sep = "_")) |>
+  count(key) |>
+  tibble::deframe()
+
+stopifnot(identical(
+  as.integer(count_key[c(
+    "0_USA", "0_UK", "0_Germany",
+    "1_USA", "1_UK", "1_Germany"
+  )]),
+  c(89L, 44L, 71L, 931L, 1790L, 1603L)
+))
 ```
 
 
-## Problem 1 {#sec-hw06-p1}
+## Problem 1
 
 ### Problem Statement
 
-> Using a two-way ANOVA, test whether there is a **main effect of test language**, a **main effect of country**, and an **interaction** between the two on reading literacy scores (`wleread`).
+> Using a two-way ANOVA, test whether there is a main effect of test language, a main effect of country, and an interaction between the two on reading literacy scores (`wleread`).
 
 ### Solution
 
-::: {.panel-tabset}
+A two-way ANOVA with interaction asks three questions:
 
-#### Conceptual
+- Does average reading score differ by test-language status?
+- Does average reading score differ by country?
+- Does the test-language difference change across countries?
 
-A **two-way ANOVA with interaction** partitions the variance in reading scores into four components:
-
-1. **Main effect of `test_lan`** --- Does speaking the test language at home matter (averaging across countries)?
-2. **Main effect of `country`** --- Do countries differ in reading scores (averaging across test-language groups)?
-3. **Interaction (`test_lan` $\times$ `country`)** --- Does the test-language effect **differ across countries**?
-4. **Residual** --- Within-cell variation not explained by the model.
-
-The statistical model is:
-
-$$
-Y_{ijk} = \mu + \alpha_i + \beta_j + (\alpha\beta)_{ij} + \varepsilon_{ijk}
-$$
-
-where $\alpha_i$ is the effect of test language ($i = 0, 1$), $\beta_j$ is the effect of country ($j = \text{USA, UK, Germany}$), $(\alpha\beta)_{ij}$ is the interaction effect, and $\varepsilon_{ijk} \sim N(0, \sigma^2)$.
-
-The interaction term is the key focus: if significant, the effect of one factor **depends on the level** of the other factor.
-
-#### R Code
+The interaction is the key test. If the interaction is significant, the effect of test language cannot be summarized well with one single average difference.
 
 ```{r}
-#| label: hw06-p1-anova
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw06-p1-anova-table
 
-# --- Fit the two-way ANOVA model with interaction ---
-# IMPORTANT: For Type III SS to match Stata, we need sum-to-zero contrasts.
-# R's default (contr.treatment) gives different Type III SS for main effects.
-old_contrasts <- options(contrasts = c("contr.sum", "contr.poly"))
+model_anova <- lm(
+  wleread ~ test_lan_f * country_f,
+  data = pisa_3,
+  contrasts = list(test_lan_f = contr.sum, country_f = contr.sum)
+)
 
-model_anova <- lm(wleread ~ factor(test_lan) * country_f, data = pisa_3)
+anova_type3 <- car::Anova(model_anova, type = 3)
 
-# Type III SS (now matches Stata's anova with i. notation)
-anova_table <- car::Anova(model_anova, type = "III")
-print(anova_table)
+anova_tests <- anova_type3 |>
+  as.data.frame() |>
+  tibble::rownames_to_column("Source") |>
+  filter(Source != "(Intercept)") |>
+  mutate(
+    Source = dplyr::recode(
+      Source,
+      test_lan_f = "Test language",
+      country_f = "Country",
+      `test_lan_f:country_f` = "Test language x country",
+      Residuals = "Residual"
+    ),
+    MS = `Sum Sq` / Df,
+    p = format_p(`Pr(>F)`)
+  ) |>
+  select(Source, Df, SS = `Sum Sq`, MS, F = `F value`, p)
 
-# Restore default contrasts
-options(old_contrasts)
-
-# Overall model fit
-cat("\n--- Overall Model Fit ---\n")
-cat("N =", nobs(model_anova), "\n")
-cat("R² =", round(summary(model_anova)$r.squared, 4), "\n")
-cat("Root MSE =", round(summary(model_anova)$sigma, 4), "\n")
-
-# Model-level F-test
-model_summary <- summary(model_anova)
-cat("F(", model_summary$fstatistic[2], ",",
-    model_summary$fstatistic[3], ") =",
-    round(model_summary$fstatistic[1], 2), "\n")
+anova_tests |>
+  round_numeric(digits = 4)
 ```
 
 ```{r}
-#| label: hw06-p1-anova-detail
-#| code-fold: true
-#| code-summary: "Show detailed ANOVA table"
+#| label: hw06-p1-model-fit
 
-# Detailed ANOVA decomposition
-# Model SS and Residual SS
-anova_seq <- anova(model_anova)
-model_ss <- sum(anova_seq$`Sum Sq`[1:3])
-resid_ss <- anova_seq$`Sum Sq`[4]
-resid_df <- anova_seq$Df[4]
-resid_ms <- resid_ss / resid_df
+glance_anova <- model_glance(model_anova)
+anova_y <- model.response(model.frame(model_anova))
+rss_anova <- sum(resid(model_anova)^2)
+tss_anova <- sum((anova_y - mean(anova_y))^2)
+model_ss_anova <- tss_anova - rss_anova
 
-cat("Model SS =", format(round(model_ss, 2), big.mark = ","), "\n")
-cat("Model df = 5\n")
-cat("Model MS =", format(round(model_ss / 5, 3), big.mark = ","), "\n")
-cat("Residual SS =", format(round(resid_ss, 0), big.mark = ","), "\n")
-cat("Residual df =", resid_df, "\n")
-cat("Residual MS =", format(round(resid_ms, 5), big.mark = ","), "\n")
+anova_fit <- tibble(
+  component = c("Model", "Residual", "Total"),
+  df = c(glance_anova$df_model, glance_anova$df_error, nobs(model_anova) - 1),
+  ss = c(model_ss_anova, rss_anova, tss_anova),
+  ms = c(
+    model_ss_anova / glance_anova$df_model,
+    rss_anova / glance_anova$df_error,
+    NA_real_
+  ),
+  F = c(glance_anova$F, NA_real_, NA_real_),
+  p = c(glance_anova$p, NA_character_, NA_character_)
+)
+
+anova_fit |>
+  round_numeric(digits = 4)
 ```
 
-:::
+The interaction is statistically significant:
 
-**Key Results:**
+$$
+F(2, 4522) = 14.72, \qquad p < .001.
+$$
 
-| Source | SS | df | MS | F | p |
-|:-------|---:|---:|---:|---:|:---|
-| Model | 1,368,555.21 | 5 | 273,711.04 | 31.49 | $< .001$ |
-| `test_lan` | 517,794.27 | 1 | 517,794.27 | 59.57 | $< .001$ |
-| `country` | 452,092.82 | 2 | 226,046.41 | 26.00 | $< .001$ |
-| `test_lan` $\times$ `country` | 255,837.10 | 2 | 127,918.55 | 14.72 | $< .001$ |
-| Residual | 39,308,808 | 4,522 | 8,692.79 | | |
-| **Total** | **40,677,363** | **4,527** | | | |
+That means the test-language difference is not the same in the USA, UK, and Germany. The main effects are also statistically significant:
 
-$N = 4{,}528$, $R^2 = 0.0336$, Root MSE $= 93.2351$
+- **Test language:** $F(1, 4522) = 59.57$, $p < .001$.
+- **Country:** $F(2, 4522) = 26.00$, $p < .001$.
 
-All three effects are **statistically significant**:
-
-- **Test language** ($F(1, 4522) = 59.57$, $p < .001$): Students who speak the test language at home score higher on average.
-- **Country** ($F(2, 4522) = 26.00$, $p < .001$): Significant differences in reading scores across countries.
-- **Interaction** ($F(2, 4522) = 14.72$, $p < .001$): The test-language effect is **not the same** across countries.
-
-::: {.callout-important}
-## What the Significant Interaction Means
-A significant interaction means that you **cannot simply talk about "the effect of test language"** without specifying which country you are referring to. The main effects alone tell an incomplete story. We need to examine the predicted cell means and interaction plots (Problem 2) to understand the nature of the interaction.
-:::
+Because the interaction is significant, the main effects are incomplete summaries. The next step is to inspect the six cell means.
 
 ::: {.callout-warning}
-## R Contrast Settings for Type III Sums of Squares
-Stata's `anova` command with `i.` notation produces **Type III** sums of squares by default. To replicate this in R using `car::Anova(type = "III")`, you must set **sum-to-zero contrasts** (`contr.sum`) before fitting the model. R's default `contr.treatment` (dummy coding) produces different Type III SS for main effects, because each main effect is tested conditional on the other being at its reference level rather than being averaged across all levels. The interaction term and residuals are unaffected by the contrast choice.
+## Why Sum Contrasts?
+Stata's `anova` output for factor variables is a Type III ANOVA table. To match that table in R, fit the model with sum-to-zero contrasts and then use `car::Anova(type = 3)`. The fitted cell means do not change; this only affects how the main-effect sums of squares are computed.
 :::
 
-::: {.callout-warning}
-## Main Effects After a Significant Interaction
-When the interaction is significant, interpret the main effect F-tests with caution. A significant main effect of country does not mean "country matters equally for all test-language groups." The interaction tells us the country effect *depends on* test language. Focus on the cell means and interaction plot (Problem 2) rather than the main effects alone.
-:::
+```{r}
+#| label: hw06-p1-check
+#| include: false
+
+type3_df <- anova_type3 |>
+  as.data.frame()
+
+stopifnot(abs(glance_anova$r_squared - 0.0336441476) < 1e-8)
+stopifnot(abs(glance_anova$F - 31.48712457) < 1e-5)
+stopifnot(abs(sigma(model_anova) - 93.2351) < 1e-4)
+stopifnot(abs(model_ss_anova - 1368555.2129) < 1e-2)
+stopifnot(abs(rss_anova - 39308808) < 1)
+stopifnot(abs(type3_df["test_lan_f", "Sum Sq"] - 517794.271) < 1e-3)
+stopifnot(abs(type3_df["country_f", "Sum Sq"] - 452092.822) < 1e-3)
+stopifnot(abs(type3_df["test_lan_f:country_f", "Sum Sq"] - 255837.095) < 1e-3)
+stopifnot(abs(type3_df["test_lan_f:country_f", "F value"] - 14.71547222) < 1e-5)
+```
 
 
-## Problem 2 {#sec-hw06-p2}
+## Problem 2
 
 ### Problem Statement
 
@@ -187,346 +203,283 @@ When the interaction is significant, interpret the main effect F-tests with caut
 
 ### Solution
 
-::: {.panel-tabset}
-
-#### Conceptual
-
-An **interaction plot** displays the predicted (or observed) cell means for each combination of the two factors. If the lines connecting the means are **parallel**, there is no interaction --- the effect of one factor is the same at every level of the other. When the lines are **not parallel** (they converge, diverge, or cross), that is visual evidence of an interaction.
-
-We compute predicted means from the ANOVA model for each of the $2 \times 3 = 6$ cells:
-
-| `test_lan` | Country | Predicted Mean |
-|:-----------|:--------|---------------:|
-| 0 (No) | Germany | 423.40 |
-| 0 (No) | UK | 538.19 |
-| 0 (No) | USA | 465.77 |
-| 1 (Yes) | Germany | 521.93 |
-| 1 (Yes) | UK | 538.18 |
-| 1 (Yes) | USA | 528.63 |
-
-The **test-language effect** (difference between Yes and No) within each country:
-
-- **Germany:** $521.93 - 423.40 = 98.53$ points
-- **USA:** $528.63 - 465.77 = 62.87$ points
-- **UK:** $538.18 - 538.19 \approx 0$ points
-
-The effect of speaking the test language at home is **huge in Germany**, **moderate in the USA**, and **essentially zero in the UK**. This is the interaction: the same variable has dramatically different effects depending on the country.
-
-#### R Code
+An interaction plot displays the estimated mean outcome in each combination of the two predictors. Parallel lines suggest no interaction. Non-parallel lines suggest that the fitted difference for one predictor changes across levels of the other.
 
 ```{r}
-#| label: hw06-p2-means
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw06-p2-cell-means
 
-# --- Compute predicted cell means ---
-pred_means <- marginaleffects::avg_predictions(
-  model_anova,
-  by = c("test_lan", "country_f")
-) |>
-  as.data.frame()
+cell_means <- emmeans::emmeans(model_anova, ~ test_lan_f * country_f)
 
-# Display the table
-pred_means |>
-  select(test_lan, country_f, estimate, std.error, conf.low, conf.high) |>
-  mutate(across(where(is.numeric), \(x) round(x, 4))) |>
-  knitr::kable(
-    col.names = c("test_lan", "Country", "Predicted Mean", "SE",
-                   "95% CI Low", "95% CI High"),
-    align = c("c", "l", "r", "r", "r", "r"),
-    caption = "Predicted cell means from the two-way ANOVA model"
-  )
-```
-
-::: {.panel-tabset group="fig-style"}
-
-##### Simple
-
-```{r}
-#| label: fig-hw06-interaction-simple
-#| fig-cap: "Interaction plot: Predicted reading scores by test language and country. Non-parallel lines indicate an interaction --- the test-language effect is largest in Germany, moderate in the USA, and negligible in the UK."
-#| fig-alt: "Interaction plot with three lines connecting predicted reading scores from No to Yes for test language spoken at home. Germany shows the steepest increase (about 98 points), USA moderate increase (about 63 points), and UK nearly flat (close to zero increase), demonstrating the country-by-test-language interaction."
-#| fig-width: 9
-#| fig-height: 6.5
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# Simple: Interaction plot using predicted means
-pred_means_simple <- pisa_3 |>
-  group_by(country_f, test_lan_f) |>
-  summarize(mean_read = mean(wleread), .groups = "drop")
-
-ggplot(pred_means_simple, aes(x = test_lan_f, y = mean_read,
-                       color = country_f, group = country_f)) +
-  geom_point(size = 3) +
-  geom_line(linewidth = 1) +
-  labs(x = "Test Language Spoken at Home?", y = "Mean Reading Score",
-       color = "Country",
-       title = "Interaction: Country x Test Language")
-```
-
-##### Detailed
-
-```{r}
-#| label: fig-hw06-interaction
-#| fig-cap: "Interaction plot: Predicted reading scores by test language and country. Non-parallel lines indicate an interaction --- the test-language effect is largest in Germany, moderate in the USA, and negligible in the UK."
-#| fig-alt: "Interaction plot with error bars showing predicted reading scores by test language and country. Germany has the steepest slope from 423 to 522, USA from 466 to 529, and UK is nearly flat around 538. Non-parallel lines confirm the significant interaction between country and test language."
-#| fig-width: 9
-#| fig-height: 6.5
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# --- Interaction plot ---
-plot_data <- pred_means |>
+cell_table <- cell_means |>
+  as.data.frame() |>
   mutate(
-    test_lan_label = factor(test_lan, levels = c(0, 1),
-                            labels = c("No", "Yes")),
+    country_f = factor(country_f, levels = c("Germany", "USA", "UK")),
+    test_lan_f = factor(test_lan_f, levels = c("No", "Yes"))
+  ) |>
+  arrange(test_lan_f, country_f)
+
+cell_table |>
+  select(
+    test_language = test_lan_f,
+    country = country_f,
+    mean_reading = emmean,
+    SE,
+    CI_low = lower.CL,
+    CI_high = upper.CL
+  ) |>
+  round_numeric(digits = 4)
+```
+
+```{r}
+#| label: hw06-p2-language-effects
+
+language_effects <- cell_table |>
+  select(country_f, test_lan_f, emmean) |>
+  tidyr::pivot_wider(names_from = test_lan_f, values_from = emmean) |>
+  mutate(
+    test_language_effect = Yes - No,
     country_f = factor(country_f, levels = c("Germany", "USA", "UK"))
+  ) |>
+  arrange(country_f)
+
+language_effects |>
+  rename(country = country_f) |>
+  round_numeric(digits = 4)
+```
+
+The test-language difference is not constant:
+
+- **Germany:** $521.93 - 423.40 = 98.53$ points.
+- **USA:** $528.63 - 465.77 = 62.87$ points.
+- **UK:** $538.18 - 538.19 \approx 0$ points.
+
+So the fitted test-language difference is largest in Germany, moderate in the USA, and nearly zero in the UK.
+
+```{r}
+#| label: fig-hw06-interaction-means
+#| fig-cap: "Estimated reading means by test-language status and country. Error bars show 95% confidence intervals. The non-parallel lines show that the test-language difference changes across countries."
+#| fig-alt: "Interaction plot of estimated reading scores by test-language status and country. Germany rises sharply from about 423 to 522, USA rises from about 466 to 529, and UK stays nearly flat around 538."
+#| fig-width: 8
+#| fig-height: 5.5
+#| echo: true
+#| code-fold: true
+
+ggplot(
+  cell_table,
+  aes(
+    x = test_lan_f,
+    y = emmean,
+    color = country_f,
+    linetype = country_f,
+    shape = country_f,
+    group = country_f
   )
-
-ggplot(plot_data, aes(x = test_lan_label, y = estimate,
-                      color = country_f, group = country_f)) +
-  geom_line(linewidth = 1.3) +
-  geom_point(size = 4) +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
-                width = 0.08, linewidth = 0.7) +
-  # Annotate the test-language effect for each country
-
-  annotate("text", x = 1.5, y = 460,
-           label = "Germany: +98.5 pts",
-           color = ber640_colors["primary"],
-           fontface = "bold", size = 4.2) +
-  annotate("text", x = 1.5, y = 505,
-           label = "USA: +62.9 pts",
-           color = ber640_colors["secondary"],
-           fontface = "bold", size = 4.2) +
-  annotate("text", x = 1.5, y = 545,
-           label = "UK: ~0 pts",
-           color = ber640_colors["accent"],
-           fontface = "bold", size = 4.2) +
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.08) +
   scale_color_manual(
-    name = "Country",
     values = c(
       "Germany" = unname(ber640_colors["primary"]),
-      "USA"     = unname(ber640_colors["secondary"]),
-      "UK"      = unname(ber640_colors["accent"])
+      "USA" = unname(ber640_colors["secondary"]),
+      "UK" = unname(ber640_colors["accent"])
     )
   ) +
+  scale_linetype_manual(values = c("Germany" = "solid", "USA" = "dashed", "UK" = "dotted")) +
+  scale_shape_manual(values = c("Germany" = 16, "USA" = 17, "UK" = 15)) +
   labs(
-    title = "Interaction: Test Language x Country",
-    subtitle = "Non-parallel lines reveal the interaction effect",
     x = "Speaks Test Language at Home",
-    y = "Predicted Reading Score (wleread)"
+    y = "Estimated Mean Reading Score",
+    color = "Country",
+    linetype = "Country",
+    shape = "Country"
   )
 ```
 
-:::
-
-:::
-
-**Interpretation:**
-
-The interaction plot reveals two key patterns:
-
-1. **For students who do NOT speak the test language at home** (left side), the country differences are **very large**: UK students score highest (538), followed by the USA (466), with Germany far behind (423). The spread across countries is roughly 115 points.
-
-2. **For students who DO speak the test language at home** (right side), the three countries **converge**: UK (538), USA (529), and Germany (522) are all within about 16 points of each other.
-
-The converging lines from left to right are the hallmark of this interaction. In Germany, students who do not speak the test language at home are at a much greater disadvantage than in the other two countries. In the UK, whether or not the student speaks the test language at home makes virtually no difference to their reading score.
+The plot shows the same story as the table. Among students who do not speak the test language at home, the country means are far apart. Among students who do speak the test language at home, the three country means are much closer together. That convergence is the visible form of the interaction.
 
 ::: {.callout-important}
-## Why Are the Lines Not Parallel?
-If there were **no interaction**, the test-language effect would be the same in every country, and the three lines would be parallel. The fact that Germany's line rises steeply while the UK's line is nearly flat tells us that the test-language effect **depends on the country** --- the defining feature of an interaction.
+## Interpretation of the Interaction
+The test-language variable is associated with reading score, but not in the same way everywhere. The fitted difference is about 98.5 points in Germany, 62.9 points in the USA, and almost zero in the UK. This is why the interaction term matters.
 :::
 
+```{r}
+#| label: hw06-p2-check
+#| include: false
 
-## Problem 3 {#sec-hw06-p3}
+mean_key <- cell_table |>
+  mutate(key = paste(test_lan_f, country_f, sep = "_")) |>
+  select(key, emmean) |>
+  tibble::deframe()
+
+effect_key <- language_effects |>
+  select(country_f, test_language_effect) |>
+  tibble::deframe()
+
+stopifnot(abs(mean_key["No_Germany"] - 423.4007) < 1e-4)
+stopifnot(abs(mean_key["No_UK"] - 538.1898) < 1e-4)
+stopifnot(abs(mean_key["No_USA"] - 465.7657) < 1e-4)
+stopifnot(abs(mean_key["Yes_Germany"] - 521.9310) < 1e-4)
+stopifnot(abs(mean_key["Yes_UK"] - 538.1839) < 1e-4)
+stopifnot(abs(mean_key["Yes_USA"] - 528.6330) < 1e-4)
+
+stopifnot(abs(effect_key["Germany"] - 98.5303) < 1e-4)
+stopifnot(abs(effect_key["USA"] - 62.8673) < 1e-4)
+stopifnot(abs(effect_key["UK"] + 0.0058) < 1e-4)
+```
+
+
+## Problem 3
 
 ### Problem Statement
 
-> By forming appropriate dummy variables for two of the countries and their interactions with `test_lan`, estimate the two-way ANOVA model using **multiple regression**. Use the USA as the reference group. Verify that the regression results match the ANOVA output.
+> By forming appropriate dummy variables for two of the countries and their interactions with `test_lan`, estimate the two-way ANOVA model using multiple regression. Use the USA as the reference group. Verify that the regression results match the ANOVA output.
 
 ### Solution
 
-::: {.panel-tabset}
-
-#### Conceptual
-
-The two-way ANOVA model with interaction can be written as an equivalent regression model. With USA as the reference category for country, we need:
-
-- **Main effect dummies:** `uk` (1 if UK, 0 otherwise) and `germany` (1 if Germany, 0 otherwise)
-- **Main effect of test language:** `test_lan` (1 if speaks test language at home)
-- **Interaction dummies:** `lang_germ` $=$ `test_lan` $\times$ `germany` and `lang_uk` $=$ `test_lan` $\times$ `uk`
-
-The regression equation is:
+With USA as the reference country, the regression version of the two-way ANOVA is:
 
 $$
-\widehat{\text{wleread}} = \hat{\beta}_0 + \hat{\beta}_1 \cdot \text{uk} + \hat{\beta}_2 \cdot \text{germany} + \hat{\beta}_3 \cdot \text{test\_lan} + \hat{\beta}_4 \cdot \text{lang\_germ} + \hat{\beta}_5 \cdot \text{lang\_uk}
+\widehat{\text{wleread}}
+= \hat{\beta}_0
++ \hat{\beta}_1\text{uk}
++ \hat{\beta}_2\text{germany}
++ \hat{\beta}_3\text{test\_lan}
++ \hat{\beta}_4\text{lang\_germ}
++ \hat{\beta}_5\text{lang\_uk}.
 $$
 
-Each coefficient has a precise meaning tied to specific **cell mean differences**:
+The interaction dummies are simple products:
 
-- $\hat{\beta}_0$ = Mean for the reference cell (USA, No test language)
-- $\hat{\beta}_1$ = UK vs. USA difference **among non-speakers** ($\bar{Y}_{\text{UK,No}} - \bar{Y}_{\text{USA,No}}$)
-- $\hat{\beta}_2$ = Germany vs. USA difference **among non-speakers** ($\bar{Y}_{\text{Ger,No}} - \bar{Y}_{\text{USA,No}}$)
-- $\hat{\beta}_3$ = Test-language effect **in the USA** ($\bar{Y}_{\text{USA,Yes}} - \bar{Y}_{\text{USA,No}}$)
-- $\hat{\beta}_4$ = How much **more/less** the test-language effect is in Germany vs. USA
-- $\hat{\beta}_5$ = How much **more/less** the test-language effect is in the UK vs. USA
-
-The total test-language effect for each country:
-
-- **USA:** $\hat{\beta}_3 = 62.87$
-- **Germany:** $\hat{\beta}_3 + \hat{\beta}_4 = 62.87 + 35.66 = 98.53$
-- **UK:** $\hat{\beta}_3 + \hat{\beta}_5 = 62.87 + (-62.87) = 0.00$
-
-#### R Code
+$$
+\text{lang\_germ} = \text{test\_lan} \times \text{germany},
+\qquad
+\text{lang\_uk} = \text{test\_lan} \times \text{uk}.
+$$
 
 ```{r}
 #| label: hw06-p3-regression
-#| code-fold: true
-#| code-summary: "Show R Code"
 
-# --- Regression with dummy variables and interactions ---
-# uk and germany are pre-existing dummies in pisa2000
-# lang_germ and lang_uk were created in Setup
-
-model_reg <- lm(wleread ~ uk + germany + test_lan + lang_germ + lang_uk,
-                data = pisa_3)
-
-# Full summary
-summary(model_reg)
-```
-
-```{r}
-#| label: tbl-hw06-p3-coefs
-#| tbl-cap: "Regression coefficients for the dummy-coded two-way ANOVA model (USA as reference)"
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# --- Tidy coefficient table ---
-tidy_model(model_reg) |>
-  knitr::kable(
-    digits = c(0, 4, 4, 4, 4, 4, 4),
-    col.names = c("Term", "Estimate", "SE", "Statistic", "p-value",
-                   "95% CI Low", "95% CI High"),
-    align = c("l", rep("r", 6))
+pisa_3_reg <- pisa_3 |>
+  mutate(
+    lang_germ = test_lan * germany,
+    lang_uk = test_lan * uk
   )
+
+model_reg <- lm(
+  wleread ~ uk + germany + test_lan + lang_germ + lang_uk,
+  data = pisa_3_reg
+)
+
+model_params(model_reg) |>
+  as_tibble() |>
+  mutate(p = format_p(p)) |>
+  select(Parameter, Coefficient, SE, CI_low, CI_high, t, df_error, p) |>
+  round_numeric(digits = 4)
 ```
 
 ```{r}
-#| label: hw06-p3-equivalence
-#| code-fold: true
-#| code-summary: "Show ANOVA-Regression equivalence"
+#| label: hw06-p3-fit-comparison
 
-# --- Verify equivalence with ANOVA ---
-cat("=== ANOVA vs. Regression Equivalence ===\n\n")
+fit_comparison <- bind_rows(
+  model_glance(model_anova) |>
+    mutate(model = "Two-way ANOVA factor model", .before = 1),
+  model_glance(model_reg) |>
+    mutate(model = "Dummy-coded regression", .before = 1)
+)
 
-# R-squared
-cat("R² (ANOVA model):", round(summary(model_anova)$r.squared, 4), "\n")
-cat("R² (Regression):  ", round(summary(model_reg)$r.squared, 4), "\n\n")
-
-# Root MSE
-cat("Root MSE (ANOVA):    ", round(summary(model_anova)$sigma, 4), "\n")
-cat("Root MSE (Regression):", round(summary(model_reg)$sigma, 4), "\n\n")
-
-# F-statistic
-cat("F (ANOVA):     ", round(summary(model_anova)$fstatistic[1], 2), "\n")
-cat("F (Regression):", round(summary(model_reg)$fstatistic[1], 2), "\n\n")
-
-# Model SS
-anova_reg <- anova(model_reg)
-model_ss_reg <- sum(anova_reg$`Sum Sq`[1:5])
-cat("Model SS (ANOVA):     ", format(round(model_ss, 2), big.mark = ","), "\n")
-cat("Model SS (Regression):", format(round(model_ss_reg, 2), big.mark = ","), "\n\n")
-
-# Predicted cell means from regression
-cat("--- Predicted Cell Means from Regression ---\n")
-cat("USA, No test_lan  (intercept):        ",
-    round(coef(model_reg)["(Intercept)"], 4), "\n")
-cat("UK, No test_lan   (intercept + uk):   ",
-    round(coef(model_reg)["(Intercept)"] + coef(model_reg)["uk"], 4), "\n")
-cat("Germany, No test_lan (intercept + ger):",
-    round(coef(model_reg)["(Intercept)"] + coef(model_reg)["germany"], 4), "\n")
-cat("USA, Yes test_lan (intercept + tl):   ",
-    round(coef(model_reg)["(Intercept)"] + coef(model_reg)["test_lan"], 4), "\n")
-cat("UK, Yes test_lan  (int + uk + tl + lu):",
-    round(coef(model_reg)["(Intercept)"] + coef(model_reg)["uk"] +
-          coef(model_reg)["test_lan"] + coef(model_reg)["lang_uk"], 4), "\n")
-cat("Germany, Yes test_lan (int + g + tl + lg):",
-    round(coef(model_reg)["(Intercept)"] + coef(model_reg)["germany"] +
-          coef(model_reg)["test_lan"] + coef(model_reg)["lang_germ"], 4), "\n")
+fit_comparison |>
+  select(model, n, df_model, df_error, F, p, r_squared, root_mse) |>
+  round_numeric(digits = 4)
 ```
 
-:::
+The two models have the same $F$-statistic, $R^2$, Root MSE, and fitted values. They are the same model written in two different languages.
 
-**Regression Results** ($N = 4{,}528$, $F(5, 4522) = 31.49$, $R^2 = 0.0336$, Root MSE $= 93.235$):
+The coefficients map directly onto cell means:
 
-| Predictor | $\hat{\beta}$ | SE | $t$ | $p$ |
-|:----------|---:|---:|---:|:---|
-| `uk` | 72.424 | 17.182 | 4.22 | $< .001$ |
-| `germany` | $-42.365$ | 14.836 | $-2.86$ | $.004$ |
-| `test_lan` | 62.867 | 10.345 | 6.08 | $< .001$ |
-| `lang_germ` | 35.663 | 15.325 | 2.33 | $.020$ |
-| `lang_uk` | $-62.873$ | 17.591 | $-3.57$ | $< .001$ |
-| Intercept | 465.766 | 9.883 | 47.13 | $< .001$ |
+- **Intercept** ($465.77$): USA students who do not speak the test language at home.
+- **`uk`** ($72.42$): among non-speakers, UK minus USA.
+- **`germany`** ($-42.37$): among non-speakers, Germany minus USA.
+- **`test_lan`** ($62.87$): test-language difference in the USA.
+- **`lang_germ`** ($35.66$): how much larger the test-language difference is in Germany than in the USA.
+- **`lang_uk`** ($-62.87$): how much smaller the test-language difference is in the UK than in the USA.
 
-**Coefficient interpretation:**
-
-1. **Intercept** ($\hat{\beta}_0 = 465.77$): The predicted mean reading score for **USA students who do NOT speak the test language at home** (the reference cell).
-
-2. **`uk`** ($\hat{\beta}_1 = 72.42$, $p < .001$): Among students who do **not** speak the test language at home, **UK students score 72.42 points higher** than USA students.
-
-3. **`germany`** ($\hat{\beta}_2 = -42.37$, $p = .004$): Among non-test-language speakers, **German students score 42.37 points lower** than USA students.
-
-4. **`test_lan`** ($\hat{\beta}_3 = 62.87$, $p < .001$): In the **USA**, students who speak the test language at home score **62.87 points higher** than those who do not.
-
-5. **`lang_germ`** ($\hat{\beta}_4 = 35.66$, $p = .020$): The test-language effect in **Germany** is **35.66 points larger** than in the USA. The total test-language effect in Germany is:
+The country-specific test-language effects are:
 
 $$
-\hat{\beta}_3 + \hat{\beta}_4 = 62.87 + 35.66 = 98.53 \text{ points}
+\begin{aligned}
+\text{USA:} \quad & \hat{\beta}_3 = 62.87,\\
+\text{Germany:} \quad & \hat{\beta}_3 + \hat{\beta}_4 = 62.87 + 35.66 = 98.53,\\
+\text{UK:} \quad & \hat{\beta}_3 + \hat{\beta}_5 = 62.87 - 62.87 \approx 0.
+\end{aligned}
 $$
 
-6. **`lang_uk`** ($\hat{\beta}_5 = -62.87$, $p < .001$): The test-language effect in the **UK** is **62.87 points smaller** than in the USA. The total test-language effect in the UK is:
+```{r}
+#| label: hw06-p3-cell-means-from-regression
 
-$$
-\hat{\beta}_3 + \hat{\beta}_5 = 62.87 + (-62.87) \approx 0 \text{ points}
-$$
+b <- coef(model_reg)
 
-This is a striking result --- in the UK, whether or not the student speaks the test language at home is **completely unrelated** to reading performance.
+regression_cells <- tibble(
+  country = factor(c("Germany", "USA", "UK"), levels = c("Germany", "USA", "UK")),
+  no_test_language = c(
+    b["(Intercept)"] + b["germany"],
+    b["(Intercept)"],
+    b["(Intercept)"] + b["uk"]
+  ),
+  yes_test_language = c(
+    b["(Intercept)"] + b["germany"] + b["test_lan"] + b["lang_germ"],
+    b["(Intercept)"] + b["test_lan"],
+    b["(Intercept)"] + b["uk"] + b["test_lan"] + b["lang_uk"]
+  )
+) |>
+  mutate(test_language_effect = yes_test_language - no_test_language)
+
+regression_cells |>
+  round_numeric(digits = 4)
+```
+
+This table reproduces the estimated cell means from Problem 2. The regression coefficients and the interaction plot are therefore telling the same story.
 
 ::: {.callout-important}
-## ANOVA = Regression: A Fundamental Equivalence
-The regression model produces **identical** results to the two-way ANOVA:
-
-- Same $R^2 = 0.0336$
-- Same $F(5, 4522) = 31.49$
-- Same Model $\text{SS} = 1{,}368{,}555.21$ with 5 df
-- Same Root MSE $= 93.235$
-- Same predicted cell means
-
-This is not a coincidence --- **ANOVA is a special case of regression** where all predictors are dummy-coded categorical variables. The ANOVA table partitions variance by factor, while the regression table shows individual coefficient tests, but the underlying model is the same.
+## ANOVA = Regression
+ANOVA is a regression model with categorical predictors. The ANOVA table groups coefficients into factor-level tests; the regression table shows the individual dummy and interaction coefficients. The fitted values are identical.
 :::
 
+```{r}
+#| label: hw06-p3-check
+#| include: false
 
-::: {.callout-caution}
-## Common Mistake: Interpreting Main Effects After a Significant Interaction
-When the country $\times$ test-language interaction is significant, the main effects of country and test language are difficult to interpret on their own. A significant main effect of country does not mean "country matters equally for speakers and non-speakers." The interaction tells us the answer depends on which test-language group we examine. Focus on the cell means and interaction plot rather than the main effect $F$-tests.
-:::
+reg_anchor <- c(
+  "(Intercept)" = 465.76573,
+  uk = 72.42405,
+  germany = -42.36503,
+  test_lan = 62.86730,
+  lang_germ = 35.66298,
+  lang_uk = -62.87313
+)
+
+reg_coefs <- coef(model_reg)[names(reg_anchor)]
+
+stopifnot(all(abs(reg_coefs - reg_anchor) < 1e-4))
+stopifnot(abs(model_glance(model_reg)$r_squared - 0.0336441476) < 1e-8)
+stopifnot(abs(model_glance(model_reg)$F - 31.48712457) < 1e-5)
+stopifnot(abs(sigma(model_reg) - 93.2351) < 1e-4)
+stopifnot(max(abs(fitted(model_anova) - fitted(model_reg))) < 1e-8)
+stopifnot(abs(sum(resid(model_anova)^2) - sum(resid(model_reg)^2)) < 1e-6)
+stopifnot(abs(regression_cells$test_language_effect[regression_cells$country == "Germany"] - 98.5303) < 1e-4)
+stopifnot(abs(regression_cells$test_language_effect[regression_cells$country == "USA"] - 62.8673) < 1e-4)
+stopifnot(abs(regression_cells$test_language_effect[regression_cells$country == "UK"] + 0.0058) < 1e-4)
+```
 
 
 ## Summary
 
-This homework demonstrated three perspectives on the same analysis:
+This homework used three views of the same model:
 
-1. **Two-way ANOVA** (Problem 1): Tests the overall significance of each factor and the interaction using $F$-tests. The significant interaction ($F(2, 4522) = 14.72$, $p < .001$) tells us the test-language effect varies across countries, but does not tell us *how*.
+1. **Two-way ANOVA** tests the test-language term, country term, and their interaction. The interaction is significant: $F(2, 4522) = 14.72$, $p < .001$.
 
-2. **Interaction plots** (Problem 2): Visualize the cell means to reveal the *nature* of the interaction. The lines converge from left to right: country differences are large among non-speakers but nearly disappear among speakers. Germany has the steepest slope (largest test-language effect), and the UK's line is essentially flat.
+2. **Estimated cell means and an interaction plot** show the pattern: the test-language difference is large in Germany, moderate in the USA, and nearly zero in the UK.
 
-3. **Dummy-coded regression** (Problem 3): Decomposes the interaction into **specific, interpretable coefficients**. Each interaction term ($\hat{\beta}_4$, $\hat{\beta}_5$) quantifies exactly how much the test-language effect in one country differs from the reference country (USA). The regression and ANOVA are mathematically equivalent --- same $R^2$, same $F$, same SS.
+3. **Dummy-coded regression** shows that ANOVA is regression with categorical predictors and product terms. The regression and ANOVA versions have identical fitted values, $R^2$, Root MSE, and overall $F$-test.
 
-The core lesson: **two-way ANOVA with interaction is simply regression with dummy variables and their products**. The interaction means the effect of one variable depends on the level of the other. Always follow up a significant interaction with cell means or interaction plots to understand the pattern.
-
-::: {.callout-note}
-## Looking Ahead
-In **Homework 7**, we transition from linear models to **logistic regression**, learning how to interpret odds ratios and confidence intervals from published tables. Then in **Homework 8**, we apply logistic regression to the classic UC Berkeley admissions dataset, encountering **Simpson's Paradox** --- where a marginal association reverses direction after controlling for a confounding variable.
-:::
+The core lesson is simple: when an interaction is present, ask "the effect for whom or under what condition?" Cell means and interaction plots are the quickest way to answer that question.

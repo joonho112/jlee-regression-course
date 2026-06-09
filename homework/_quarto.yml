@@ -15,6 +15,7 @@ book:
   search: true
   reader-mode: true
   cover-image: images/hex-logo.svg
+  cover-image-alt: "BER 640 Homework Solutions hex logo"
   favicon: images/hex-glyph.svg
   page-footer:
     left: "BER 640 · Homework Solutions"
@@ -27,14 +28,22 @@ book:
 
   chapters:
     - index.qmd
-    - chapters/hw01-simple-regression.qmd
-    - chapters/hw02-dummy-regression.qmd
-    - chapters/hw03-confounding.qmd
-    - chapters/hw04-one-way-anova.qmd
-    - chapters/hw05-interactions.qmd
-    - chapters/hw06-two-way-anova.qmd
-    - chapters/hw07-logistic-interpretation.qmd
-    - chapters/hw08-simpsons-paradox.qmd
+    # Keep homework filenames stable: these slugs are published URLs and freeze keys.
+    # Change display titles in each qmd file; rename files only with redirects.
+    - part: "Part I: Linear Regression Foundations"
+      chapters:
+        - chapters/hw01-simple-regression.qmd
+        - chapters/hw02-dummy-regression.qmd
+        - chapters/hw03-confounding.qmd
+        - chapters/hw04-one-way-anova.qmd
+    - part: "Part II: Multiple Regression and Interactions"
+      chapters:
+        - chapters/hw05-interactions.qmd
+        - chapters/hw06-two-way-anova.qmd
+    - part: "Part III: Logistic Regression"
+      chapters:
+        - chapters/hw07-logistic-interpretation.qmd
+        - chapters/hw08-simpsons-paradox.qmd
     - references.qmd
 
   page-navigation: true
@@ -49,7 +58,7 @@ format:
       light: [cosmo, html/custom.scss]
       dark: [darkly, html/custom-dark.scss]
     lightbox: auto
-    code-fold: true
+    code-fold: false
     code-tools: true
     code-link: true
     code-line-numbers: true

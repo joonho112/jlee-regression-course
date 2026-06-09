@@ -8,115 +8,95 @@ title: "Homework 4: Multiple Dummies and One-Way ANOVA"
 
 ::: {.callout-note}
 ## Learning Objectives
-- Use multiple dummy variables to represent a multi-category predictor
-- Understand the equivalence of regression with dummies and one-way ANOVA
-- Perform and interpret the overall $F$-test for group differences
-- Conduct pairwise comparisons with Sidak correction for multiple testing
-- **Related:** Chapter 3: *One-Way ANOVA* (in Lecture Notes)
+- Use multiple dummy variables to represent a categorical predictor with three groups
+- Interpret dummy-regression coefficients relative to a reference group
+- Explain why regression with country dummies and one-way ANOVA give the same omnibus $F$-test
+- Use Sidak-adjusted pairwise comparisons to identify which country means differ
+- **Related notes:** [Chapter 3: *One-Way ANOVA*](../../notes/chapters/03-one-way-anova.html)
+- **Related lab:** [Lab 4: *One-Way ANOVA and Categorical Predictors*](../../labs/labs/lab04-categorical-contrasts.html)
 :::
 
 ::: {.callout-tip}
 ## Stata-to-R Translation
-| Stata Command | R Equivalent | Used In |
+| Stata command | R equivalent | Used in |
 |:---|:---|:---|
 | `regress wleread uk germany` | `lm(wleread ~ uk + germany, data = pisa_3)` | Problem 1 |
-| `anova wleread country` | `aov(wleread ~ country_f)` + `summary()` | Problem 2a |
-| `oneway wleread country, sidak` | `emmeans(model, pairwise ~ country_f, adjust = "sidak")` | Problem 2c |
+| `anova wleread country` | `lm(wleread ~ country_f, data = pisa_3)` followed by `anova()` | Problem 2(a) |
+| `oneway wleread country, sidak` | `emmeans()` followed by `pairs(adjust = "sidak")` | Problem 2(c) |
 :::
 
-**Dataset:** `pisa2000` from the `regdatasets` package (USA, UK, Germany; $N = 4{,}528$)
+**Dataset:** `pisa2000` from the `regdatasets` package.
+
+We use students from the USA, UK, and Germany ($N = 4{,}528$). In Problem 1, USA is the reference group.
+
 
 ## Setup
 
 ```{r}
 #| label: hw04-setup
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# Load emmeans for pairwise comparisons (Sidak correction)
-pacman::p_load(emmeans)
 
 data(pisa2000)
 
-# Filter to three countries and create a factor variable
-# USA is the reference level (first in levels)
 pisa_3 <- pisa2000 |>
   filter(usa == 1 | uk == 1 | germany == 1) |>
-  mutate(country_f = factor(
-    case_when(usa == 1 ~ "USA", uk == 1 ~ "UK", germany == 1 ~ "Germany"),
-    levels = c("USA", "UK", "Germany")
-  ))
+  mutate(
+    country_f = factor(
+      case_when(
+        usa == 1 ~ "USA",
+        uk == 1 ~ "UK",
+        germany == 1 ~ "Germany"
+      ),
+      levels = c("USA", "UK", "Germany")
+    )
+  )
 
-# Verify sample sizes
 pisa_3 |>
   count(country_f, name = "n") |>
   mutate(pct = round(100 * n / sum(n), 1))
 ```
 
 ```{r}
-#| label: hw04-verify-n
+#| label: hw04-setup-check
 #| include: false
 
-# Sanity check: total N must be 4528
 stopifnot(nrow(pisa_3) == 4528)
+stopifnot(identical(levels(pisa_3$country_f), c("USA", "UK", "Germany")))
+stopifnot(all(rowSums(pisa_3[c("usa", "uk", "germany")] == 1) == 1L))
 ```
 
 
-## Problem 1 {#sec-hw04-p1}
+## Problem 1
 
 ### Problem Statement
 
 > Choose one country as the reference group and regress `wleread` on dummy variables for the other two countries. Interpret the regression coefficients.
 
-::: {.panel-tabset}
-#### Solution
+### Solution
 
 ```{r}
-#| label: hw04-q1-regression
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw04-p1-fit
 
-# Regression with country dummies (USA as reference)
-# uk and germany are pre-coded 0/1 dummies in the dataset
 model1 <- lm(wleread ~ uk + germany, data = pisa_3)
 
-# Full regression summary
-summary(model1)
-
-# Tidy coefficient table
-tidy_model(model1)
+model_params(model1) |>
+  as_tibble() |>
+  mutate(p = format_p(p)) |>
+  select(Parameter, Coefficient, SE, CI_low, CI_high, t, df_error, p) |>
+  round_numeric(digits = 4)
 ```
 
-**Model Summary:**
+```{r}
+#| label: hw04-p1-fit-summary
 
-- **Sample size:** $N = 4{,}528$ students from three countries (USA, UK, Germany).
-- **Overall fit:** $F(2, 4525) = 21.76$, $p < .001$, indicating that country is a statistically significant predictor of reading scores.
-- **Variance explained:** $R^2 = 0.0095$ --- country accounts for about 1% of the variance in reading scores. While statistically significant (given the large sample), this is a small effect.
-- **Root MSE:** $\hat{\sigma} = 94.36$, which estimates the pooled within-group standard deviation of reading scores across the three countries.
+hw04_fit <- model_glance(model1)
 
-**Regression equation:**
-
-$$
-\widehat{\text{wleread}} = 523.15 + 15.04 \times \text{uk} - 5.40 \times \text{germany}
-$$
-
-**Interpretation of coefficients:**
-
-- **Intercept** ($\hat{\beta}_0 = 523.15$, $\text{SE} = 2.955$, $t = 177.07$, $p < .001$): The predicted mean reading score when both `uk` $= 0$ and `germany` $= 0$, i.e., the **mean reading score for US students**. American students scored an average of $523.1$ points.
-
-- **`uk`** ($\hat{\beta}_1 = 15.04$, $\text{SE} = 3.686$, $t = 4.08$, $p < .001$): The difference in mean reading scores between UK and US students. UK students scored, on average, $15.0$ points **higher** than US students. This difference is statistically significant at any conventional level ($t = 4.08$, $df = 4525$, $p < .001$).
-
-<!-- NOTE: The original Stata answer-key PDF prose incorrectly states p < .001 for Germany vs USA.
-     The Stata regression TABLE shows p = .150 (t = -1.44), which is what we correctly report here.
-     Do not "correct" this to match the original PDF prose — it is a typo in the answer key. -->
-- **`germany`** ($\hat{\beta}_2 = -5.40$, $\text{SE} = 3.748$, $t = -1.44$, $p = .150$): The difference in mean reading scores between German and US students. German students scored, on average, $5.4$ points **lower** than US students. This difference is **not** statistically significant ($t = -1.44$, $df = 4525$, $p = .150$).
+hw04_fit |>
+  round_numeric(digits = 4)
+```
 
 ```{r}
-#| label: hw04-q1-verify-means
-#| code-fold: true
-#| code-summary: "Show Verification of Group Means"
+#| label: hw04-p1-group-means
 
-# Verify: intercept = US mean, coefficients = differences from US mean
 group_means <- pisa_3 |>
   summarise(
     .by = country_f,
@@ -126,390 +106,335 @@ group_means <- pisa_3 |>
   ) |>
   arrange(country_f)
 
-group_means
-
-# Show the connection explicitly
-cat("\nVerification:\n")
-cat(sprintf("  Intercept         = %.4f  (US mean  = %.4f)\n",
-            coef(model1)[1], group_means$mean_read[group_means$country_f == "USA"]))
-cat(sprintf("  Intercept + b_uk  = %.4f  (UK mean  = %.4f)\n",
-            coef(model1)[1] + coef(model1)[2],
-            group_means$mean_read[group_means$country_f == "UK"]))
-cat(sprintf("  Intercept + b_ger = %.4f  (Ger mean = %.4f)\n",
-            coef(model1)[1] + coef(model1)[3],
-            group_means$mean_read[group_means$country_f == "Germany"]))
+group_means |>
+  round_numeric(digits = 4)
 ```
 
-The verification confirms:
+The fitted regression equation is:
 
-- $\hat{\beta}_0 = \bar{Y}_{\text{USA}} = 523.15$
-- $\hat{\beta}_0 + \hat{\beta}_1 = \bar{Y}_{\text{UK}} = 538.18$
-- $\hat{\beta}_0 + \hat{\beta}_2 = \bar{Y}_{\text{Germany}} = 517.75$
+$$
+\widehat{\text{wleread}}
+= 523.15 + 15.04 \times \text{uk} - 5.40 \times \text{germany}.
+$$
 
-#### Code Explanation
+Because USA is the reference group:
 
-```{r}
-#| label: hw04-q1-regression-explain
-#| eval: false
+- **Intercept** ($\hat{\beta}_0 = 523.15$, $p < .001$): the estimated mean reading score for US students.
+- **`uk`** ($\hat{\beta}_1 = 15.04$, $p < .001$): UK students scored about 15.0 points higher than US students, on average.
+- **`germany`** ($\hat{\beta}_2 = -5.40$, $p = .150$): German students scored about 5.4 points lower than US students, on average. This difference is not statistically significant.
 
-# Regression with country dummies (USA as reference)
-model1 <- lm(wleread ~ uk + germany, data = pisa_3)
-```
-
-- `lm(wleread ~ uk + germany, data = pisa_3)`: Fits an OLS regression predicting reading scores from two dummy variables. With USA as the omitted (reference) category, the intercept equals the US mean and each slope equals the difference between that country's mean and the US mean.
-- We use the pre-coded dummy variables (`uk`, `germany`) directly from the dataset, which mirrors the Stata command `regress wleread uk germany`.
-
-```{r}
-#| label: hw04-q1-verify-explain
-#| eval: false
-
-# Verify: intercept = US mean, coefficients = differences from US mean
-group_means <- pisa_3 |>
-  summarise(.by = country_f, n = n(), mean_read = mean(wleread),
-            sd_read = sd(wleread)) |>
-  arrange(country_f)
-```
-
-- `.by = country_f` groups the summary by country factor.
-- This verification step demonstrates that with dummy coding, regression coefficients are simply group mean differences relative to the reference category.
-
+::: {.callout-note}
+## Calculation Note
+If you see a source key marking the Germany-vs-USA coefficient as $p < .001$, treat that as a typo. The coefficient table has $t \approx -1.44$, which corresponds to the unadjusted regression p-value $p = .150$. In the Sidak-adjusted pairwise table below, the USA-Germany comparison remains non-significant with $p = .386$.
 :::
+
+The group means make the dummy coding transparent:
+
+$$
+\bar{Y}_{\text{USA}} \approx 523.15,
+\qquad
+\bar{Y}_{\text{UK}} \approx 538.18,
+\qquad
+\bar{Y}_{\text{Germany}} \approx 517.75.
+$$
+
+Using the unrounded coefficients, the UK mean is the USA mean plus the UK coefficient, and the Germany mean is the USA mean plus the Germany coefficient.
+
+```{r}
+#| label: hw04-p1-check
+#| include: false
+
+stopifnot(abs(coef(model1)[["(Intercept)"]] - 523.1475) < 1e-4)
+stopifnot(abs(coef(model1)[["uk"]] - 15.03654) < 1e-5)
+stopifnot(abs(coef(model1)[["germany"]] + 5.395565) < 1e-6)
+stopifnot(abs(summary(model1)$coefficients["germany", "Pr(>|t|)"] - 0.1501) < 1e-4)
+stopifnot(abs(model_glance(model1)$F - 21.75714) < 1e-5)
+stopifnot(abs(model_glance(model1)$r_squared - 0.009524819) < 1e-9)
+stopifnot(abs(sigma(model1) - 94.36021) < 1e-5)
+stopifnot(abs(group_means$mean_read[group_means$country_f == "USA"] - 523.1475) < 1e-4)
+stopifnot(abs(group_means$mean_read[group_means$country_f == "UK"] - 538.1841) < 1e-4)
+stopifnot(abs(group_means$mean_read[group_means$country_f == "Germany"] - 517.7520) < 1e-4)
+```
+
+### Code Explanation
+
+- `lm(wleread ~ uk + germany, data = pisa_3)` fits a regression with two dummy variables.
+- With three countries, we need $3 - 1 = 2$ dummy variables.
+- USA is omitted, so USA is the reference group.
+- `model_params(model1)` prints the coefficient table.
+- `model_glance(model1)` gives model-level quantities such as the overall $F$-test, $R^2$, and Root MSE.
 
 ::: {.callout-tip}
-## Dummy Coding and the Reference Group
-When representing a categorical variable with $k$ categories, we need $k - 1$ dummy variables. The omitted category becomes the **reference group**. The intercept equals the reference group mean, and each dummy coefficient equals the difference between that group's mean and the reference group mean. Here, with 3 countries, we use 2 dummies (`uk` and `germany`), and USA is the reference group.
+## Key Takeaway
+With $k$ groups, regression uses $k - 1$ dummy variables. The intercept is the reference-group mean, and each dummy coefficient is the difference between that group's mean and the reference-group mean.
 :::
 
 
-## Problem 2 {#sec-hw04-p2}
+## Problem 2
 
 ### Problem Statement
 
 > (a) Using ANOVA, is the effect of country significant at the 5% level?
+>
 > (b) Could you answer (a) from the regression output in Problem 1?
+>
 > (c) Perform pairwise comparisons of country means using Sidak's method. Which countries differ significantly?
 
 
-### Part (a): ANOVA F-test {#sec-hw04-p2a}
-
-::: {.panel-tabset}
-#### Solution
+### Part (a): ANOVA F-Test
 
 ```{r}
-#| label: hw04-q2a-anova
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw04-p2a-anova
 
-# One-way ANOVA: reading scores by country
-anova_model <- aov(wleread ~ country_f, data = pisa_3)
+anova_model <- lm(wleread ~ country_f, data = pisa_3)
 
-# Display the ANOVA table
-summary(anova_model)
+anova_table <- anova(anova_model)
+
+anova_table |>
+  as.data.frame() |>
+  tibble::rownames_to_column("Source") |>
+  mutate(p = format_p(`Pr(>F)`)) |>
+  select(Source, Df, `Sum Sq`, `Mean Sq`, F = `F value`, p) |>
+  round_numeric(digits = 4)
 ```
 
-**ANOVA Table:**
-
-| Source | SS | df | MS | $F$ | $p$ |
-|--------|---:|---:|---:|----:|----:|
-| Country (Model) | $387{,}444.5$ | 2 | $193{,}722.3$ | $21.76$ | $< .001$ |
-| Residual | $40{,}289{,}918.7$ | 4,525 | $8{,}903.8$ | | |
-| **Total** | **$40{,}677{,}363.2$** | **4,527** | | | |
-
-**Decision:** Yes, the effect of country is statistically significant at the 5% level. The ANOVA yields $F(2, 4525) = 21.76$ with $p < .001$, which is well below $\alpha = 0.05$. We reject the null hypothesis that the three country means are equal:
+Yes. The ANOVA table gives:
 
 $$
-H_0: \mu_{\text{USA}} = \mu_{\text{UK}} = \mu_{\text{Germany}}
+F(2, 4525) = 21.76,
+\qquad
+p < .001.
 $$
 
-At least one country differs significantly from the others in mean reading scores.
+At the 5% significance level, we reject:
 
-**Effect size:** $R^2 = \dfrac{\text{SS}_{\text{Model}}}{\text{SS}_{\text{Total}}} = \dfrac{387{,}444.5}{40{,}677{,}363.2} = 0.0095$
+$$
+H_0: \mu_{\text{USA}} = \mu_{\text{UK}} = \mu_{\text{Germany}}.
+$$
 
-#### Code Explanation
+Country is statistically associated with mean reading score. The effect is statistically significant, but small: $R^2 = 0.0095$, so country explains about 1% of the variation in reading scores.
+
+Stata's `oneway` output also reports Bartlett's test for equal variances. Here it is not significant, $\chi^2(2) = 0.45$, $p = .799$, so it does not flag unequal country variances. This is an assumption diagnostic, not the omnibus test of equal country means.
 
 ```{r}
-#| label: hw04-q2a-anova-explain
-#| eval: false
+#| label: hw04-p2a-effect-size
 
-# One-way ANOVA: reading scores by country
-anova_model <- aov(wleread ~ country_f, data = pisa_3)
-summary(anova_model)
+anova_effect <- tibble(
+  ss_country = anova_table["country_f", "Sum Sq"],
+  ss_residual = anova_table["Residuals", "Sum Sq"],
+  ss_total = ss_country + ss_residual,
+  r_squared = ss_country / ss_total,
+  root_mse = sqrt(anova_table["Residuals", "Mean Sq"])
+)
+
+anova_effect |>
+  round_numeric(digits = 4)
 ```
 
-- `aov(wleread ~ country_f, data = pisa_3)`: Fits a one-way ANOVA model. This is equivalent to the Stata command `anova wleread country`. The factor variable `country_f` (with levels USA, UK, Germany) is used instead of the raw dummy variables.
-- `summary(anova_model)`: Displays the ANOVA table with Sum of Squares, degrees of freedom, Mean Squares, $F$-statistic, and $p$-value.
+```{r}
+#| label: hw04-p2a-bartlett-check
+#| include: false
 
+bartlett_hw04 <- bartlett.test(wleread ~ country_f, data = pisa_3)
+
+stopifnot(abs(unname(bartlett_hw04$statistic) - 0.44791) < 1e-5)
+stopifnot(abs(bartlett_hw04$p.value - 0.7994) < 1e-4)
+```
+
+::: {.callout-note}
+## What the Omnibus F-Test Says
+The overall ANOVA $F$-test tells us whether at least one country mean differs from the others. It does not tell us which countries differ. That is why we need pairwise comparisons in Part (c).
 :::
 
 
-### Part (b): Regression vs. ANOVA F-test {#sec-hw04-p2b}
-
-::: {.panel-tabset}
-#### Solution
+### Part (b): Regression and ANOVA Give the Same F-Test
 
 ```{r}
-#| label: hw04-q2b-compare
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw04-p2b-compare
 
-# Extract F-statistics from both approaches
-reg_summary <- summary(model1)
-reg_F <- reg_summary$fstatistic
+regression_f <- model_glance(model1) |>
+  transmute(
+    method = "Regression with dummies",
+    df_model,
+    df_error,
+    F,
+    p,
+    root_mse
+  )
 
-anova_summary <- summary(anova_model)
-anova_F <- anova_summary[[1]]["country_f", "F value"]
-anova_p <- anova_summary[[1]]["country_f", "Pr(>F)"]
+anova_f <- tibble(
+  method = "One-way ANOVA",
+  df_model = anova_table["country_f", "Df"],
+  df_error = anova_table["Residuals", "Df"],
+  F = anova_table["country_f", "F value"],
+  p = format_p(anova_table["country_f", "Pr(>F)"]),
+  root_mse = sqrt(anova_table["Residuals", "Mean Sq"])
+)
 
-cat("Side-by-Side Comparison: Regression F vs. ANOVA F\n")
-cat("==================================================\n")
-cat(sprintf("  Regression F(2, 4525):  %.2f\n", reg_F[1]))
-cat(sprintf("  ANOVA F(2, 4525):       %.2f\n", anova_F))
-cat(sprintf("  Regression p-value:     %.6f\n",
-            pf(reg_F[1], reg_F[2], reg_F[3], lower.tail = FALSE)))
-cat(sprintf("  ANOVA p-value:          %.6f\n", anova_p))
-cat(sprintf("  Regression R²:          %.4f\n", reg_summary$r.squared))
-cat(sprintf("  Regression Root MSE:    %.4f\n", sigma(model1)))
-cat("==================================================\n")
-cat("The F-statistics are IDENTICAL.\n")
+bind_rows(regression_f, anova_f) |>
+  round_numeric(digits = 4)
 ```
 
-**Yes** --- the question in Part (a) can be answered directly from the regression output in Problem 1. The overall $F$-test from the regression is $F(2, 4525) = 21.76$, $p < .001$, which is **identical** to the ANOVA $F$-test.
+Yes. The regression output in Problem 1 already contains the same omnibus test:
 
-This is not a coincidence. Regression with $k - 1$ dummy variables for a $k$-category factor and one-way ANOVA on that factor are **algebraically the same model**. They produce the same:
+$$
+H_0: \beta_{\text{UK}} = \beta_{\text{Germany}} = 0.
+$$
 
-- $F$-statistic and $p$-value
-- $R^2$ (proportion of variance explained)
-- Root MSE (pooled within-group standard deviation)
-- Residual sum of squares
+Because USA is the reference group, this null hypothesis says that the UK mean and Germany mean are both equal to the USA mean. That is the same as saying all three country means are equal.
 
-#### Code Explanation
+Regression with two country dummies and one-way ANOVA with a three-level country factor are the same linear model written two ways. They have the same overall $F$-test, $p$-value, residual sum of squares, and Root MSE.
 
 ```{r}
-#| label: hw04-q2b-compare-explain
-#| eval: false
+#| label: hw04-p2b-check
+#| include: false
 
-# Extract F-statistic from regression
-reg_F <- summary(model1)$fstatistic
+stopifnot(abs(anova_table["country_f", "F value"] - 21.75714) < 1e-5)
+stopifnot(abs(anova_table["country_f", "Sum Sq"] - 387444.5) < 0.1)
+stopifnot(abs(anova_table["Residuals", "Mean Sq"] - sigma(model1)^2) < 1e-8)
+stopifnot(abs(anova_table["country_f", "F value"] - model_glance(model1)$F) < 1e-10)
 ```
-
-- `summary(model1)$fstatistic` returns a named vector with the $F$-statistic value, numerator $df$, and denominator $df$.
-- `pf(F, df1, df2, lower.tail = FALSE)` computes the $p$-value from the $F$-distribution.
-
-```{r}
-#| label: hw04-q2b-compare-explain2
-#| eval: false
-
-# Extract F-statistic from ANOVA
-anova_F <- summary(anova_model)[[1]]["country_f", "F value"]
-```
-
-- `summary(anova_model)[[1]]` extracts the ANOVA table as a data frame. We index by the row name `"country_f"` and column `"F value"` to pull the $F$-statistic.
-
-:::
 
 ::: {.callout-important}
-## Regression with Dummies = One-Way ANOVA
-Regression with $k - 1$ dummy variables is **mathematically identical** to one-way ANOVA with $k$ groups. The overall $F$-test from the regression tests $H_0: \beta_1 = \beta_2 = \cdots = \beta_{k-1} = 0$, which is equivalent to testing $H_0: \mu_1 = \mu_2 = \cdots = \mu_k$. The $F$-statistics, $p$-values, $R^2$, and Root MSE are all identical. ANOVA is not a separate procedure --- it is regression with categorical predictors.
+## ANOVA Is Regression
+One-way ANOVA is regression with a categorical predictor. In R, `lm(wleread ~ country_f, data = pisa_3)` lets R create the dummies from the factor. In Problem 1, `lm(wleread ~ uk + germany, data = pisa_3)` used the same dummy coding manually.
 :::
 
 
-### Part (c): Pairwise Comparisons with Sidak Correction {#sec-hw04-p2c}
-
-::: {.panel-tabset}
-#### Solution
+### Part (c): Sidak-Adjusted Pairwise Comparisons
 
 ```{r}
-#| label: hw04-q2c-pairwise
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: hw04-p2c-pairwise
 
-# Fit the ANOVA model (needed for emmeans)
-# emmeans extracts estimated marginal means and performs pairwise comparisons
-emm <- emmeans(anova_model, "country_f")
+country_means <- emmeans::emmeans(anova_model, "country_f")
+country_means |>
+  as.data.frame() |>
+  select(country_f, emmean, SE, df, lower.CL, upper.CL) |>
+  round_numeric(digits = 4)
 
-# Display estimated marginal means (group means)
-emm
-
-# Sidak-corrected pairwise comparisons
-pairwise <- pairs(emm, adjust = "sidak")
-pairwise
-
-# Also show as a tidy data frame
-as.data.frame(pairwise) |>
-  mutate(across(where(is.numeric), \(x) round(x, 4)))
+pairwise_sidak <- pairs(country_means, adjust = "sidak")
 ```
 
-**Pairwise Comparison Results (Sidak-corrected):**
-
-| Comparison | Difference | SE | $t$ | $p$ (Sidak) | Significant? |
-|:-----------|----------:|---------:|-----:|------------:|:-------------|
-| USA -- Germany | $5.40$ | $3.748$ | $1.44$ | $0.386$ | No |
-| USA -- UK | $-15.04$ | $3.686$ | $-4.08$ | $< .001$ | **Yes** |
-| Germany -- UK | $-20.43$ | $3.637$ | $-5.62$ | $< .001$ | **Yes** |
-
-**Interpretation:**
-
-1. **UK vs. Germany** ($\text{diff} = 20.43$, $p < .001$): The UK mean is $20.4$ points higher than the German mean. This difference is statistically significant after Sidak correction.
-
-2. **US vs. Germany** ($\text{diff} = 5.40$, $p = .386$): The US mean is $5.4$ points higher than the German mean. This difference is **not** statistically significant after Sidak correction.
-
-3. **UK vs. US** ($\text{diff} = 15.04$, $p < .001$): The UK mean is $15.0$ points higher than the US mean. This difference is statistically significant after Sidak correction. Note that this value matches the `uk` coefficient from the regression in Problem 1.
-
-**Conclusion:** UK students have significantly higher mean reading scores than both US and German students. The US--Germany difference is not statistically significant. The ordering of means is: $\bar{Y}_{\text{UK}} > \bar{Y}_{\text{USA}} > \bar{Y}_{\text{Germany}}$, but only the UK differs significantly from the other two.
-
-::: {.panel-tabset}
-##### Simple
 ```{r}
-#| label: hw04-q2c-plot-simple
-#| fig-alt: "Bar chart showing mean reading scores by country. UK has the highest mean around 538, USA around 523, and Germany around 518. The visual shows UK clearly above both other countries."
-#| code-fold: true
-#| code-summary: "Show Plot Code"
-#| fig-width: 8
-#| fig-height: 6
+#| label: tbl-hw04-p2c-pairwise
+#| tbl-cap: "Sidak-adjusted pairwise comparisons of country reading means"
 
-# Simple: Group means bar plot
-country_means <- pisa_3 |>
-  group_by(country_f) |>
-  summarize(mean_read = mean(wleread))
+pairwise_table <- as.data.frame(pairwise_sidak) |>
+  transmute(
+    Comparison = contrast,
+    Difference = estimate,
+    SE = SE,
+    df = df,
+    t = t.ratio,
+    p = format_p(p.value),
+    Significant = if_else(p.value < .05, "Yes", "No")
+  )
 
-ggplot(country_means, aes(x = country_f, y = mean_read, fill = country_f)) +
-  geom_col() +
-  labs(x = "Country", y = "Mean Reading Score",
-       title = "Mean Reading Scores by Country") +
-  theme(legend.position = "none")
+pairwise_table |>
+  gt::gt() |>
+  gt::cols_label(
+    Comparison = "Comparison",
+    Difference = "Mean diff.",
+    SE = "Std. error",
+    df = "df",
+    t = "t ratio",
+    p = "Sidak p",
+    Significant = "Significant"
+  ) |>
+  gt::fmt_number(columns = c(Difference, SE, t), decimals = 4) |>
+  gt::fmt_number(columns = df, decimals = 0, use_seps = FALSE) |>
+  gt::cols_align("left", columns = Comparison) |>
+  gt::cols_align("right", columns = c(Difference, SE, df, t, p)) |>
+  gt::cols_align("center", columns = Significant) |>
+  gt::cols_width(
+    Comparison ~ gt::pct(28),
+    Difference ~ gt::pct(14),
+    SE ~ gt::pct(14),
+    df ~ gt::pct(8),
+    t ~ gt::pct(11),
+    p ~ gt::pct(13),
+    Significant ~ gt::pct(8)
+  ) |>
+  gt::tab_options(table.width = gt::pct(100))
 ```
 
-##### Detailed
+The Sidak-adjusted comparisons show:
+
+1. **USA vs. UK:** USA is about 15.0 points lower than the UK. This difference is statistically significant ($p < .001$).
+
+2. **USA vs. Germany:** USA is about 5.4 points higher than Germany. This difference is not statistically significant ($p = .386$).
+
+3. **UK vs. Germany:** UK is about 20.4 points higher than Germany. This difference is statistically significant ($p < .001$).
+
+So the UK mean is significantly higher than both the USA and Germany means. The USA-Germany difference is not statistically significant after Sidak correction.
+
 ```{r}
-#| label: hw04-q2c-plot
-#| fig-alt: "Bar chart with 95 percent confidence interval error bars showing mean reading scores. UK (538) is significantly higher than both USA (523) and Germany (518). Significance brackets indicate UK differs from both countries at p less than 0.001, while the USA-Germany difference is not significant."
-#| code-fold: true
-#| code-summary: "Show Plot Code"
+#| label: hw04-p2c-check
+#| include: false
+
+pairwise_df <- as.data.frame(pairwise_sidak)
+
+stopifnot(abs(pairwise_df$estimate[pairwise_df$contrast == "USA - UK"] + 15.03654) < 1e-5)
+stopifnot(abs(pairwise_df$p.value[pairwise_df$contrast == "USA - UK"] - 0.0001377) < 1e-6)
+stopifnot(abs(pairwise_df$estimate[pairwise_df$contrast == "USA - Germany"] - 5.395565) < 1e-6)
+stopifnot(abs(pairwise_df$p.value[pairwise_df$contrast == "USA - Germany"] - 0.3860129) < 1e-7)
+stopifnot(abs(pairwise_df$estimate[pairwise_df$contrast == "UK - Germany"] - 20.43211) < 1e-5)
+stopifnot(abs(pairwise_df$SE[pairwise_df$contrast == "UK - Germany"] - 3.189637) < 1e-6)
+stopifnot(abs(pairwise_df$t.ratio[pairwise_df$contrast == "UK - Germany"] - 6.405777) < 1e-6)
+stopifnot(pairwise_df$p.value[pairwise_df$contrast == "UK - Germany"] < .001)
+```
+
+::: {.callout-warning}
+## Common Mistake: Ignoring Multiple Comparisons
+After a significant overall $F$-test, it is tempting to run several ordinary two-sample tests. That inflates the chance of at least one false positive. Sidak adjustment corrects the pairwise p-values for the fact that we are making three comparisons.
+:::
+
+### Optional Mean Plot
+
+The table above is the main answer. The plot below shows the same estimated country means with confidence intervals.
+
+```{r}
+#| label: fig-hw04-country-means
+#| fig-cap: "Estimated mean reading scores for USA, UK, and Germany with 95% confidence intervals."
+#| fig-alt: "Dot-and-whisker plot with confidence intervals for mean reading scores. The UK mean is highest around 538, the USA mean is around 523, and the Germany mean is around 518."
 #| fig-width: 8
-#| fig-height: 6
+#| fig-height: 5
+#| echo: false
 
-# Extract emmeans data for plotting
-emm_df <- as.data.frame(emm)
+country_means_df <- as.data.frame(country_means)
 
-# Bar plot of group means with 95% CI error bars
-ggplot(emm_df, aes(x = country_f, y = emmean, fill = country_f)) +
-  geom_col(width = 0.6, alpha = 0.85) +
-  geom_errorbar(
+ggplot(country_means_df, aes(x = country_f, y = emmean, color = country_f)) +
+  geom_pointrange(
     aes(ymin = lower.CL, ymax = upper.CL),
-    width = 0.15,
-    linewidth = 0.8,
-    color = ber640_colors["primary"]
+    size = 1.1,
+    linewidth = 0.8
   ) +
-  # Add mean labels on the bars
   geom_text(
-    aes(label = sprintf("%.1f", emmean)),
-    vjust = -0.5, size = 5, fontface = "bold",
-    color = ber640_colors["primary"]
+    aes(label = round(emmean, 1)),
+    vjust = -1.1,
+    fontface = "bold"
   ) +
-  # Significance brackets (manual annotations)
-  # UK vs Germany (significant)
-  annotate("segment", x = 2, xend = 3, y = 548, yend = 548,
-           linewidth = 0.6, color = ber640_colors["secondary"]) +
-  annotate("text", x = 2.5, y = 551, label = "p < .001",
-           size = 3.5, color = ber640_colors["secondary"], fontface = "bold") +
-  # UK vs USA (significant)
-  annotate("segment", x = 1, xend = 2, y = 555, yend = 555,
-           linewidth = 0.6, color = ber640_colors["secondary"]) +
-  annotate("text", x = 1.5, y = 558, label = "p < .001",
-           size = 3.5, color = ber640_colors["secondary"], fontface = "bold") +
-  # USA vs Germany (NOT significant)
-  annotate("segment", x = 1, xend = 3, y = 563, yend = 563,
-           linewidth = 0.6, color = "grey50") +
-  annotate("text", x = 2, y = 566, label = "p = .386 (n.s.)",
-           size = 3.5, color = "grey50", fontface = "italic") +
-  scale_fill_manual(values = c(
-    "USA" = unname(ber640_colors["accent"]),
-    "UK" = unname(ber640_colors["primary"]),
-    "Germany" = unname(ber640_colors["warning"])
-  )) +
-  scale_y_continuous(
-    limits = c(0, 575),
-    breaks = seq(0, 550, 50),
-    expand = expansion(mult = c(0, 0.02))
-  ) +
+  scale_color_manual(values = unname(ber640_colors[c("accent", "primary", "warning")])) +
   labs(
-    title = "Mean Reading Scores by Country with 95% CIs",
-    subtitle = "PISA 2000, Three Countries (N = 4,528) | Sidak-Corrected Pairwise Comparisons",
     x = "Country",
-    y = "Mean Reading Score (wleread)"
+    y = "Estimated mean reading score",
+    color = "Country"
   ) +
   theme(legend.position = "none")
 ```
-:::
-
-The plot displays the estimated marginal means (group means) for each country with 95% confidence interval error bars. Significance brackets indicate which pairwise differences are statistically significant after Sidak correction.
-
-#### Code Explanation
-
-```{r}
-#| label: hw04-q2c-pairwise-explain
-#| eval: false
-
-# Estimated marginal means
-emm <- emmeans(anova_model, "country_f")
-```
-
-- `emmeans(anova_model, "country_f")`: Computes the estimated marginal means (EMMs) for each level of `country_f`. In a one-way ANOVA with balanced or unbalanced data, the EMMs are simply the group means. The `emmeans` package also provides the standard errors and confidence intervals.
-
-```{r}
-#| label: hw04-q2c-pairwise-explain2
-#| eval: false
-
-# Sidak-corrected pairwise comparisons
-pairwise <- pairs(emm, adjust = "sidak")
-```
-
-- `pairs(emm, adjust = "sidak")`: Computes all pairwise differences between group means and adjusts the $p$-values using the **Sidak correction**. This is equivalent to the Stata command `oneway wleread country, sidak`.
-- The Sidak correction is a slightly less conservative alternative to Bonferroni. For $m$ comparisons, the Sidak-adjusted $p$-value is $p_{\text{adj}} = 1 - (1 - p)^m$, which controls the familywise Type I error rate at $\alpha$.
-- With 3 groups, there are $\binom{3}{2} = 3$ pairwise comparisons, so the Sidak correction accounts for this multiplicity.
-
-```{r}
-#| label: hw04-q2c-plot-explain
-#| eval: false
-
-# Extract emmeans data for plotting
-emm_df <- as.data.frame(emm)
-
-ggplot(emm_df, aes(x = country_f, y = emmean, fill = country_f)) +
-  geom_col(width = 0.6, alpha = 0.85) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.15)
-```
-
-- `as.data.frame(emm)`: Converts the `emmeans` object to a data frame containing `emmean` (estimated mean), `SE`, `lower.CL`, and `upper.CL` (confidence limits).
-- `geom_col()`: Creates a bar chart where bar height represents the group mean.
-- `geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL))`: Adds 95% confidence interval error bars using the confidence limits from the `emmeans` output.
-- `annotate("segment", ...)` and `annotate("text", ...)`: Manually adds significance brackets and $p$-value labels above the bars to indicate pairwise comparison results.
-
-:::
-
-::: {.callout-tip}
-## Why Sidak Correction?
-When performing multiple pairwise comparisons, the probability of at least one Type I error (false positive) increases with the number of tests. With 3 groups and 3 pairwise comparisons at $\alpha = 0.05$ each, the familywise error rate would be approximately $1 - (1 - 0.05)^3 = 0.143$. The Sidak correction adjusts the $p$-values upward (or equivalently, the critical $\alpha$ downward) to maintain the overall familywise error rate at 5%.
-:::
-
-
-::: {.callout-caution}
-## Common Mistake: Skipping the Multiple Comparisons Correction
-After finding a significant overall $F$-test, students sometimes run pairwise $t$-tests without correcting for multiple comparisons. With 3 groups, there are 3 pairwise comparisons; with more groups, the number grows quickly. Without a correction (like Sidak, Bonferroni, or Tukey), the family-wise error rate inflates well above the nominal $\alpha$. Always use a multiplicity-adjusted procedure when making multiple pairwise comparisons.
-:::
 
 
 ## Summary
 
-This homework demonstrated two key equivalences and introduced the problem of multiple comparisons:
+This homework extends the dummy-variable logic from Homework 2 to a three-group predictor:
 
-1. **Regression with dummies = One-way ANOVA.** Regressing `wleread` on two dummy variables (`uk` and `germany` with USA as reference) produced an $F(2, 4525) = 21.76$ that is identical to the one-way ANOVA $F$-test. The two approaches are different representations of the same underlying linear model.
+1. **Multiple dummy regression:** With three groups, we use two dummy variables and one reference group.
 
-2. **The overall $F$-test tells you "something differs" but not "what."** The significant $F$-test ($p < .001$) rejects $H_0: \mu_{\text{USA}} = \mu_{\text{UK}} = \mu_{\text{Germany}}$, but it does not identify which specific pairs of countries differ. This is why post-hoc pairwise comparisons are needed.
+2. **Regression and ANOVA equivalence:** The regression overall $F$-test and the one-way ANOVA $F$-test are the same test written in two languages.
 
-3. **Sidak-corrected pairwise comparisons** revealed that UK students scored significantly higher than both US students ($\text{diff} = 15.0$, $p < .001$) and German students ($\text{diff} = 20.4$, $p < .001$), while the US--Germany difference was not significant ($\text{diff} = 5.4$, $p = .386$).
+3. **Pairwise comparisons:** A significant omnibus $F$-test tells us that at least one mean differs, but Sidak-adjusted pairwise comparisons tell us which pairs differ.
 
 ::: {.callout-note}
 ## Looking Ahead
-In **Homework 6**, we extend this framework to **two-way ANOVA** with interactions. Instead of examining one factor (country), we will cross two factors and ask whether the effect of one factor depends on the level of another --- a question that requires interaction terms in the regression model.
+In **Homework 6**, we extend this framework to two-way ANOVA with interactions. Instead of asking whether one factor matters, we ask whether the effect of one factor depends on the level of another.
 :::

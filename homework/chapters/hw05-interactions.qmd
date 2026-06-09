@@ -9,26 +9,29 @@ title: "Homework 5: Multiple Regression and Interactions"
 ::: {.callout-note}
 ## Learning Objectives
 - Interpret coefficients in a multiple regression with many predictors
-- Understand and interpret interaction terms in the context of a published regression table
-- Distinguish between main effects and conditional effects in interaction models
-- Decompose interaction models into separate equations for each group
-- **Related:** Chapter 4: *Continuous Predictors* and Chapter 5: *Interactions* (in Lecture Notes)
+- Read an interaction term from a published regression table
+- Distinguish main effects from conditional effects in interaction models
+- Translate one interaction into group-specific slopes and a group-difference formula
+- **Related notes:** [Chapter 4: *Continuous Predictors*](../../notes/chapters/04-continuous-predictors.html) and [Chapter 5: *Interactions*](../../notes/chapters/05-interactions.html)
+- **Related labs:** [Lab 5: *Multiple Regression with Continuous Predictors*](../../labs/labs/lab05-multiple-regression.html) and [Lab 6: *Interactions in Regression*](../../labs/labs/lab06-interactions.html)
 :::
 
-This homework is entirely **conceptual** --- no raw data, only a published regression table to interpret. The table comes from @langton1994, who studied salary determinants among tenured and tenure-track faculty at 308 U.S. colleges and universities in 1969 ($N = 35{,}491$).
+This homework is entirely **conceptual**: there are no raw data to analyze, only a published regression table to interpret. The table comes from @langton1994, who studied salary determinants among tenured and tenure-track faculty at 308 U.S. colleges and universities in 1969 ($N = 35{,}491$).
+
+As in the interaction lab, the key idea is simple: an interaction means **it depends**. Here, the salary-variation slope depends on sex, and the male-female salary gap depends on salary variation.
 
 
 ## The Regression Table
 
-The table below reproduces Table 3 from @langton1994. Model 1 is a main-effects model. Model 2 adds a measure of salary variation within the professor's field and its interaction with sex.
+The table below reproduces Table 3 from @langton1994. Model 1 is a main-effects model. Model 2 adds salary variation within the professor's field and an interaction between sex and salary variation.
+
+The raw data are not used here. The table is reproduced from the published coefficients, so the chapter interprets the table rather than refitting the model.
 
 ```{r}
 #| label: tbl-hw05-regression
 #| tbl-cap: "Unstandardized OLS Coefficients for Faculty Salary [@langton1994, Table 3]"
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| echo: false
 
-# Reproduce the published regression table
 reg_table_df <- data.frame(
   Variable = c(
     "Years of experience",
@@ -49,7 +52,7 @@ reg_table_df <- data.frame(
     "616.77*** (34.48)",
     "616.52*** (7.68)",
     "850.26*** (51.19)",
-    "-310.27** (106.96)",
+    "-310.37** (106.96)",
     "-1863.70*** (62.07)",
     "—",
     "—",
@@ -79,15 +82,50 @@ knitr::kable(
 )
 ```
 
-**Note:** \*$p < .05$, \*\*$p < .01$, \*\*\*$p < .001$ (two-tailed). Numbers in parentheses are standard errors.
+**Note:** \*$p < .05$, \*\*$p < .01$, \*\*\*$p < .001$ (one-tailed). Numbers in parentheses are standard errors. The nonwhite (race) coefficient reads \*\* in Model 1 ($t \approx 2.90$) but \*\*\* in Model 2 ($t \approx 3.20$) despite an almost unchanged estimate, because only the Model 2 $t$-ratio clears the one-tailed $p<.001$ cutoff ($z \approx 3.09$); under two-tailed tests ($z_{.001} \approx 3.29$) both cells would read \*\*.
+
+```{r}
+#| label: hw05-reference-check
+#| include: false
+
+# Race stars follow the source's one-tailed tests: Model 1 t ~ 2.90 -> ** (p<.01);
+# Model 2 t ~ 3.20 clears the one-tailed p<.001 cutoff (z ~ 3.09) -> *** (two-tailed would be **).
+# Do not "correct" the Model 2 *** to ** without also reverting the legend above to two-tailed.
+stopifnot(reg_table_df$Model_1[reg_table_df$Variable == "Race (nonwhite = 1)"] == "-310.37** (106.96)")
+stopifnot(reg_table_df$Model_2[reg_table_df$Variable == "Race (nonwhite = 1)"] == "-342.13*** (106.83)")
+stopifnot(reg_table_df$Model_2[reg_table_df$Variable == "Sex × salary variation"] == "-3932.71* (1872.05)")
+stopifnot(reg_table_df$Model_2[reg_table_df$Variable == "Salary variation"] == "-5571.50*** (585.62)")
+```
 
 ::: {.callout-note}
 ## Variable Definitions
 - **Degree quality:** Rating of institution from which degree was received (Carnegie Commission), scale 0--4.
 - **Research productivity:** Scale based on number of articles/books published.
-- **Salary variation:** Variability in salary within the professor's field controlling for the other variables --- a measure of "uncertainty and dispersion in wages paid in the labor market."
+- **Salary variation:** Variability in salary within the professor's field controlling for the other variables; a measure of uncertainty and dispersion in wages paid in the labor market.
 - **Sex:** $1 =$ female, $0 =$ male.
 :::
+
+```{r}
+#| label: hw05-interaction-constants
+#| include: false
+
+model2_sex <- -698.46
+model2_salary_variation <- -5571.50
+model2_interaction <- -3932.71
+
+men_sv_slope <- model2_salary_variation
+women_sv_slope <- model2_salary_variation + model2_interaction
+female_minus_male_gap_at_0 <- model2_sex
+male_minus_female_gap_at_0 <- -model2_sex
+male_minus_female_gap_slope <- -model2_interaction
+
+stopifnot(
+  any(reg_table_df$Variable == "Sex (female = 1)"),
+  isTRUE(all.equal(women_sv_slope, -9504.21)),
+  isTRUE(all.equal(male_minus_female_gap_at_0, 698.46)),
+  isTRUE(all.equal(male_minus_female_gap_slope, 3932.71))
+)
+```
 
 
 ## Problem 1
@@ -96,35 +134,35 @@ knitr::kable(
 
 > Interpret each of the regression coefficients in Model 1 (main effects only) from the @langton1994 table on faculty salaries.
 
-### Solution
+### Direct Answer
 
-Model 1 contains seven predictors --- four continuous and three dummy variables. Each coefficient represents the estimated effect of that variable **after controlling for all other variables in the model**.
+Model 1 contains seven predictors: three continuous/scale predictors and four dummy variables. Terminal degree, marital status, race, and sex are dummy variables. Each coefficient is interpreted after controlling for all other variables in the model.
+
+After controlling for each of the other variables, the estimated mean 9-month salary:
+
+1. **Years of experience** ($\hat{\beta}_j = 162.68$, $p < .001$): increases by **\$162.68** for each additional year of experience.
+
+2. **Terminal degree** ($\hat{\beta}_j = 264.050$, $p < .001$): is **\$264.05 higher** for Ph.D. holders than for those without a Ph.D.
+
+3. **Degree quality** ($\hat{\beta}_j = 616.77$, $p < .001$): increases by **\$616.77** for each one-unit increase in degree quality on the 0--4 Carnegie scale.
+
+4. **Research productivity** ($\hat{\beta}_j = 616.52$, $p < .001$): increases by **\$616.52** for each one-unit increase in research productivity.
+
+5. **Marital status** ($\hat{\beta}_j = 850.26$, $p < .001$): is **\$850.26 higher** for married faculty than for non-married faculty.
+
+6. **Race** ($\hat{\beta}_j = -310.37$, $p < .01$): is **\$310.37 lower** for nonwhite faculty than for white faculty.
+
+7. **Sex** ($\hat{\beta}_j = -1863.70$, $p < .001$): is **\$1,863.70 lower** for female faculty than for male faculty.
 
 ::: {.callout-tip}
 ## Interpretation Template
-- **Continuous predictor:** "After controlling for each of the other variables, each one-unit increase in $X$ is associated with a \$___ change in estimated mean salary."
-- **Dummy predictor:** "After controlling for each of the other variables, the estimated mean salary for [group = 1] is \$___ higher/lower than for [group = 0]."
+- **Continuous predictor:** "After controlling for the other variables, each one-unit increase in $X$ is associated with a \$___ change in estimated mean salary."
+- **Dummy predictor:** "After controlling for the other variables, the estimated mean salary for the group coded 1 is \$___ higher/lower than for the reference group coded 0."
 :::
 
-After controlling for each of the other variables in the model, the estimated mean 9-month salary:
-
-1. **Years of experience** ($\hat{\beta} = 162.68$, $p < .001$): increases by **\$162.68** for each additional year of experience.
-
-2. **Terminal degree** ($\hat{\beta} = 264.050$, $p < .001$): is **\$264.05 higher** for Ph.D. holders than for those without a Ph.D.
-
-3. **Degree quality** ($\hat{\beta} = 616.77$, $p < .001$): increases by **\$616.77** for each one-unit increase in degree quality (on the 0--4 Carnegie scale).
-
-4. **Research productivity** ($\hat{\beta} = 616.52$, $p < .001$): increases by **\$616.52** for each one-unit increase in research productivity.
-
-5. **Marital status** ($\hat{\beta} = 850.26$, $p < .001$): is **\$850.26 higher** for married faculty than for non-married faculty.
-
-6. **Race** ($\hat{\beta} = -310.27$, $p < .01$): is **\$310.27 lower** for nonwhite faculty than for white faculty.
-
-7. **Sex** ($\hat{\beta} = -1863.70$, $p < .001$): is **\$1,863.70 lower** for female faculty than for male faculty.
-
 ::: {.callout-important}
-## The Gender Pay Gap
-The sex coefficient is the largest in absolute value among all predictors. Even after controlling for experience, terminal degree, degree quality, research productivity, marital status, and race, **women earned nearly \$1,864 less than men** on a 9-month salary basis. This is a substantial disparity that persists after accounting for many legitimate determinants of salary.
+## Reference Groups Matter
+The race and sex variables are dummy variables. Because `Race = 1` means nonwhite and `Sex = 1` means female, negative coefficients mean the coded group has a lower estimated mean salary than the reference group.
 :::
 
 
@@ -134,229 +172,230 @@ The sex coefficient is the largest in absolute value among all predictors. Even 
 
 > In Model 2, interpret the coefficients of Sex, Salary variation, and Sex $\times$ Salary variation.
 
-### Solution
+### Direct Answer
 
-Model 2 introduces an **interaction term** between Sex and Salary variation. To interpret these coefficients, we first write out the relevant portion of the regression equation (focusing on the three variables of interest and holding the other predictors constant at fixed values):
+Model 2 includes an interaction between Sex and Salary variation. The three key coefficients are:
+
+- **Sex:** $\hat{\beta}_1 = -698.46$
+- **Salary variation:** $\hat{\beta}_2 = -5571.50$
+- **Sex $\times$ salary variation:** $\hat{\beta}_3 = -3932.71$
+
+```{r}
+#| label: hw05-p2-coefficient-interpretation-table
+#| echo: true
+#| code-fold: true
+
+model2_interpretation <- tibble(
+  term = c("Sex (female = 1)", "Salary variation", "Sex × salary variation"),
+  coefficient = c(model2_sex, model2_salary_variation, model2_interaction),
+  reference_condition = c(
+    "Only when salary variation = 0",
+    "Only for men, because Female = 0",
+    "Difference between the women's and men's salary-variation slopes"
+  ),
+  correct_reading = c(
+    "At salary variation 0, women are estimated 698.46 dollars lower than men.",
+    "For men, a 1-unit increase in salary variation is associated with 5571.50 dollars lower salary.",
+    "The women's salary-variation slope is 3932.71 dollars more negative than the men's slope."
+  ),
+  common_misread = c(
+    "Treating this as the overall gender gap.",
+    "Treating this as the salary-variation slope for everyone.",
+    "Forgetting that it changes both the women's slope and the gender gap."
+  )
+)
+
+model2_interpretation |>
+  gt::gt() |>
+  gt::cols_label(
+    term = "Term",
+    coefficient = "Coefficient",
+    reference_condition = "Reference condition",
+    correct_reading = "Correct reading",
+    common_misread = "Common misread"
+  ) |>
+  gt::fmt_number(columns = coefficient, decimals = 2) |>
+  gt::cols_align("left", columns = c(term, reference_condition, correct_reading, common_misread)) |>
+  gt::cols_align("right", columns = coefficient) |>
+  gt::cols_width(
+    term ~ gt::pct(16),
+    coefficient ~ gt::pct(12),
+    reference_condition ~ gt::pct(22),
+    correct_reading ~ gt::pct(30),
+    common_misread ~ gt::pct(20)
+  ) |>
+  gt::tab_options(table.width = gt::pct(100)) |>
+  gt::tab_caption("How to read the three Model 2 interaction coefficients.")
+```
+
+Holding the other predictors fixed:
+
+- **Sex:** When salary variation equals 0, women's estimated mean 9-month salary is **\$698.46 lower** than men's. This is a conditional baseline difference, not the overall gender gap. The answer key notes that this value is probably not substantively meaningful if salary variation is never actually 0.
+- **Salary variation:** For men, the reference group where Female $= 0$, a one-unit increase in salary variation is associated with a **\$5,571.50 lower** estimated mean salary.
+- **Sex $\times$ salary variation:** The salary-variation slope for women is **\$3,932.71 more negative** than the salary-variation slope for men.
+
+Therefore, women's conditional salary-variation slope is:
 
 $$
-\hat{y} = \hat{\beta}_0 + \hat{\beta}_1 \cdot \text{Female} + \hat{\beta}_2 \cdot \text{SV} + \hat{\beta}_3 \cdot \text{Female} \times \text{SV} + \cdots
+-5571.50 - 3932.71 = -9504.21
 $$
 
-where:
+So for women, a one-unit increase in salary variation is associated with about a **\$9,504 lower** estimated mean salary, holding the other predictors fixed.
 
-- $\hat{\beta}_1 = -698.46$ (Sex)
-- $\hat{\beta}_2 = -5571.50$ (Salary variation)
-- $\hat{\beta}_3 = -3932.71$ (Sex $\times$ Salary variation)
+```{r}
+#| label: hw05-p2-derived-quantities
+#| echo: true
+#| code-fold: true
 
-**Algebraic decomposition by group:**
+interaction_quantities <- tibble(
+  quantity = c(
+    "Men's salary-variation slope",
+    "Women's salary-variation slope",
+    "Female-minus-male gap",
+    "Male-minus-female gap"
+  ),
+  expression = c(
+    "-5571.50",
+    "-5571.50 - 3932.71",
+    "-698.46 - 3932.71 * SV",
+    "698.46 + 3932.71 * SV"
+  ),
+  interpretation = c(
+    "Men's estimated salary decreases by 5571.50 dollars for a 1-unit increase in salary variation.",
+    "Women's estimated salary decreases by 9504.21 dollars for a 1-unit increase in salary variation.",
+    "Women are estimated lower than men, and the female-minus-male gap becomes more negative as salary variation increases.",
+    "Men are estimated higher than women, and the male-minus-female gap increases as salary variation increases."
+  )
+)
+
+interaction_quantities |>
+  knitr::kable(
+    col.names = c("Derived quantity", "Expression", "Interpretation"),
+    align = c("l", "l", "l"),
+    caption = "Derived slopes and gender-gap formulas implied by Model 2."
+  )
+```
+
+### Algebra
+
+Focus on the part of the regression equation involving Sex, Salary variation, and their interaction:
+
+$$
+\hat{y} =
+\hat{\beta}_0
++ \hat{\beta}_1 \text{Female}
++ \hat{\beta}_2 \text{SV}
++ \hat{\beta}_3 (\text{Female} \times \text{SV})
++ \cdots
+$$
+
+Substituting the published Model 2 coefficients gives:
+
+$$
+\hat{y} =
+\hat{\beta}_0
+- 698.46 \text{Female}
+- 5571.50 \text{SV}
+- 3932.71(\text{Female} \times \text{SV})
++ \cdots
+$$
 
 For **men** (Female $= 0$):
 
 $$
-\hat{y}_{\text{men}} = \hat{\beta}_0 + (-5571.50) \cdot \text{SV} + \cdots
+\hat{y}_{\text{men}} =
+\hat{\beta}_0
+- 5571.50 \text{SV}
++ \cdots
 $$
 
 For **women** (Female $= 1$):
 
 $$
-\hat{y}_{\text{women}} = (\hat{\beta}_0 - 698.46) + (-5571.50 - 3932.71) \cdot \text{SV} + \cdots
+\hat{y}_{\text{women}} =
+(\hat{\beta}_0 - 698.46)
++ (-5571.50 - 3932.71)\text{SV}
++ \cdots
 $$
 
 $$
-= (\hat{\beta}_0 - 698.46) + (-9504.21) \cdot \text{SV} + \cdots
+\hat{y}_{\text{women}} =
+(\hat{\beta}_0 - 698.46)
+- 9504.21\text{SV}
++ \cdots
 $$
 
-::: {.panel-tabset}
+### Two Equivalent Readings
 
-#### Version 1: Emphasis on Salary Variation Effect
+You can read the interaction in two equivalent ways.
 
-This interpretation focuses on what each coefficient tells us about the effect of salary variation:
+**Reading 1: The salary-variation slope depends on sex.**
 
-- **Sex** ($\hat{\beta}_1 = -698.46$, $p > .05$): When salary variation $= 0$, the estimated mean salary for women is \$698.46 lower than for men, holding all other variables constant. However, this coefficient is **not statistically significant** ($\text{SE} = 566.87$).
+- For men, the salary-variation slope is $-5571.50$.
+- For women, the salary-variation slope is $-9504.21$.
+- The interaction term $-3932.71$ is the difference between those two slopes.
 
-- **Salary variation** ($\hat{\beta}_2 = -5571.50$, $p < .001$): For **men** (the reference group), a one-unit increase in salary variation is associated with a **\$5,571.50 decrease** in estimated mean salary.
+**Reading 2: The gender gap depends on salary variation.**
 
-- **Sex $\times$ Salary variation** ($\hat{\beta}_3 = -3932.71$, $p < .05$): For **women**, the negative effect of salary variation is **even larger**. Each one-unit increase in salary variation is associated with an *additional* \$3,932.71 decrease in salary beyond the men's effect. Women's total effect of salary variation is:
+Because Female $= 1$, the sex coefficient is the female-minus-male difference. If we report the male-minus-female gap, we reverse the sign:
 
 $$
-\hat{\beta}_2 + \hat{\beta}_3 = -5571.50 + (-3932.71) = -\$9{,}504.21
+\hat{y}_{\text{men}} - \hat{y}_{\text{women}}
+= 698.46 + 3932.71 \times \text{SV}
 $$
+
+At salary variation $\text{SV}$, the estimated male-female gap is $698.46 + 3932.71 \times \text{SV}$. As salary variation increases, this estimated gap widens.
 
 ::: {.callout-warning}
-## When $X = 0$ Might Be Meaningless
-The Sex coefficient in Model 2 ($-698.46$) represents the male-female difference **when salary variation equals zero**. But salary variation is unlikely to be exactly zero in any real academic field. This makes $\hat{\beta}_1$ a mathematical extrapolation rather than a substantively meaningful quantity. Always consider whether the "when the other variable equals zero" condition is realistic when interpreting coefficients in interaction models.
+## Common Mistake: Treating Main Effects as Average Effects
+When an interaction is in the model, the main effects are conditional. In Model 2, the Sex coefficient is the female-male difference only when salary variation equals 0. The Salary variation coefficient is the slope only for men, the reference group where Female $= 0$. Do not interpret either coefficient as an unconditional average effect.
 :::
 
-#### Version 2: Emphasis on the Sex Effect
-
-This interpretation focuses on what the interaction tells us about the **gender gap**:
-
-- **Sex** ($\hat{\beta}_1 = -698.46$): The baseline gender gap (at salary variation $= 0$).
-
-- **Sex $\times$ Salary variation** ($\hat{\beta}_3 = -3932.71$, $p < .05$): The gender gap **increases by \$3,932.71** for each one-unit increase in salary variation. In fields where salary variation is higher, women are disadvantaged *even more* relative to men.
-
-At any given level of salary variation (SV), the estimated male-female wage gap is:
-
-$$
-\hat{y}_{\text{men}} - \hat{y}_{\text{women}} = 698.46 + 3932.71 \cdot \text{SV}
-$$
-
-This means the gender gap is not constant --- it **widens** as salary variation increases.
-
+::: {.callout-warning}
+## Common Mistake: Reversing the Gender Gap
+Because Female $= 1$, the sex coefficient is female minus male. A negative coefficient means women are estimated to earn less than men at that salary-variation value. If you report the male-minus-female gap, reverse the sign: $698.46 + 3932.71 \times \text{SV}$.
 :::
 
-::: {.panel-tabset group="fig-hw05-interaction"}
+### Optional Illustration
 
-#### Simple
-
-```{r}
-#| label: fig-hw05-interaction-simple
-#| fig-cap: "Predicted salary as a function of salary variation for men and women (Model 2). The lines diverge as salary variation increases, illustrating the interaction effect."
-#| fig-alt: "Two lines showing predicted salary as a function of salary variation. Both lines slope downward, but the women's line falls much more steeply than the men's line, creating a widening gender gap as salary variation increases."
-#| fig-width: 9
-#| fig-height: 6
-#| code-fold: true
-#| code-summary: "Show R Code"
-
-# Simple: Interaction plot - salary by gender and salary variation
-salary_var <- seq(0, 1, length.out = 100)
-men_salary <- 11712.80 - 5571.50 * salary_var
-women_salary <- (11712.80 - 698.46) + (-5571.50 - 3932.71) * salary_var
-
-df_interaction <- data.frame(
-  sv = rep(salary_var, 2),
-  salary = c(men_salary, women_salary),
-  gender = rep(c("Men", "Women"), each = 100)
-)
-
-ggplot(df_interaction, aes(x = sv, y = salary, color = gender)) +
-  geom_line(linewidth = 1) +
-  labs(x = "Salary Variation", y = "Predicted Salary ($)",
-       title = "Gender Pay Gap Widens with Salary Variation",
-       color = "Gender")
-```
-
-#### Detailed
+The figure below is an illustration based only on the published Model 2 coefficients. Its purpose is to show the non-parallel lines implied by the interaction; the raw data are not being plotted or refit. Because the published table does not give the observed range of salary variation or covariate means, the vertical placement and x-range are schematic. The slope difference and widening gap are the important features.
 
 ```{r}
-#| label: fig-hw05-interaction-detailed
-#| fig-cap: "Predicted salary as a function of salary variation for men and women (Model 2). The lines diverge as salary variation increases, illustrating the interaction effect. Other predictors held constant at sample means (values chosen for illustration only)."
-#| fig-alt: "Two diverging lines showing predicted salary versus salary variation. Men's salary decreases by 5572 dollars per unit increase in salary variation, while women's salary decreases by 9504 dollars. The gender gap widens from about 698 dollars at zero salary variation, illustrating the interaction effect."
-#| fig-width: 9
-#| fig-height: 6
-#| code-fold: true
-#| code-summary: "Show R Code"
+#| label: fig-hw05-interaction-lines
+#| fig-cap: "Schematic illustration of the Model 2 interaction component. The salary-variation axis is drawn on a 0-to-1 schematic scale, and the vertical axis shows only the sex and salary-variation component, not full predicted salary."
+#| fig-alt: "Two downward-sloping schematic lines show the model component from sex and salary variation terms. Men start at zero on the component scale and fall with salary variation. Women start lower and fall more steeply, so the vertical gap widens as salary variation increases."
+#| fig-width: 8
+#| fig-height: 5
+#| echo: false
 
-# --- Construct predicted salary lines from Model 2 coefficients ---
-# Focus on the three key variables: Sex, Salary variation, and interaction
-# Hold other predictors at plausible constant values for illustration
-# (exact baseline doesn't matter for showing the interaction pattern)
+salary_variation <- seq(0, 1, length.out = 100)
 
-# Coefficients from Model 2
-b0 <- 11712.80      # Intercept
-b_sex <- -698.46     # Sex (female = 1)
-b_sv <- -5571.50     # Salary variation
-b_int <- -3932.71    # Sex x Salary variation
-
-# Plausible constants for other predictors (approximate sample means)
-other_terms <- 162.59 * 10 +   # 10 years experience
-               270.15 * 0.7 +  # 70% Ph.D.
-               657.08 * 2.0 +  # Degree quality = 2
-               614.96 * 3.0 +  # Research productivity = 3
-               816.00 * 0.7 +  # 70% married
-              -342.13 * 0.05   # 5% nonwhite
-
-# Salary variation range for plotting
-sv_range <- seq(0, 1.2, length.out = 200)
-
-# Predicted salary for men (Female = 0)
-y_men <- b0 + b_sv * sv_range + other_terms
-
-# Predicted salary for women (Female = 1)
-y_women <- (b0 + b_sex) + (b_sv + b_int) * sv_range + other_terms
-
-# Create data frame for plotting
 plot_data <- data.frame(
-  salary_variation = rep(sv_range, 2),
-  predicted_salary = c(y_men, y_women),
-  sex = rep(c("Men", "Women"), each = length(sv_range))
+  salary_variation = rep(salary_variation, 2),
+  salary_component = c(
+    men_sv_slope * salary_variation,
+    model2_sex + women_sv_slope * salary_variation
+  ),
+  sex = rep(c("Men", "Women"), each = length(salary_variation))
 )
 
-# --- Plot ---
-ggplot(plot_data, aes(x = salary_variation, y = predicted_salary,
-                      color = sex, linetype = sex)) +
-  geom_line(linewidth = 1.3) +
-  # Annotate the gap at SV = 0.8
-  annotate(
-    "segment",
-    x = 0.8, xend = 0.8,
-    y = b0 + b_sv * 0.8 + other_terms,
-    yend = (b0 + b_sex) + (b_sv + b_int) * 0.8 + other_terms,
-    color = ber640_colors["secondary"],
-    linewidth = 0.8, linetype = "dotted",
-    arrow = arrow(ends = "both", length = unit(0.15, "inches"))
-  ) +
-  annotate(
-    "text",
-    x = 0.83,
-    y = ((b0 + b_sv * 0.8 + other_terms) +
-         ((b0 + b_sex) + (b_sv + b_int) * 0.8 + other_terms)) / 2,
-    label = paste0(
-      "Gap = $",
-      format(round(698.46 + 3932.71 * 0.8, 0), big.mark = ",")
-    ),
-    hjust = 0, size = 4,
-    color = ber640_colors["secondary"],
-    fontface = "bold"
-  ) +
-  # Annotate line equations
-  annotate(
-    "text",
-    x = 0.05,
-    y = b0 + b_sv * 0.05 + other_terms + 300,
-    label = "Men: slope = -$5,572",
-    hjust = 0, size = 3.8,
-    color = ber640_colors["primary"],
-    fontface = "bold"
-  ) +
-  annotate(
-    "text",
-    x = 0.05,
-    y = (b0 + b_sex) + (b_sv + b_int) * 0.05 + other_terms - 300,
-    label = "Women: slope = -$9,504",
-    hjust = 0, size = 3.8,
-    color = ber640_colors["accent"],
-    fontface = "bold"
-  ) +
-  # Scales
-  scale_color_manual(
-    name = "Sex",
-    values = c(
-      "Men" = unname(ber640_colors["primary"]),
-      "Women" = unname(ber640_colors["accent"])
-    )
-  ) +
-  scale_linetype_manual(
-    name = "Sex",
-    values = c("Men" = "solid", "Women" = "dashed")
-  ) +
+ggplot(plot_data, aes(x = salary_variation, y = salary_component, color = sex, linetype = sex)) +
+  geom_line(linewidth = 1.1) +
+  scale_color_manual(values = c(
+    "Men" = unname(ber640_colors["primary"]),
+    "Women" = unname(ber640_colors["secondary"])
+  )) +
+  scale_linetype_manual(values = c("Men" = "solid", "Women" = "dashed")) +
   scale_y_continuous(labels = scales::dollar_format()) +
   labs(
-    title = "Interaction Effect: Sex x Salary Variation",
-    subtitle = "The gender pay gap widens as salary variation increases",
-    x = "Salary Variation (within field)",
-    y = "Predicted 9-Month Salary ($)"
+    x = "Salary variation (schematic 0-1 scale)",
+    y = "Model component",
+    color = "Sex",
+    linetype = "Sex"
   )
 ```
 
-:::
-
-::: {.callout-warning}
-## Main Effects in Interaction Models Are Conditional
-When an interaction term is present, the "main effect" of a variable represents its effect **only when the interacting variable equals zero** (or the reference category). It is NOT the average effect across all levels. In Model 2, the coefficient of Sex ($-698.46$) is the gender gap only when Salary variation $= 0$ --- which may never occur in practice. Always state the conditioning value when interpreting main effects in interaction models.
-:::
-
-The figure makes the interaction visually clear: the two lines **diverge** as salary variation increases. Both men and women earn less in fields with higher salary variation, but the negative effect is nearly **twice as large** for women ($-\$9{,}504$) as for men ($-\$5{,}572$). The widening gap between the lines is the interaction effect.
+The two lines are not parallel. That is the visual signature of this continuous $\times$ categorical interaction: the salary-variation slope differs by sex, and the male-female gap changes as salary variation changes.
 
 
 ## Problem 3
@@ -365,32 +404,38 @@ The figure makes the interaction visually clear: the two lines **diverge** as sa
 
 > By looking at the estimates, can you answer the question of whether the male-female wage differential is exacerbated by more uncertainty and dispersion in wages?
 
-### Solution
+### Direct Answer
 
-**Yes.** The male-female wage differential is exacerbated by greater salary variation.
+**Yes, based on these estimates.** Greater salary variation is associated with a larger male-female wage differential.
 
-The interaction coefficient ($\hat{\beta}_3 = -3932.71$, $p < .05$) tells us that for each one-unit increase in salary variation, the gender gap in salary **increases by \$3,932.71**. Recall from Version 2 in Problem 2 that the estimated gender gap at any level of salary variation is:
+The interaction coefficient is negative:
 
 $$
-\text{Gender gap} = \hat{y}_{\text{men}} - \hat{y}_{\text{women}} = 698.46 + 3932.71 \cdot \text{SV}
+\hat{\beta}_{\text{Female} \times \text{SV}} = -3932.71
 $$
 
-As salary variation (SV) increases, the gap grows. In fields with more uncertainty and dispersion in wages, women fare **disproportionately worse** relative to men.
+This means that the salary-variation slope is more negative for women than for men. Equivalently, the estimated male-female gap increases by **\$3,932.71** for each one-unit increase in salary variation:
+
+$$
+\text{Male-female gap}
+= 698.46 + 3932.71 \times \text{SV}
+$$
+
+So, as salary variation increases, the estimated male-female gap widens.
 
 ::: {.callout-important}
 ## What Interaction Terms Tell Us
-An interaction term tells us that the effect of one variable **depends on the level of another variable**. Here, the interaction between sex and salary variation means:
+An interaction term tells us that the association or slope for one variable **depends on** the level of another variable. Here, both statements describe the same statistical pattern:
 
-- The effect of salary variation on salary is **different for men and women** (Version 1).
-- Equivalently, the male-female salary gap is **not constant** across fields with different salary variation (Version 2).
+- The salary-variation slope differs for men and women.
+- The male-female salary gap differs across fields with different salary variation.
 
-Both statements describe the same statistical relationship from different perspectives. The substantive conclusion is that labor market uncertainty amplifies gender inequality in faculty pay.
+The published estimates support the conclusion that greater wage uncertainty and dispersion are associated with a larger male-female salary gap. This is an interpretation of the regression table, not a claim that the homework refit the model from raw data.
 :::
 
-
 ::: {.callout-caution}
-## Common Mistake: Reading Main Effects as Unconditional in Interaction Models
-In Model 2, the coefficient of Sex ($-698.46$) does NOT represent the "overall" gender gap. It is the gender gap *only when salary variation equals zero*. Students frequently interpret main effects in interaction models as if the interaction term were absent. When an interaction is present, every main effect is conditional on the interacting variable being at its reference value (often zero). Always state the conditioning value.
+## Common Mistake: Reading the Sex Main Effect Alone
+Do not conclude that there is no gender gap just because the Model 2 Sex coefficient is not statistically significant. With an interaction in the model, the Sex coefficient refers only to salary variation $= 0$. The gender gap depends on salary variation, so the interaction term and the gap formula are the more relevant pieces of Model 2.
 :::
 
 
@@ -398,13 +443,13 @@ In Model 2, the coefficient of Sex ($-698.46$) does NOT represent the "overall" 
 
 This homework practiced three key skills for interpreting multiple regression with interaction terms:
 
-1. **Coefficient interpretation in main-effects models.** Each coefficient in Model 1 represents the estimated change in salary associated with a one-unit change in the predictor, **controlling for all other variables**. The "controlling for" qualifier is essential in multiple regression --- it distinguishes partial effects from marginal (unadjusted) effects.
+1. **Coefficient interpretation in main-effects models.** Each coefficient in Model 1 represents the estimated change in salary associated with a one-unit change in the predictor, controlling for all other variables.
 
-2. **Interaction interpretation.** When a model includes $X_1$, $X_2$, and $X_1 \times X_2$, the coefficient of $X_1$ is its effect **when $X_2 = 0$** (and vice versa). The interaction coefficient tells us how the effect of one variable changes across levels of the other. Algebraic decomposition into separate group equations makes this concrete.
+2. **Interaction interpretation.** When a model includes $X_1$, $X_2$, and $X_1 \times X_2$, the coefficient of $X_1$ is its conditional slope or difference when $X_2 = 0$, and the interaction coefficient tells us how that slope or difference changes as $X_2$ changes.
 
-3. **Conditional effects and diverging slopes.** The interaction between sex and salary variation produced two regression lines with different slopes --- the hallmark of a moderated relationship. The gender pay gap is not a fixed quantity but depends on the labor market context (salary variation) of the professor's field.
+3. **Conditional effects and non-parallel lines.** The interaction between sex and salary variation produces different slopes for men and women. The male-female salary gap is not a fixed number in Model 2; it depends on salary variation.
 
 ::: {.callout-note}
 ## Looking Ahead
-In **Homework 6** (Two-Way ANOVA), we extend interaction concepts to models with **two categorical predictors**. Instead of diverging slopes (continuous $\times$ dummy), you will see crossing or non-parallel cell means --- but the core logic of "the effect of one variable depends on the level of the other" remains the same.
+In **Homework 6** (Two-Way ANOVA), we extend interaction concepts to models with two categorical predictors. Instead of diverging slopes for a continuous $\times$ dummy interaction, you will see crossing or non-parallel cell means. The core logic is the same: the difference associated with one variable depends on the level of another.
 :::
