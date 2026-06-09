@@ -1,0 +1,17 @@
+---
+title: "Quiz 7 — Logistic Regression & Odds Ratios"
+---
+
+These questions check **logistic regression** — modelling the log-odds of a binary
+outcome, $\operatorname{logit}(p) = b_0 + b_1 x$, and interpreting a coefficient as an
+**odds ratio** $e^{b_1}$ (a percentage change in the odds). Several items refer to a
+shared coefficient table shown with the questions. They mirror **Homework 7** and draw
+on **Chapters 9–10** of the Lecture Notes.
+
+Answer each question and press **Check** for instant, explained feedback. Your score
+and progress are saved in this browser; press **Reset quiz** to start over.
+
+```{=html}
+<div class="quizbank" data-bank="../assets/banks/quiz7.json" data-show-title="false"></div>
+<script type="module" src="../assets/quiz-engine.js"></script>
+```

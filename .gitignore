@@ -3,6 +3,8 @@ _site/
 _book/
 .quarto/
 site_libs/
+!labs/_freeze/site_libs/
+!labs/_freeze/site_libs/**
 
 # Quarto computation cache (_freeze) is intentionally COMMITTED so the site
 # rebuilds in CI without re-executing R. Do not ignore it.
@@ -17,3 +19,23 @@ site_libs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local editor / tooling config (not part of the course materials)
+.claude/
+.vscode/
+.idea/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Stray render / build logs
+*-render.txt
+
+# practice/ quiz book — internal/dev files kept locally but not published.
+# The maintained source is banks/*.yml and the validator is
+# extract/build_banks.py (both committed). See MAINTAINING.md.
+practice/_*/
+practice/ADR.md
+practice/extract/parser_*.py
+practice/extract/build_banks_a.py

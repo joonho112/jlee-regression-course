@@ -1,0 +1,17 @@
+---
+title: "Quiz 5 — Interactions & Simple Slopes"
+---
+
+These questions check **interactions** — when the effect of one predictor *depends on*
+another, as in $\hat{y} = b_0 + b_1 x + b_2 z + b_3 xz$ — and the **simple slopes** you
+read off for each group. Several items refer to a shared faculty-salary coefficient
+table shown with the questions. They mirror **Homework 5** and draw on **Chapters 4–5**
+of the Lecture Notes.
+
+Answer each question and press **Check** for instant, explained feedback. Your score
+and progress are saved in this browser; press **Reset quiz** to start over.
+
+```{=html}
+<div class="quizbank" data-bank="../assets/banks/quiz5.json" data-show-title="false"></div>
+<script type="module" src="../assets/quiz-engine.js"></script>
+```

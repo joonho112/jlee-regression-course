@@ -1,0 +1,1397 @@
+// =====================================================================
+// _quiz.scss — student-quiz COMPONENT LAYER of the "Cividis Ink" design system
+// =====================================================================
+// This is the BER 640 quiz-engine component layer (the `.qz-*` taxonomy:
+// score/mastery banner, question cards, options, numeric / multi-blank /
+// matching controls, feedback, why-correct, shared-asset tables). It is the
+// SCSS-native successor to the browser-verified `practice/assets/quiz.css`.
+//
+// HOW IT FITS THE DESIGN SYSTEM
+// -----------------------------
+// `@import`-ed from the /practice book's theme layers in the `scss:rules`
+// region, exactly like `_brand-rules.scss` / `_components.scss`:
+//
+//   custom.scss       (light, over cosmo):  @import "brand-tokens";  /*-- scss:rules --*/  @import "quiz";
+//   custom-dark.scss  (dark,  over darkly): @import "brand-tokens";  /*-- scss:rules --*/  @import "quiz";
+//
+// It therefore REQUIRES the shared Cividis Ink tokens
+// (`quizzes/html/_brand-tokens.scss`) to already be in scope: it consumes
+// `$navy $slate $teal $gold $rust $plum $ink $paper`, the `$gray-*` ramp, the
+// Bootstrap role aliases (`$primary $success $danger $info $warning $accent`,
+// `$link-color $link-hover-color`), and the Pairing-B font stacks. No hue that
+// has a token is hardcoded here; every `--qz-*` custom property is DRIVEN from
+// a token via `#{...}` interpolation so the quiz inherits the brand for free.
+//
+// SEMANTIC COLOR MAP (token -> --qz-* role)
+//   correct  -> $success / $teal   (tip/teal success hue)
+//   wrong    -> $danger  / $rust   (warm danger)
+//   partial  -> $warning / $gold   (gold "some of the way there" credit)
+//   headings -> $primary / $navy
+//   links    -> $accent  / $slate  ($link-color is also $slate)
+//   info     -> $info    / $plum   (why-correct block)
+//   surfaces -> $paper, $gray-* ramp
+//
+// THEMING: a single `[data-bs-theme="dark"]` block (the selector Quarto/
+// Bootstrap toggles) re-drives the same custom properties with lightened
+// cividis hues for AA contrast on a dark surface — so every component below,
+// which reads only `--qz-*`, switches theme without per-component dark rules.
+//
+// ACCESSIBILITY: color is NEVER the sole signal — correct/partial/wrong states
+// always pair the hue with an icon and visible text (injected by the engine).
+//
+// LOCALLY-DEFINED HUES (no token exists for these — see comments at each):
+//   $qz-correct-strong / $qz-correct-bg / $qz-correct-soft  (teal tints + AA-dark variant of $teal)
+//   $qz-wrong-strong   / $qz-wrong-bg   / $qz-wrong-soft    (rust tints + AA-dark variant of $rust)
+//   $qz-band-partial(-bg/-soft) light + dark               (gold darkened for AA on its own tint)
+//   $qz-info-bg (plum tint) + dark info edge/bg
+//   $qz-primary-dark / $qz-link-dark / $qz-link-hover-dark  (lifted navy/slate for dark)
+//   surface neutrals for dark mode (no dark surface tokens live in the shared partial by design)
+// =====================================================================
+
+// ---------------------------------------------------------------------
+// Local SCSS vars — ONLY for hues/tints that have NO shared token.
+// Light derivations of the cividis correct/wrong/partial hues (darkened or
+// tinted for AA on their own soft backgrounds), plus the dark-surface neutrals
+// and lifted accents (the shared partial deliberately keeps NO dark-surface
+// tokens, so darkly stays genuinely dark — see _brand-tokens.scss notes).
+// ---------------------------------------------------------------------
+
+// -- correct (teal) light tints: $teal itself is large-text/UI-only (3.4:1),
+//    so a darkened "-strong" is used for borders/icons/verdict text. --
+$qz-correct-strong: #2f6f6b !default; // darkened $teal for AA text/iconography
+$qz-correct-bg:     #eaf4f3 !default; // teal wash for graded-correct surfaces
+$qz-correct-soft:   #d8ebe9 !default; // teal soft edge
+
+// -- wrong (rust) light tints: darkened $rust + warm washes. --
+$qz-wrong-strong:   #8f3717 !default; // darkened $rust for AA text/iconography
+$qz-wrong-bg:       #fbeee8 !default; // rust wash for graded-incorrect surfaces
+$qz-wrong-soft:     #f3dccf !default; // rust soft edge
+
+// -- partial (gold) light: $gold (2.4:1) fails AA as text, so darken it for the
+//    pill/verdict text; keep gold-tinted bg/edge. --
+$qz-band-partial:      #7a5f0f !default; // darkened $gold -> AA on its tint (#faf3dc): ~5.45:1 (was #8a6d12 @ 4.42:1, borderline)
+$qz-band-partial-bg:   #faf3dc !default; // gold wash
+$qz-band-partial-soft: #efe0b0 !default; // gold soft edge
+
+// -- info (plum) light wash for the why-correct block. --
+$qz-info-bg-light:     #f4eef7 !default; // plum tint behind why-correct
+
+// -- neutral structural light grays not 1:1 with a single ramp step. --
+$qz-border-light:      #d9dee3 !default; // soft slate-tinted gray border
+$qz-card-bg-light:     #ffffff !default; // pure-white card over $paper page
+
+// -- DARK-MODE hues: lifted cividis variants for AA on a dark surface
+//    (no dark-surface tokens exist in the shared partial, by design). --
+$qz-bg-dark:           #10161d !default; // page behind cards (dark)
+$qz-card-bg-dark:      #18222d !default; // card surface (dark)
+$qz-text-dark:         #e8edf2 !default; // body text (dark)
+$qz-muted-dark:        #9fb0c0 !default; // muted text (dark)
+$qz-border-dark:       #2d3a47 !default; // border (dark)
+$qz-rule-dark:         #283441 !default; // hairline rule (dark)
+
+$qz-primary-dark:      #6ea8d8 !default; // lifted navy/slate -> primary on dark
+// White-text-on-fill variant of the dark primary: the lifted $qz-primary-dark
+// (#6ea8d8) is only 2.54:1 with white, so a darker fill is used UNDER white text
+// (the Check button + the "Q#" pill) to clear WCAG 1.4.3 AA. #2c5f86 on white is
+// ~6.8:1. Kept separate from $qz-primary so the link accent / progress-bar fill
+// stay light. See the contrast note in _brand-tokens.scss.
+$qz-primary-fill-dark: #2c5f86 !default; // AA-on-white fill for dark Check/Q# (~6.8:1)
+$qz-link-dark:         #7bb6e0 !default; // lifted slate link on dark
+$qz-link-hover-dark:   #a9d2f0 !default; // lifted link hover on dark
+
+$qz-correct-dark:      #6fc3bd !default; // lifted $teal -> correct on dark
+$qz-wrong-dark:        #e08a63 !default; // lifted $rust -> wrong on dark
+$qz-partial-dark:      #e8c45c !default; // lifted $gold -> partial on dark
+$qz-info-edge-dark:    #b58fc6 !default; // lifted $plum edge on dark
+
+// ---------------------------------------------------------------------
+// Token plumbing: drive the quiz's --qz-* custom properties FROM the shared
+// Cividis Ink SCSS tokens. Components below read ONLY these custom properties,
+// so a single light/dark swap here re-themes the whole quiz.
+// ---------------------------------------------------------------------
+
+:root {
+  // --- named cividis tokens (interpolated straight from the shared partial) ---
+  --qz-ink:   #{$ink};
+  --qz-navy:  #{$navy};
+  --qz-slate: #{$slate};
+  --qz-teal:  #{$teal};
+  --qz-gold:  #{$gold};
+  --qz-rust:  #{$rust};
+  --qz-plum:  #{$plum};
+  --qz-paper: #{$paper};
+
+  // --- light surfaces ---
+  --qz-bg:      var(--qz-paper);
+  --qz-card-bg: #{$qz-card-bg-light};
+  --qz-text:    var(--qz-ink);
+  --qz-muted:   #{$gray-600};         // gray-600
+  --qz-border:  #{$qz-border-light};  // soft slate-tinted gray (no exact ramp step)
+  --qz-rule:    #{$gray-200};         // gray-200
+
+  // --- semantic roles (Bootstrap aliases: $primary=navy, $link-color=slate, $link-hover-color=navy) ---
+  --qz-primary:    #{$primary};
+  // Fill UNDER white text (Check button bg + "Q#" pill bg). In LIGHT mode this
+  // is just $primary (navy @ ~11:1 with white). Dark mode overrides it with a
+  // darker fill so white text clears AA there too (--qz-primary itself stays
+  // light for the link accent + progress-bar fill).
+  --qz-primary-fill: var(--qz-primary);
+  --qz-primary-fill-hover: #09385e; // darkened navy for Check :hover (white text clears AA)
+  --qz-link:       #{$link-color};
+  --qz-link-hover: #{$link-hover-color};
+
+  // correct = teal ($success); wrong = rust ($danger). *-strong used for
+  // borders/icons so the hue reads clearly even where the base token is
+  // large-text-only.
+  --qz-correct:        #{$success};
+  --qz-correct-strong: #{$qz-correct-strong};
+  --qz-correct-bg:     #{$qz-correct-bg};
+  --qz-correct-soft:   #{$qz-correct-soft};
+
+  --qz-wrong:        #{$danger};
+  --qz-wrong-strong: #{$qz-wrong-strong};
+  --qz-wrong-bg:     #{$qz-wrong-bg};
+  --qz-wrong-soft:   #{$qz-wrong-soft};
+
+  // info = plum ($info) for the why-correct block.
+  --qz-info-bg:     #{$qz-info-bg-light};
+  --qz-info-border: #{$info};
+
+  // Mastery bands: Full = teal, Partial = gold ($warning), Minimal = rust. Each
+  // carries a text + background pair so the pill reads on its own (color is not
+  // the sole signal — the band word "Full/Partial/Minimal mastery" is shown).
+  --qz-band-full:      var(--qz-correct-strong);
+  --qz-band-full-bg:   var(--qz-correct-bg);
+  --qz-band-full-soft: var(--qz-correct-soft);
+  --qz-band-partial:      #{$qz-band-partial};      // darkened $gold for AA on its tint
+  --qz-band-partial-bg:   #{$qz-band-partial-bg};
+  --qz-band-partial-soft: #{$qz-band-partial-soft};
+  --qz-band-minimal:      var(--qz-wrong-strong);
+  --qz-band-minimal-bg:   var(--qz-wrong-bg);
+  --qz-band-minimal-soft: var(--qz-wrong-soft);
+
+  // Sticky offset for the score banner. In the Quarto book there is no fixed top
+  // bar to clear, so it pins flush to the top of the scroll area (0); the harness
+  // overrides this to clear its own demo bar.
+  --qz-scorebar-top: 0rem;
+
+  --qz-radius:    12px;
+  --qz-radius-sm: 8px;
+  --qz-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
+
+  // Pairing-B font stacks, straight from the shared tokens.
+  --qz-font:      #{$font-family-sans-serif};
+  --qz-font-head: #{$headings-font-family};
+  --qz-font-mono: #{$font-family-monospace};
+}
+
+[data-bs-theme="dark"] {
+  // Lightened cividis hues for AA contrast on a dark surface. Only the
+  // custom-property *values* change here; every component rule below is shared.
+  --qz-bg:      #{$qz-bg-dark};
+  --qz-card-bg: #{$qz-card-bg-dark};
+  --qz-text:    #{$qz-text-dark};
+  --qz-muted:   #{$qz-muted-dark};
+  --qz-border:  #{$qz-border-dark};
+  --qz-rule:    #{$qz-rule-dark};
+
+  --qz-primary:    #{$qz-primary-dark};    // lifted navy/slate (link accent / progress fill)
+  // Darker fill under white text so the Check button + "Q#" pill clear AA on
+  // dark (the lifted --qz-primary above is too light at 2.54:1 with white).
+  --qz-primary-fill: #{$qz-primary-fill-dark};
+  --qz-primary-fill-hover: #34719e; // Check :hover on dark — still ~5.3:1 white-on-fill (AA)
+  --qz-link:       #{$qz-link-dark};
+  --qz-link-hover: #{$qz-link-hover-dark};
+
+  --qz-correct:        #{$qz-correct-dark}; // lifted teal
+  --qz-correct-strong: #{$qz-correct-dark};
+  --qz-correct-bg:     #{rgba($teal, 0.16)};
+  --qz-correct-soft:   #{rgba($teal, 0.32)};
+
+  --qz-wrong:        #{$qz-wrong-dark};     // lifted rust
+  --qz-wrong-strong: #{$qz-wrong-dark};
+  --qz-wrong-bg:     #{rgba($rust, 0.18)};
+  --qz-wrong-soft:   #{rgba($rust, 0.36)};
+
+  --qz-info-bg:     #{rgba($plum, 0.18)};
+  --qz-info-border: #{$qz-info-edge-dark};
+
+  // Lifted band hues for a dark surface.
+  --qz-band-full:      var(--qz-correct-strong);
+  --qz-band-full-bg:   var(--qz-correct-bg);
+  --qz-band-full-soft: var(--qz-correct-soft);
+  --qz-band-partial:      #{$qz-partial-dark};      // lifted gold
+  --qz-band-partial-bg:   #{rgba($gold, 0.18)};
+  --qz-band-partial-soft: #{rgba($gold, 0.36)};
+  --qz-band-minimal:      var(--qz-wrong-strong);
+  --qz-band-minimal-bg:   var(--qz-wrong-bg);
+  --qz-band-minimal-soft: var(--qz-wrong-soft);
+
+  --qz-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+// ---------------------------------------------------------------------
+// Layout shell
+// ---------------------------------------------------------------------
+
+.qz-quiz {
+  font-family: var(--qz-font);
+  color: var(--qz-text);
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+  line-height: 1.6;
+}
+
+.qz-title {
+  font-family: var(--qz-font-head);
+  font-weight: 700;
+  font-size: 2.1rem;
+  color: var(--qz-primary);
+  margin: 0.5rem 0 0.25rem;
+  line-height: 1.3;
+}
+
+.qz-module {
+  color: var(--qz-muted);
+  margin: 0 0 1.75rem;
+  font-size: 0.95rem;
+}
+
+// ---------------------------------------------------------------------
+// Running-score banner (sticky)
+// role=status / aria-live=polite live region; updates on every Check.
+// ---------------------------------------------------------------------
+
+.qz-scorebar {
+  position: sticky;
+  top: var(--qz-scorebar-top);
+  z-index: 9; // tucks just under the harness top bar (z-index:10)
+  background: var(--qz-card-bg);
+  border: 1px solid var(--qz-border);
+  border-radius: var(--qz-radius);
+  box-shadow: var(--qz-shadow);
+  padding: 0.85rem 1.1rem;
+  margin: 0 0 1.75rem;
+  // A left accent rail that takes on the current band's hue.
+  border-left: 5px solid var(--qz-border);
+  transition: border-left-color 0.15s ease;
+
+  &.is-started {
+    border-left-color: var(--qz-band-minimal);
+  }
+  // Recolor the rail by the band the pill is showing (set via JS class).
+  &:has(.qz-band--full) {
+    border-left-color: var(--qz-band-full);
+  }
+  &:has(.qz-band--partial) {
+    border-left-color: var(--qz-band-partial);
+  }
+  &:has(.qz-band--minimal).is-started {
+    border-left-color: var(--qz-band-minimal);
+  }
+}
+
+.qz-scorebar__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.qz-scorebar__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+}
+
+.qz-score__line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-family: var(--qz-font-head);
+}
+.qz-score__points {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--qz-text);
+}
+.qz-score__earned {
+  color: var(--qz-primary);
+}
+.qz-score__slash,
+.qz-score__unit {
+  color: var(--qz-muted);
+  font-weight: 600;
+}
+.qz-score__unit {
+  font-size: 0.95rem;
+}
+.qz-score__dot {
+  color: var(--qz-border);
+  font-weight: 700;
+}
+.qz-score__pct {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--qz-text);
+}
+.qz-score__answered-wrap {
+  font-size: 0.95rem;
+  color: var(--qz-muted);
+  font-weight: 600;
+}
+.qz-score__answered {
+  color: var(--qz-text);
+}
+
+// Mastery band pill — color + the band word (never color alone).
+.qz-band {
+  font-family: var(--qz-font-head);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+
+  &--full {
+    color: var(--qz-band-full);
+    background: var(--qz-band-full-bg);
+    border-color: var(--qz-band-full-soft);
+  }
+  &--partial {
+    color: var(--qz-band-partial);
+    background: var(--qz-band-partial-bg);
+    border-color: var(--qz-band-partial-soft);
+  }
+  &--minimal {
+    color: var(--qz-band-minimal);
+    background: var(--qz-band-minimal-bg);
+    border-color: var(--qz-band-minimal-soft);
+  }
+}
+
+// Progress bar (answered / total).
+.qz-progress {
+  width: 100%;
+}
+.qz-progress__bar {
+  position: relative;
+  height: 0.55rem;
+  width: 100%;
+  background: var(--qz-rule);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.qz-progress__fill {
+  height: 100%;
+  width: 0%;
+  background: var(--qz-primary);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+.qz-scorebar.is-complete .qz-progress__fill {
+  background: var(--qz-band-full);
+}
+
+.qz-scorebar__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  flex-wrap: wrap;
+}
+.qz-savenote {
+  font-size: 0.8rem;
+  color: var(--qz-muted);
+  line-height: 1.4;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.qz-savenote__icon {
+  white-space: nowrap;
+}
+
+// Reset button: a quiet, outline counterpart to the primary Check button.
+.qz-btn--reset {
+  background: transparent;
+  color: var(--qz-link);
+  border: 1px solid var(--qz-border);
+  font-size: 0.85rem;
+  padding: 0.35rem 0.9rem;
+  flex: 0 0 auto;
+
+  &:hover:not(:disabled) {
+    border-color: var(--qz-wrong-strong);
+    color: var(--qz-wrong-strong);
+    background: var(--qz-wrong-bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qz-progress__fill,
+  .qz-scorebar {
+    transition: none;
+  }
+}
+
+// On short/edge cases where :has() is unsupported, the rail stays neutral and
+// the pill colors still convey the band — graceful degradation, no breakage.
+
+// ---------------------------------------------------------------------
+// Card
+// ---------------------------------------------------------------------
+
+.qz-card {
+  background: var(--qz-card-bg);
+  border: 1px solid var(--qz-border);
+  border-radius: var(--qz-radius);
+  box-shadow: var(--qz-shadow);
+  padding: 1.4rem 1.5rem 1.5rem;
+  margin: 0 0 1.5rem;
+}
+
+.qz-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.qz-number {
+  font-family: var(--qz-font-head);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  // White text sits on --qz-primary-fill (= --qz-primary in light; a darker
+  // fill in dark mode) so the "Q#" pill clears WCAG 1.4.3 AA in both themes.
+  background: var(--qz-primary-fill);
+  border-radius: 999px;
+  padding: 0.12rem 0.7rem;
+  letter-spacing: 0.02em;
+}
+
+.qz-points {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--qz-muted);
+  border: 1px solid var(--qz-border);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+}
+
+.qz-meta {
+  font-size: 0.8rem;
+  color: var(--qz-muted);
+  margin-left: auto;
+  text-transform: lowercase;
+  letter-spacing: 0.01em;
+}
+
+.qz-stem {
+  font-size: 1.05rem;
+  margin-bottom: 1.1rem;
+
+  p {
+    margin: 0 0 0.7rem;
+  }
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Inline code inside stems / options
+.qz-stem code,
+.qz-option__text code,
+.qz-why code,
+.qz-rationale code {
+  font-family: var(--qz-font-mono);
+  font-size: 0.9em;
+  background: var(--qz-rule);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+}
+
+// ---------------------------------------------------------------------
+// Options (fieldset)
+// ---------------------------------------------------------------------
+
+.qz-options {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0; // fix flexbox overflow on fieldset
+}
+
+.qz-legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--qz-muted);
+  padding: 0;
+  margin: 0 0 0.6rem;
+}
+
+.qz-option-row {
+  margin: 0 0 0.55rem;
+  border: 1.5px solid var(--qz-border);
+  border-radius: var(--qz-radius-sm);
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+
+  &:last-of-type {
+    margin-bottom: 0;
+  }
+
+  // Hover/focus affordances on a still-interactive row.
+  &:not(.is-correct):not(.is-incorrect):hover {
+    border-color: var(--qz-link);
+    background: rgba(44, 110, 145, 0.05); // $slate @ 5% — interactive wash
+  }
+
+  // --- Graded states (color + the icon/text injected by the engine) ---
+  &.is-correct {
+    border-color: var(--qz-correct-strong);
+    background: var(--qz-correct-bg);
+
+    .qz-option__status {
+      color: var(--qz-correct-strong);
+    }
+  }
+
+  &.is-incorrect {
+    border-color: var(--qz-wrong-strong);
+    background: var(--qz-wrong-bg);
+
+    .qz-option__status {
+      color: var(--qz-wrong-strong);
+    }
+  }
+
+  // A correct answer the student missed: same teal, but dashed to read as
+  // "you should have picked this" rather than "you got this".
+  &.is-correct.is-missed {
+    border-style: dashed;
+  }
+}
+
+.qz-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  cursor: pointer;
+  margin: 0;
+}
+
+// Native control, sized up and tinted to the brand accent.
+.qz-input {
+  margin: 0;
+  margin-top: 0.18rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  accent-color: var(--qz-primary);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--qz-link);
+    outline-offset: 2px;
+  }
+}
+
+.qz-option__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.qz-option__status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// Disabled (post-grade) rows keep full text contrast — only the cursor
+// changes, so feedback stays legible.
+.qz-input:disabled,
+.qz-option-row:has(.qz-input:disabled) .qz-option {
+  cursor: default;
+}
+
+.qz-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+// Per-distractor rationale revealed beneath a chosen wrong option.
+.qz-rationale {
+  border-top: 1px solid var(--qz-wrong-soft);
+  margin: 0 0.85rem;
+  padding: 0.55rem 0 0.7rem;
+  font-size: 0.92rem;
+  color: var(--qz-text);
+}
+.qz-rationale__tag {
+  font-weight: 700;
+  color: var(--qz-wrong-strong);
+}
+
+// ---------------------------------------------------------------------
+// Controls
+// ---------------------------------------------------------------------
+
+.qz-controls {
+  margin-top: 1.1rem;
+}
+
+.qz-btn {
+  font-family: var(--qz-font);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+  border-radius: var(--qz-radius-sm);
+  padding: 0.5rem 1.3rem;
+  cursor: pointer;
+  transition: background-color 0.12s ease, opacity 0.12s ease;
+
+  &--check {
+    // White label on --qz-primary-fill (= --qz-primary in light; a darker fill
+    // in dark mode) so the resting Check button clears WCAG 1.4.3 AA in both
+    // themes (the lifted dark --qz-primary alone is only 2.54:1 with white).
+    background: var(--qz-primary-fill);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: var(--qz-primary-fill-hover);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--qz-link);
+    outline-offset: 2px;
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+// ---------------------------------------------------------------------
+// Feedback
+// ---------------------------------------------------------------------
+
+.qz-feedback {
+  margin-top: 1.1rem;
+
+  &:empty {
+    margin-top: 0;
+  }
+}
+
+.qz-verdict {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--qz-font-head);
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--qz-radius-sm);
+  margin-bottom: 0.9rem;
+
+  &.is-correct {
+    color: var(--qz-correct-strong);
+    background: var(--qz-correct-bg);
+    border: 1px solid var(--qz-correct-soft);
+  }
+  // Distinct PARTIAL state (P2-1): gold/amber, NOT the rust "incorrect" box —
+  // so partial credit reads as "some of the way there", not "wrong". Reuses the
+  // mastery gold band tokens (same semantics). Color is not the sole signal: a
+  // distinct partial icon + the words "Partial credit" accompany it.
+  &.is-partial {
+    color: var(--qz-band-partial);
+    background: var(--qz-band-partial-bg);
+    border: 1px solid var(--qz-band-partial-soft);
+  }
+  &.is-incorrect {
+    color: var(--qz-wrong-strong);
+    background: var(--qz-wrong-bg);
+    border: 1px solid var(--qz-wrong-soft);
+  }
+}
+
+.qz-why {
+  border-left: 4px solid var(--qz-info-border);
+  background: var(--qz-info-bg);
+  border-radius: 0 var(--qz-radius-sm) var(--qz-radius-sm) 0;
+  padding: 0.7rem 1rem;
+  margin-bottom: 0.85rem;
+}
+.qz-why__head {
+  font-family: var(--qz-font-head);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 0 0 0.35rem;
+  color: var(--qz-text);
+}
+.qz-why__body p {
+  margin: 0 0 0.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.qz-source {
+  font-size: 0.92rem;
+  margin: 0;
+  color: var(--qz-muted);
+}
+.qz-source__label {
+  font-weight: 600;
+}
+.qz-source__link {
+  color: var(--qz-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: var(--qz-link-hover);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--qz-link);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+// ---------------------------------------------------------------------
+// Shared bits for the entry / select types (numeric, multi_blank, match)
+// ---------------------------------------------------------------------
+
+// Visually-hidden but screen-reader-available label.
+.qz-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Inline check/cross chip used in per-blank and per-prompt detail rows.
+.qz-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+
+  &.is-correct {
+    color: var(--qz-correct-strong);
+    background: var(--qz-correct-bg);
+    border: 1px solid var(--qz-correct-soft);
+  }
+  &.is-incorrect {
+    color: var(--qz-wrong-strong);
+    background: var(--qz-wrong-bg);
+    border: 1px solid var(--qz-wrong-soft);
+  }
+
+  .qz-icon {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+}
+
+// The keyed-answer + accepted-window line shown after grading.
+.qz-answer-line {
+  margin: 0 0 0.4rem;
+  font-size: 0.98rem;
+}
+.qz-answer-line__tag {
+  font-weight: 700;
+  color: var(--qz-text);
+}
+.qz-your-entry {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  color: var(--qz-muted);
+}
+
+// Neutral rationale variant (multi_blank / matching reveal): plum rule rather
+// than the rust "why this is wrong" treatment, since these explain the key.
+.qz-rationale--neutral {
+  border-top: 1px solid var(--qz-rule);
+  margin: 0.35rem 0 0;
+  padding: 0.4rem 0 0;
+  font-size: 0.9rem;
+  color: var(--qz-muted);
+}
+
+// ---------------------------------------------------------------------
+// numeric
+// ---------------------------------------------------------------------
+
+.qz-num-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+
+  // Graded states on the field row (color + the verdict text/icon below).
+  &.is-correct .qz-num-input {
+    border-color: var(--qz-correct-strong);
+    background: var(--qz-correct-bg);
+  }
+  &.is-incorrect .qz-num-input {
+    border-color: var(--qz-wrong-strong);
+    background: var(--qz-wrong-bg);
+  }
+}
+
+.qz-num-input {
+  font-family: var(--qz-font);
+  font-size: 1.05rem;
+  color: var(--qz-text);
+  background: var(--qz-card-bg);
+  border: 1.5px solid var(--qz-border);
+  border-radius: var(--qz-radius-sm);
+  padding: 0.5rem 0.7rem;
+  width: 12rem;
+  max-width: 100%;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--qz-link);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--qz-link);
+    outline-offset: 2px;
+    border-color: var(--qz-link);
+  }
+  &:disabled {
+    cursor: default;
+    opacity: 1; // keep the entered value fully legible after grading
+  }
+}
+.qz-num-unit {
+  font-size: 0.95rem;
+  color: var(--qz-muted);
+}
+
+// "Common wrong answers" list (distractor_notes).
+.qz-distractors-wrap {
+  margin-bottom: 0.85rem;
+}
+.qz-distractors__head,
+.qz-match-distractors__head {
+  font-family: var(--qz-font-head);
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin: 0 0 0.35rem;
+  color: var(--qz-text);
+}
+.qz-distractors,
+.qz-match-distractors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.qz-distractor,
+.qz-match-distractor {
+  font-size: 0.9rem;
+  color: var(--qz-text);
+  padding: 0.3rem 0 0.3rem 0.9rem;
+  border-left: 3px solid var(--qz-wrong-soft);
+  margin-bottom: 0.35rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+.qz-distractor__val,
+.qz-match-distractor__opt {
+  font-weight: 700;
+  color: var(--qz-wrong-strong);
+}
+
+// ---------------------------------------------------------------------
+// multi_blank
+// ---------------------------------------------------------------------
+
+// Inline blanks sit in the prose; size them to read as fill-ins, not boxes.
+.qz-stem--blanks {
+  margin-bottom: 1.1rem;
+
+  ul,
+  ol {
+    margin: 0.4rem 0 0.7rem;
+    padding-left: 1.4rem;
+  }
+  li {
+    margin: 0 0 0.4rem;
+  }
+}
+
+.qz-blank-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  white-space: nowrap;
+
+  &.is-correct .qz-blank-input {
+    border-bottom-color: var(--qz-correct-strong);
+    background: var(--qz-correct-bg);
+  }
+  &.is-correct .qz-blank-status {
+    color: var(--qz-correct-strong);
+  }
+  &.is-incorrect .qz-blank-input {
+    border-bottom-color: var(--qz-wrong-strong);
+    background: var(--qz-wrong-bg);
+  }
+  &.is-incorrect .qz-blank-status {
+    color: var(--qz-wrong-strong);
+  }
+}
+.qz-blank-input {
+  font-family: var(--qz-font);
+  font-size: 0.98rem;
+  color: var(--qz-text);
+  background: var(--qz-card-bg);
+  border: 0;
+  border-bottom: 2px solid var(--qz-link);
+  border-radius: 3px 3px 0 0;
+  padding: 0.12rem 0.4rem;
+  width: 9rem;
+  max-width: 60vw;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+
+  &::placeholder {
+    color: var(--qz-muted);
+    opacity: 0.7;
+    font-size: 0.85em;
+  }
+  &:hover:not(:disabled) {
+    background: rgba(44, 110, 145, 0.06); // $slate @ 6% — interactive wash
+  }
+  &:focus-visible {
+    outline: 2px solid var(--qz-link);
+    outline-offset: 2px;
+  }
+  &:disabled {
+    cursor: default;
+  }
+}
+
+// Inline per-blank status icon (the wrapper also tints the input).
+.qz-blank-status {
+  display: inline-flex;
+  align-items: center;
+
+  .qz-icon {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+}
+
+// Per-blank detail list shown after grading.
+.qz-blank-detail,
+.qz-match-detail {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+}
+.qz-blank-row,
+.qz-match-detail__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--qz-border);
+  border-left-width: 4px;
+  border-radius: var(--qz-radius-sm);
+  margin-bottom: 0.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+  &.is-correct {
+    border-left-color: var(--qz-correct-strong);
+  }
+  &.is-incorrect {
+    border-left-color: var(--qz-wrong-strong);
+  }
+  // Force the rationale and full-width children onto their own line.
+  .qz-rationale {
+    flex-basis: 100%;
+  }
+}
+.qz-blank-row__label {
+  font-weight: 600;
+}
+.qz-blank-row__exp {
+  color: var(--qz-muted);
+  font-size: 0.92rem;
+}
+
+// ---------------------------------------------------------------------
+// matching
+// ---------------------------------------------------------------------
+
+.qz-match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.qz-match-row {
+  display: grid;
+  // Stacked layout. The prompt AND the <select> options can both be long prose
+  // (responses run up to ~120 chars), so a side-by-side grid let the select's
+  // max-content width balloon and crush the prompt to one word per line. Number
+  // + prompt share the first row; the select and its graded status stack below,
+  // indented under the prompt. The select fills its column (width: 100%) so it
+  // never demands more than the available width.
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "num prompt"
+    ".   control"
+    ".   status";
+  align-items: start;
+  gap: 0.45rem 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--qz-border);
+  border-radius: var(--qz-radius-sm);
+
+  &.is-correct {
+    border-color: var(--qz-correct-strong);
+    background: var(--qz-correct-bg);
+
+    .qz-match__status {
+      color: var(--qz-correct-strong);
+    }
+  }
+  &.is-incorrect {
+    border-color: var(--qz-wrong-strong);
+    background: var(--qz-wrong-bg);
+
+    .qz-match__status {
+      color: var(--qz-wrong-strong);
+    }
+  }
+}
+.qz-match__num {
+  grid-area: num;
+  font-weight: 700;
+  color: var(--qz-muted);
+  font-size: 0.9rem;
+}
+.qz-match__prompt {
+  grid-area: prompt;
+  min-width: 0;
+}
+.qz-match__control {
+  grid-area: control;
+  min-width: 0;
+}
+.qz-match__select {
+  font-family: var(--qz-font);
+  font-size: 0.95rem;
+  color: var(--qz-text);
+  background: var(--qz-card-bg);
+  border: 1.5px solid var(--qz-border);
+  border-radius: var(--qz-radius-sm);
+  padding: 0.4rem 0.6rem;
+  width: 100%;
+  max-width: 100%;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--qz-link);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--qz-link);
+    outline-offset: 2px;
+    border-color: var(--qz-link);
+  }
+  &:disabled {
+    cursor: default;
+    opacity: 1;
+  }
+}
+.qz-match__status {
+  grid-area: status;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// Per-prompt reveal of the correct pairing.
+.qz-match-detail__pair {
+  display: inline;
+}
+.qz-match-detail__arrow {
+  font-weight: 700;
+  color: var(--qz-muted);
+}
+.qz-match-detail__right {
+  font-weight: 600;
+}
+.qz-match-distractors-wrap {
+  margin-bottom: 0.85rem;
+}
+
+@media (max-width: 34rem) {
+  // On a phone the full banner card is too tall to pin usefully; let it scroll
+  // with the page (static) instead of overlaying the question content. It stays
+  // sticky on wider viewports, where it renders as a compact one-line bar.
+  // (The matching rows already stack at every width — see .qz-match-row above.)
+  .qz-scorebar {
+    position: static;
+  }
+}
+
+// Respect reduced-motion preference.
+@media (prefers-reduced-motion: reduce) {
+  .qz-option-row,
+  .qz-btn,
+  .qz-num-input,
+  .qz-blank-input,
+  .qz-match__select {
+    transition: none;
+  }
+}
+
+// ---------------------------------------------------------------------
+// Shared assets (P0-5): tables / figures / notes referenced by items.
+// Rendered ABOVE the stem; display-only, never graded.
+// ---------------------------------------------------------------------
+
+.qz-assets {
+  margin: 0 0 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.qz-asset {
+  margin: 0;
+  border: 1px solid var(--qz-border);
+  border-radius: var(--qz-radius-sm);
+  background: var(--qz-bg);
+  padding: 0.85rem 0.95rem;
+  overflow: hidden;
+}
+
+.qz-asset__title {
+  font-family: var(--qz-font-head);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--qz-text);
+  margin: 0 0 0.6rem;
+  line-height: 1.35;
+}
+
+.qz-asset__caption {
+  font-size: 0.85rem;
+  color: var(--qz-muted);
+  line-height: 1.45;
+  margin: 0.6rem 0 0;
+
+  p {
+    margin: 0 0 0.4rem;
+  }
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.qz-asset__img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--qz-radius-sm);
+  margin: 0 auto;
+}
+
+// Horizontal scroll affordance for wide tables on narrow screens.
+.qz-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+// A pipe table embedded in an item stem / why-correct needs vertical breathing
+// room from the surrounding prose (asset tables get theirs from the asset wrap).
+.qz-stem .qz-table-wrap,
+.qz-why__body .qz-table-wrap {
+  margin: 0.7rem 0 0.25rem;
+}
+
+// --- Real Markdown pipe table (P0-5): the minimal inline MD can't do this. ---
+.qz-md-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: var(--qz-text);
+
+  caption {
+    caption-side: top;
+    text-align: left;
+    color: var(--qz-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+  th,
+  td {
+    padding: 0.4rem 0.7rem;
+    border-bottom: 1px solid var(--qz-rule);
+    vertical-align: top;
+    white-space: nowrap;
+  }
+  thead th {
+    font-family: var(--qz-font-head);
+    font-weight: 700;
+    color: var(--qz-text);
+    border-bottom: 2px solid var(--qz-border);
+    background: var(--qz-rule);
+    text-align: left;
+  }
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  // First column reads as a row header: keep it left and a touch bolder.
+  tbody td:first-child {
+    font-weight: 600;
+    white-space: normal; // allow long variable names to wrap
+  }
+  // Zebra striping. The plain rule is the fallback; the color-mix override
+  // (P2-9) tints each even row toward the text color where supported.
+  tbody tr:nth-child(even) td {
+    background: var(--qz-rule);
+  }
+}
+// Declaration order gives non-color-mix browsers (Safari < 16.2) the flat
+// fallback automatically; @supports guards the enhancement so it is never the
+// only path.
+@supports (background: color-mix(in srgb, red 50%, white)) {
+  .qz-md-table tbody tr:nth-child(even) td {
+    background: color-mix(in srgb, var(--qz-text) 6%, var(--qz-card-bg));
+  }
+}
+
+// Standalone display-math block (a `$$…$$` paragraph).
+.qz-mathblock {
+  margin: 0.6rem 0 0.9rem;
+  overflow-x: auto;
+}
+
+// ---------------------------------------------------------------------
+// Unknown / unsupported item type — graceful placeholder (P2-9).
+// ---------------------------------------------------------------------
+.qz-card--unknown {
+  border-style: dashed;
+}
+.qz-unknown-note {
+  margin: 0.6rem 0 0;
+  font-size: 0.92rem;
+  color: var(--qz-muted);
+  font-style: italic;
+}
+
+// ---------------------------------------------------------------------
+// Print (added in the SCSS refactor): reveal graded feedback on paper and
+// avoid clipping. The engine reveals feedback by populating .qz-feedback and
+// toggling state classes, so a printed page after "Check" should keep the
+// verdict, why-correct, rationale, and per-blank/match details visible.
+// ---------------------------------------------------------------------
+@media print {
+  // Force a readable light rendering regardless of the on-screen theme, so a
+  // dark-mode page does not print as dark ink on dark fills.
+  .qz-quiz {
+    color: #000;
+    max-width: none;
+    padding: 0;
+  }
+
+  // Drop sticky positioning and shadows so the banner prints in flow and
+  // nothing is hidden behind a (non-existent) toolbar.
+  .qz-scorebar {
+    position: static;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  // Keep each question card intact across page breaks where possible, and
+  // drop heavy shadows for clean print.
+  .qz-card {
+    box-shadow: none;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  // Ensure any revealed feedback is shown (never collapsed/clipped on print),
+  // and let it expand to its full height.
+  .qz-feedback,
+  .qz-why,
+  .qz-rationale,
+  .qz-rationale--neutral,
+  .qz-blank-detail,
+  .qz-match-detail,
+  .qz-distractors-wrap,
+  .qz-match-distractors-wrap {
+    display: block !important;
+    overflow: visible !important;
+    break-inside: avoid;
+  }
+
+  // Tables and assets must not be clipped to a scroll viewport on paper.
+  .qz-table-wrap,
+  .qz-asset,
+  .qz-mathblock {
+    overflow: visible !important;
+  }
+  .qz-md-table {
+    break-inside: auto;
+  }
+
+  // Print the graded state borders (browsers strip backgrounds by default;
+  // ask for them so correct/partial/wrong washes survive where the user opts
+  // into "background graphics"). Borders still convey state without them.
+  .qz-option-row,
+  .qz-verdict,
+  .qz-chip,
+  .qz-band,
+  .qz-num-input,
+  .qz-match-row {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  // Hide the interactive controls (Check / Reset) — they do nothing on paper.
+  .qz-controls,
+  .qz-btn,
+  .qz-savenote {
+    display: none !important;
+  }
+}

@@ -1,0 +1,61 @@
+project:
+  type: book
+  output-dir: _book
+  # The quiz engine, its stylesheet, and the JSON question banks are static assets
+  # the page fetches at runtime — copy them verbatim into _book.
+  resources:
+    - assets/**
+
+book:
+  title: "BER 640 Practice Quizzes"
+  subtitle: "Interactive self-check questions with instant feedback"
+  author: "JoonHo Lee"
+  date: "2026"
+  date-format: "YYYY"
+  site-url: https://joonho112.github.io/jlee-regression-course/practice/
+  repo-url: https://github.com/joonho112/jlee-regression-course
+  repo-subdir: practice
+  repo-actions: [edit, issue]
+  search: true
+  reader-mode: true
+  cover-image: images/hex-logo.svg
+  favicon: images/hex-glyph.svg
+  page-footer:
+    left: "BER 640 · Practice Quizzes"
+    center: "© 2026 JoonHo Lee · licensed CC BY 4.0"
+    right: "Built with [Quarto](https://quarto.org)"
+
+  sidebar:
+    style: floating
+    collapse-level: 2
+
+  chapters:
+    - index.qmd
+    - part: "Part I: Linear Regression Foundations"
+      chapters:
+        - chapters/quiz1-simple-regression.qmd
+        - chapters/quiz2-dummy-variables.qmd
+        - chapters/quiz3-confounding-ancova.qmd
+        - chapters/quiz4-one-way-anova.qmd
+    - part: "Part II: Multiple Regression and Interactions"
+      chapters:
+        - chapters/quiz5-interactions.qmd
+        - chapters/quiz6-two-way-anova.qmd
+    - part: "Part III: Logistic Regression"
+      chapters:
+        - chapters/quiz7-logistic-odds.qmd
+        - chapters/quiz8-multiple-logistic-simpsons.qmd
+
+  page-navigation: true
+  back-to-top-navigation: true
+
+format:
+  html:
+    theme:
+      light: [cosmo, html/custom.scss]
+      dark: [darkly, html/custom-dark.scss]
+    lightbox: auto
+    toc: true
+    toc-depth: 3
+    number-sections: false
+    df-print: kable

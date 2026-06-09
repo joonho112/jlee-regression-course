@@ -1,0 +1,32 @@
+// =====================================================================
+// BER 640 lecture-notes book — shared, THEME-AGNOSTIC scss:rules
+// =====================================================================
+// @imported into BOTH custom.scss (light) and custom-dark.scss (dark) so structural
+// rules apply in both themes without duplication. Anything whose COLOR differs by theme
+// (heading color, h2 underline color, callout tints, inline-code bg) is set in the
+// importing file, NOT here. Component structure (Phase 2) accrues here over time.
+
+// --- Heading rhythm (structure; per-theme colors set by the importer) ---
+h1, h2, h3, h4, h5, h6 { letter-spacing: -0.01em; }
+h2 {
+  padding-bottom: 0.5rem;
+  margin-top: 2rem;
+  border-bottom-width: 3px;
+  border-bottom-style: solid;   // color per theme
+}
+h6 { text-transform: uppercase; letter-spacing: 0.05em; }
+
+// --- Inline code (bg/color per theme) ---
+:not(pre) > code { padding: 0.15em 0.4em; border-radius: 0.2rem; }
+a code { background-color: transparent; color: inherit; padding: 0; }
+
+// --- Table column sizing (theme-agnostic) ---
+// Quarto/Pandoc renders every Markdown pipe table with a <colgroup> whose <col>
+// widths are derived from the *dash counts* in the separator row. That made
+// short-content columns (e.g. "Available After", "Difficulty", "Pts") wide and
+// long prose columns ("Topics", "Concept", "Learning target") cramped — wasting
+// space and forcing excessive wrapping. Neutralize those inline percentage
+// widths so the browser sizes every column to its CONTENT (auto table layout),
+// giving wide columns to long text and narrow columns to short values.
+table { table-layout: auto !important; width: 100%; }
+table > colgroup > col { width: auto !important; }

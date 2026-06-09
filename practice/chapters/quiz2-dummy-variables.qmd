@@ -1,0 +1,16 @@
+---
+title: "Quiz 2 — Dummy Variables & the *t*-Test"
+---
+
+These questions check how a **0/1 dummy variable** turns a two-group comparison into a
+regression — the model $\hat{y} = b_0 + b_1 D$ where $D$ indicates group membership —
+and how that connects to the two-sample *t*-test. They mirror **Homework 2** and draw
+on **Chapter 1** of the Lecture Notes.
+
+Answer each question and press **Check** for instant, explained feedback. Your score
+and progress are saved in this browser; press **Reset quiz** to start over.
+
+```{=html}
+<div class="quizbank" data-bank="../assets/banks/quiz2.json" data-show-title="false"></div>
+<script type="module" src="../assets/quiz-engine.js"></script>
+```

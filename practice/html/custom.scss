@@ -1,0 +1,47 @@
+/*-- scss:defaults --*/
+
+// BER 640 lecture-notes book theme layer — added OVER cosmo (light) / darkly (dark),
+// never replacing them, so the whole layer reverts by deleting this file + the two
+// theme lines in _quarto.yml. Used for BOTH the light and dark theme entries; any
+// dark-specific rules live below under [data-bs-theme="dark"].
+//
+// Step 1.2: brand tokens ACTIVATED — the Cividis Ink palette + Pairing B fonts
+// now reach the book via the import below. Component rules follow in 1.5/1.6 and Phase 2.
+@import "brand-tokens";
+
+// Light-surface variables — this file is the LIGHT theme layer ([cosmo, html/custom.scss]).
+// Kept out of the shared partial so the dark theme (darkly) retains its own dark surfaces.
+$body-bg:    $paper;
+$body-color: $gray-800;
+$code-bg:    $gray-100;
+$code-color: $gray-900;
+
+/*-- scss:rules --*/
+
+@import "brand-rules";   // shared theme-agnostic structural rules
+@import "components";    // pedagogical component taxonomy (Phase 2)
+@import "quiz";          // student-quiz component layer (the /practice book)
+
+// ===== Step 2.1 — light surface CSS variables (consumed by components) =====
+:root {
+  --surface:     #{$gray-50};
+  --surface-2:   #ffffff;
+  --border:      #{$gray-200};
+  --muted:       #{$gray-600};
+  --accent-tint: rgba(44, 110, 145, 0.05);
+}
+
+// ===== Step 1.6 — heading rhythm (light colors) =====
+h1, h2, h3, h4, h5, h6 { color: $primary; }       // navy headings
+h2 { border-bottom-color: $gray-200; }             // subtle grey underline
+h6 { color: $gray-600; }
+:not(pre) > code { background-color: $gray-100; color: $gray-900; }
+
+// ===== Step 1.5 — four-color callout legend re-tint (Cividis Ink, light) =====
+// Semantic legend (fixed): note=Theory, tip=Practical, warning=Pitfall, important=Key Takeaway.
+div.callout { margin: 1.4rem 0; border-radius: 0.3rem; }
+.callout-note      { border-left-color: $info !important;    background-color: rgba(107, 62, 122, 0.07); }  // plum
+.callout-tip       { border-left-color: $success !important; background-color: rgba(62, 142, 138, 0.08); }  // teal
+.callout-warning   { border-left-color: $warning !important; background-color: rgba(201, 162, 39, 0.10); }  // gold
+.callout-important { border-left-color: $danger !important;  background-color: rgba(168, 67, 30, 0.07);  }  // rust
+// NOTE: $secondary is a neutral grey in this system, so .callout-important must use $danger.

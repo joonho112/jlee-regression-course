@@ -1,0 +1,16 @@
+---
+title: "Quiz 3 — Confounding & ANCOVA"
+---
+
+These questions check **confounding** and **statistical adjustment** — how adding a
+covariate to a model like $\hat{y} = b_0 + b_1 D + b_2 x$ can change, or even reverse,
+a group difference, and what collinearity does (and doesn't) do to the estimates. They
+mirror **Homework 3** and draw on **Chapter 2** of the Lecture Notes.
+
+Answer each question and press **Check** for instant, explained feedback. Your score
+and progress are saved in this browser; press **Reset quiz** to start over.
+
+```{=html}
+<div class="quizbank" data-bank="../assets/banks/quiz3.json" data-show-title="false"></div>
+<script type="module" src="../assets/quiz-engine.js"></script>
+```

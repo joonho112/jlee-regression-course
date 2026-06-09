@@ -27,7 +27,7 @@ mkdir -p "$SITE"
 cp -R "$ROOT/website/_site/." "$SITE/"
 
 # Books -> subpaths
-for map in "notes/_book:notes" "labs/_book:labs" "homework/_book:homework" "quizzes/_book:quizzes" "project/_book:project"; do
+for map in "notes/_book:notes" "labs/_book:labs" "homework/_book:homework" "quizzes/_book:quizzes" "project/_book:project" "practice/_book:practice"; do
   src="$ROOT/${map%%:*}"
   dst="$SITE/${map##*:}"
   mkdir -p "$dst"

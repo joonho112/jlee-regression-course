@@ -1,0 +1,16 @@
+---
+title: "Quiz 4 — One-Way ANOVA & Multiple Comparisons"
+---
+
+These questions check **one-way ANOVA** — the omnibus $F$-test for differences among
+group means — and the **multiple-comparison** problem, where running many pairwise
+tests inflates the family-wise error rate unless it is controlled (Sidak / Bonferroni).
+They mirror **Homework 4** and draw on **Chapter 3** of the Lecture Notes.
+
+Answer each question and press **Check** for instant, explained feedback. Your score
+and progress are saved in this browser; press **Reset quiz** to start over.
+
+```{=html}
+<div class="quizbank" data-bank="../assets/banks/quiz4.json" data-show-title="false"></div>
+<script type="module" src="../assets/quiz-engine.js"></script>
+```

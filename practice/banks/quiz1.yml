@@ -1,0 +1,433 @@
+# BER 640 — practice-quiz question bank (this is the maintained source).
+# Edit this file, then run `python3 extract/build_banks.py` to validate and
+# regenerate assets/banks/<quiz>.json. Schema: schema/quiz-schema.json (v1.0).
+# See MAINTAINING.md for the authoring guide.
+
+schema_version: '1.0'
+quiz_id: quiz1
+title: 'Quiz 1: Simple Linear Regression'
+module: Simple Linear Regression
+available_after: Week 2
+mastery:
+  full_min: 80
+  partial_min: 60
+settings:
+  time_limit_min: 60
+  attempts: unlimited
+  score_recorded: highest
+  show_answers: immediately
+items:
+- id: q1-01
+  type: multiple_choice
+  number: 1
+  topic: Response vs. explanatory
+  points: 1
+  difficulty: conceptual
+  stem: |-
+    A college admissions team wants to use a student's **high school GPA** to predict that student's later **college GPA**, and plans to fit a simple linear regression.
+
+    In this study, which variable should be the **response** ($y$) and which should be the **explanatory** ($x$) variable?
+  options:
+  - id: a
+    text: >-
+      College GPA is $x$ and high school GPA is $y$, because high school GPA is recorded first in the
+      data file.
+    correct: false
+    rationale: >-
+      It reverses the roles using an irrelevant cue. A column's position in the data file has nothing
+      to do with which variable is the response; the research question fixes the roles.
+  - id: b
+    text: >-
+      High school GPA is $x$ and college GPA is $y$, because the model predicts the later outcome from
+      the earlier measure.
+    correct: true
+  - id: c
+    text: >-
+      Either variable can serve as $y$, because regression treats the two variables symmetrically.
+    correct: false
+    rationale: >-
+      Regression is *not* symmetric in $x$ and $y$ — OLS minimizes squared *vertical* (in-$y$) deviations,
+      so regressing $y$ on $x$ generally gives a different line than regressing $x$ on $y$.
+  - id: d
+    text: Whichever variable has the larger standard deviation should be the response $y$.
+    correct: false
+    rationale: >-
+      A variable's spread is irrelevant to its role; the role is set by the substantive question, not
+      by which variable varies more.
+  why_correct: >-
+    The response (outcome) variable is the one we want to predict or explain — here, the later college
+    GPA — and the explanatory (predictor) variable is the one we predict *from* — here, the earlier high
+    school GPA. The research question sets these roles, so the model is $\text{E}(y_i \mid x_i) = \alpha
+    + \beta x_i$ with college GPA as $y$ and high school GPA as $x$.
+  source:
+    chapter: 1
+    title: Simple Linear Regression
+    section: The Simple Linear Regression Model
+    href: ../../notes/chapters/01-simple-linear-regression.html#sec-ch1-model
+- id: q1-02
+  type: multiple_choice
+  number: 2
+  topic: Slope interpretation
+  points: 1
+  difficulty: applied
+  stem: |-
+    For students at a college, the prediction equation relating college GPA ($y$) to high school GPA ($x$), both on a 0–4 scale, is
+
+    $$\hat{y} = 0.5 + 0.7\,x.$$
+
+    Which statement correctly interprets the **slope**?
+  options:
+  - id: a
+    text: A student with a high school GPA of 1 is predicted to have a college GPA of 0.7.
+    correct: false
+    rationale: >-
+      This confuses the slope with a fitted value. At $x = 1$, $\hat{y} = 0.5 + 0.7(1) = 1.2$, not 0.7;
+      the slope is a *rate of change*, not a predicted score.
+  - id: b
+    text: >-
+      For each 1-point increase in high school GPA, the predicted college GPA is higher by 0.7 points,
+      on average.
+    correct: true
+  - id: c
+    text: >-
+      Raising a student's high school GPA by 1 point causes their college GPA to rise by 0.7 points.
+    correct: false
+    rationale: >-
+      This imposes a causal claim. The slope describes association, not causation; with observational
+      data, unmeasured factors could drive both GPAs, so "causes" is unjustified.
+  - id: d
+    text: >-
+      For each 1-point increase in high school GPA, the predicted college GPA is higher by 0.7 standard
+      deviations, on average.
+    correct: false
+    rationale: >-
+      The 0.7 is in raw GPA *points* per GPA point, not standard deviations. The "per standard deviation"
+      reading belongs to the *standardized* coefficient, a different quantity.
+  why_correct: >-
+    The slope is the predicted change in the response per one-unit increase in the predictor: a 1-point
+    rise in high school GPA is associated with a **0.7-point increase** in *predicted college GPA*, on
+    average. It names the variable (college GPA), direction (increase), magnitude (0.7), and units (GPA
+    points).
+  source:
+    chapter: 1
+    title: Simple Linear Regression
+    section: Interpreting the Intercept and Slope
+    href: ../../notes/chapters/01-simple-linear-regression.html#sec-ch1-model
+- id: q1-03
+  type: matching
+  number: 3
+  topic: Matching lines to shape
+  points: 2
+  difficulty: conceptual
+  stem: >-
+    Each line below is written as $y = \text{intercept} + \text{slope} \cdot x$. Match each line (left)
+    to the description of its **direction and steepness** (right). The **sign** of the slope gives the
+    direction; the **absolute value** of the slope gives the steepness. Each description is used exactly
+    once.
+  prompts:
+  - id: p1
+    text: $y = 7 + 0.5x$
+    match: w
+    rationale: >-
+      slope $+0.5$ is positive (rises) and small in magnitude, so it rises *moderately*.
+  - id: p2
+    text: $y = 7 + x$
+    match: v
+    rationale: >-
+      slope $+1$ is positive (rises) and larger in magnitude than $0.5$, so it rises *more steeply* than
+      line 1.
+  - id: p3
+    text: $y = 7 - x$
+    match: x
+    rationale: slope $-1$ is negative (falls) with magnitude 1, so it falls *steeply*.
+  - id: p4
+    text: $y = 7 - 0.5x$
+    match: z
+    rationale: >-
+      slope $-0.5$ is negative (falls) with magnitude $0.5$, so it falls *moderately* — less steeply than
+      line 3 because $|-0.5| < |-1|$.
+  - id: p5
+    text: $y = 7$
+    match: y
+    rationale: >-
+      slope $0$ means $y$ never changes with $x$ — a horizontal (flat) line at $y = 7$.
+  responses:
+  - id: v
+    text: Rises steeply (slope $+1$)
+  - id: w
+    text: Rises moderately (slope $+0.5$)
+  - id: x
+    text: Falls steeply (slope $-1$)
+  - id: y
+    text: Flat — neither rises nor falls (slope $0$)
+  - id: z
+    text: Falls moderately (slope $-0.5$)
+  why_correct: >-
+    the *sign* of the slope sets the direction and its *absolute value* sets the steepness — they are
+    not interchangeable. A slope of $-1$ is steeper than $+0.5$ (because $|-1| > |0.5|$) even though it
+    is negative, and a slope of $0$ is genuinely *flat*, not "barely rising."
+  source:
+    chapter: 1
+    title: Simple Linear Regression
+    section: The Regression Function
+    href: ../../notes/chapters/01-simple-linear-regression.html#the-regression-function
+- id: q1-04
+  type: multiple_choice
+  number: 4
+  topic: Intercept in context
+  points: 1
+  difficulty: conceptual
+  stem: |-
+    For students at a college, the fitted equation relating college GPA ($y$) to high school GPA ($x$) is
+
+    $$\hat{y} = 0.5 + 0.7\,x,$$
+
+    where both GPAs are measured on the usual 0–4 scale and the college's admitted students all have high school GPAs well above 0. What is the best interpretation of the **intercept**, $0.5$?
+  options:
+  - id: a
+    text: >-
+      It is the predicted *change* in college GPA for a one-point increase in high school GPA.
+    correct: false
+    rationale: That describes the *slope* (0.7), not the intercept.
+  - id: b
+    text: It is the predicted college GPA for the average admitted student.
+    correct: false
+    rationale: >-
+      The prediction for the *average* student uses the mean high school GPA, not $x = 0$. The fitted
+      line passes through the point of means, so $\hat{y}$ at $\bar{x}$ equals $\bar{y}$, not the intercept.
+  - id: c
+    text: >-
+      It is the predicted college GPA for a student whose high school GPA is 0 — but since the admitted
+      GPAs lie well above 0, it does not describe a typical student here.
+    correct: true
+  - id: d
+    text: It is meaningless and should always be dropped from the model.
+    correct: false
+    rationale: >-
+      The intercept is needed to define the line and generate predictions; it is not "always meaningless."
+      It is only of limited substantive interest when $x = 0$ falls outside the observed range.
+  why_correct: >-
+    The intercept is the predicted value of $y$ when $x = 0$ — here, the predicted college GPA for a high
+    school GPA of 0. Because the admitted students' high school GPAs all sit well above 0, the value $x
+    = 0$ lies outside the relevant range, so the intercept is a valid number but does not describe a typical
+    admitted student.
+  source:
+    chapter: 1
+    title: Simple Linear Regression
+    section: Interpreting the Intercept and Slope
+    href: ../../notes/chapters/01-simple-linear-regression.html#sec-ch1-model
+- id: q1-05
+  type: multi_blank
+  number: 5
+  topic: Recognizing ŷ = x
+  points: 2
+  difficulty: applied
+  stem: |-
+    A proposed prediction equation for college GPA ($y$) from high school GPA ($x$) is
+
+    $$\hat{y} = x.$$
+
+    Rewrite it in the form $\hat{y} = \text{intercept} + \text{slope}\cdot x$ and complete the interpretation:
+
+    "The intercept is {{blank1}} and the slope is {{blank2}}. This equation predicts that a student's college GPA {{blank3}} (is always higher than / exactly equals / is unrelated to) their high school GPA."
+  blanks:
+  - id: blank1
+    kind: numeric
+    answer: 0
+    tolerance: 0.0
+    rationale: >-
+      writing $\hat{y} = x$ as $\hat{y} = 0 + 1\cdot x$ shows the intercept is 0 — a student with a high
+      school GPA of 0 is predicted to have a college GPA of 0.
+  - id: blank2
+    kind: numeric
+    answer: 1
+    tolerance: 0.0
+    rationale: >-
+      the coefficient on $x$ is 1, so each 1-point increase in high school GPA raises predicted college
+      GPA by exactly 1 point.
+  - id: blank3
+    kind: text
+    accept:
+    - exactly equals
+    match: ci_trim
+    rationale: >-
+      an intercept of 0 and a slope of 1 means $\hat{y} = x$, so predicted college GPA equals high school
+      GPA.
+  why_correct: |-
+    **`[blank1]` (intercept = 0):** writing $\hat{y} = x$ as $\hat{y} = 0 + 1\cdot x$ shows the intercept is 0 — a student with a high school GPA of 0 is predicted to have a college GPA of 0.
+    **`[blank2]` (slope = 1):** the coefficient on $x$ is 1, so each 1-point increase in high school GPA raises predicted college GPA by exactly 1 point.
+    **`[blank3]` (exactly equals):** an intercept of 0 and a slope of 1 means $\hat{y} = x$, so predicted college GPA equals high school GPA.
+    **Common errors:** swapping the blanks (intercept 1, slope 0) describes the *flat* line $\hat{y} = 1$, not $\hat{y} = x$; and "is unrelated to" describes a slope of 0, whereas the slope here is 1 — the strongest one-to-one positive relationship, not the absence of one.
+  source:
+    chapter: 1
+    title: Simple Linear Regression
+    section: Interpreting the Intercept and Slope
+    href: ../../notes/chapters/01-simple-linear-regression.html#sec-ch1-model
+- id: q1-06
+  type: numeric
+  number: 6
+  topic: Computing a fitted value
+  points: 2
+  difficulty: applied
+  stem: |-
+    For students at a college, the prediction equation relating college GPA ($y$) to high school GPA ($x$) is
+
+    $$\hat{y} = 0.5 + 0.7\,x.$$
+
+    For a student with a **high school GPA of 3.0**, the predicted college GPA $\hat{y}$ is ________. Enter a number.
+  answer: 2.6
+  accept_range:
+    min: 2.55
+    max: 2.65
+  tolerance: 0.05
+  why_correct: |-
+    $\hat{y} = 0.5 + 0.7(3.0) = 0.5 + 2.1 = 2.6$ GPA points.
+
+    **Tolerance:** the narrow $\pm 0.05$ window absorbs sensible rounding without admitting a wrong method.
+    **Common errors the window excludes:** **2.1** (using only the slope term $0.7 \times 3.0$ and dropping the intercept); **3.6** (computing $(0.5 + 0.7) \times 3.0$, the wrong order of operations); or **0.5** (reporting the intercept alone). The fitted value adds the intercept to the slope-times-$x$ term, in that order.
+  source:
+    chapter: 1
+    title: Simple Linear Regression
+    section: OLS Estimation
+    href: ../../notes/chapters/01-simple-linear-regression.html#sec-ch1-ols
+- id: q1-07
+  type: multiple_choice
+  number: 7
+  topic: Realistic prediction range
+  points: 1
+  difficulty: applied
+  stem: |-
+    An admissions officer proposes the prediction equation
+
+    $$\hat{y} = 0.5 + 7x$$
+
+    for college GPA ($y$) from high school GPA ($x$), where **both GPAs range from 0 to 4**. Is this equation realistic over the valid range, and why?
+  options:
+  - id: a
+    text: >-
+      No — for ordinary high school GPAs it predicts college GPAs above the 4.0 ceiling, which are impossible
+      (e.g., $\hat{y} = 7.5$ at $x = 1$).
+    correct: true
+  - id: b
+    text: >-
+      Yes — the arithmetic is correct at every $x$, so any value it returns is a valid prediction for
+      the scale.
+    correct: false
+    rationale: >-
+      A correct substitution is not the test of realism — it can still return an *impossible* value. Realism
+      requires that predictions stay within possible outcomes over the valid range of $x$.
+  - id: c
+    text: >-
+      No — the equation is unrealistic because its slope is negative, so predicted college GPA falls as
+      high school GPA rises.
+    correct: false
+    rationale: >-
+      The slope is $+7$, which is *positive*; predicted GPA *rises* with $x$. The problem is that it rises
+      far too steeply, not that it falls.
+  - id: d
+    text: >-
+      Yes, once the intercept $0.5$ is dropped, because the intercept is what pushes the prediction too
+      high.
+    correct: false
+    rationale: >-
+      Dropping the intercept gives $\hat{y} = 7x$, which is *even worse* — at $x = 1$ it predicts 7.0,
+      still far above 4. The steep *slope*, not the small intercept, is what breaks the range.
+  why_correct: >-
+    A college GPA must stay between 0 and 4, but with a slope of 7 the line leaves the valid range almost
+    immediately: at $x = 1$, $\hat{y} = 0.5 + 7(1) = 7.5$, and solving $0.5 + 7x = 4$ gives $x = 0.5$,
+    so any high school GPA above 0.5 yields an impossible predicted college GPA. The equation is unrealistic
+    over essentially the whole relevant range.
+  source:
+    chapter: 1
+    title: Simple Linear Regression
+    section: Extrapolation
+    href: ../../notes/chapters/01-simple-linear-regression.html#extrapolation
+- id: q1-08
+  type: true_false
+  number: 8
+  topic: Extrapolation reliability
+  points: 1
+  difficulty: conceptual
+  stem: >-
+    **True or False:** As long as the arithmetic is done correctly, a fitted regression equation gives
+    a *trustworthy* prediction for any value of $x$ — including values well outside the range of the data
+    used to fit it.
+  options:
+  - id: a
+    text: 'True'
+    correct: false
+    rationale: >-
+      It conflates a *valid substitution* with a *valid value*. The equation will always return a number
+      for any $x$, but that number is only dependable within the observed range; trusting any arithmetically
+      correct prediction is the targeted misconception.
+  - id: b
+    text: 'False'
+    correct: true
+  shuffle: false
+  why_correct: >-
+    A correct substitution is not the same as a reliable prediction. The fitted line is only supported
+    over the **range of $x$ in the data**; predicting outside that range is **extrapolation**, where the
+    linear relationship may no longer hold, so the predicted value can be untrustworthy — or even impossible,
+    as when $\hat{y} = 0.5 + 7x$ returns a GPA above 4 — even though the arithmetic is exact.
+  source:
+    chapter: 1
+    title: Simple Linear Regression
+    section: Extrapolation
+    href: ../../notes/chapters/01-simple-linear-regression.html#extrapolation
+- id: q1-09
+  type: multiple_choice
+  number: 9
+  topic: Comparing two equations
+  points: 1
+  difficulty: challenge
+  stem: |-
+    Two prediction equations are proposed for college GPA ($y$) from high school GPA ($x$), with **both GPAs on a 0–4 scale**:
+
+    | Equation | $\hat{y}$ at $x = 1$ | $\hat{y}$ at $x = 4$ |
+    |:---------|---------------------:|---------------------:|
+    | Equation I:  $\hat{y} = 0.5 + 7x$   | 7.5 | 28.5 |
+    | Equation II: $\hat{y} = 0.5 + 0.7x$ | 1.2 |  3.3 |
+
+    Both slopes are positive. Which equation should be preferred as a model of college GPA, and why?
+  options:
+  - id: a
+    text: >-
+      Equation II — both lines rise, but only Equation II keeps every prediction inside the possible 0–4
+      range.
+    correct: true
+  - id: b
+    text: >-
+      Equation I — its steeper slope means high school GPA matters more, so it is the stronger, better-fitting
+      model of college GPA.
+    correct: false
+    rationale: >-
+      A steeper slope is not "better" — here it is exactly what forces impossible predictions. Magnitude
+      must be judged against what values are possible, not maximized.
+  - id: c
+    text: >-
+      Either is equally good — both slopes are positive, so both lines rise and the choice between them
+      does not matter.
+    correct: false
+    rationale: >-
+      Sharing a positive direction does not make two models equally good; they differ sharply in whether
+      their predictions are realistic, which is precisely what separates them.
+  - id: d
+    text: >-
+      Equation I — a steeper slope makes the relationship more statistically significant, so the steeper
+      equation should be preferred.
+    correct: false
+    rationale: >-
+      These are proposed equations, not fitted estimates, so there is no test or $p$-value here; "steeper
+      is more significant" confuses the size of a slope with statistical significance (which depends on
+      the standard error).
+  why_correct: >-
+    A good model must be right on all three counts together — direction, steepness, and realism. Both
+    equations rise (positive slope), but the slope of 7 is so steep that Equation I leaves the valid 0–4
+    GPA range almost immediately ($\hat{y} = 7.5$ at $x = 1$, $28.5$ at $x = 4$), while Equation II's
+    moderate slope of 0.7 keeps every prediction inside 0–4 ($1.2$ at $x = 1$, $3.3$ at $x = 4$). Realism
+    over the valid range decides it: Equation II.
+  source:
+    chapter: 1
+    title: Simple Linear Regression
+    section: Extrapolation
+    href: ../../notes/chapters/01-simple-linear-regression.html#extrapolation

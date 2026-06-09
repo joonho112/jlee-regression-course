@@ -39,6 +39,19 @@ jobs:
         with:
           version: "1.9.37"
 
+      - name: Set up Python (for the practice quiz-bank build gate)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Build & validate the practice quiz banks (schema + relational gate)
+        # Validates every YAML bank against the schema + relational rules and
+        # (re)generates practice/assets/banks/*.json. Fails the build on any
+        # invalid content, before the /practice book renders.
+        run: |
+          python3 -m pip install --quiet pyyaml jsonschema
+          python3 practice/extract/build_banks.py
+
       - name: Render Quarto projects (reuses committed _freeze)
         run: |
           quarto render website
@@ -46,6 +59,7 @@ jobs:
           quarto render labs
           quarto render homework
           quarto render quizzes
+          quarto render practice
           quarto render project
 
       - name: Fetch prebuilt regdatasets pkgdown site

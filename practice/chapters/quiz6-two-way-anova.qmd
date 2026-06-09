@@ -1,0 +1,16 @@
+---
+title: "Quiz 6 — Two-Way ANOVA & Interaction"
+---
+
+These questions check **two-way ANOVA** — two categorical factors, their main effects,
+and the **interaction** between them — read through the regression model
+$\hat{y} = b_0 + b_1 A + b_2 B + b_3 AB$ and the associated $F$-tests. They mirror
+**Homework 6** and draw on **Chapter 5** of the Lecture Notes.
+
+Answer each question and press **Check** for instant, explained feedback. Your score
+and progress are saved in this browser; press **Reset quiz** to start over.
+
+```{=html}
+<div class="quizbank" data-bank="../assets/banks/quiz6.json" data-show-title="false"></div>
+<script type="module" src="../assets/quiz-engine.js"></script>
+```

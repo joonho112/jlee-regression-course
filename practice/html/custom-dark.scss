@@ -1,0 +1,37 @@
+/*-- scss:defaults --*/
+
+// BER 640 lecture-notes book — DARK theme layer: [darkly, html/custom-dark.scss].
+// Inherits the Cividis Ink brand tokens + Pairing B fonts from the shared partial, but
+// deliberately does NOT override the surface variables ($body-bg/$body-color/$code-bg/
+// $code-color) so the darkly base keeps mode genuinely dark. Dark-specific component
+// rules (heading color lightening, callout tints, code panel) are added in Phase 1.6 / Phase 2.
+
+@import "brand-tokens";
+
+/*-- scss:rules --*/
+
+@import "brand-rules";   // shared theme-agnostic structural rules
+@import "components";    // pedagogical component taxonomy (Phase 2)
+@import "quiz";          // student-quiz component layer (the /practice book)
+
+// ===== Step 2.1 — dark surface CSS variables =====
+:root {
+  --surface:     #26292c;
+  --surface-2:   #2b2f33;
+  --border:      #3a3f44;
+  --muted:       #a8b0b8;
+  --accent-tint: rgba(127, 179, 213, 0.08);
+}
+
+// ===== Step 1.6 — heading rhythm (dark colors) =====
+h1, h2, h3, h4, h5, h6 { color: #7FB3D5; }         // lightened slate-blue for dark contrast
+h2 { border-bottom-color: #3a3f44; }               // dark grey underline
+h6 { color: #9ca3af; }
+:not(pre) > code { background-color: #2b2f33; color: #e3e6e8; }
+
+// ===== Step 1.5 — four-color callout legend re-tint (dark) =====
+// Stronger tints + lighter edge colors so callouts read against the dark surface.
+.callout-note      { border-left-color: #9b6fae !important; background-color: rgba(146, 107, 160, 0.16); }  // plum (light)
+.callout-tip       { border-left-color: #54b0aa !important; background-color: rgba(78, 170, 165, 0.16);  }  // teal (light)
+.callout-warning   { border-left-color: $warning !important; background-color: rgba(201, 162, 39, 0.16);  }  // gold
+.callout-important { border-left-color: #c45a37 !important; background-color: rgba(196, 90, 55, 0.16);   }  // rust (light)

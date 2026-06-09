@@ -15,6 +15,11 @@ title: "Module Quizzes"
 
 Module quizzes assess your understanding of key concepts from each lecture module. They are designed as a **mastery-based** learning tool --- you can retake each quiz as many times as needed to demonstrate understanding.
 
+::: {.callout-tip}
+## Practice anytime, with instant feedback
+Sharpen up with the **[interactive Practice Quizzes]({{< var books.practice_quizzes >}}){target="_blank"}** --- the same kinds of questions, answered right in your browser with **instant, explained feedback** (why each option is right *or* wrong) and a running score that links back to the Lecture Notes. They are **ungraded and unlimited**; the *graded* module quizzes are the ones you take in Blackboard.
+:::
+
 ## Quiz Schedule
 
 | Quiz | Module | Topics | Available After |

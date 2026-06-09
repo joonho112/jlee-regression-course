@@ -49,3 +49,4 @@ books:
   r_lab_book: "/labs"
   project_guide: "/project"
   regdatasets: "/regdatasets"
+  practice_quizzes: "/practice"   # interactive student practice quizzes (ungraded)

@@ -1,0 +1,59 @@
+---
+title: "BER 640 Practice Quizzes"
+subtitle: "Check your understanding — with instant, explained feedback"
+---
+
+Welcome! These **practice quizzes** let you test your understanding of the BER 640
+regression material right here in your browser. They mirror the eight homework
+assignments, so working through a quiz is a low-stakes way to rehearse exactly the
+ideas its paired homework drills.
+
+::: {.callout-tip}
+## How it works
+1. **Pick an answer** to a question and press **Check**.
+2. You get **instant feedback**:
+   - if you're **wrong**, the quiz explains *why that specific choice is wrong* —
+     each option targets a common misconception;
+   - if you're **right**, it explains *why the answer is correct*.
+3. Every question links back to the exact **Lecture Notes** section it draws on, so
+   you can review the moment you need to.
+4. A **running score** and a **mastery band** (Full / Partial / Minimal) update as
+   you go, and your progress is **saved in this browser** so you can leave and come
+   back. Press **Reset** on a quiz to start it over.
+:::
+
+::: {.callout-note}
+## These are for practice, not a grade
+The practice quizzes are **open-book, ungraded, and unlimited** — answer keys live
+in the page, so treat them as a study tool. Your **graded** module quizzes are the
+ones in **Blackboard**. Progress here is stored only on the device you're using; it
+is never uploaded.
+:::
+
+## The eight quizzes
+
+Each quiz pairs with a homework assignment and the lecture-notes chapters it builds
+on. (Chapters are wired in as the book is built; this overview is the map.)
+
+| Quiz | Topic | ↔ Homework | Notes |
+|:--|:--|:--:|:--|
+| 1 | Simple Linear Regression | HW 1 | Ch. 1 |
+| 2 | Dummy Variables & the *t*-Test | HW 2 | Ch. 1 |
+| 3 | Confounding & ANCOVA | HW 3 | Ch. 2 |
+| 4 | One-Way ANOVA & Multiple Comparisons | HW 4 | Ch. 3 |
+| 5 | Interactions & Simple Slopes | HW 5 | Ch. 4–5 |
+| 6 | Two-Way ANOVA & Interaction | HW 6 | Ch. 5 |
+| 7 | Logistic Regression & Odds Ratios | HW 7 | Ch. 9–10 |
+| 8 | Multiple Logistic & Simpson's Paradox | HW 8 | Ch. 10–11 |
+
+Across the eight quizzes there are **85 questions** in six formats — multiple choice,
+true/false, select-all, numeric fill-in, fill-in-multiple-blanks, and matching —
+each with a worked explanation.
+
+## Where this fits
+
+- **[Lecture Notes](../notes/)** — the textbook these questions are drawn from.
+- **[R Lab Book](../labs/)** — hands-on R for the same topics.
+- **[Homework Solutions](../homework/)** — fully worked solutions to the paired homeworks.
+
+Pick a quiz from the sidebar to begin.

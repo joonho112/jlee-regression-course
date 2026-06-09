@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ber640.course/schema/quiz-bank-1.0.json",
+  "title": "BER 640 Quiz Bank",
+  "description": "Canonical question-bank schema (v1.0) for the BER 640 client-side student quiz engine. Validates one YAML/JSON bank per quiz. Companion to schema.md (human spec). Some relational rules (cross-array id resolution, blank-token presence, partial_min<full_min, responses>=prompts) are enforced by the CI wrapper after schema validation; see schema.md section 11.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "quiz_id", "title", "mastery", "items"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "quiz_id": { "$ref": "#/$defs/slug" },
+    "title": { "$ref": "#/$defs/nonEmptyString" },
+    "module": { "type": "string" },
+    "available_after": { "type": "string" },
+    "source": { "$ref": "#/$defs/source" },
+    "mastery": { "$ref": "#/$defs/mastery" },
+    "settings": { "$ref": "#/$defs/settings" },
+    "shared_assets": { "type": "array", "items": { "$ref": "#/$defs/asset" } },
+    "items": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/item" } }
+  },
+
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+    "nonEmptyString": { "type": "string", "minLength": 1, "pattern": "\\S" },
+
+    "mastery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["full_min", "partial_min"],
+      "properties": {
+        "full_min": { "type": "number", "minimum": 0, "maximum": 100 },
+        "partial_min": { "type": "number", "minimum": 0, "maximum": 100 },
+        "label": { "type": "string" }
+      }
+    },
+
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "time_limit_min": { "type": "integer", "minimum": 0 },
+        "attempts": { "type": "string" },
+        "score_recorded": { "type": "string", "enum": ["highest", "latest", "average"] },
+        "show_answers": { "type": "string", "enum": ["immediately", "after_close"] }
+      }
+    },
+
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chapter", "title", "href"],
+      "properties": {
+        "chapter": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "section": { "type": "string" },
+        "href": { "type": "string", "minLength": 1, "pattern": "#" }
+      }
+    },
+
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "kind": { "type": "string", "enum": ["table", "figure", "note"] },
+        "title": { "type": "string" },
+        "caption": { "type": "string" },
+        "markdown": { "$ref": "#/$defs/nonEmptyString" },
+        "src": { "type": "string", "minLength": 1 },
+        "alt": { "type": "string" }
+      },
+      "if": { "properties": { "kind": { "const": "figure" } }, "required": ["kind"] },
+      "then": { "required": ["src", "alt"] },
+      "else": { "required": ["markdown"] }
+    },
+
+    "accept_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "type": "number" },
+        "max": { "type": "number" }
+      }
+    },
+
+    "distractor_note": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "rationale"],
+      "properties": {
+        "value": { "type": ["number", "string"] },
+        "rationale": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text", "correct"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "text": { "$ref": "#/$defs/nonEmptyString" },
+        "correct": { "type": "boolean" },
+        "rationale": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "if": { "properties": { "correct": { "const": false } }, "required": ["correct"] },
+      "then": { "required": ["rationale"] }
+    },
+
+    "blank": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "rationale"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "kind": { "type": "string", "enum": ["numeric", "text"] },
+        "label": { "type": "string" },
+        "answer": { "type": "number" },
+        "tolerance": { "type": "number", "minimum": 0 },
+        "accept_range": { "$ref": "#/$defs/accept_range" },
+        "unit": { "type": "string" },
+        "accept": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonEmptyString" } },
+        "match": { "type": "string", "enum": ["ci_trim", "exact"] },
+        "rationale": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "numeric" } }, "required": ["kind"] },
+          "then": {
+            "required": ["answer"],
+            "anyOf": [{ "required": ["tolerance"] }, { "required": ["accept_range"] }]
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "text" } }, "required": ["kind"] },
+          "then": { "required": ["accept"] }
+        }
+      ]
+    },
+
+    "prompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text", "match", "rationale"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "text": { "$ref": "#/$defs/nonEmptyString" },
+        "match": { "$ref": "#/$defs/slug" },
+        "rationale": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "text": { "$ref": "#/$defs/nonEmptyString" },
+        "distractor": { "type": "boolean" },
+        "rationale": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "if": { "properties": { "distractor": { "const": true } }, "required": ["distractor"] },
+      "then": { "required": ["rationale"] }
+    },
+
+    "itemBase": {
+      "type": "object",
+      "required": ["id", "type", "stem", "points", "difficulty", "why_correct", "source"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "type": {
+          "type": "string",
+          "enum": ["multiple_choice", "true_false", "multiple_answer", "numeric", "multi_blank", "matching"]
+        },
+        "number": { "type": "integer", "minimum": 1 },
+        "topic": { "type": "string" },
+        "stem": { "$ref": "#/$defs/nonEmptyString" },
+        "asset_refs": { "type": "array", "items": { "$ref": "#/$defs/slug" } },
+        "points": { "type": "number", "exclusiveMinimum": 0 },
+        "difficulty": { "type": "string", "enum": ["conceptual", "applied", "challenge"] },
+        "why_correct": { "$ref": "#/$defs/nonEmptyString" },
+        "source": { "$ref": "#/$defs/source" },
+        "shuffle": { "type": "boolean" }
+      }
+    },
+
+    "item": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/itemBase" }],
+      "oneOf": [
+        {
+          "title": "multiple_choice",
+          "properties": {
+            "type": { "const": "multiple_choice" },
+            "options": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 5,
+              "items": { "$ref": "#/$defs/option" },
+              "contains": { "properties": { "correct": { "const": true } }, "required": ["correct"] },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          },
+          "required": ["options"]
+        },
+        {
+          "title": "true_false",
+          "properties": {
+            "type": { "const": "true_false" },
+            "options": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "$ref": "#/$defs/option" },
+              "contains": { "properties": { "correct": { "const": true } }, "required": ["correct"] },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          },
+          "required": ["options"]
+        },
+        {
+          "title": "multiple_answer",
+          "comment": "Always exact-set / all-or-nothing; no partial_credit field (engine hard-codes exact-set).",
+          "properties": {
+            "type": { "const": "multiple_answer" },
+            "options": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 6,
+              "items": { "$ref": "#/$defs/option" },
+              "contains": { "properties": { "correct": { "const": true } }, "required": ["correct"] },
+              "minContains": 1
+            }
+          },
+          "required": ["options"]
+        },
+        {
+          "title": "numeric",
+          "properties": {
+            "type": { "const": "numeric" },
+            "answer": { "type": "number" },
+            "tolerance": { "type": "number", "minimum": 0 },
+            "accept_range": { "$ref": "#/$defs/accept_range" },
+            "unit": { "type": "string" },
+            "placeholder": { "type": "string" },
+            "distractor_notes": { "type": "array", "items": { "$ref": "#/$defs/distractor_note" } }
+          },
+          "required": ["answer"],
+          "anyOf": [{ "required": ["tolerance"] }, { "required": ["accept_range"] }]
+        },
+        {
+          "title": "multi_blank",
+          "properties": {
+            "type": { "const": "multi_blank" },
+            "blanks": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/blank" } },
+            "partial_credit": { "type": "boolean" }
+          },
+          "required": ["blanks"]
+        },
+        {
+          "title": "matching",
+          "properties": {
+            "type": { "const": "matching" },
+            "prompts": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/prompt" } },
+            "responses": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/response" } },
+            "partial_credit": { "type": "boolean" }
+          },
+          "required": ["prompts", "responses"]
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

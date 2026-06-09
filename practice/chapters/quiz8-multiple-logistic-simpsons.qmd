@@ -1,0 +1,17 @@
+---
+title: "Quiz 8 — Multiple Logistic & Simpson's Paradox"
+---
+
+These questions check **multiple logistic regression** — adjusted odds ratios from a
+model like $\operatorname{logit}(p) = b_0 + b_1 \text{female} + b_2 \text{dept}$ — and
+**Simpson's paradox**, where a marginal association reverses after adjustment. Several
+items refer to the shared Berkeley-admissions tables shown with the questions. They
+mirror **Homework 8** and draw on **Chapters 10–11** of the Lecture Notes.
+
+Answer each question and press **Check** for instant, explained feedback. Your score
+and progress are saved in this browser; press **Reset quiz** to start over.
+
+```{=html}
+<div class="quizbank" data-bank="../assets/banks/quiz8.json" data-show-title="false"></div>
+<script type="module" src="../assets/quiz-engine.js"></script>
+```
