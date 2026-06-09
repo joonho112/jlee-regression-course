@@ -114,17 +114,6 @@ Key terms are **bold on first use**, where they are defined; they are gathered w
 
 :::
 
-## Acknowledgments
-
-These lecture notes are based on the course materials for **EDUC 275B: Data Analysis in Education Research 2**, a graduate-level regression course taught for many years by [Professor Sophia Rabe-Hesketh](https://gse.berkeley.edu/sophia-rabe-hesketh) at the UC Berkeley Graduate School of Education. The EDUC 275B lecture notes represent years of careful content development and refinement by Professor Rabe-Hesketh and numerous Graduate Student Instructors (GSIs). I wanted students at the University of Alabama to benefit fully from that accumulated effort, and so I developed the BER 640 course materials building on the foundation that EDUC 275B established.
-
-One important adaptation: the original EDUC 275B materials are built entirely around Stata. I have rewritten all analysis examples in R and added interactive Observable JS applications throughout the notes to help students build intuition for key statistical concepts. This decision reflected the learning needs of University of Alabama students in my BER 640: Advanced Statistical Methods in Education course. That said, I expect these notes will also be useful to UC Berkeley EDUC 275B students who prefer to learn the same material in R, as well as to other learners and instructors seeking an accessible, open-source regression textbook grounded in education research.
-
-This project was supported by the Online Teaching Innovation and Digital Education (OTIDE) initiative at the University of Alabama. The datasets used throughout are available via the [`regdatasets`](https://joonho112.github.io/regdatasets/) R package.
-
-If you have questions, suggestions, or notice anything that needs to be updated or corrected, please do not hesitate to reach out at [jlee296@ua.edu](mailto:jlee296@ua.edu). Feedback is always welcome.
-
-::: {.callout-note}
 ## Citation
+
 Lee, J. (2026). *Advanced Statistical Methods in Education: A Regression Approach with R*. University of Alabama. Available at: [https://joonho112.github.io/jlee-regression-course/notes/](https://joonho112.github.io/jlee-regression-course/notes/)
-:::
