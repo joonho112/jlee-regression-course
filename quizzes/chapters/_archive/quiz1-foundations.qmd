@@ -4,7 +4,7 @@ title: "Quiz 1: Foundations of Regression"
 
 ::: {.callout-note}
 ## About this quiz
-**Module:** Foundations of Regression  ·  **Available after:** Week 3  ·  **Source:** Lecture Notes, [Ch. 1 (Simple Linear Regression)](../../notes/chapters/01-simple-linear-regression.qmd).
+**Module:** Foundations of Regression  ·  **Available after:** Week 3  ·  **Source:** Lecture Notes, [Ch. 1 (Simple Linear Regression)](../../notes/chapters/01-simple-linear-regression.html).
 
 This quiz assesses the core ideas of simple linear regression: identifying the response and explanatory variables, interpreting the slope and intercept in context, ordinary least squares and its algebraic consequences, $R^2$ and its link to correlation, the model assumptions and their diagnostics, confidence vs prediction intervals, regression to the mean, and the dummy-variable / $t$-test connection. Items are open-book and emphasize interpretation over computation.
 :::

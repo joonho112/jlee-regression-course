@@ -1,0 +1,434 @@
+---
+title: "Quiz 5: Interactions & Simple Slopes"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Interactions & Simple Slopes  ·  **Available after:** Week 7  ·  **Source:** Lecture Notes, [Ch. 5 (Interactions)](../../notes/chapters/05-interactions.html), building on [Ch. 4 (Continuous Predictors)](../../notes/chapters/04-continuous-predictors.html).
+
+This quiz mirrors Homework 5: every item interprets a single published table — @langton1994's faculty-salary regression, with sex coded $1 =$ female, $0 =$ male. You will interpret Model-1 main-effect coefficients (continuous and dummy), recognize that an interaction makes lower-order coefficients **conditional**, read the salary-variation slope as the *men-only* slope and the sex coefficient as the gap *only at salary variation = 0*, compute women's salary-variation slope and the male–female gap as a function of salary variation, reason about the symmetry of moderation, and judge a non-significant main effect in the presence of a significant interaction. Two folded Chapter-8 diagnostics close the quiz: reading a residuals-vs-fitted plot and computing a variance inflation factor. Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 13 |
+| Total points | 17 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 7 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 5. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## The Faculty-Salary Table
+
+Several items below refer to the regression table reproduced from @langton1994, Table 3 — unstandardized OLS coefficients predicting 9-month faculty salary ($N = 35{,}491$). **Model 1** is a main-effects model. **Model 2** adds *salary variation* (dispersion of wages within the professor's field) and a **Sex × salary variation** interaction. **Sex is coded $1 =$ female, $0 =$ male**, so the reference group is men. Standard errors are in parentheses; \*$p<.05$, \*\*$p<.01$, \*\*\*$p<.001$.
+
+| Variable | Model 1 | Model 2 |
+|:---------|--------:|--------:|
+| Years of experience | 162.68\*\*\* (2.05) | 162.59\*\*\* (2.05) |
+| Degree quality (0–4 scale) | 616.77\*\*\* (34.48) | 657.08\*\*\* (34.64) |
+| Sex (female = 1) | −1863.70\*\*\* (62.07) | −698.46 (566.87) |
+| Salary variation | — | −5571.50\*\*\* (585.62) |
+| Sex × salary variation | — | −3932.71\* (1872.05) |
+| Intercept | 10033.24\*\*\* | 11712.80\*\*\* |
+| $R^2$ (adjusted) | .40 | .40 |
+
+: Selected coefficients from @langton1994, Table 3 (other Model-1 predictors omitted for brevity). {.striped}
+
+## Questions
+
+### Question 1 — What an interaction means {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 5]`**
+
+In Model 2, the salary-variation slope is $-5571.50$ for men but **more negative (steeper) for women** — the effect of salary variation on salary **depends on sex**. In the language of Chapter 5, what role does *sex* play with respect to the salary-variation effect?
+
+A. It is an effect modifier (moderator): the salary-variation slope depends on its level.
+
+B. It is a confounder, because it is correlated with both salary variation and salary.
+
+C. It is a mediator, because it transmits the salary-variation effect to salary.
+
+D. It is a suppressor, because adding it strengthens the salary-variation coefficient.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** When the effect of one predictor on the outcome *depends on the value of another* predictor, that second predictor is an **effect modifier** (moderator), and the two interact. Here the salary-variation slope changes across sex ($-5571.50$ for men vs $-9504.21$ for women) — exactly effect modification, the textbook "it depends."
+- **Why not B:** A confounder is associated with both predictor and outcome and *biases* an estimate; by definition it does not change the *size* of another predictor's effect across its own levels. The scenario describes a changing slope, not bias.
+- **Why not C:** A mediator lies *on* the causal pathway (X → M → Y). Sex is not a downstream consequence of salary variation that then causes salary; it conditions the salary-variation effect.
+- **Why not D:** A suppressor changes the *magnitude* of another coefficient when added to the model; the defining feature here is that the slope differs *by the level of* sex — moderation, not suppression.
+- **Source:** [Ch. 5 (Interactions), "Continuous by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cont-cat).
+
+:::
+
+### Question 2 — A continuous main-effect coefficient {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 4]`**
+
+In **Model 1** (main effects only), the coefficient on *degree quality* is $616.77$ (degree quality is rated 0–4 on the Carnegie scale), with $p<.001$. Which statement best interprets this coefficient?
+
+A. Faculty from higher-quality institutions earn an estimated mean salary of \$616.77, averaged over the other predictors.
+
+B. Each one-unit increase in degree quality is associated with a \$616.77 increase in estimated mean salary, ignoring the other predictors in the model.
+
+C. Each one-unit increase in degree quality is associated with a \$616.77 increase in estimated mean salary, holding the other predictors fixed.
+
+D. Degree quality explains about 617% of the total variation in faculty salary.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** In a multiple regression, a continuous predictor's coefficient is the estimated change in the mean outcome per one-unit increase in that predictor, **holding the other predictors fixed** — here, +\$616.77 per one-unit rise in degree quality, controlling for experience, sex, and the rest. It names the variable, direction, magnitude, and units.
+- **Why not A:** That reads the coefficient as a *group mean* (a level of salary) rather than a *slope* (a change in salary per unit) — a documented slope-vs-mean confusion.
+- **Why not B:** It drops the crucial "holding the other predictors fixed" qualifier. In a multiple regression the coefficient is an *adjusted* (partial) effect, not the raw bivariate association.
+- **Why not D:** It conflates the coefficient with $R^2$ (variance explained, here .40 for the whole model). \$616.77 is a dollar slope, not a proportion of variance.
+- **Source:** [Ch. 4 (Continuous Predictors), "Multiple Regression with Continuous Predictors"](../../notes/chapters/04-continuous-predictors.html#sec-ch4-model).
+
+:::
+
+### Question 3 — A dummy main-effect coefficient {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 4]`**
+
+In **Model 1**, the coefficient on *Sex* is $-1863.70$ ($p<.001$), where **Sex is coded $1 =$ female, $0 =$ male**. Holding the other predictors fixed, which statement best interprets this coefficient?
+
+A. Female faculty are estimated to earn \$1,863.70 *more* than male faculty.
+
+B. Female faculty are estimated to earn \$1,863.70 *less* than male faculty.
+
+C. Female faculty are estimated to earn 1,863.70% less than male faculty.
+
+D. Sex has no effect on salary, because a coefficient cannot be negative.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** With sex coded female = 1 (men the reference), the coefficient is the *adjusted* female-minus-male difference. A negative value means the coded group (women) is estimated **lower** — women earn about \$1,863.70 less than men, holding the other predictors fixed. This states the variable, direction (lower), magnitude, and units, and matches the published reading.
+- **Why not A:** This reverses the reference category. The negative sign attaches to the group coded 1 (women); reading it as women earning *more* mistakes which group is the baseline.
+- **Why not C:** The coefficient is in **dollars**, not percent. The model is linear in dollars (not log-transformed), so $-1863.70$ is a \$1,863.70 gap, not a 1,863.70% gap.
+- **Why not D:** A significant negative coefficient (here $p<.001$) is a real, estimated *lower* salary for women — "no effect" misreads a strong adjusted difference as null.
+- **Source:** [Ch. 4 (Continuous Predictors), "Multiple Regression with Continuous Predictors"](../../notes/chapters/04-continuous-predictors.html#sec-ch4-model).
+
+:::
+
+### Question 4 — Main effects become conditional {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 5]`**
+
+**True or False:** Because Model 2 includes the **Sex × salary variation** product, the lower-order ("main effect") coefficients on *Sex* ($-698.46$) and *salary variation* ($-5571.50$) still estimate each variable's *average* effect across the full range of the other variable, just as they did in the main-effects model.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** Once the **Sex × salary variation** term enters, every lower-order coefficient becomes **conditional** — the effect *when the other variable in the product equals zero*, not an average. The salary-variation coefficient ($-5571.50$) is the slope **only for men** (Female $= 0$); the sex coefficient ($-698.46$) is the female−male gap **only at salary variation $= 0$**. Neither is an unconditional average effect.
+- **Why "True" is wrong:** It carries over the *additive*-model reading, where a main effect is a constant average. That holds only without an interaction; adding the product term turns all lower-order coefficients it touches into conditional effects evaluated where the other variable is zero.
+- **Source:** [Ch. 5 (Interactions), "Interpretation of Each Coefficient"](../../notes/chapters/05-interactions.html#sec-ch5-coef-interpret).
+
+:::
+
+### Question 5 — Whose slope is the salary-variation coefficient? {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 5]`**
+
+In **Model 2**, the coefficient on *salary variation* is $-5571.50$. Given that **Sex is coded $1 =$ female, $0 =$ male**, whose salary-variation slope does this coefficient describe?
+
+A. Women only — it is the salary-variation slope when Female = 1, the coded group.
+
+B. Everyone — it is the salary-variation slope shared by all faculty.
+
+C. Men only — it is the salary-variation slope when Female = 0, the reference group.
+
+D. The overall average salary-variation slope across men and women combined.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** In a model with **Sex × salary variation**, the salary-variation coefficient is its slope *at the reference level of sex* (Female = 0), i.e., **for men**: each one-unit rise in salary variation is associated with about a \$5,571.50 lower estimated mean salary, for men. The women's slope requires adding the interaction term.
+- **Why not A:** Women's slope is $-5571.50 + (-3932.71) = -9504.21$, obtained by *adding* the interaction term — not the $-5571.50$ coefficient alone.
+- **Why not B:** It is *not* everyone's slope. With an interaction present, no single coefficient gives a slope shared by all; the slope differs by sex.
+- **Why not D:** $-5571.50$ is a conditional (men-only) slope, not an average over both groups; an average slope is a different quantity from the reference-group slope.
+- **Source:** [Ch. 5 (Interactions), "Interpretation of Each Coefficient"](../../notes/chapters/05-interactions.html#sec-ch5-coef-interpret).
+
+:::
+
+### Question 6 — The sex coefficient is a conditional baseline gap {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 5]`**
+
+**True or False:** In **Model 2**, the *Sex* coefficient $-698.46$ is the overall female–male salary gap across all fields, averaged over every value of salary variation.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** With the **Sex × salary variation** term in the model, $-698.46$ is the female−male gap **only at salary variation $= 0$** — a conditional baseline, not the overall gap. The actual gap changes with salary variation: the female−male gap is $-698.46 - 3932.71 \cdot \text{SV}$, so it equals $-698.46$ only at SV $= 0$ and grows more negative from there. (As the homework notes, SV $= 0$ may not even be substantively realistic.)
+- **Why "True" is wrong:** Reading the sex coefficient as the overall gender gap ignores the interaction. The gap is a *function* of salary variation, not a single number; treating $-698.46$ as "the gap" is the classic conditional-vs-marginal error.
+- **Source:** [Ch. 5 (Interactions), "Interpretation of Each Coefficient"](../../notes/chapters/05-interactions.html#sec-ch5-coef-interpret).
+
+:::
+
+### Question 7 — What the interaction coefficient equals {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 5]`**
+
+In **Model 2**, the **Sex × salary variation** coefficient is $-3932.71$ ($p<.05$). Reading the interaction as a difference of slopes, what does this single coefficient represent?
+
+A. The salary-variation slope for women, holding the other predictors fixed.
+
+B. The female–male salary gap evaluated at the average level of salary variation.
+
+C. The salary-variation slope averaged over men and women.
+
+D. The difference between the two groups' salary-variation slopes (women's minus men's).
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** A continuous × categorical interaction coefficient is the *difference between the two groups' slopes* — here women's salary-variation slope **minus** men's: $(-9504.21) - (-5571.50) = -3932.71$. Equivalently, women's slope is \$3,932.71 *more negative* than men's. (It is also the rate at which the male−female gap grows per unit of salary variation — the same number read the other way.)
+- **Why not A:** Women's slope is $-9504.21$, found by *adding* this interaction to the men's slope ($-5571.50$). The $-3932.71$ is the *difference* between slopes, not a slope itself.
+- **Why not B:** A male–female gap at a specific salary-variation value comes from the gap formula ($698.46 + 3932.71 \cdot \text{SV}$), not directly from the interaction coefficient alone; the interaction is on the *slope* scale, not a dollar gap at a chosen SV.
+- **Why not C:** There is no single sex-averaged salary-variation effect once an interaction is present; this coefficient quantifies the *difference* between the slopes, not their average. The men's slope alone is the bare salary-variation coefficient ($-5571.50$).
+- **Source:** [Ch. 5 (Interactions), "The School Difference Depends on LRT"](../../notes/chapters/05-interactions.html#the-school-difference-depends-on-lrt).
+
+:::
+
+### Question 8 — Computing women's salary-variation slope {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 5]`**
+
+In **Model 2** (Sex coded $1 =$ female, $0 =$ male), the relevant coefficients are:
+
+| Term | Estimate |
+|:-----|---------:|
+| Salary variation | $-5571.50$ |
+| Sex × salary variation | $-3932.71$ |
+
+A group's salary-variation slope is the men's (reference) slope *plus* the interaction term for that group: $\beta_{\text{SV}} + \beta_{\text{Sex}\times\text{SV}}$. Compute **women's** salary-variation slope. Enter a number.
+
+#### Answer & Rationale
+
+**Correct answer: −9504.21** (accept **−9560 to −9450**, tolerance about ±55)
+
+- **Computation:** women have Female $= 1$, so their slope is the men's slope plus the interaction: $-5571.50 + (-3932.71) = -9504.21$. For women, each one-unit increase in salary variation is associated with about a \$9,504 *lower* estimated mean salary, holding the other predictors fixed.
+- **Tolerance:** the ±55 window absorbs rounding of the published coefficients without admitting a wrong method.
+- **Common errors to avoid:** **−5571.50** is men's (reference) slope only, forgetting the interaction; **−3932.71** reports the interaction term (the slope *difference*, not a slope); **+1638.79** *subtracts* the interaction ($-5571.50 - (-3932.71)$) instead of adding it — wrong sign operation. All fall outside the window.
+- **Source:** [Ch. 5 (Interactions), "Deriving Group-Specific Equations"](../../notes/chapters/05-interactions.html#deriving-group-specific-equations).
+
+:::
+
+### Question 9 — The salary gap as a function of salary variation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 5]`**
+
+In **Model 2** (Sex coded $1 =$ female, $0 =$ male), the *Sex* coefficient is $-698.46$ and the *Sex × salary variation* coefficient is $-3932.71$. The estimated **male − female** salary gap is a linear function of salary variation (SV):
+
+$$\text{(male salary)} - \text{(female salary)} = [\text{blank1}] + [\text{blank2}] \times \text{SV}.$$
+
+- The intercept of the gap, **[blank1]**, is the male − female gap when SV $= 0$.
+- The slope of the gap on SV is **[blank2]**.
+- As salary variation increases, the male − female gap **[blank3]** (widens / narrows).
+
+#### Answer & Rationale
+
+**Correct answers:** `[blank1]` = **698.46** (accept 690–707) · `[blank2]` = **3932.71** (accept 3900–3965) · `[blank3]` = **widens**
+
+- **`[blank1]` = 698.46:** the *Sex* coefficient is the *female − male* gap at SV $= 0$, equal to $-698.46$; reversing it to the *male − female* gap flips the sign to **+698.46** (men earn \$698.46 more than women when salary variation is zero).
+- **`[blank2]` = 3932.71:** the interaction coefficient is $-3932.71$ on the female−male scale; reversed to male−female it is **+3932.71**, the rate at which the male advantage grows per one-unit increase in salary variation.
+- **`[blank3]` = widens:** because the slope on SV is **positive** (+3,932.71), the male − female gap *increases* as salary variation rises — greater wage dispersion is associated with a *larger* gap. This matches Homework 5's conclusion that the differential is exacerbated by more uncertainty in wages.
+- **Common error to avoid:** reporting the gap as the constant **698.46** alone drops the interaction term and wrongly treats the gap as fixed; answering "narrows" mistakes the sign of the slope (a negative *female−male* interaction means the *male* advantage grows, so the male−female gap widens); keeping the *female−male* signs ($-698.46$, $-3932.71$) answers the wrong direction (that gap grows more negative, i.e., the female shortfall widens).
+- **Source:** [Ch. 5 (Interactions), "The School Difference Depends on LRT"](../../notes/chapters/05-interactions.html#the-school-difference-depends-on-lrt).
+
+:::
+
+### Question 10 — A non-significant main effect is not "no effect" {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 5]`**
+
+In **Model 2**, the *Sex* coefficient ($-698.46$) is **not** statistically significant, but the **Sex × salary variation** interaction ($-3932.71$) **is** significant ($p<.05$).
+
+**True or False:** Because the *Sex* main effect is not significant, it is correct to conclude that there is *no* male–female salary gap.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** When an interaction is in the model, the *Sex* coefficient is the gap **only at salary variation $= 0$** — so its non-significance means only that the gap is indistinguishable from zero *at that single point*, not everywhere. The **significant interaction** says the gap *changes* with salary variation: the male−female gap is $698.46 + 3932.71 \cdot \text{SV}$, which grows as salary variation rises. A non-significant conditional baseline does **not** imply "no gender gap."
+- **Why "True" is wrong:** Reading a non-significant conditional main effect as "no effect" ignores the significant interaction. With moderation present, the gap is a *function* of the moderator; the interaction term and the gap formula — not the lone *Sex* coefficient — are the relevant evidence.
+- **Source:** [Ch. 5 (Interactions), "Testing the Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-testing).
+
+:::
+
+### Question 11 — The symmetry of an interaction {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 5]`**
+
+The single **Sex × salary variation** term in Model 2 supports two readings: "the salary-variation slope depends on sex" **and** "the male–female gap depends on salary variation." Which statement about these two readings is correct?
+
+A. They are two equivalent readings of the *same* interaction coefficient: "sex moderates the salary-variation slope" is the same statistical statement as "salary variation moderates the gender gap." Which variable is the "moderator" is a choice of framing, not of mathematics.
+
+B. They are different claims that would each require a separate interaction term to be true.
+
+C. Only the first reading is valid, because moderation runs one way — the categorical variable moderates the continuous one, never the reverse.
+
+D. They can both hold only if salary variation is mean-centered first.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** An interaction is **symmetric**: the product $\text{Sex} \times \text{SV}$ is the same term read either way. Grouping the model by sex makes the salary-variation slope depend on sex; grouping it by salary variation makes the gender gap depend on salary variation. Both describe the *same* non-additivity captured by the *single* coefficient ($-3932.71$), so which variable is called the "moderator" is set by the research question, not the algebra.
+- **Why not B:** There is a *single* product term and a single coefficient; both readings come from it. Two interaction terms are not needed (and are not even defined here).
+- **Why not C:** Moderation is *not* one-directional. Because $x \times z = z \times x$, either variable can be cast as the moderator; the math is interchangeable.
+- **Why not D:** Centering shifts where the *lower-order* coefficients are evaluated but does *not* create or remove the symmetry — both readings hold with or without centering.
+- **Source:** [Ch. 5 (Interactions), "Continuous by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cont-cat).
+
+:::
+
+### Question 12 — Reading a residuals-vs-fitted plot {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Applied · Notes Ch. 8]`**
+
+After fitting the faculty-salary model, you examine the **residuals-vs-fitted** plot. Match each described *pattern* (left) to the *diagnosis* it most clearly signals (right). Each diagnosis is used at most once; one right-column option is a distractor.
+
+| # | Residuals-vs-fitted pattern |
+|:--|:----------------------------|
+| 1 | Points scatter randomly in a horizontal band of roughly constant width; the LOESS curve is flat at zero. |
+| 2 | The spread *fans out* — a narrow band of residuals at low fitted values widening to a wide band at high fitted values (a funnel); the LOESS curve stays flat. |
+| 3 | The LOESS curve through the residuals is clearly *U-shaped* (curved) while the vertical spread stays roughly constant. |
+
+| | Diagnosis |
+|:--|:----------|
+| W | Heteroscedasticity: coefficients stay unbiased, but the usual SEs, CIs, and $p$-values become unreliable. |
+| X | Assumptions look satisfied: constant spread and a flat mean indicate no clear violation of linearity or constant variance. |
+| Y | Nonlinearity: the mean structure is mis-specified (a needed nonlinear term is missing). |
+| Z | Non-normality of the residuals (best diagnosed from the Q–Q plot, not this plot). |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → X, 2 → W, 3 → Y** (Z is an unused distractor)
+
+- **1 → X (assumptions OK):** random scatter in a constant-width band with a flat LOESS shows neither a mean nor a spread problem — the linearity and constant-variance assumptions look satisfied.
+- **2 → W (heteroscedasticity):** a *funnel/fan* in the spread (with a flat LOESS) is the signature of non-constant variance. OLS coefficients remain **unbiased**, but the usual standard errors — and hence the $t$-tests, $p$-values, and confidence intervals — become unreliable (remedy: robust SEs or a variance-stabilizing transform).
+- **3 → Y (nonlinearity):** a *curved* (U-shaped) LOESS through the residuals signals a mis-specified **mean** structure — typically a missing nonlinear (e.g., quadratic) term. The constant spread confirms the problem is the mean, not the variance; the fix is a polynomial term or a predictor transformation.
+- **Distractor Z (non-normality):** non-normality is read from the **Q–Q plot**, not from curvature or funneling in the residuals-vs-fitted plot, so no pattern here maps to it. (Pairing the U-shaped curve with non-normality, or the funnel with nonlinearity, swaps the spread diagnosis for a mean/shape diagnosis — the classic confusion this item guards against.)
+- **Source:** [Ch. 8 (Model Diagnostics), "Residuals vs. Fitted Values Plot"](../../notes/chapters/08-model-diagnostics.html#sec-ch8-resid-fitted).
+
+:::
+
+### Question 13 — Computing a variance inflation factor {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 8]`**
+
+To check multicollinearity among the Model-2 predictors, you regress one predictor (salary variation) on **all the other** predictors and obtain $R^2_j = 0.80$. The variance inflation factor is
+
+$$\text{VIF}_j = \frac{1}{1 - R^2_j}.$$
+
+Compute the VIF. Enter a number.
+
+#### Answer & Rationale
+
+**Correct answer: 5.0** (accept **4.9–5.1**, tolerance ±0.1)
+
+- **Computation:** $\text{VIF}_j = \dfrac{1}{1 - R^2_j} = \dfrac{1}{1 - 0.80} = \dfrac{1}{0.20} = 5.0$. The standard error of that coefficient is therefore inflated by $\sqrt{5} \approx 2.2$ relative to the no-collinearity case — **moderate** collinearity by the usual rules of thumb (VIF $\geq 5$ warrants attention; VIF $\geq 10$ is serious). Crucially, a high VIF **inflates the SE only**; it does **not** bias the coefficient estimate.
+- **Tolerance:** the ±0.1 window absorbs rounding without admitting a wrong method.
+- **Common errors to avoid:** **1.25** plugs $0.20$ into $1/(1 - R^2_j)$ where $R^2_j = 0.80$ belongs ($1/(1-0.20)$); **0.80** just restates $R^2_j$ — the VIF is the reciprocal of $1 - R^2_j$, not $R^2_j$ itself. Both fall outside the window.
+- **Source:** [Ch. 8 (Model Diagnostics), "Variance Inflation Factor (VIF)"](../../notes/chapters/08-model-diagnostics.html#variance-inflation-factor-vif).
+
+:::
+
+## Coverage
+
+This quiz draws on Lecture Notes Ch. 4 (Continuous Predictors, 2 items), Ch. 5 (Interactions, 9 items), and Ch. 8 (Model Diagnostics, 2 folded items), all anchored to @langton1994's faculty-salary table. The 13 items total **17 points** (Multiple Choice ×6, True/False ×3, Fill-in-the-Blank ×2, Fill-in-Multiple-Blanks ×1, Matching ×1) and span all three difficulty levels.
+
+| # | Concept | Source | Type | Difficulty | Pts |
+|:--|:--------|:-------|:-----|:-----------|:---:|
+| 1 | Interaction = "it depends" (effect modification) | Ch 5 | Multiple Choice | Conceptual | 1 |
+| 2 | Continuous main-effect coefficient (hold others fixed) | Ch 4 | Multiple Choice | Conceptual | 1 |
+| 3 | Dummy main-effect coefficient (sign tied to female = 1) | Ch 4 | Multiple Choice | Applied | 1 |
+| 4 | Main effects become conditional under an interaction | Ch 5 | True/False | Challenge | 1 |
+| 5 | Focal continuous slope = reference-group (men's) slope | Ch 5 | Multiple Choice | Applied | 1 |
+| 6 | Sex coefficient = gap only at SV = 0 | Ch 5 | True/False | Conceptual | 1 |
+| 7 | Interaction coefficient = difference of slopes | Ch 5 | Multiple Choice | Conceptual | 1 |
+| 8 | Compute women's salary-variation slope (−9504.21) | Ch 5 | Fill-in-the-Blank | Applied | 2 |
+| 9 | Gap as a function of SV (698.46 + 3932.71·SV), widens | Ch 5 | Fill-in-Multiple-Blanks | Applied | 2 |
+| 10 | Non-significant main effect ≠ no gap (interaction present) | Ch 5 | True/False | Challenge | 1 |
+| 11 | Symmetry of interactions | Ch 5 | Multiple Choice | Conceptual | 1 |
+| 12 | Reading residuals-vs-fitted patterns *(folded Ch 8)* | Ch 8 | Matching | Applied | 2 |
+| 13 | Computing VIF = 1/(1−R²ⱼ) = 5.0 *(folded Ch 8)* | Ch 8 | Fill-in-the-Blank | Applied | 2 |
+
+: Quiz 5 item map. {.striped}

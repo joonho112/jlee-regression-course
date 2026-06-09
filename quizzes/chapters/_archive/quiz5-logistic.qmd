@@ -4,7 +4,7 @@ title: "Quiz 5: Logistic Regression"
 
 ::: {.callout-note}
 ## About this quiz
-**Module:** Logistic Regression  ·  **Available after:** Week 11  ·  **Source:** Lecture Notes, [Ch. 9 (Simple Logistic Regression)](../../notes/chapters/09-simple-logistic-regression.qmd) and [Ch. 10 (Multiple Logistic Regression)](../../notes/chapters/10-multiple-logistic-regression.qmd).
+**Module:** Logistic Regression  ·  **Available after:** Week 11  ·  **Source:** Lecture Notes, [Ch. 9 (Simple Logistic Regression)](../../notes/chapters/09-simple-logistic-regression.html) and [Ch. 10 (Multiple Logistic Regression)](../../notes/chapters/10-multiple-logistic-regression.html).
 
 This quiz assesses logistic regression: why the linear probability model fails, the logistic function and the probability/odds/log-odds scales, coefficients and odds ratios, predicted probabilities and average marginal effects, adjusted odds ratios, Simpson's paradox, and Wald vs likelihood-ratio inference. A central focus is the distinction between an **odds ratio** and a **probability (risk) ratio**. Items are open-book and emphasize interpretation over computation.
 :::

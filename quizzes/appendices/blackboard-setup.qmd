@@ -4,11 +4,11 @@ title: "Blackboard Setup Specification"
 
 ## Purpose
 
-This appendix is the **deployment-ready specification** for building the six BER 640 module quizzes in Blackboard. It collects everything OTIDE needs in one place: the question-type mapping, the per-quiz deployment settings, the release schedule, the numeric-answer (tolerance) policy, and a complete **answer-key summary** for every item. Each quiz's content (stems, options, rationale) lives in its chapter; this appendix is the configuration layer on top of it.
+This appendix is the **deployment-ready specification** for building the eight BER 640 module quizzes in Blackboard. The quiz set **mirrors the eight homework assignments one-to-one** — one quiz per homework — so the eight quizzes vary in length and weight, right-sized to the homework each reinforces (**85 items / 114 points** in total). This appendix collects everything OTIDE needs in one place: the question-type mapping, the per-quiz deployment settings, the release schedule, the numeric-answer (tolerance) policy, and a complete **answer-key summary** for every item. Each quiz's content (stems, options, rationale) lives in its chapter; this appendix is the configuration layer on top of it.
 
 ::: {.callout-important}
 ## Items flagged for instructor confirmation
-A few settings are **proposed defaults** (see the [Item-Writing Style Guide](style-guide.qmd)). Confirm before deployment: the **60-minute time limit**, the **answer-release timing** ("after the availability window closes"), and the **exact open/due calendar dates** (set from the official OTIDE Fall 2026 Course Schedule). Attempts (Unlimited), score handling (Highest), 6 quizzes, and 10% weight are fixed by the course's mastery design.
+A few settings are **proposed defaults** (see the [Item-Writing Style Guide](style-guide.qmd)). Confirm before deployment: the **60-minute time limit**, the **answer-release timing** ("after the availability window closes"), and the **exact open/due calendar dates** (set from the official OTIDE Fall 2026 Course Schedule). Attempts (Unlimited), score handling (Highest), the 8-quiz set, and 10% weight are fixed by the course's mastery design.
 :::
 
 ## Question-type mapping
@@ -26,16 +26,19 @@ Every item is one of six **auto-gradable** Blackboard question types, so quizzes
 
 ## Master settings table
 
-The same deployment settings apply to all six quizzes except the availability week.
+The same deployment settings apply to all eight quizzes except the availability week, item count, and points — each quiz is **right-sized to its paired homework**, so the per-quiz **Items** and **Points** differ (they are *not* a uniform total). The time limit (60 min), attempts (Unlimited), score kept (Highest), and answer-release timing are identical across all eight.
 
-| Quiz | Module | Available after | Open ≈ (Fall 2026) | Items | Points | Time limit | Attempts | Score kept | Show correct answers |
-|:-----|:-------|:----------------|:-------------------|:-----:|:------:|:----------:|:--------:|:-----------|:---------------------|
-| Quiz 1 | Foundations of Regression | Week 3 | early Sep | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
-| Quiz 2 | Categorical Predictors | Week 5 | mid Sep | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
-| Quiz 3 | Interactions | Week 7 | early Oct | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
-| Quiz 4 | Model Building & Diagnostics | Week 9 | mid Oct | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
-| Quiz 5 | Logistic Regression | Week 11 | late Oct | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
-| Quiz 6 | Logistic Diagnostics | Week 12 | early Nov | 15 | 20 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz | Module (↔ HW) | Notes Ch. | Available after | Open ≈ (Fall 2026) | Items | Points | Time limit | Attempts | Score kept | Show correct answers |
+|:-----|:--------------|:----------|:----------------|:-------------------|:-----:|:------:|:----------:|:--------:|:-----------|:---------------------|
+| Quiz 1 | Simple Linear Regression (HW1) | Ch 1 | Week 2 | early Sep | 9 | 12 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 2 | Dummy Variables & the *t*-Test (HW2) | Ch 1 | Week 3 | early Sep | 9 | 12 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 3 | Confounding & ANCOVA (HW3) | Ch 2 | Week 4 | mid Sep | 10 | 13 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 4 | One-Way ANOVA & Multiple Comparisons (HW4) | Ch 3 | Week 5 | mid Sep | 12 | 15 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 5 | Interactions & Simple Slopes (HW5) | Ch 4–5 | Week 7 | early Oct | 13 | 17 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 6 | Two-Way ANOVA & Interaction (HW6) | Ch 5 | Week 8 | mid Oct | 11 | 16 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 7 | Logistic Regression & Odds Ratios (HW7) | Ch 9–10 | Week 10 | late Oct | 10 | 14 | 60 min | Unlimited | Highest | After availability ends |
+| Quiz 8 | Multiple Logistic & Simpson's Paradox (HW8) | Ch 10–11 | Week 11 | early Nov | 11 | 15 | 60 min | Unlimited | Highest | After availability ends |
+| **Total** | **8 quizzes (one per homework)** | — | — | — | **85** | **114** | — | — | — | — |
 
 : The "Open ≈" column is an approximate calendar guide only; the course runs Aug 19 – Dec 4, 2026, so the authoritative open/due dates come from the OTIDE Course Schedule (Camille sets the Grade Center dates). {.striped}
 
@@ -45,7 +48,127 @@ The same deployment settings apply to all six quizzes except the availability we
 - **Per-attempt feedback:** show the **score** and **which questions were incorrect** after each submission — but **not** the correct answers, to preserve item integrity across unlimited retakes.
 - **Show correct answers + rationale:** only **after the availability window closes**.
 - **Question delivery:** randomize **question order** and **answer-option order** (neutralizes any answer-position pattern in the print source).
-- **Weight:** the 6 quizzes together count **10%** of the final grade.
+- **Weight:** the 8 quizzes together count **10%** of the final grade.
+:::
+
+## Per-quiz deployment tables
+
+Build each quiz with the settings below. These reproduce the **Blackboard settings** table at the top of each quiz chapter; only **Number of questions**, **Total points**, and **Availability** change from quiz to quiz — everything else (60-minute limit, Unlimited attempts, Highest recorded, answers shown after the availability window) is identical across all eight.
+
+::: {.panel-tabset}
+
+### Quiz 1
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 9 |
+| Total points | 12 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 2 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 1 — Simple Linear Regression (↔ HW1, Notes Ch. 1). {.striped}
+
+### Quiz 2
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 9 |
+| Total points | 12 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 3 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 2 — Dummy Variables & the *t*-Test (↔ HW2, Notes Ch. 1). {.striped}
+
+### Quiz 3
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 10 |
+| Total points | 13 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 4 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 3 — Confounding & ANCOVA (↔ HW3, Notes Ch. 2). {.striped}
+
+### Quiz 4
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 12 |
+| Total points | 15 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 5 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 4 — One-Way ANOVA & Multiple Comparisons (↔ HW4, Notes Ch. 3). {.striped}
+
+### Quiz 5
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 13 |
+| Total points | 17 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 7 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 5 — Interactions & Simple Slopes (↔ HW5, Notes Ch. 4–5). {.striped}
+
+### Quiz 6
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 11 |
+| Total points | 16 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 8 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 6 — Two-Way ANOVA & Interaction (↔ HW6, Notes Ch. 5). {.striped}
+
+### Quiz 7
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 10 |
+| Total points | 14 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 10 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 7 — Logistic Regression & Odds Ratios (↔ HW7, Notes Ch. 9–10). {.striped}
+
+### Quiz 8
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 11 |
+| Total points | 15 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 11 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 8 — Multiple Logistic & Simpson's Paradox (↔ HW8, Notes Ch. 10–11). {.striped}
+
 :::
 
 ## Numeric-answer (tolerance) policy
@@ -54,157 +177,165 @@ For every Fill-in-the-Blank / Fill-in-Multiple-Blanks item, configure Blackboard
 
 | Quiz · Item | Keyed value | Accept range | Format note |
 |:------------|:-----------:|:-------------|:------------|
-| Q1 · 6 | 0.30 | 0.29 – 0.31 | proportion (also accept 30 if entered as a percent) |
-| Q1 · 11 | 11 | 10.9 – 11.1 | also accept 11.0 |
-| Q1 · 13 | 4.50 | 4.4 – 4.6 | also accept 4.5 |
-| Q2 · 3 | 3.7 | 3.6 – 3.8 | — |
-| Q2 · 9 | 73.0 | 72.9 – 73.1 | also accept 73 |
-| Q2 · 11 | 4.00 | 3.95 – 4.05 | also accept 4 |
-| Q3 · 5 | 11.68 | 11.6 – 11.8 | — |
-| Q3 · 6 | −1.10 | −1.15 – −1.05 | negative value |
-| Q3 · 9 (FIMB) | 2.50 / 0.30 / 11.78 / 0.54 | ±0.05 each | four numeric blanks |
-| Q4 · 3 | 3.0 | 3.0 – 3.1 | percent (exact 3.05 also acceptable) |
-| Q4 · 7 | 0.054 | 0.053 – 0.055 | — |
-| Q4 · 14 | 5.0 | 4.9 – 5.1 | also accept 5 |
-| Q5 · 4 | 4 | 3.9 – 4.1 | also accept 4.0 |
-| Q5 · 7 | 2.0 | 1.99 – 2.01 | — |
-| Q5 · 10 | 0.75 | 0.74 – 0.76 | proportion |
-| Q6 · 5 (FIMB) | 0.85 / 0.80 / 0.90 | ±0.01 each | three numeric blanks (proportions) |
-| Q6 · 14 | 3.0 | 2.95 – 3.05 | also accept 3 |
+| Q1 · 5 (FIMB) | 0 / 1 | exact (accept 1.0) | two numeric blanks; blank 3 is the phrase "exactly equals" |
+| Q1 · 6 | 2.6 | 2.55 – 2.65 | tolerance $\pm 0.05$ |
+| Q2 · 3 | 535.56 | 535.0 – 536.1 | tolerance $\approx \pm 0.5$ |
+| Q2 · 6 (FIMB) | 4.65 / 1018 | 4.6 – 4.7 / exact | $t$-statistic (±0.05) and $df$ (exact); blank 3 is "reject" |
+| Q3 · 2 | 2 | 1.9 – 2.1 | tolerance $\pm 0.1$ |
+| Q3 · 5 (FIMB) | 11.8 / 11.2 / −0.6 | ±0.1 each | three numeric blanks; blank 3 is a negative difference |
+| Q4 · 4 | 538.18 | 537.9 – 538.5 | tolerance $\pm 0.3$ |
+| Q5 · 8 | −9504.21 | −9560 – −9450 | negative value; tolerance $\approx \pm 55$ |
+| Q5 · 9 (FIMB) | 698.46 / 3932.71 | 690 – 707 / 3900 – 3965 | two numeric blanks; blank 3 is the word "widens" |
+| Q5 · 13 | 5.0 | 4.9 – 5.1 | VIF; tolerance $\pm 0.1$ |
+| Q6 · 2 (FIMB) | 14.72 / 2 / 4522 | 14.6 – 14.8 / exact / exact | $F$ (±0.1) and the two df (exact); blank 4 is "significant" |
+| Q6 · 5 | 98.53 | 98.0 – 99.0 | tolerance $\pm 0.5$ |
+| Q6 · 8 (FIMB) | 465.77 / 72.42 / 62.87 | 465.3 – 466.3 / 71.9 – 72.9 / 62.4 – 63.4 | three numeric blanks (cell-mean coefficients) |
+| Q6 · 9 | 98.53 | 98.0 – 99.0 | tolerance $\pm 0.5$ |
+| Q7 · 2 | 1.10 | 1.09 – 1.11 | odds ratio; tolerance $\pm 0.01$ |
+| Q7 · 5 | 24 | 23 – 25 | percent change in odds; tolerance $\pm 1$ |
+| Q7 · 7 (FIMB) | 0.275 / 0.576 | 0.27 – 0.28 / 0.57 – 0.58 | two numeric blanks (log-odds CI limits), ±0.01 each |
+| Q8 · 1 | 1.71 | 1.68 – 1.74 | odds; tolerance $\pm 0.03$ |
+| Q8 · 2 | 0.64 | 0.62 – 0.66 | crude odds ratio; tolerance $\pm 0.02$ |
+| Q8 · 9 (FIMB) | 0.12 | 0.11 – 0.13 | one numeric blank (Wald $p$); blank 2 is "fail to reject" |
 
 ## Answer-key summary
 
 Use these tables to verify the build and to spot-check Grade Center scoring. **Type** uses MC / MA / TF / MATCH / FIB / FIMB. (Question order and answer-option order are randomized at delivery, so the letters below refer to the source chapters, not necessarily what a student sees.)
 
-### Quiz 1 — Foundations (Week 3)
+### Quiz 1 — Simple Linear Regression (Week 2 · 9 items / 12 pts · ↔ HW1)
 
 | # | Type | Key |
 |:-:|:----:|:----|
 | 1 | MC | B |
 | 2 | MC | B |
-| 3 | MC | C |
-| 4 | TF | False |
-| 5 | MA | A, B, D |
-| 6 | FIB | 0.30 |
+| 3 | MATCH | 1→W, 2→V, 3→X, 4→Z, 5→Y |
+| 4 | MC | C |
+| 5 | FIMB | 0 / 1 / "exactly equals" |
+| 6 | FIB | 2.6 |
 | 7 | MC | A |
-| 8 | MATCH | 1→X, 2→Y, 3→Z, 4→W |
-| 9 | MC | B |
-| 10 | MC | D |
-| 11 | FIB | 11 |
-| 12 | MC | A |
-| 13 | FIB | 4.50 |
-| 14 | TF | True |
-| 15 | TF | False |
+| 8 | TF | False |
+| 9 | MC | A |
 
-### Quiz 2 — Categorical Predictors (Week 5)
+### Quiz 2 — Dummy Variables & the *t*-Test (Week 3 · 9 items / 12 pts · ↔ HW2)
 
 | # | Type | Key |
 |:-:|:----:|:----|
-| 1 | MC | B |
+| 1 | MATCH | 1→Z, 2→X, 3→Y |
 | 2 | MC | C |
-| 3 | FIB | 3.7 |
-| 4 | TF | True |
-| 5 | MC | B |
-| 6 | TF | False |
-| 7 | MC | A |
-| 8 | MC | D |
-| 9 | FIB | 73.0 |
-| 10 | MATCH | 1→Y, 2→Z, 3→X, 4→W |
-| 11 | FIB | 4.00 |
-| 12 | MC | B |
-| 13 | MA | A, B, C |
-| 14 | TF | True |
-| 15 | MC | A |
-
-### Quiz 3 — Interactions (Week 7)
-
-| # | Type | Key |
-|:-:|:----:|:----|
-| 1 | MC | A |
-| 2 | MATCH | 1→Y, 2→W, 3→X |
-| 3 | MC | B |
-| 4 | TF | False |
-| 5 | FIB | 11.68 |
-| 6 | FIB | −1.10 |
-| 7 | MC | C |
-| 8 | TF | True |
-| 9 | FIMB | 2.50 / 0.30 / 11.78 / 0.54 |
-| 10 | MC | D |
-| 11 | MC | A |
-| 12 | MC | C |
-| 13 | MC | B |
-| 14 | MA | A, B, D |
-| 15 | MC | D |
-
-### Quiz 4 — Model Building & Diagnostics (Week 9)
-
-| # | Type | Key |
-|:-:|:----:|:----|
-| 1 | MC | A |
-| 2 | MATCH | 1→W, 2→X, 3→Y, 4→Z |
-| 3 | FIB | 3.0 |
+| 3 | FIB | 535.56 |
 | 4 | MC | B |
 | 5 | TF | True |
-| 6 | MC | C |
-| 7 | FIB | 0.054 |
+| 6 | FIMB | 4.65 / 1018 / "reject" |
+| 7 | TF | True |
 | 8 | MC | D |
 | 9 | TF | False |
-| 10 | MATCH | 1→W, 2→X, 3→Y, 4→Z |
-| 11 | MC | A |
-| 12 | MC | B |
-| 13 | MC | C |
-| 14 | FIB | 5.0 |
-| 15 | MC | D |
 
-### Quiz 5 — Logistic Regression (Week 11)
-
-| # | Type | Key |
-|:-:|:----:|:----|
-| 1 | MA | A, B, C |
-| 2 | MC | B |
-| 3 | MATCH | 1→X, 2→Y, 3→W |
-| 4 | FIB | 4 |
-| 5 | TF | False |
-| 6 | MC | A |
-| 7 | FIB | 2.0 |
-| 8 | MC | C |
-| 9 | TF | False |
-| 10 | FIB | 0.75 |
-| 11 | MC | D |
-| 12 | MC | B |
-| 13 | MC | C |
-| 14 | MC | A |
-| 15 | TF | True |
-
-### Quiz 6 — Logistic Diagnostics (Week 12)
+### Quiz 3 — Confounding & ANCOVA (Week 4 · 10 items / 13 pts · ↔ HW3)
 
 | # | Type | Key |
 |:-:|:----:|:----|
 | 1 | MC | A |
+| 2 | FIB | 2 |
+| 3 | MC | A |
+| 4 | MC | C |
+| 5 | FIMB | 11.8 / 11.2 / −0.6 |
+| 6 | MC | C |
+| 7 | TF | False |
+| 8 | MC | B |
+| 9 | TF | False |
+| 10 | MA | A, B, C |
+
+### Quiz 4 — One-Way ANOVA & Multiple Comparisons (Week 5 · 12 items / 15 pts · ↔ HW4)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MC | B |
 | 2 | TF | False |
 | 3 | MC | C |
-| 4 | MATCH | 1→W, 2→X, 3→Y, 4→Z |
-| 5 | FIMB | 0.85 / 0.80 / 0.90 |
-| 6 | MC | B |
-| 7 | TF | False |
-| 8 | MC | D |
+| 4 | FIB | 538.18 |
+| 5 | MC | A |
+| 6 | TF | False |
+| 7 | MATCH | 1→Y, 2→W, 3→X, 4→Z |
+| 8 | TF | True |
 | 9 | MC | B |
 | 10 | MA | A, B, C |
-| 11 | MC | A |
+| 11 | MC | C |
 | 12 | MC | C |
-| 13 | MATCH | 1→Y, 2→Z, 3→W, 4→X |
-| 14 | FIB | 3.0 |
-| 15 | TF | True |
+
+### Quiz 5 — Interactions & Simple Slopes (Week 7 · 13 items / 17 pts · ↔ HW5)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MC | A |
+| 2 | MC | C |
+| 3 | MC | B |
+| 4 | TF | False |
+| 5 | MC | C |
+| 6 | TF | False |
+| 7 | MC | D |
+| 8 | FIB | −9504.21 |
+| 9 | FIMB | 698.46 / 3932.71 / "widens" |
+| 10 | TF | False |
+| 11 | MC | A |
+| 12 | MATCH | 1→X, 2→W, 3→Y |
+| 13 | FIB | 5.0 |
+
+### Quiz 6 — Two-Way ANOVA & Interaction (Week 8 · 11 items / 16 pts · ↔ HW6)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MC | A |
+| 2 | FIMB | 14.72 / 2 / 4522 / "significant" |
+| 3 | TF | False |
+| 4 | MC | C |
+| 5 | FIB | 98.53 |
+| 6 | MC | B |
+| 7 | TF | True |
+| 8 | FIMB | 465.77 / 72.42 / 62.87 |
+| 9 | FIB | 98.53 |
+| 10 | MC | C |
+| 11 | MATCH | 1→W, 2→X, 3→Y, 4→Z |
+
+### Quiz 7 — Logistic Regression & Odds Ratios (Week 10 · 10 items / 14 pts · ↔ HW7)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | MATCH | 1→Z, 2→X, 3→Y |
+| 2 | FIB | 1.10 |
+| 3 | MC | B |
+| 4 | MC | C |
+| 5 | FIB | 24 |
+| 6 | MC | D |
+| 7 | FIMB | 0.275 / 0.576 |
+| 8 | TF | False |
+| 9 | TF | False |
+| 10 | TF | True |
+
+### Quiz 8 — Multiple Logistic & Simpson's Paradox (Week 11 · 11 items / 15 pts · ↔ HW8)
+
+| # | Type | Key |
+|:-:|:----:|:----|
+| 1 | FIB | 1.71 |
+| 2 | FIB | 0.64 |
+| 3 | MC | B |
+| 4 | MC | C |
+| 5 | TF | True |
+| 6 | MC | C |
+| 7 | MC | D |
+| 8 | TF | False |
+| 9 | FIMB | 0.12 / "fail to reject" |
+| 10 | MC | A |
+| 11 | MATCH | 1→Y, 2→W, 3→Z, 4→X |
 
 ## Mastery grading scale
 
-Each quiz is scored out of **20 points** and converted to a percentage; the Grade Center keeps the **highest** percentage across a student's unlimited attempts. The mastery bands (per the course [syllabus](../../website/assignment/quizzes.qmd)) are:
+Each quiz is scored on **its own point total** (12–17 points, see the master settings table) and converted to a percentage; the Grade Center keeps the **highest** percentage across a student's unlimited attempts. Because the quizzes are right-sized to their paired homework, the mastery bands are stated as **percentages of each quiz's own denominator**, not as a fixed point cutoff. The bands (per the course [syllabus](../../assignment/quizzes.html)) are:
 
 | Score | Criteria |
 |:------|:---------|
-| Full credit | 80% or higher (≥ 16 / 20) |
-| Partial credit | 60–79% (12–15 / 20) |
-| Minimal credit | Below 60% (< 12 / 20) |
+| Full credit | 80% or higher of the quiz total |
+| Partial credit | 60–79% of the quiz total |
+| Minimal credit | Below 60% of the quiz total |
 | No credit | Quiz not attempted |
 
-The six quizzes together contribute **10%** of the final course grade.
+The eight quizzes together contribute **10%** of the final course grade.

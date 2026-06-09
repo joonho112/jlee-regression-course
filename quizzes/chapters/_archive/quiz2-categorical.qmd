@@ -4,7 +4,7 @@ title: "Quiz 2: Categorical Predictors"
 
 ::: {.callout-note}
 ## About this quiz
-**Module:** Categorical Predictors  ·  **Available after:** Week 5  ·  **Source:** Lecture Notes, [Ch. 2 (ANCOVA)](../../notes/chapters/02-ancova.qmd) and [Ch. 3 (One-way ANOVA)](../../notes/chapters/03-one-way-anova.qmd).
+**Module:** Categorical Predictors  ·  **Available after:** Week 5  ·  **Source:** Lecture Notes, [Ch. 2 (ANCOVA)](../../notes/chapters/02-ancova.html) and [Ch. 3 (One-way ANOVA)](../../notes/chapters/03-one-way-anova.html).
 
 This quiz assesses analysis of covariance and one-way ANOVA: the ANCOVA model and "controlling for" a covariate, adjusted means, the parallel-slopes assumption, confounders vs mediators, collinearity, Type I vs Type III sums of squares, ANOVA as regression with dummy variables, the ANOVA table and $F$-test, multiple comparisons, and effect size ($\eta^2$). Items are open-book and emphasize interpretation over computation.
 :::

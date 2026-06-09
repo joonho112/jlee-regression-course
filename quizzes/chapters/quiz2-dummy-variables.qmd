@@ -1,0 +1,289 @@
+---
+title: "Quiz 2: Dummy Variables & the t-Test"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Dummy Variables & the *t*-Test  ·  **Available after:** Week 3  ·  **Source:** Lecture Notes, [Ch. 1 (Simple Linear Regression)](../../notes/chapters/01-simple-linear-regression.html).
+
+This quiz assesses regression with a single dummy predictor, mirroring Homework 2 (US PISA reading scores regressed on `female`): a 0/1 predictor turns regression into a comparison of two means, so the intercept is the reference-group mean and the slope is the difference between group means; you recover the comparison-group mean from the intercept and slope; the coefficient's standard error measures the sampling uncertainty of that difference; the dummy "regression line" is just the two group means joined; the slope $t$-test equals the pooled two-sample $t$-test; Root MSE is the pooled within-group standard deviation; and an observational coefficient is an association, not proof of causation. Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 9 |
+| Total points | 12 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 3 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 2. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — Mapping the dummy coefficient table {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 1]`**
+
+Using the US PISA 2000 sample ($N = 1{,}020$), reading score (`wleread`) is regressed on `female`, a dummy coded **0 = male (reference)** and **1 = female**. The fitted equation is
+
+$$\widehat{\text{wleread}} = 507.86 + 27.70 \times \text{female}.$$
+
+Match each quantity from the model (left) to the group statistic it equals (right). Each statistic is used exactly once.
+
+| Quantity | | Equals |
+|:---------|:--|:-------|
+| 1. The intercept, $507.86$ | | X. The female − male mean difference, $27.70$ points |
+| 2. The `female` coefficient, $27.70$ | | Y. The female mean, $535.56$ points |
+| 3. Intercept + coefficient, $507.86 + 27.70$ | | Z. The male (reference) mean, $507.86$ points |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → Z, 2 → X, 3 → Y**
+
+- **1 → Z:** with a single 0/1 dummy, the intercept is the predicted score when `female = 0`. Because `female = 0` is the male (reference) group, the intercept $507.86$ *is* the male mean.
+- **2 → X:** the slope is the predicted change in the outcome as `female` goes from 0 to 1 — the female mean minus the male mean, $535.56 - 507.86 = 27.70$ points.
+- **3 → Y:** evaluating the equation at `female = 1` gives the female mean, $507.86 + 27.70 = 535.56$ points.
+- **Why the common errors are wrong:** reading the intercept as the *grand* mean ignores that it is the prediction at `female = 0` (the reference-group mean, not the average over all 1,020 students); reading the coefficient $27.70$ as a group *mean* confuses a difference between means with a level.
+- **Source:** [Ch. 1 (Simple Linear Regression), "Regression with a Dummy Variable"](../../notes/chapters/01-simple-linear-regression.html#regression-with-a-dummy-variable).
+
+:::
+
+### Question 2 — Interpreting the dummy slope {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 1]`**
+
+In the US PISA regression $\widehat{\text{wleread}} = 507.86 + 27.70 \times \text{female}$ (`female` coded 0 = male, 1 = female), which statement best interprets the **coefficient on `female` (27.70)**?
+
+A. The mean reading score for female US students is 27.70.
+
+B. Female US students scored about 27.70% higher in reading than male US students, on average.
+
+C. Female US students scored about 27.70 reading points above male US students, on average.
+
+D. Being female caused a student's reading score to rise by about 27.70 reading points, on average.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** for a 0/1 dummy, the slope is the predicted difference in the outcome between the coded group and the reference group. It names the variable (reading score), the direction (higher for females), the magnitude (27.70), and the units (reading points): females scored about 27.70 points higher than males, on average.
+- **Why not A:** this confuses the *difference in means* with a *group mean*. The female mean is $507.86 + 27.70 = 535.56$, not 27.70; the coefficient is a gap, not a level.
+- **Why not B:** the coefficient is in raw reading **points**, not percent. A 27.70-point gap on a score near 508 is about 5.5%, not 27.70%.
+- **Why not D:** PISA is observational, so the coefficient describes an **association**, not a causal effect; "caused" is unjustified without a design that rules out confounders.
+- **Source:** [Ch. 1 (Simple Linear Regression), "Regression with a Dummy Variable"](../../notes/chapters/01-simple-linear-regression.html#regression-with-a-dummy-variable).
+
+:::
+
+### Question 3 — Recovering the female mean {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 1]`**
+
+The US PISA regression of reading score on `female` (0 = male, 1 = female) is
+
+$$\widehat{\text{wleread}} = 507.86 + 27.70 \times \text{female}.$$
+
+The intercept $507.86$ is the mean reading score for males. Using the fitted equation, compute the **predicted mean reading score for female students** (`female = 1`). Enter a number (round to two decimals).
+
+Female mean = ________
+
+#### Answer & Rationale
+
+**Correct answer: 535.56** (accept **535.0–536.1**, tolerance $\approx \pm 0.5$)
+
+- **Why 535.56:** under reference-group coding, the comparison group's mean is the intercept plus that group's dummy coefficient. Setting `female = 1`: $\hat{y} = 507.86 + 27.70(1) = 535.56$ reading points.
+- **Tolerance:** the window absorbs sensible rounding of the reported coefficients without admitting a wrong method.
+- **Common errors to avoid:** answering `27.70` (reporting the *coefficient* — a difference — as if it were the mean), `507.86` (returning the male/reference mean, i.e., forgetting to add the coefficient), or `480.16` (subtracting, $507.86 - 27.70$, instead of adding) — all fall outside the window.
+- **Source:** [Ch. 1 (Simple Linear Regression), "Regression with a Dummy Variable"](../../notes/chapters/01-simple-linear-regression.html#regression-with-a-dummy-variable).
+
+:::
+
+### Question 4 — What the coefficient standard error measures {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 1]`**
+
+In the US PISA regression, the coefficient on `female` is $27.70$ with a **standard error of 5.96**. What does this standard error represent?
+
+A. A 95% confidence interval for the difference between the two mean reading scores.
+
+B. The sample-to-sample variability of the estimated 27.70-point difference under repeated sampling.
+
+C. The spread of the individual reading scores around their own mean in the sample.
+
+D. Evidence that the estimated difference is large, since a small standard error must imply a big effect.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** a coefficient's standard error is the standard deviation of that estimate over hypothetical repeated samples. If we redrew samples of 1,020 US students and refit the model, the estimated **27.70-point difference** would vary; 5.96 summarizes that typical sample-to-sample variation — the precision of the estimated mean difference.
+- **Why not A:** a standard error is a single number, not an interval. A confidence interval is *built from* the SE (roughly estimate $\pm 1.96 \times \text{SE}$), but the SE itself is not the interval.
+- **Why not C:** the spread of the raw scores around their mean is a standard deviation (the within-group spread is the Root MSE, $94.633$); $5.96$ is far smaller because it describes the precision of an *estimate*, not the variability of individual students.
+- **Why not D:** a small SE signals **precision**, not **magnitude**. How well we pin down the estimate and how big the difference is are distinct; a small SE does not by itself mean a large effect.
+- **Source:** [Ch. 1 (Simple Linear Regression), "The $t$-test for the Slope"](../../notes/chapters/01-simple-linear-regression.html#the-t-test-for-the-slope).
+
+:::
+
+### Question 5 — The dummy "regression line" has only two fitted values {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 1]`**
+
+**True or False:** In the regression $\widehat{\text{wleread}} = 507.86 + 27.70 \times \text{female}$, where `female` takes only the values 0 and 1, the fitted "regression line" produces just **two** fitted values — $507.86$ for males and $535.56$ for females — so it is really the two group means joined by a line segment, not a continuous trend.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A (True) is correct:** a 0/1 predictor can be substituted only at $x = 0$ or $x = 1$, so the equation yields exactly two fitted values: $507.86$ at `female = 0` (the male mean) and $507.86 + 27.70 = 535.56$ at `female = 1` (the female mean). The "line" connecting them is just the two group means joined; its slope $27.70$ is the *rise* between those two points, not a rate over a continuum.
+- **Why "False" is wrong:** treating the dummy line as a *continuous* trend — as if it predicted a score at `female = 0.5`, the way a numeric predictor like hours studied would — misreads a two-category indicator as a measured quantity. There is no "0.5 female"; only the two endpoints are defined.
+- **Source:** [Ch. 1 (Simple Linear Regression), "Regression with a Dummy Variable"](../../notes/chapters/01-simple-linear-regression.html#regression-with-a-dummy-variable).
+
+:::
+
+### Question 6 — Testing the slope: t, df, and the decision {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 1]`**
+
+For the US PISA regression ($N = 1{,}020$), the coefficient on `female` is $27.70$ with a standard error of $5.96$. Test $H_0: \beta_1 = 0$ versus $H_a: \beta_1 \neq 0$ at the **1% significance level** ($\alpha = .01$); the reported $p$-value is $< .001$.
+
+Complete the test: "The test statistic is $t = 27.70 / 5.96 =$ **[blank1]** (two decimals), on $df = n - 2 =$ **[blank2]** degrees of freedom. Because $p < .001 < .01$, we **[blank3]** (reject / fail to reject) $H_0$."
+
+#### Answer & Rationale
+
+**Correct answers:** `[blank1]` = 4.65 (accept 4.6–4.7) · `[blank2]` = 1018 · `[blank3]` = reject
+
+- **`[blank1]` ($t = 4.65$):** the slope $t$-statistic is the estimate divided by its standard error, $t = 27.70 / 5.96 \approx 4.65$.
+- **`[blank2]` ($df = 1018$):** a simple regression estimates two parameters (intercept and slope), so the error degrees of freedom are $n - 2 = 1{,}020 - 2 = 1{,}018$.
+- **`[blank3]` (reject):** since $p < .001$ is below $\alpha = .01$, we reject $H_0$ — there is statistically significant evidence that mean reading scores differ between female and male US students.
+- **Common errors to avoid:** using $df = n - 1 = 1019$ or $df = n = 1020$ (forgetting both estimated parameters); computing $27.70 - 5.96$ instead of the *ratio*; or answering "fail to reject" despite $p < .001 < .01$.
+- **Source:** [Ch. 1 (Simple Linear Regression), "The $t$-test for the Slope"](../../notes/chapters/01-simple-linear-regression.html#the-t-test-for-the-slope).
+
+:::
+
+### Question 7 — Regression t-test ≡ pooled two-sample t-test {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 1]`**
+
+**True or False:** Testing $H_0: \beta_1 = 0$ for the `female` slope in the regression of `wleread` on the dummy gives the **same** test as a pooled (equal-variance) independent-samples $t$-test comparing female and male mean reading scores — the same $|t|$ (4.65), the same $df$ (1018), and the same $p$-value; only the *sign* of $t$ can differ, depending on which group is subtracted from which.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A (True) is correct:** regression on a single 0/1 dummy *is* the pooled two-sample $t$-test. The slope equals the difference in group means, its standard error equals the pooled-variance standard error of that difference, and the resulting statistic, degrees of freedom ($n - 2 = 1018$), and two-sided $p$-value are identical. The only difference is the **sign**: regression here reports female − male (so $t = +4.65$), whereas software reporting male − female would give $t = -4.65$; the magnitude is the same.
+- **Why "False" is wrong:** treating the $t$-test and the dummy regression as *unrelated* procedures — or expecting *different* degrees of freedom or $p$-values, or agreement "only when $n$ is large" — misses the unifying idea: the two-sample $t$-test is the special case of regression with one dummy predictor, and the identity is exact for *any* $n$.
+- **Source:** [Ch. 1 (Simple Linear Regression), "Equivalence with the Independent Samples $t$-test"](../../notes/chapters/01-simple-linear-regression.html#equivalence-with-the-independent-samples-t-test).
+
+:::
+
+### Question 8 — Root MSE is the pooled within-group SD {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 1]`**
+
+In the US PISA dummy-variable regression, the output reports **Root MSE = 94.633**. The standard deviation of all 1,020 reading scores, computed *ignoring* gender, is **95.586**. What does the Root MSE of 94.633 represent?
+
+A. The combined standard deviation of all 1,020 reading scores, computed while ignoring the students' gender.
+
+B. The standard error of the estimated slope coefficient on the `female` dummy variable.
+
+C. The standard deviation of the two fitted (predicted) values from the regression, 507.86 and 535.56.
+
+D. The pooled within-group SD — the spread of scores around each gender's own mean.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** in a dummy-variable regression the fitted values are the group means, so each residual is a student's deviation from *their own gender's* mean. Root MSE $= \sqrt{\text{SSE}/df}$ is therefore the **pooled within-group SD** ($94.633$) — the typical spread *within* groups after the between-group difference is removed.
+- **Why not A:** the combined SD ($95.586$) is computed *ignoring* gender, so it mixes within-group variation with the between-group gap; that extra spread is why $95.586 > 94.633$. Root MSE removes the between-group part, so the two are not the same.
+- **Why not B:** the slope's standard error here is $5.96$, a far smaller quantity on a different scale; Root MSE summarizes residual spread, not the precision of a coefficient.
+- **Why not C:** with only two fitted values (the two group means), their spread reflects the *between*-group difference, not the residual (within-group) spread the Root MSE measures.
+- **Source:** [Ch. 1 (Simple Linear Regression), "Equivalence with the Independent Samples $t$-test"](../../notes/chapters/01-simple-linear-regression.html#equivalence-with-the-independent-samples-t-test).
+
+:::
+
+### Question 9 — Association, not causation {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 1]`**
+
+**True or False:** In the US PISA data (an observational survey), the coefficient on `female` is positive and statistically significant ($t = 4.65$, $p < .001$). This result, on its own, proves that **gender causes** the gap in reading scores.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** a significant coefficient establishes a reliable **association** between gender and reading score — the two co-vary in this sample — not a causal effect. PISA is observational, so unmeasured factors that differ by gender (schooling experiences, home environment, reading habits) could drive the gap; the test cannot rule them out. A causal claim would require a design that controls for confounders.
+- **Why "True" is wrong:** conflating statistical significance with causation is a core misconception. Significance speaks only to whether the association is distinguishable from zero — a sampling question — and says nothing about *why* the scores differ; a large sample sharpens the estimate but does not turn an association into a cause.
+- **Source:** [Ch. 1 (Simple Linear Regression), "Association, Not Causation"](../../notes/chapters/01-simple-linear-regression.html#the-regression-function).
+
+:::
+
+## Coverage
+
+This quiz draws every item from Lecture Notes Ch. 1 and mirrors Homework 2 (US PISA `wleread ~ female`, $N = 1{,}020$). The 9 items total **12 points** (Matching ×1, Multiple Choice ×3, Fill-in-the-Blank ×1, Fill-in-Multiple-Blanks ×1, True/False ×3) and span all three difficulty levels.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | Map coefficient table: intercept ↔ reference mean, slope ↔ mean difference, intercept + slope ↔ comparison mean | Matching | Conceptual | 2 |
+| 2 | Interpret the dummy slope as a difference in means (var + dir + mag + units) | Multiple Choice | Applied | 1 |
+| 3 | Recover the comparison-group (female) mean = intercept + slope (535.56) | Fill-in-the-Blank | Applied | 2 |
+| 4 | Coefficient SE = sampling uncertainty of the estimated difference | Multiple Choice | Conceptual | 1 |
+| 5 | Dummy "regression line" = two group means joined (only two fitted values) | True/False | Conceptual | 1 |
+| 6 | Slope test: $t = $ est/SE, $df = n-2$, decide at $\alpha$ (4.65, 1018, reject) | Fill-in-Multiple-Blanks | Applied | 2 |
+| 7 | Regression $t$ on a dummy ≡ pooled two-sample $t$ | True/False | Conceptual | 1 |
+| 8 | Root MSE = pooled within-group SD, not the combined SD | Multiple Choice | Challenge | 1 |
+| 9 | An observational dummy "effect" = association, not causation | True/False | Conceptual | 1 |
+
+: Quiz 2 item map — 9 items, 12 points total. {.striped}

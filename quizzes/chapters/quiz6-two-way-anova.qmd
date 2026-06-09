@@ -1,0 +1,388 @@
+---
+title: "Quiz 6: Two-Way ANOVA & Interaction"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Two-Way ANOVA & Interaction  ·  **Available after:** Week 8  ·  **Source:** Lecture Notes, [Ch. 5 (Interactions)](../../notes/chapters/05-interactions.html), with background from [Ch. 3 (One-Way ANOVA)](../../notes/chapters/03-one-way-anova.html).
+
+This quiz assesses the two-way ANOVA with two categorical predictors: what the design tests (two main effects plus their interaction), reading the main- and interaction-$F$-tests with their degrees of freedom from a Type-III table, why a significant interaction makes the main effects incomplete summaries, reading an interaction plot and quantifying a simple effect and a difference of differences from a cell-means table, the equivalence between the two-way ANOVA and a dummy-plus-product regression, and interpreting conditional (simple) effects rather than a single main effect. Mirroring Homework 6, every item uses the PISA reading example — students from the USA, UK, and Germany ($N = 4{,}528$) crossed with whether the student speaks the test language at home — and emphasizes interpretation over computation. Items are open-book; every table, equation, and result is shown statically, and each item carries the output it needs in its own stem.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 11 |
+| Total points | 16 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 8 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 6. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — What a two-way ANOVA tests {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 5]`**
+
+Researchers model PISA reading literacy score (`wleread`) on **country** (USA, UK, Germany) and whether the student **speaks the test language at home** (No, Yes) using a two-way ANOVA with the country-by-test-language interaction. Their central question is whether the boost from speaking the test language at home is the *same size* in every country. Which statement best describes what this single analysis tests?
+
+A. It tests two main effects (country and test language) plus their interaction, and the interaction — does the test-language effect differ by country? — is the key test for their question.
+
+B. It runs two separate one-way ANOVAs, one for country and one for test language, and reports them side by side.
+
+C. It tests the two main effects, while the interaction is an optional add-on that is examined only if both main effects are non-significant.
+
+D. It tests the two main effects as the primary result; the interaction merely re-scales the main effects and need not be interpreted.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** A two-way ANOVA partitions the outcome into a main effect for each factor *plus* their interaction, all estimated in one model. The interaction term is exactly the test of whether the test-language effect changes across countries — the researchers' central question — so it is the key test here, not an afterthought.
+- **Why not B:** Two separate one-way ANOVAs cannot estimate the interaction at all; fitting both factors jointly in one model is what lets the "does it depend on country?" question be tested.
+- **Why not C:** The interaction is not contingent on the main effects being non-significant. It is tested directly and is often the primary result; here it is significant even though both main effects are too.
+- **Why not D:** A significant interaction does not "re-scale" the main effects — it tells you the effect of one factor is not constant across the other, which *changes how* the main effects may be read rather than leaving them untouched.
+- **Source:** [Ch. 5 (Interactions), "Categorical by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cat-cat).
+
+:::
+
+### Question 2 — Reading the Type-III interaction test {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 5]`**
+
+The two-way ANOVA of reading score on country $\times$ test language ($N = 4{,}528$) produces the Type-III table below.
+
+| Source | df | $F$ | $p$ |
+|:-------|---:|----:|:----|
+| Test language | 1 | 59.57 | $<.001$ |
+| Country | 2 | 26.00 | $<.001$ |
+| Test language $\times$ Country | ? | ? | $<.001$ |
+| Residual | 4522 | | |
+
+Read the **interaction** row and complete the report at $\alpha = .05$:
+
+"The Country $\times$ Test-language interaction is tested by $F =$ **[blank1]** on **[blank2]** numerator degrees of freedom and **[blank3]** denominator degrees of freedom; because $p < .001$, the interaction is **[blank4]** (significant / not significant)."
+
+Enter the $F$ value and each df as a single number, and the significance verdict as one word.
+
+#### Answer & Rationale
+
+**Correct answers:** `[blank1]` = **14.72** (accept 14.6–14.8, tolerance $\pm 0.1$) · `[blank2]` = **2** (numerator df; exact) · `[blank3]` = **4522** (denominator df; exact) · `[blank4]` = **significant**
+
+- **`[blank1]` = 14.72:** the interaction $F$ for these data, read straight from the Test language $\times$ Country row, $F(2, 4522) = 14.72$.
+- **`[blank2]` = 2:** the interaction numerator df is $(\text{#country levels}-1)(\text{#test-language levels}-1) = (3-1)(2-1) = 2$ — one fewer than the number of countries, *not* the number of countries.
+- **`[blank3]` = 4522:** the denominator df is the residual df, $4522$, read from the Residual row of the table.
+- **`[blank4]` = significant:** with $p < .001 < .05$, reject the null of no interaction — the test-language effect is *not* the same across countries.
+- **Common errors:** entering `3` (the number of countries, $k$ instead of $k-1$) or `1` (the test-language main-effect df) for the numerator df, putting the residual df $4522$ in the numerator blank (swapping the two df), or reading a sum-of-squares value as the $F$; all fall outside the keyed answers.
+- **Source:** [Ch. 5 (Interactions), "Testing the Overall Interaction"](../../notes/chapters/05-interactions.html#testing-the-overall-interaction).
+
+:::
+
+### Question 3 — A significant interaction makes main effects incomplete {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 5]`**
+
+In the PISA model the country $\times$ test-language interaction is significant, $F(2, 4522) = 14.72$, $p < .001$, and both main effects are significant as well.
+
+**True or False:** Because each factor still has a significant main effect, it is fine to report a single average test-language effect as "the" effect of speaking the test language at home, summarizing all three countries at once.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** A significant interaction means the test-language effect is **not constant** across countries — it is large in Germany ($\approx +98.5$ points), moderate in the USA ($\approx +62.9$), and near zero in the UK. Once the effect differs by country, a single pooled "average effect" hides exactly the variation the interaction flagged, so the main effect becomes an **incomplete summary**. The honest report gives the effect country by country.
+- **Why "True" is wrong:** The significance of the main-effect $F$ does not rescue a single-number summary; the marginal effect still exists arithmetically, but presenting it *as if it applied uniformly* would misrepresent the UK (where the effect is $\approx 0$) and Germany (where it is $\approx +99$) alike. That additive reading is valid only when the interaction is negligible.
+- **Source:** [Ch. 5 (Interactions), "Categorical by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cat-cat).
+
+:::
+
+### Question 4 — Reading the interaction plot {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 5]`**
+
+An interaction plot puts test-language status (No, Yes) on the horizontal axis and estimated mean reading score on the vertical axis, drawing one line per country. The **Germany** line rises steeply (about $423$ up to $522$), the **USA** line rises moderately (about $466$ up to $529$), and the **UK** line stays essentially **flat** (about $538$ at both points). What does this pattern indicate?
+
+A. No interaction, because all three lines slope upward in the same general direction.
+
+B. The vertical gaps between the lines reflect only the country intercepts and say nothing about an interaction.
+
+C. An interaction: the lines are **not parallel**, so the test-language difference (each line's slope) changes across countries — steep for Germany, flat for the UK.
+
+D. No interaction can be claimed unless the lines actually cross each other on the plot.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** On an interaction plot, the slope of each line *is* that country's test-language effect. Germany's steep rise, the USA's moderate rise, and the UK's flat line are three different slopes — the lines are **non-parallel**, the visual signature of an interaction. They also converge on the "Yes" side (the country means are far apart among non-speakers but close among speakers), and that convergence is the interaction made visible.
+- **Why not A:** Lines can all point "upward" yet have very different steepness; shared *direction* is not the criterion. Non-parallelism — differing slopes — is what signals an interaction, and these slopes plainly differ.
+- **Why not B:** Differing intercepts (baseline gaps) are a *main effect* of country. The interaction is read from whether the lines are *parallel*; dismissing the changing slopes as "intercept only" misreads the plot.
+- **Why not D:** Crossing is sufficient but not necessary. Any departure from parallel — including converging lines that never fully cross, as here — indicates an interaction.
+- **Source:** [Ch. 5 (Interactions), "Interpreting the Cell Means"](../../notes/chapters/05-interactions.html#interpreting-the-cell-means).
+
+:::
+
+### Question 5 — A simple effect from the cell means {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 5]`**
+
+The estimated mean reading scores in each country-by-test-language cell are:
+
+| Country | Does **not** speak test language (No) | Speaks test language (Yes) |
+|:--------|--------------------------------------:|---------------------------:|
+| Germany | 423.40 | 521.93 |
+| USA     | 465.77 | 528.63 |
+| UK      | 538.19 | 538.18 |
+
+Compute the **simple effect of test language within Germany** — the predicted difference in reading score between German students who *do* speak the test language at home and those who do *not* (Yes − No). Enter a number (reading-score points), rounded to two decimals.
+
+#### Answer & Rationale
+
+**Correct answer: 98.53** (accept **98.0–99.0**, tolerance $\pm 0.5$)
+
+- **Why 98.53:** the simple effect within a country is the within-row difference of its two cell means, $521.93 - 423.40 = 98.53$ points. German students who speak the test language at home are predicted to score about **98.5 points higher** in reading than those who do not — the largest test-language effect of the three countries.
+- **Tolerance:** the $\pm 0.5$ window absorbs rounding of the cell means without admitting a wrong cell or a reversed direction.
+- **Common errors:** answering `62.87` (the *USA* simple effect, $528.63 - 465.77$), `≈ 0` (the *UK* effect, $538.18 - 538.19$), or `−98.53` (subtracting No − Yes, the wrong direction — speakers score higher, so the effect is positive); all fall outside the window.
+- **Source:** [Ch. 5 (Interactions), "Interpreting the Cell Means"](../../notes/chapters/05-interactions.html#interpreting-the-cell-means).
+
+:::
+
+### Question 6 — The interaction as a difference of differences {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 5]`**
+
+Using the same cell-means table:
+
+| Country | Does **not** speak test language (No) | Speaks test language (Yes) |
+|:--------|--------------------------------------:|---------------------------:|
+| Germany | 423.40 | 521.93 |
+| USA     | 465.77 | 528.63 |
+| UK      | 538.19 | 538.18 |
+
+Read the interaction as a *difference of differences*. The test-language simple effect (Yes − No) is $521.93 - 423.40 = 98.53$ in Germany and $538.18 - 538.19 \approx 0$ in the UK. By how much does Germany's test-language effect exceed the UK's, and what does that quantity represent?
+
+A. About $98.5$ points, but this is just Germany's simple effect on its own and is unrelated to the interaction.
+
+B. About $98.5$ points — the difference between Germany's test-language effect ($\approx 98.5$) and the UK's ($\approx 0$); this contrast of two simple effects is exactly what the interaction quantifies.
+
+C. About $538$ points — the difference between the two countries' reading scores among speakers.
+
+D. About $98.5$ points, obtained by *adding* Germany's effect ($\approx 98.5$) and the UK's ($\approx 0$).
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** An interaction is a *difference of differences*. Germany's test-language effect ($98.53$) minus the UK's ($\approx 0$) is $98.53 - 0 \approx 98.5$ points — how much *more* the test-language effect matters in Germany than in the UK. That contrast between two simple effects is precisely what the interaction quantifies; a zero difference of differences would mean no interaction.
+- **Why not A:** The numeric value here *coincides* with Germany's standalone simple effect only because the UK effect is $\approx 0$. But the *quantity* being computed is the difference between two countries' simple effects — that difference is the interaction. Calling it "just Germany's effect, unrelated to the interaction" names the right number under the wrong reasoning.
+- **Why not C:** About $538$ is a single cell value (a country contrast among speakers), not a difference of test-language effects.
+- **Why not D:** A difference of differences *subtracts* one simple effect from the other; it does not sum them. The sum reasoning would mislead whenever the second effect is not $\approx 0$.
+- **Source:** [Ch. 5 (Interactions), "Interpreting the Cell Means"](../../notes/chapters/05-interactions.html#interpreting-the-cell-means).
+
+:::
+
+### Question 7 — Two-way ANOVA equals dummy-plus-product regression {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 5]`**
+
+The PISA two-way ANOVA (`wleread ~ test_lan * country`) is re-estimated as a regression on dummy variables plus their products — the two country dummies (`uk`, `germany`), the test-language dummy (`test_lan`), and the two interaction products — with USA non-speakers as the reference cell. The regression reports overall $F = 31.49$, $R^2 = 0.0336$, and Root MSE $= 93.24$.
+
+**True or False:** This dummy-plus-product regression is the *same model* as the two-way ANOVA — it returns identical fitted values, the same $R^2$, the same Root MSE, and the same overall $F$ — just written in regression notation.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A (True) is correct:** A two-way ANOVA with an interaction **is** a regression with dummy variables and their product terms — the same design matrix written two ways. It therefore produces identical fitted cell means and the same global fit statistics: $R^2 = 0.0336$, Root MSE $= 93.24$, and overall $F = 31.49$. The ANOVA table simply groups the dummy and product coefficients into factor-level $F$-tests; the regression shows the individual coefficients.
+- **Why "False" is wrong:** Claiming the two give *different* fits — or that only the $F$ matches while $R^2$/Root MSE differ, or that the predictors must first be *centered* — misstates the equivalence. Centering can change which conditional value a lower-order coefficient reports, but it does **not** alter the fitted values or any of these global fit statistics, and no centering is needed here because dummy coding already places the reference cell at the intercept.
+- **Source:** [Ch. 5 (Interactions), "Categorical by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cat-cat).
+
+:::
+
+### Question 8 — Mapping regression coefficients to cell means {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 5]`**
+
+The dummy-plus-product regression (USA non-speakers = reference cell) returns:
+
+$$
+\widehat{\text{wleread}} = 465.77 + 72.42\,(\text{uk}) - 42.37\,(\text{germany}) + 62.87\,(\text{test\_lan}) + 35.66\,(\text{lang\_germ}) - 62.87\,(\text{lang\_uk})
+$$
+
+where $\text{lang\_germ} = \text{test\_lan} \times \text{germany}$ and $\text{lang\_uk} = \text{test\_lan} \times \text{uk}$. Identify the **value** each coefficient takes, given what it represents. Enter each blank as a number.
+
+- The **intercept** is the predicted reading score for **USA students who do not speak the test language at home** (the reference cell); its value is **[blank1]**.
+- The **`uk`** coefficient is the **UK − USA** difference in mean reading score **among non-speakers**; its value is **[blank2]**.
+- The **`test_lan`** coefficient is the test-language effect (Yes − No) **in the USA**, the reference country; its value is **[blank3]**.
+
+#### Answer & Rationale
+
+**Correct answers:** `[blank1]` = **465.77** (accept 465.3–466.3, tolerance $\pm 0.5$) · `[blank2]` = **72.42** (accept 71.9–72.9) · `[blank3]` = **62.87** (accept 62.4–63.4)
+
+- **`[blank1]` = 465.77:** with every dummy set to $0$ (USA, non-speaker) the fitted value is the intercept — the reference-cell mean, USA non-speakers. It is *not* the grand mean.
+- **`[blank2]` = 72.42:** in a model with the interaction, `uk` is the UK − USA gap evaluated where `test_lan` $= 0$ — i.e., **among non-speakers**: $538.19 - 465.77 = 72.42$. It is a conditional, not an overall, country gap.
+- **`[blank3]` = 62.87:** `test_lan` is the test-language effect for the reference country, the **USA**: $528.63 - 465.77 = 62.87$. It is *not* "everyone's" effect, because the interaction terms adjust it for the other countries.
+- **Common error:** treating the intercept as the grand mean, or reading `uk`/`test_lan` as overall (marginal) effects rather than effects conditional on the other factor being at its reference level.
+- **Source:** [Ch. 5 (Interactions), "Interpreting the Cell Means"](../../notes/chapters/05-interactions.html#interpreting-the-cell-means).
+
+:::
+
+### Question 9 — Recovering a simple effect from the regression {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Challenge · Notes Ch. 5]`**
+
+From the same regression (USA non-speakers = reference):
+
+$$
+\widehat{\text{wleread}} = 465.77 + 72.42\,(\text{uk}) - 42.37\,(\text{germany}) + 62.87\,(\text{test\_lan}) + 35.66\,(\text{lang\_germ}) - 62.87\,(\text{lang\_uk})
+$$
+
+Here `test_lan` $= 62.87$ is the test-language effect for the **USA** only, and the product term `lang_germ` $= 35.66$ is **how much larger** Germany's test-language effect is than the USA's. Using these coefficients, recover **Germany's** test-language (Yes − No) simple effect. Enter a number (reading-score points), rounded to two decimals.
+
+#### Answer & Rationale
+
+**Correct answer: 98.53** (accept **98.0–99.0**, tolerance $\pm 0.5$)
+
+- **Why 98.53:** a country's simple effect from the regression is the reference-country effect plus that country's interaction term, $\beta_{\text{test\_lan}} + \beta_{\text{lang\_germ}} = 62.87 + 35.66 = 98.53$ points. This exactly recovers Germany's cell-mean difference, $521.93 - 423.40 = 98.53$ — the regression and the cell means tell the same story.
+- **Tolerance:** the $\pm 0.5$ window absorbs rounding of the two coefficients while excluding the common wrong combinations.
+- **Common errors:** answering `35.66` (the interaction dummy alone — the *amount by which* Germany's effect exceeds the USA's, not Germany's full effect), `62.87` (the USA effect, ignoring Germany's adjustment), or `27.21` (subtracting, $62.87 - 35.66$, instead of adding the same-signed adjustment); all fall outside the window.
+- **Source:** [Ch. 5 (Interactions), "Deriving Group-Specific Equations"](../../notes/chapters/05-interactions.html#deriving-group-specific-equations).
+
+:::
+
+### Question 10 — Interpreting effects when the interaction is significant {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 5]`**
+
+The country $\times$ test-language interaction is significant. A colleague asks you to state, in one sentence, "the effect of speaking the test language at home on reading score." What is the statistically sound response?
+
+A. Report the single pooled test-language main effect as "the" effect, since its $F$-test is significant and one number is the most concise summary.
+
+B. Average the three country-specific effects into one overall number and report that average, treating the interaction as noise.
+
+C. Report the per-country (simple) effects — about $+98.5$ points in Germany, $+62.9$ in the USA, and $\approx 0$ in the UK — because a significant interaction means the effect depends on country, so you must specify "the effect for whom / where?"
+
+D. Report only Germany's effect (the largest, at $\approx +98.5$), since the largest simple effect best represents the variable's overall importance.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** When the interaction is significant, the test-language effect is *conditional* on country, so the correct unit of interpretation is the **simple (conditional) effect**: $\approx +98.5$ in Germany, $+62.9$ in the USA, $\approx 0$ in the UK. The discipline is to ask "the effect for whom, or under what condition?" — a single number cannot answer that honestly.
+- **Why not A:** Reporting the pooled main effect as "the" effect ignores the very heterogeneity the significant interaction established; it would imply a sizeable effect in the UK, where there is essentially none.
+- **Why not B:** Averaging *over* the interaction collapses the differences back into one number — the same error as A in disguise — and describes no actual country well. The point of finding an interaction is to *stop* reporting a single average.
+- **Why not D:** The largest simple effect is not "representative"; it is one of three genuinely different effects. Reporting only Germany would misstate the USA and badly misstate the UK.
+- **Source:** [Ch. 5 (Interactions), "Categorical by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cat-cat).
+
+:::
+
+### Question 11 — Matching terms to two-way components {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 5]`**
+
+In the PISA two-way ANOVA of reading score on country $\times$ test language, match each quantity from the analysis (left) to the model component it represents (right). Each component is used at most once; one right-column option is a distractor.
+
+| # | Quantity |
+|:--|:---------|
+| 1 | The $F(1, 4522) = 59.57$ test for **test language** |
+| 2 | The $F(2, 4522) = 26.00$ test for **country** |
+| 3 | The $F(2, 4522) = 14.72$ test for **country $\times$ test language** |
+| 4 | The predicted value $521.93$ for **German students who speak the test language** |
+
+| | Component |
+|:--|:---------|
+| W | A main effect (one factor, averaging over the other) |
+| X | A second main effect (the other factor, averaging over the first) |
+| Y | The interaction (whether one factor's effect depends on the other) |
+| Z | A single cell mean (one country $\times$ test-language combination's fitted mean) |
+| V | A three-way interaction among three factors |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → W, 2 → X, 3 → Y, 4 → Z**
+
+- **1 → W:** the test-language $F$-test is a **main effect** — does mean reading score differ between speakers and non-speakers, averaging over country.
+- **2 → X:** the country $F$-test is the **other main effect** — does mean reading score differ across the three countries, averaging over test language.
+- **3 → Y:** the country $\times$ test-language $F$-test is the **interaction** — does the test-language effect differ across countries.
+- **4 → Z:** $521.93$ is a single **cell mean**, the fitted value for one country-by-test-language combination (German speakers), not an effect or a test.
+- **Distractor V (three-way interaction):** unused. This design has only **two** factors, so no three-way interaction exists; a three-way term would require a third categorical factor crossed with these two.
+- **Source:** [Ch. 5 (Interactions), "Testing the Overall Interaction"](../../notes/chapters/05-interactions.html#testing-the-overall-interaction).
+
+:::
+
+## Coverage
+
+This quiz draws entirely from Lecture Notes Ch. 5 (Interactions), with conceptual background from Ch. 3 (One-Way ANOVA), and mirrors Homework 6's PISA country $\times$ test-language two-way ANOVA. The 11 items total **16 points** (Multiple Choice ×4, True/False ×2, Fill-in-the-Blank ×2, Fill-in-Multiple-Blanks ×2, Matching ×1) and span all three difficulty levels (Conceptual ×4, Applied ×5, Challenge ×2).
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | What a two-way ANOVA tests (two main effects + interaction) | Multiple Choice | Conceptual | 1 |
+| 2 | Read the interaction $F$, df, and decision from a Type-III table | Fill-in-Multiple-Blanks | Applied | 2 |
+| 3 | Significant interaction ⇒ main effects are incomplete | True/False | Conceptual | 1 |
+| 4 | Reading an interaction plot (non-parallel ⇒ interaction) | Multiple Choice | Applied | 1 |
+| 5 | A simple effect from the cell means (Germany 98.53) | Fill-in-the-Blank | Applied | 2 |
+| 6 | The interaction as a difference of differences | Multiple Choice | Applied | 1 |
+| 7 | Two-way ANOVA ≡ dummy-plus-product regression | True/False | Conceptual | 1 |
+| 8 | Map regression coefficients to cell means | Fill-in-Multiple-Blanks | Applied | 2 |
+| 9 | Recover a simple effect from the regression (62.87 + 35.66 = 98.53) | Fill-in-the-Blank | Challenge | 2 |
+| 10 | Interpret conditional effects, not a single main effect | Multiple Choice | Challenge | 1 |
+| 11 | Match terms to two-way components | Matching | Conceptual | 2 |
+
+: Quiz 6 item map. {.striped}

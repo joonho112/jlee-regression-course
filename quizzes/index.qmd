@@ -1,6 +1,6 @@
 # Preface {.unnumbered}
 
-This companion volume collects all **6 module quizzes** for **BER 640: Advanced Statistical Methods in Education**, along with their complete answer keys and the Blackboard configuration needed to deploy them. For each quiz it presents the item set exactly as students encounter it, paired with a full rationale for every question, the point values, and the deployment settings. It is the instructor-facing authoring artifact behind the auto-graded quizzes and serves as the single source of truth for the quiz content, scoring, and design.
+This companion volume collects all **8 module quizzes** for **BER 640: Advanced Statistical Methods in Education**, along with their complete answer keys and the Blackboard configuration needed to deploy them. The quiz set is built to **mirror the eight homework assignments one-to-one**: each quiz reinforces exactly the concepts its paired homework drills, so a student who has worked the homework is rehearsing the same ideas in a low-stakes, auto-graded checkpoint. For each quiz it presents the item set exactly as students encounter it, paired with a full rationale for every question, the point values, the **link back to the Lecture Notes** section the item draws on, and the deployment settings. It is the instructor-facing authoring artifact behind the auto-graded quizzes and serves as the single source of truth for the quiz content, scoring, and design.
 
 The module quizzes are built around a **mastery-based, open-book** philosophy. Rather than functioning as high-stakes, one-shot assessments, they are low-stakes checkpoints that let students confirm their grasp of each module's key ideas. Students may retake each quiz as many times as needed, and only the highest score is recorded. The questions therefore aim to diagnose understanding and guide review, not to penalize early mistakes.
 
@@ -15,14 +15,14 @@ Each question is presented in a **panel-tabset** format with two tabs:
 The question exactly as students see it in Blackboard, including the item type, the stem, and all answer options. Read this tab first to experience the question from the student's perspective before consulting the key.
 
 ### Answer & Rationale
-The instructor key for the question. It identifies the correct answer (or answers), explains **why each distractor is wrong**, lists the **point value**, cites the **source** in the Lecture Notes that the question draws on, and assigns a **difficulty tag**. Use this tab to author, review, or revise the item.
+The instructor key for the question. It identifies the correct answer (or answers), explains **why each distractor is wrong**, lists the **point value**, links to the **source** in the Lecture Notes that the question draws on, and assigns a **difficulty tag**. Use this tab to author, review, or revise the item.
 :::
 
 ::: {.callout-tip}
 ## Suggested Workflow
 1. Read the **Question** tab to confirm the stem and options are clear and unambiguous.
 2. Open the **Answer & Rationale** tab to verify the keyed answer, the distractor explanations, and the points.
-3. Follow the **source citation** to the relevant Lecture Notes chapter to confirm the question is aligned with what students were taught.
+3. Follow the **source link** to the relevant Lecture Notes section to confirm the question is aligned with what students were taught.
 :::
 
 ### Blackboard Settings Table
@@ -42,16 +42,18 @@ Each quiz chapter opens with a **Blackboard settings table** that documents exac
 
 ## Quiz Overview
 
-The six quizzes map one-to-one onto the course's lecture modules and become available to students after the listed week, once the corresponding lecture and lab material is complete.
+The eight quizzes map **one-to-one onto the eight homework assignments** and become available to students after the listed week, once the corresponding lecture, lab, and homework material is complete. (Availability weeks are proposed defaults; confirm against the course calendar.)
 
-| Quiz | Module | Topics | Available After |
-|:-----|:-------|:-------|:----------------|
-| Quiz 1 | Foundations of Regression | Simple regression, OLS, dummy variables | Week 3 |
-| Quiz 2 | Categorical Predictors | ANCOVA, one-way ANOVA, multiple comparisons | Week 5 |
-| Quiz 3 | Interactions | Interaction effects, two-way ANOVA, simple slopes | Week 7 |
-| Quiz 4 | Model Building & Diagnostics | Nonlinear relationships, model selection, residual diagnostics | Week 9 |
-| Quiz 5 | Logistic Regression | Odds ratios, predicted probabilities, Simpson's Paradox | Week 11 |
-| Quiz 6 | Logistic Diagnostics | Goodness of fit, classification, pseudo-$R^2$ | Week 12 |
+| Quiz | ↔ HW | Topics | Available After |
+|:-----|:----:|:-------|:----------------|
+| Quiz 1 — Simple Linear Regression | HW1 | Variable roles, slope & intercept interpretation, prediction and realism | Week 2 |
+| Quiz 2 — Dummy Variables & the *t*-Test | HW2 | Single dummy = group-mean difference, regression *t* = pooled *t*, Root MSE | Week 3 |
+| Quiz 3 — Confounding & ANCOVA | HW3 | Adjusted vs. unadjusted differences, "controlling for," confounding, collinearity | Week 4 |
+| Quiz 4 — One-Way ANOVA & Multiple Comparisons | HW4 | *k*−1 dummies, ANOVA table & *F*, regression ≡ ANOVA, Sidak pairwise, $\eta^2$ | Week 5 |
+| Quiz 5 — Interactions & Simple Slopes | HW5 | Multiple-regression coefficients, interactions, simple slopes, residual plots, VIF | Week 7 |
+| Quiz 6 — Two-Way ANOVA & Interaction | HW6 | Two-way ANOVA, cell means, interaction plots, ANOVA ≡ dummy + product regression | Week 8 |
+| Quiz 7 — Logistic Regression & Odds Ratios | HW7 | Odds ratios, % change in odds, reciprocal ORs, log-odds CIs, OR ≠ risk ratio | Week 10 |
+| Quiz 8 — Multiple Logistic & Simpson's Paradox | HW8 | Crude vs. adjusted ORs, Simpson's paradox, Wald test, grouped goodness-of-fit | Week 11 |
 
 ## Question Types
 
@@ -68,7 +70,7 @@ Every item is written to be **auto-gradable** in Blackboard, so that quizzes sco
 
 ::: {.callout-note}
 ## Conceptual, Open-Book Items
-Across all types, questions emphasize **conceptual understanding** and the correct interpretation of statistical output rather than mechanical computation. Because the quizzes are **open-book** and **open-notes**, items reward students who can read, reason about, and apply the course material rather than memorize it.
+Across all types, questions emphasize **conceptual understanding** and the correct interpretation of statistical output rather than mechanical computation. Because the quizzes are **open-book** and **open-notes**, items reward students who can read, reason about, and apply the course material rather than memorize it. Items never ask students to write R code — that practice lives in the [R Lab Book](../labs/).
 :::
 
 ## Difficulty Tags
@@ -78,7 +80,7 @@ Each question is tagged with one of three difficulty levels:
 | Tag | Description |
 |:----|:------------|
 | `Conceptual` | Focuses on understanding and interpreting statistical concepts. Tests definitions, assumptions, and the meaning of results. |
-| `Applied` | Requires reading R output or working through a short calculation to analyze data and interpret results. |
+| `Applied` | Requires reading static R output or working through a short calculation to analyze data and interpret results. |
 | `Challenge` | Extends beyond routine applications. May involve combining multiple techniques or thinking critically about assumptions. |
 
 ## Callout Boxes
@@ -114,30 +116,25 @@ Quizzes count toward **10% of the final grade** and are scored on a mastery scal
 | Minimal credit | Below 60% on the quiz |
 | No credit | Quiz not attempted |
 
-Students may take each quiz an **unlimited** number of times, and the **highest score** across all attempts is recorded in the Grade Center. There is no penalty for multiple attempts; the first attempt is best used as a self-assessment that identifies areas for review, and students are encouraged to retake each quiz until they reach mastery.
+Students may take each quiz an **unlimited** number of times, and the **highest score** across all attempts is recorded in the Grade Center. There is no penalty for multiple attempts; the first attempt is best used as a self-assessment that identifies areas for review, and students are encouraged to retake each quiz until they reach mastery. Because the mastery score is a **percentage**, the quizzes are right-sized to their homework (roughly 9--13 items each) rather than forced to a common point total.
 
 ## Cross-References to Course Materials
 
-Every question's **Answer & Rationale** tab cites the chapter in the [Lecture Notes](../notes/) that the item draws on, so that content can be traced directly to where it was taught. For computational review, students should also consult the [R Lab Book](../labs/). The quizzes align with the Lecture Notes as follows:
+Every question's **Answer & Rationale** tab **links to the section in the [Lecture Notes](../notes/)** that the item draws on, so that content can be traced directly to where it was taught. For computational review, students should also consult the [R Lab Book](../labs/), and to practice the same ideas on data, the matching chapter in the [Homework Solutions](../homework/). The quizzes align with the Lecture Notes as follows:
 
 | Quiz | Lecture Notes coverage |
 |:-----|:-----------------------|
-| Quiz 1 | Foundations of regression: simple linear regression, OLS estimation, and dummy variables. |
-| Quiz 2 | Categorical predictors: one-way ANOVA, ANCOVA, and multiple comparisons. |
-| Quiz 3 | Interactions: interaction effects, two-way ANOVA, and simple slopes. |
-| Quiz 4 | Model building and diagnostics: nonlinear relationships, model selection, and residual diagnostics. |
-| Quiz 5 | Logistic regression: odds ratios, predicted probabilities, and Simpson's Paradox. |
-| Quiz 6 | Logistic diagnostics: goodness of fit, classification, and pseudo-$R^2$. |
+| Quiz 1 | Ch. 1 — Simple linear regression: variable roles, slope/intercept, prediction, extrapolation. |
+| Quiz 2 | Ch. 1 — Dummy variables and the *t*-test: reference-group mean, mean difference, regression ≡ pooled *t*-test, Root MSE. |
+| Quiz 3 | Ch. 2 — ANCOVA and confounding: adjusted vs. unadjusted differences, "controlling for," omitted-variable bias, collinearity. |
+| Quiz 4 | Ch. 3 — One-way ANOVA: *k*−1 dummies, the ANOVA table and *F*-test, regression ≡ ANOVA, multiple comparisons, $\eta^2$. |
+| Quiz 5 | Ch. 4--5 — Multiple regression and interactions: coefficient interpretation, conditional/simple slopes; plus folded Ch. 8 diagnostics (residual plots, VIF). |
+| Quiz 6 | Ch. 5 (with Ch. 3) — Two-way ANOVA: cell means, interaction plots, ANOVA as regression with product terms. |
+| Quiz 7 | Ch. 9--10 — Logistic regression: odds ratios, % change in odds, reciprocal ORs, log-odds confidence intervals, OR vs. risk ratio. |
+| Quiz 8 | Ch. 10 (with folded Ch. 11) — Multiple logistic regression: adjusted odds ratios, Simpson's paradox, the Wald test, grouped goodness-of-fit. |
 
 To review the underlying concepts before authoring, revising, or answering a question, follow the link to the relevant chapter in the [Lecture Notes](../notes/) book.
 
-## Acknowledgments
-
-This project was supported by the Online Teaching Innovation and Digital Education (OTIDE) initiative at the University of Alabama. The datasets referenced throughout are available via the [`regdatasets`](../regdatasets/) R package.
-
-If you have questions, suggestions, or notice errors, please reach out at [jlee296@ua.edu](mailto:jlee296@ua.edu).
-
-::: {.callout-note}
 ## Citation
+
 Lee, J. (2026). *BER 640 Module Quizzes*. University of Alabama. Available at: [https://joonho112.github.io/jlee-regression-course/quizzes/](https://joonho112.github.io/jlee-regression-course/quizzes/)
-:::

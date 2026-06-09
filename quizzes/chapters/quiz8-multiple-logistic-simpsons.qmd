@@ -1,0 +1,391 @@
+---
+title: "Quiz 8: Multiple Logistic & Simpson's Paradox"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Multiple Logistic & Simpson's Paradox  ·  **Available after:** Week 11  ·  **Source:** Lecture Notes, [Ch. 10 (Multiple Logistic Regression)](../../notes/chapters/10-multiple-logistic-regression.html), with the two grouped goodness-of-fit items folded in from [Ch. 11 (Logistic Regression Diagnostics)](../../notes/chapters/11-logistic-diagnostics.html).
+
+This final quiz assesses multiple logistic regression with categorical predictors and the way an aggregate comparison can mislead. You read a department-by-gender admissions table and convert a cell admission rate to its odds; collapse over departments to form a **crude** odds ratio; enter a nominal department code as a **factor** rather than a continuous score; interpret the **adjusted** odds ratio for gender "holding department constant"; decide significance from whether an odds-ratio confidence interval includes 1; recognize that the crude-to-adjusted shift is the *expected, correct* behavior of adjustment; explain the divergence as **Simpson's paradox = omitted-variable bias on the logit scale** — resolved by adding the confounder as a main-effect covariate, not a product term, and not a coding error; conduct a **Wald test** for the gender coefficient and tie its decision to the confidence interval; and, folded from Chapter 11, read a **grouped Pearson goodness-of-fit** test over the 10 covariate patterns. Mirroring Homework 8, every item uses the same UC Berkeley graduate-admissions data ($N = 3{,}593$; five departments crossed with gender; outcome = admitted), where the crude female odds ratio of 0.64 becomes an adjusted 0.97 once department is included. Items are open-book, every table and model result is shown statically in the stem, and the emphasis is interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 11 |
+| Total points | 15 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 11 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 8. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## The Berkeley Admissions Data
+
+Several items below refer to the UC Berkeley graduate-admissions data analyzed in Homework 8, based on @bickel1975. There are $N = 3{,}593$ applicants to five graduate departments (coded 1--5), with `female` coded $1 =$ female, $0 =$ male, and the outcome `admitted` coded $1 =$ admitted, $0 =$ not admitted. Two summaries recur.
+
+**Three-way counts (admitted by gender, within each department):**
+
+| Department | Male admitted | Male not admitted | Female admitted | Female not admitted |
+|:-----------|--------------:|------------------:|----------------:|--------------------:|
+| Dept 1 | 353 | 207 | 17 | 8 |
+| Dept 2 | 120 | 205 | 202 | 391 |
+| Dept 3 | 138 | 279 | 131 | 244 |
+| Dept 4 | 53 | 138 | 94 | 299 |
+| Dept 5 | 22 | 351 | 24 | 317 |
+
+: Department-by-gender admission counts, UC Berkeley graduate admissions ($N = 3{,}593$). {.striped}
+
+**Collapsed two-way table (pooling over departments):**
+
+| Gender | Admitted | Not admitted | Total |
+|:-------|---------:|-------------:|------:|
+| Male | 686 | 1180 | 1866 |
+| Female | 468 | 1259 | 1727 |
+
+: The same applicants, collapsed over department. {.striped}
+
+When `admitted` is regressed on `female` **and** department (entered as a factor, with Dept 1 as the reference), the adjusted model is:
+
+| Term | Odds ratio | Log-odds SE | 95% CI | $z$ | $p$ |
+|:-----|-----------:|------------:|:------:|----:|----:|
+| Female vs male | 0.97 | 0.084 | [0.82, 1.15] | −0.35 | .724 |
+| Dept 2 vs Dept 1 | 0.32 | 0.039 | [0.25, 0.41] | −9.35 | < .001 |
+| Dept 3 vs Dept 1 | 0.30 | 0.036 | [0.24, 0.38] | −9.97 | < .001 |
+| Dept 4 vs Dept 1 | 0.20 | 0.028 | [0.15, 0.26] | −11.58 | < .001 |
+| Dept 5 vs Dept 1 | 0.04 | 0.007 | [0.03, 0.06] | −17.93 | < .001 |
+
+: Adjusted logistic-regression odds ratios for `admitted ~ female + factor(department)`. The department odds ratios decline steeply from Dept 1; the intercept plus the `female` and four department dummies make six estimated parameters in all. {.striped}
+
+## Questions
+
+### Question 1 — A cell admission rate and its odds {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 10]`**
+
+From the three-way table, consider **male applicants to Department 1**: 353 were admitted and 207 were not, for 560 applicants in all, an admission **rate** of $353/560 = 0.63$. Convert this rate to the **odds** of admission for Dept 1 males, using $\text{odds} = \dfrac{\text{rate}}{1 - \text{rate}}$. Give your answer as a single number, rounded to two decimal places.
+
+Odds = ________
+
+#### Answer & Rationale
+
+**Correct answer: 1.71** (accept **1.68–1.74**, tolerance $\pm 0.03$)
+
+- **Why 1.71:** the odds are the admission rate divided by the non-admission rate, $\dfrac{0.63}{1 - 0.63} = \dfrac{0.63}{0.37} = 1.71$ (equivalently $353/207 = 1.71$ directly from the counts). For Dept 1 males, admissions outnumber rejections about 1.71 to 1.
+- **Tolerance:** the $\pm 0.03$ window absorbs whether the rate was carried as $0.63$ or $0.6304$ (the exact value is $353/207 = 1.705\ldots$) without admitting a wrong method.
+- **Common error:** reporting `0.63` stops at the *rate* and never divides by $(1 - \text{rate})$ — a rate is bounded in $[0, 1]$, but odds run from 0 to $\infty$. Reporting `0.37` gives the *non*-admission rate $1 - 0.63$; reporting `0.59` inverts the ratio ($0.37/0.63$, or $207/353$), the odds *against* admission. All three fall outside the window.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Motivating Example: Berkeley Admissions"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-example).
+
+:::
+
+### Question 2 — The crude, department-ignoring odds ratio {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 10]`**
+
+Using the **collapsed two-way table** (pooling over departments), the odds of admission are $468/1259$ for female applicants and $686/1180$ for male applicants. Compute the **crude odds ratio** comparing female to male applicants, ignoring department,
+
+$$
+\widehat{\text{OR}}_{\text{crude}} = \frac{468 / 1259}{686 / 1180}.
+$$
+
+Give your answer as a single number, rounded to two decimal places.
+
+Crude odds ratio = ________
+
+#### Answer & Rationale
+
+**Correct answer: 0.64** (accept **0.62–0.66**, tolerance $\pm 0.02$)
+
+- **Why 0.64:** the female odds are $468/1259 = 0.372$ and the male odds are $686/1180 = 0.581$, so $\widehat{\text{OR}}_{\text{crude}} = 0.372/0.581 = 0.64$. Ignoring department, female applicants' admission **odds** are about 0.64 times the male odds — roughly **36% lower** ($100(0.64 - 1) = -36\%$).
+- **Tolerance:** the $\pm 0.02$ window absorbs rounding of the two intermediate odds (the exact value is $0.639$) without admitting a wrong method.
+- **Common error:** reporting `1.56` inverts the ratio (male odds over female odds, $1/0.64$) and would suggest a female *advantage*; reporting `0.36` quotes the *percent change in odds* magnitude as if it were the odds ratio (it is $1 - \text{OR}$, not the OR); describing the result as "36% less *likely*" misreads a change in **odds** as a change in **probability** (risk). All fall outside the window.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Simpson's Paradox and Confounding"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-simpson).
+
+:::
+
+### Question 3 — Entering department as a factor {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 10]`**
+
+The variable `department` is recorded as the codes 1, 2, 3, 4, 5 — labels for five distinct graduate departments with no inherent order or spacing. To include department in the logistic regression of `admitted` on `female`, how should it enter the model?
+
+A. As a single continuous predictor `+ department`, since the codes 1–5 are already numeric and ready to use.
+
+B. As a **factor** — `+ factor(department)` — which creates four dummy variables for departments 2–5, leaving department 1 as the reference group; a single 1–5 code would wrongly impose an equal-spaced ordering on nominal labels.
+
+C. As five dummy variables, one for each department, so that every department is represented in the model.
+
+D. It cannot be included at all, because logistic regression accepts only continuous predictors.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** a nominal predictor with five levels enters as a **factor**, which the software expands into $5 - 1 = 4$ dummy variables (departments 2–5), with the omitted level — department 1 — serving as the reference group. Each dummy's coefficient then compares that department to department 1, holding gender fixed. Entering the raw code `+ department` would instead force a *constant* log-odds change from Dept 1→2, 2→3, 3→4, 4→5 — an equal-spacing, ordered assumption the arbitrary labels do not justify.
+- **Why not A:** a single continuous `+ department` term is exactly the mistake; it imposes a meaningless linear ordering and equal spacing on labels that are names, not a scale.
+- **Why not C:** a dummy for *every* level **plus** the intercept creates perfect collinearity (the dummy-variable trap); one level must be omitted as the reference, so four dummies — not five — are used.
+- **Why not D:** logistic regression handles categorical predictors precisely *by* expanding a factor into dummy variables — that is what `factor(department)` does.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "The Multiple Logistic Regression Model"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-model).
+
+:::
+
+### Question 4 — What the adjusted odds ratio means {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 10]`**
+
+In the adjusted model `admitted ~ female + factor(department)`, the exponentiated `female` coefficient is the **adjusted odds ratio** of **0.97**. What does "adjusted" mean for this odds ratio?
+
+A. The odds ratio has been corrected for measurement error in the recorded admission outcome.
+
+B. The odds ratio has been rescaled so that it falls between 0 and 1.
+
+C. The odds ratio for female versus male applicants is estimated **holding department constant** — it compares female and male applicants *within the same department*, isolating gender from the department effect.
+
+D. The odds ratio for female versus male applicants **ignoring** which department they applied to.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** in a multiple logistic regression, each coefficient carries a "holding the other predictors fixed" meaning. The adjusted odds ratio of 0.97 compares female to male applicants *within levels of department* — the logistic analogue of an ANCOVA-style statistical control on the logit scale. It states the variable (gender), the direction (female odds slightly below male), the magnitude (×0.97), and the scale (odds), conditional on the department each applicant applied to.
+- **Why not A:** "adjusted" means controlling for a confounder (department), not correcting for measurement error in the outcome.
+- **Why not B:** adjustment has nothing to do with rescaling into $[0, 1]$; odds ratios live on $(0, \infty)$, and 0.97 is below 1 only because the estimated female odds are slightly lower.
+- **Why not D:** *ignoring* department gives the *crude* (unadjusted) odds ratio of 0.64 from Question 2 — exactly the quantity the adjusted model is meant to improve upon, not what "adjusted" refers to.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Adjusted Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-adjusted-or).
+
+:::
+
+### Question 5 — Significance from a confidence interval {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 10]`**
+
+For the adjusted `female` effect, the odds ratio is 0.97 with a 95% confidence interval of $[0.82, 1.15]$.
+
+**True or False:** Because this confidence interval **includes 1** (the no-difference value for an odds ratio), the adjusted gender difference is *not* statistically significant at the 5% level.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A (True) is correct:** for an odds ratio, the null value of "no effect" is **1** (equal odds), not 0. A 95% confidence interval that **contains 1** is exactly the case in which the null of "no difference" cannot be rejected at $\alpha = .05$. Here $[0.82, 1.15]$ straddles 1, so the adjusted female-vs-male difference is not significant; the data are **consistent with equal odds** of admission for women and men within department — the same conclusion the Wald $p = .724$ (Question 9) confirms.
+- **Why "False" is wrong:** the misconception is to call an effect significant even though its interval covers the null value, or to compare the odds-ratio interval to **0** rather than to **1**. On the odds-ratio scale the no-effect benchmark is 1 (0 is the null only on the *log-odds* scale), and an interval covering 1 signals non-significance.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Confidence Intervals for Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#confidence-intervals-for-odds-ratios).
+
+:::
+
+### Question 6 — The crude-to-adjusted shift is expected {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 10]`**
+
+The crude odds ratio for female applicants is 0.64 (an apparent disadvantage), but the department-adjusted odds ratio rises to 0.97 with a confidence interval that now crosses 1. A colleague worries that "the estimate moved so much, the model must be broken." How should this large crude-to-adjusted shift be understood?
+
+A. The shift proves the adjusted model is wrong, because a genuine effect cannot change this much when one control is added.
+
+B. The shift signals a coding error in the gender or department variables that would disappear once the data are re-cleaned.
+
+C. The shift is the **expected, correct behavior** of adjustment: conditioning on a confounder (department) moves a biased crude estimate toward the within-department comparison, and here it reveals that the apparent crude gender gap was largely a department effect.
+
+D. The shift means a `female × department` interaction term must be added before either odds ratio can be trusted.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** the crude and adjusted odds ratios answer *different questions* — the crude pools all applicants, the adjusted compares within department. When department is a confounder, the coefficient on the predictor of interest is *supposed* to change, and the size of the move is the **expected behavior when a real confounder (department) is added to the model**. Adjusting for department pulls the female odds ratio from 0.64 to 0.97, showing that most of the crude "gap" reflected which departments women applied to, not a within-department admissions difference. A large, sensible shift is the whole point of adjustment, not a malfunction.
+- **Why not A:** a real effect *can* shrink dramatically when a confounder is added; that shrinkage is the entire purpose of adjustment, not evidence the model is wrong.
+- **Why not B:** the shift arises in correctly coded data from genuine confounding; it is not an artifact that re-cleaning would remove.
+- **Why not D:** adjusting for department as a **main effect** is what moves the estimate; an interaction term would instead test whether the gender effect *differs across* departments — a different question, not what produces this crude-to-adjusted shift (see Question 8).
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Visualizing Crude vs Adjusted Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#visualizing-crude-vs-adjusted-odds-ratios).
+
+:::
+
+### Question 7 — Simpson's paradox as omitted-variable bias {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 10]`**
+
+Pooling departments, female applicants appear *disadvantaged* (crude OR 0.64), yet after conditioning on department the gender gap nearly vanishes (adjusted OR 0.97), and within several departments women are admitted at rates at or above men. Department is associated with **both** applicant gender (the female share differs sharply across departments) **and** admission rate (some departments admit far more freely than others). Which statement best explains this divergence?
+
+A. It is a coding artifact in the dummy variables that vanishes once the codes are corrected.
+
+B. It is evidence that gender and department **interact**, so a `female × department` product term is needed to fit the data.
+
+C. The reversal shows that adjustment cannot shrink a real effect this far, so the crude estimate must be the correct one.
+
+D. It is **Simpson's paradox — omitted-variable bias on the logit scale**: department confounds the gender–admission association, so omitting it biases the crude gender effect, and including it removes the bias.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** Simpson's paradox here *is* omitted-variable bias applied to a binary outcome on the log-odds scale. Department meets both OVB conditions: it is associated with the predictor of interest (women applied disproportionately to lower-admitting departments) **and** with the outcome (departments differ widely in admission rate — note the steeply declining department odds ratios). Omitting department makes the crude gender odds ratio a biased blend of gender and department; adding it as a covariate separates them, and the apparent female disadvantage largely disappears. (Strictly, the logistic odds ratio is **non-collapsible** — it can shift somewhat even without confounding — so the crude-vs-adjusted comparison does not isolate confounding as cleanly as it does for an OLS coefficient; here, though, department is a genuine confounder and drives the reversal.)
+- **Why not A:** the reversal is a genuine confounding phenomenon in correctly coded data, not a miscoding artifact.
+- **Why not B:** Simpson's paradox is about *confounding* (a main-effect control), not interaction; it is resolved by adding department as a covariate, not a product term (see Question 8).
+- **Why not C:** a large shrinkage when a confounder is added is the expected, correct behavior of adjustment — it is the whole purpose of conditioning on the confounder, not a reason to prefer the (biased) crude estimate.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Simpson's Paradox and Confounding"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-simpson).
+
+:::
+
+### Question 8 — How the paradox is resolved {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 10]`**
+
+A classmate argues: "Because the crude and adjusted gender odds ratios disagree, resolving the Berkeley Simpson's paradox **requires adding a `female × department` product (interaction) term** to the model — and if that does not fix it, the reversal was a data-cleaning error all along."
+
+**True or False:** This claim is correct.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** the paradox is resolved by adding department as a **main-effect covariate** — exactly what `admitted ~ female + factor(department)` does — and that alone is enough to remove the confounding and move the female odds ratio from 0.64 to 0.97. A `female × department` *product* term answers a different question (does the gender effect *differ across* departments?) and is not what undoes Simpson's paradox. Nor is the divergence a data-cleaning error: it is genuine confounding in correctly coded data. Both halves of the claim are wrong, so the statement is False.
+- **Why "True" is wrong:** it conflates **confounding** (handled by a main-effect control) with **interaction** (effect modification), and mislabels a real confounding reversal as a coding/cleaning artifact. Adjustment for the confounder, not a product term, is the fix.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Why the Reversal?"](../../notes/chapters/10-multiple-logistic-regression.html#why-the-reversal).
+
+:::
+
+### Question 9 — The Wald test for the gender coefficient {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 10]`**
+
+The Wald test for a single logistic coefficient tests $H_0: \beta_{\text{female}} = 0$ using $z = \hat{\beta}/SE$, and for one coefficient it can be reported as a one-degree-of-freedom chi-square, $X^2(1) = z^2$. For `female`, the adjusted model gives $z = -0.35$ (with $p = .724$).
+
+- **[blank 1]** Compute the Wald chi-square statistic, $X^2(1) = (-0.35)^2 =$ ________ (round to two decimals).
+- **[blank 2]** At $\alpha = .05$ (with $\text{df} = 1$), the decision is to ________ the null hypothesis $H_0: \beta_{\text{female}} = 0$ (enter **reject** or **fail to reject**).
+
+#### Answer & Rationale
+
+**Correct answers:** `[blank 1]` = **0.12** (accept **0.11–0.13**, tolerance $\pm 0.01$) · `[blank 2]` = **fail to reject** (accept "do not reject," "retain")
+
+- **`[blank 1]`:** $X^2(1) = z^2 = (-0.35)^2 = 0.12$, on 1 degree of freedom (the exact value is $(-0.3538)^2 = 0.125$). Squaring the $z$ removes its sign, so the chi-square is positive even though $z$ is negative.
+- **`[blank 2]`:** with $p = .724 > .05$ (equivalently, $X^2(1) = 0.12$ far below the critical $\chi^2_{1,\,.05} = 3.84$), we **fail to reject** $H_0$. There is no evidence that the adjusted log-odds coefficient for gender differs from zero — the hypothesis-test counterpart of the confidence interval in Question 5: the interval includes 1 and the Wald test is non-significant, the same conclusion two ways.
+- **Common error:** reporting `−0.35` (or `0.35`) keys the chi-square as $z$ rather than $z^2$ — the Wald chi-square squares the $z$ statistic, and a chi-square cannot be negative. Choosing **reject** ignores the large $p$-value ($p = .724$) and contradicts the CI conclusion, since both are computed from the same $\hat{\beta}$ and $SE$.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "The Wald Test"](../../notes/chapters/10-multiple-logistic-regression.html#the-wald-test).
+
+:::
+
+### Question 10 — The grouped Pearson goodness-of-fit test {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 11]`**
+
+Because both predictors are categorical, the Berkeley data collapse into exactly **10 covariate patterns** (5 departments × 2 genders). Comparing observed and expected admissions within those 10 patterns, the grouped Pearson goodness-of-fit test gives $X^2(4) = 2.56$, $p = .634$, where the degrees of freedom are $\#\text{patterns} - \#\text{parameters} = 10 - 6 = 4$ (the six parameters are the intercept plus the `female` and four department dummies). Which interpretation is correct?
+
+A. There is **no evidence of lack of fit** ($p = .634$): the additive `female + department` model is adequate, and lack of fit — were it present — would correspond to an unmodeled gender × department interaction.
+
+B. The result cannot be trusted: with only $X^2(4) = 2.56$ the sample must be too sparse, since a large total $n$ alone is what validates the chi-square reference distribution.
+
+C. Goodness of fit should instead be assessed by **summing the individual applicants' Pearson residuals** across all 3,593 cases, not by grouping into covariate patterns.
+
+D. Because the Pearson $X^2$ is numerically close to the deviance $G^2$, the agreement of the two statistics confirms that the model fits.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** the grouped Pearson statistic compares observed to model-expected admissions across the 10 covariate patterns and is referred to a $\chi^2_4$ distribution. A *non-significant* result ($X^2(4) = 2.56$, $p = .634$, well below the $\chi^2_4$ critical value of 9.49) means the observed pattern counts are close to what the additive model predicts — **no evidence of lack of fit**. In this all-categorical model, the only **remaining structural term available in this all-categorical design** is the gender × department interaction — letting the gender effect vary by department — so "no lack of fit" says that term is not needed.
+- **Why not B:** this is the sparseness misconception, and it does not apply here. Validity comes from **non-sparse covariate patterns** (large expected counts per pattern): with two categorical predictors the 3,593 cases collapse into just 10 well-populated patterns, so the expected counts are far above 5 and the $\chi^2$ approximation holds. A large total $n$ does **not** rescue the test when a *continuous* predictor spreads it across many tiny patterns — but that sparseness problem does not arise with these two categorical predictors.
+- **Why not C:** the grouped goodness-of-fit test is defined on *per-pattern* observed/expected counts; summing individual-level Pearson residuals across all 3,593 applicants is a different quantity and does not reproduce this statistic.
+- **Why not D:** $X^2$ and $G^2$ are usually close but not equal, and their mere agreement does not "confirm fit"; each must be *small relative to its degrees of freedom* before fit is supported ($2.56$ on $df = 4$).
+- **Source:** [Ch. 11 (Logistic Regression Diagnostics), "Pearson Chi-Square ($X^2$)"](../../notes/chapters/11-logistic-diagnostics.html#sec-ch11-pearson-x2).
+
+:::
+
+### Question 11 — Matching grouped goodness-of-fit concepts {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 11]`**
+
+For the grouped Pearson goodness-of-fit test of the Berkeley additive model ($X^2(4) = 2.56$, $p = .634$), match each concept (left) to its correct meaning in this analysis (right).
+
+| Concept | | Meaning in this analysis |
+|:--------|:--|:-------------------------|
+| 1. The 10 covariate patterns | | W. $10 - 6 = 4$ (patterns minus the six estimated parameters) |
+| 2. The degrees of freedom | | X. An unmodeled gender × department interaction |
+| 3. A non-significant $X^2$ ($p = .634$) | | Y. The 5 departments crossed with the 2 gender groups |
+| 4. What "lack of fit" would mean here | | Z. No evidence that the additive `female + department` model is wrong |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → Y, 2 → W, 3 → Z, 4 → X**
+
+- **1 → Y:** the covariate patterns are the distinct predictor combinations; with two categorical predictors there are $5 \times 2 = 10$ of them (5 departments crossed with 2 genders), and observed and expected admissions are compared *within* each.
+- **2 → W:** the degrees of freedom are $\#\text{patterns} - \#\text{parameters} = 10 - 6 = 4$, where the six parameters are the intercept, the `female` dummy, and the four department dummies.
+- **3 → Z:** a non-significant grouped $X^2$ ($p = .634$) means the observed and expected pattern counts agree — no evidence that the additive `female + department` model is wrong; it fits adequately.
+- **4 → X:** in this all-categorical model, the only way the additive specification could fail is if the gender effect differed across departments — i.e., a gender × department interaction.
+- **Distractor to avoid:** a tempting wrong response is "the sum of the individual applicants' Pearson residuals." The grouped test is built from *per-pattern* observed and expected counts, not from summed individual-level residuals, so that phrase matches none of the four concepts.
+- **Source:** [Ch. 11 (Logistic Regression Diagnostics), "Covariate Patterns and Grouped Data"](../../notes/chapters/11-logistic-diagnostics.html#covariate-patterns-and-grouped-data).
+
+:::
+
+## Coverage
+
+This quiz draws from Lecture Notes Ch. 10 (Multiple Logistic Regression, 9 items) and Ch. 11 (Logistic Regression Diagnostics, 2 folded grouped-goodness-of-fit items), and mirrors Homework 8's analysis of the UC Berkeley graduate-admissions data and its Simpson's paradox. The 11 items total **15 points** (Multiple Choice ×5, Fill-in-the-Blank ×2, True/False ×2, Fill-in-Multiple-Blanks ×1, Matching ×1) and span all three difficulty levels (Conceptual ×4, Applied ×5, Challenge ×2). The keyed correct responses are spread across the option letters.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| Q8-01 | Cell rate → odds, $0.63/(1-0.63) = 1.71$ | Fill-in-the-Blank | Applied | 2 |
+| Q8-02 | Crude (department-ignoring) odds ratio, $0.64$ (~36% lower) | Fill-in-the-Blank | Applied | 2 |
+| Q8-03 | Nominal department enters as a factor / $k-1$ dummies, not a continuous code | Multiple Choice | Conceptual | 1 |
+| Q8-04 | Adjusted OR (0.97) = odds multiplier holding department constant | Multiple Choice | Conceptual | 1 |
+| Q8-05 | CI $[0.82, 1.15]$ includes 1 ⇒ not significant after adjustment | True/False | Conceptual | 1 |
+| Q8-06 | Crude → adjusted shift is the expected, correct behavior of adjustment | Multiple Choice | Applied | 1 |
+| Q8-07 | Simpson's paradox = omitted-variable bias on the logit scale | Multiple Choice | Challenge | 1 |
+| Q8-08 | Resolved by a main-effect covariate, not a product term; not a coding error | True/False | Conceptual | 1 |
+| Q8-09 | Wald test: $X^2(1) = z^2 = 0.12$, fail to reject ($p = .724$) | Fill-in-Multiple-Blanks | Applied | 2 |
+| Q8-10 | Grouped Pearson GOF over 10 patterns, $X^2(4) = 2.56$ ⇒ no lack of fit | Multiple Choice | Challenge | 1 |
+| Q8-11 | Grouped GOF concepts ↔ meanings (patterns, df, n.s., interaction) | Matching | Conceptual | 2 |
+
+: Quiz 8 item map. {.striped}

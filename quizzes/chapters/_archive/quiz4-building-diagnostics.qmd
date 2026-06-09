@@ -4,7 +4,7 @@ title: "Quiz 4: Model Building & Diagnostics"
 
 ::: {.callout-note}
 ## About this quiz
-**Module:** Model Building & Diagnostics  ·  **Available after:** Week 9  ·  **Source:** Lecture Notes, [Ch. 6 (Nonlinear Relationships)](../../notes/chapters/06-nonlinear-relationships.qmd), [Ch. 7 (Model Building)](../../notes/chapters/07-model-building.qmd), and [Ch. 8 (Model Diagnostics)](../../notes/chapters/08-model-diagnostics.qmd).
+**Module:** Model Building & Diagnostics  ·  **Available after:** Week 9  ·  **Source:** Lecture Notes, [Ch. 6 (Nonlinear Relationships)](../../notes/chapters/06-nonlinear-relationships.html), [Ch. 7 (Model Building)](../../notes/chapters/07-model-building.html), and [Ch. 8 (Model Diagnostics)](../../notes/chapters/08-model-diagnostics.html).
 
 This quiz assesses nonlinear modeling (LOWESS, log transforms, polynomials), model building (nested $F$-tests, $\Delta R^2$, the $R^2$-always-rises problem, stepwise/GIGO), and residual diagnostics (residual types, residual-vs-fitted and Q-Q plots, leverage vs influence, VIF, heteroscedasticity). Items are open-book and emphasize interpretation over computation.
 :::

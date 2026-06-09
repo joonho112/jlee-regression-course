@@ -1,0 +1,417 @@
+---
+title: "Quiz 4: One-Way ANOVA & Multiple Comparisons"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** One-Way ANOVA & Multiple Comparisons  ·  **Available after:** Week 5  ·  **Source:** Lecture Notes, [Ch. 3 (One-Way ANOVA)](../../notes/chapters/03-one-way-anova.html).
+
+This quiz assesses one-way ANOVA and multiple comparisons, mirroring Homework 4 (PISA reading scores for students from the USA, UK, and Germany, $N = 4{,}528$, with the USA as the reference group): coding a three-level country factor with $k - 1$ dummy variables, interpreting the intercept and dummy coefficients as the reference mean and group-vs-reference differences, recovering a group mean, reading an individual coefficient's significance, what a significant omnibus $F$-test does and does not say, reading and completing an ANOVA table, the equivalence of regression-with-dummies and one-way ANOVA, why pairwise comparisons are the needed follow-up, family-wise error and its correction, reading a Sidak-adjusted pairwise table, and $\eta^2$ as variance explained. Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 12 |
+| Total points | 15 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 5 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 4. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — Dummies for a three-level factor {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 3]`**
+
+A study compares mean PISA reading scores across students from three countries — the USA, the UK, and Germany — using a regression with dummy variables. How many dummy variables are needed to represent the three countries, and what role does the omitted country play?
+
+A. One dummy is enough; a single variable can index all three countries.
+
+B. Two dummies are needed (one fewer than the number of countries); the omitted country (USA) becomes the reference group that all comparisons are made against.
+
+C. Three dummies are needed, one for each country including the USA, so that no country is left out.
+
+D. Regression cannot include a three-level categorical predictor, so the countries must be analyzed with separate models.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** A categorical predictor with $k$ levels requires $k - 1$ dummies; with three countries that is $3 - 1 = 2$ dummies (here `uk` and `germany`). The level given no dummy — the USA — is the **reference group**: it is coded $0$ on both dummies, the intercept equals its mean, and each dummy coefficient compares its country to the USA.
+- **Why not A:** A single dummy can only distinguish two groups; one variable cannot separate three countries without collapsing two of them.
+- **Why not C:** Including a dummy for *every* country alongside the intercept creates perfect collinearity — the **dummy-variable trap** — because the three dummies sum to a column of ones identical to the intercept. One country must be omitted as the reference.
+- **Why not D:** Regression handles a categorical predictor precisely *by* creating $k - 1$ dummies; doing so for a three-level factor is exactly what one-way ANOVA is.
+- **Source:** [Ch. 3 (One-Way ANOVA), "Dummy Variable Coding"](../../notes/chapters/03-one-way-anova.html#dummy-variable-coding).
+
+:::
+
+### Question 2 — Why not a single 1/2/3 code {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 3]`**
+
+**True or False:** Instead of using two dummy variables, encoding the three countries in a single numeric variable (USA = 1, UK = 2, Germany = 3) and entering it as one predictor is a fine, efficient shortcut that gives the same answer.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** Country is a **nominal** variable with no inherent order. A single 1/2/3 code forces the regression to treat the countries as **ordered and equally spaced** — implying the UK-to-Germany step equals the USA-to-UK step and ranking Germany "above" the USA. That constraint is unjustified and changes the model: it estimates a single linear trend across an arbitrary ordering rather than three free group means. The correct approach uses $k - 1 = 2$ dummies, which impose no ordering.
+- **Why "True" is wrong:** This is the documented misconception that a numeric code is an interchangeable shortcut for dummies. The single column is *fewer* numbers but the *wrong* model: the dummy coding lets each country's mean float freely, whereas the 1/2/3 code bakes in a false ordering and equal spacing.
+- **Source:** [Ch. 3 (One-Way ANOVA), "Coding Schemes"](../../notes/chapters/03-one-way-anova.html#sec-ch3-coding).
+
+:::
+
+### Question 3 — Interpreting the intercept and a dummy coefficient {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 3]`**
+
+The regression of PISA reading score on country dummies (USA = reference) gives
+
+$$\widehat{\text{wleread}} = 523.15 + 15.04 \cdot \text{uk} - 5.40 \cdot \text{germany}.$$
+
+How should the intercept ($523.15$) and the `uk` coefficient ($15.04$) be interpreted?
+
+A. The intercept $523.15$ is the grand mean across all three countries; the `uk` coefficient $15.04$ is the estimated mean reading score for UK students.
+
+B. The intercept $523.15$ is the US mean; the `uk` coefficient $15.04$ is the difference between the UK mean and the German mean.
+
+C. The intercept $523.15$ is the estimated mean reading score for US students; the `uk` coefficient $15.04$ is the amount by which the UK mean *exceeds* the US mean — not the UK mean itself.
+
+D. The intercept $523.15$ is the US mean; the `uk` coefficient $15.04$ is the estimated mean reading score for UK students.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** Under reference-group coding the intercept is the **reference (USA) mean**, $523.15$ points, because both dummies are $0$ for a US student. Each dummy coefficient is that group's mean **minus the reference mean**, so `uk` $= +15.04$ says UK students score about $15.0$ points higher than US students on average — a **difference**, not a level. (The UK mean is $523.15 + 15.04 = 538.18$, the subject of Question 4.)
+- **Why not A:** The intercept is the *reference* mean, not the grand mean, and the `uk` coefficient is a difference, not the UK mean — this option mislabels both quantities.
+- **Why not B:** Each dummy compares its country to the **reference (USA)**, not to the other dummy's country; `uk` is UK $-$ USA, not UK $-$ Germany.
+- **Why not D:** This reads the coefficient $15.04$ as the UK mean; it is the UK-minus-USA *difference*. Mistaking a dummy coefficient for a group mean is the documented pitfall here.
+- **Source:** [Ch. 3 (One-Way ANOVA), "Interpreting the Coefficients"](../../notes/chapters/03-one-way-anova.html#interpreting-the-coefficients).
+
+:::
+
+### Question 4 — Recovering a group mean {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 3]`**
+
+Using the fitted model (USA = reference)
+
+$$\widehat{\text{wleread}} = 523.15 + 15.04 \cdot \text{uk} - 5.40 \cdot \text{germany},$$
+
+compute the predicted **mean reading score for UK students**. Enter a number (points).
+
+Predicted mean (UK) = ________
+
+#### Answer & Rationale
+
+**Correct answer: 538.18** (accept **537.9–538.5**, tolerance $\pm 0.3$)
+
+- **Why 538.18:** Under reference coding a group's mean is the intercept plus that group's dummy coefficient. For a UK student, set $\text{uk} = 1$ and $\text{germany} = 0$: $\widehat{\text{wleread}} = 523.15 + 15.04(1) - 5.40(0) = 538.18$ points.
+- **Tolerance:** the $\pm 0.3$ window absorbs rounding of the two-decimal coefficients without admitting a wrong method.
+- **Common errors:** answering `15.04` reports the *coefficient* (the UK $-$ USA difference) as if it were the mean; `523.15` returns the *reference* (USA) mean; `532.79` wrongly adds the Germany coefficient ($523.15 + 15.04 - 5.40$), applying a dummy that is $0$ for a UK student. All three fall outside the window.
+- **Source:** [Ch. 3 (One-Way ANOVA), "Interpreting the Coefficients"](../../notes/chapters/03-one-way-anova.html#interpreting-the-coefficients).
+
+:::
+
+### Question 5 — Significance of an individual coefficient {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 3]`**
+
+The coefficient table from the country-dummy regression (USA = reference) is:
+
+| Term | Estimate | $t$ | $p$ |
+|:-----|---------:|----:|----:|
+| (Intercept) | 523.15 | — | $< .001$ |
+| `uk` | 15.04 | — | $< .001$ |
+| `germany` | $-5.40$ | $-1.44$ | $.150$ |
+
+What does the `germany` row tell you about how German and US students compare?
+
+A. German students scored about $5.4$ points lower than US students, but this difference is **not statistically significant** ($p = .150$), so we cannot conclude the Germany and USA means differ.
+
+B. Because the coefficient ($-5.40$) is nonzero, the Germany–USA difference of about $5.4$ points is statistically significant.
+
+C. Because $p = .150$, the Germany and USA means are **exactly equal**.
+
+D. German students scored about $5.4$ points lower than UK students, and this is not significant.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** The `germany` coefficient estimates the Germany-minus-USA difference as about $-5.4$ points (Germany lower), but with $t \approx -1.44$ its $p$-value is $.150$ — above $.05$ — so the difference is **not statistically significant**. We fail to reject $H_0: \beta_{\text{germany}} = 0$ (the Germany and USA means are equal); the direction and magnitude are reported, but the comparison is inconclusive.
+- **Why not B:** A nonzero point estimate is not the same as a significant one. Significance depends on the estimate *relative to its standard error* ($t = -1.44$, $p = .150$), not on whether the number differs from zero.
+- **Why not C:** A non-significant result means we lack evidence that the means differ — **not** that they are exactly equal. Failing to reject $H_0$ is not the same as proving it; the best estimate of the gap is still $-5.40$ points.
+- **Why not D:** Each dummy is measured against the **reference (USA)**, so this coefficient compares Germany to the USA, not to the UK.
+- **Source:** [Ch. 3 (One-Way ANOVA), "Interpreting the Coefficients"](../../notes/chapters/03-one-way-anova.html#interpreting-the-coefficients).
+
+:::
+
+### Question 6 — What a significant omnibus F means {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 3]`**
+
+The one-way ANOVA on the three-country data gives a significant omnibus $F(2, 4525) = 21.76$, $p < .001$.
+
+**True or False:** A significant omnibus $F$ means that all three country means (USA, UK, Germany) differ from one another.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** The omnibus $F$-test evaluates $H_0: \mu_{\text{USA}} = \mu_{\text{UK}} = \mu_{\text{Germany}}$. Rejecting it means **at least one** mean differs from at least one other — it does *not* establish that *every* pair differs. Indeed, in these data the UK differs from both the USA and Germany, yet the USA–Germany pair does not differ significantly (Question 11). Identifying which pairs differ requires follow-up pairwise comparisons.
+- **Why "True" is wrong:** This is the documented misconception that a significant $F$ certifies all pairwise differences. One group can differ from the rest while the others are statistically indistinguishable, so "all three means differ" overstates what the omnibus test shows.
+- **Source:** [Ch. 3 (One-Way ANOVA), "The $F$-test"](../../notes/chapters/03-one-way-anova.html#the-f-test).
+
+:::
+
+### Question 7 — Reading the ANOVA table {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Applied · Notes Ch. 3]`**
+
+A one-way ANOVA of reading score on country ($k = 3$ countries, $N = 4{,}528$ students) produced the table below. Match each labeled quantity (left) to its correct value or definition (right).
+
+| Source | Df | Sum Sq | Mean Sq | $F$ |
+|:-------|---:|-------:|--------:|----:|
+| Country | **(1)** | 387{,}444 | 193{,}722 | **(3)** |
+| Residuals | **(2)** | 40{,}290{,}600 | 8{,}904 | |
+
+| Prompt | | Response |
+|:-------|:--|:---------|
+| 1. Between-group df (Country) | | W. $n - k = 4528 - 3 = 4525$ |
+| 2. Within-group df (Residuals) | | X. $\text{MS}_{\text{between}} / \text{MS}_{\text{within}} = 193{,}722 / 8{,}904 = 21.76$ |
+| 3. $F$ statistic | | Y. $k - 1 = 3 - 1 = 2$ |
+| 4. Within-group Mean Sq | | Z. $\text{SS}_{\text{within}} / \text{df}_{\text{within}} = 40{,}290{,}600 / 4525 = 8{,}904$ |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → Y, 2 → W, 3 → X, 4 → Z**
+
+- **1 → Y:** The between-group (Country) degrees of freedom equal the number of groups minus one, $k - 1 = 2$.
+- **2 → W:** The within-group (Residual) degrees of freedom equal the total sample size minus the number of groups, $n - k = 4528 - 3 = 4525$.
+- **3 → X:** The $F$ statistic is the ratio of mean squares, $\text{MS}_{\text{between}} / \text{MS}_{\text{within}} = 193{,}722 / 8{,}904 \approx 21.76$ — *between* over *within*, never the reverse.
+- **4 → Z:** The within-group mean square is the residual sum of squares divided by its degrees of freedom, $40{,}290{,}600 / 4525 \approx 8{,}904$; it is the pooled within-group variance, and its square root is the Root MSE ($\sqrt{8{,}904} \approx 94.36$).
+- **Source:** [Ch. 3 (One-Way ANOVA), "The ANOVA Table"](../../notes/chapters/03-one-way-anova.html#sec-ch3-anova-table).
+
+:::
+
+### Question 8 — Regression with dummies equals one-way ANOVA {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 3]`**
+
+A researcher fits `wleread ~ uk + germany` (regression with two country dummies, USA reference) and, separately, a one-way ANOVA of `wleread` on the three-level country factor.
+
+**True or False:** These two analyses are the same linear model written two ways: they produce an identical omnibus $F$ ($21.76$), the same $p$-value, the same residual sum of squares, and the same Root MSE ($94.36$), and the regression's overall $F$ tests $H_0: \beta_{\text{uk}} = \beta_{\text{germany}} = 0$.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A (True) is correct:** One-way ANOVA *is* regression with a categorical predictor: letting the software build dummies from the factor yields exactly the same design matrix, fitted values, and residuals as entering `uk` and `germany` by hand. The two therefore share the same omnibus $F(2, 4525) = 21.76$, the same $p$-value, the same residual SS, and the same Root MSE ($94.36$). Because the USA is the reference, the regression's overall $F$ tests $H_0: \beta_{\text{uk}} = \beta_{\text{germany}} = 0$ — i.e., that the UK and Germany means both equal the USA mean — which is exactly $H_0: \mu_{\text{USA}} = \mu_{\text{UK}} = \mu_{\text{Germany}}$.
+- **Why "False" is wrong:** A common misconception treats ANOVA and dummy regression as different procedures that merely "agree sometimes" or only when the design is balanced. They are algebraically the **same model**; the equivalence is exact, not approximate, and does not depend on equal group sizes.
+- **Source:** [Ch. 3 (One-Way ANOVA), "ANOVA as Regression with Dummy Variables"](../../notes/chapters/03-one-way-anova.html#sec-ch3-model).
+
+:::
+
+### Question 9 — What to do after a significant F {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 3]`**
+
+The omnibus $F$-test for the three countries is significant ($F(2, 4525) = 21.76$, $p < .001$). A researcher now wants to know **which specific countries differ** in mean reading score. What is the appropriate next step?
+
+A. No follow-up is needed; the significant $F$ already establishes that every pair of countries differs.
+
+B. Conduct pairwise comparisons among the country means (with a multiple-comparisons correction), because the omnibus $F$ says at least one mean differs but not which ones.
+
+C. Read the largest sample mean from the data; the $F$-test names that country as significantly highest.
+
+D. Refit the model with the country coded 1/2/3 to obtain a single ranking of the countries.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** A significant omnibus $F$ tells us at least one mean differs but is **silent about which pairs**. To locate the specific differences, run **pairwise comparisons** among the group means (USA–UK, USA–Germany, UK–Germany), applying a correction (e.g., Sidak, Bonferroni, Tukey) to control the family-wise error rate across the set of comparisons.
+- **Why not A:** The $F$-test does not certify that every pair differs — only that not all means are equal; the pairwise structure still has to be examined (here the UK differs from both, but the USA and Germany do not).
+- **Why not C:** The $F$-test does not single out the top group or test any specific contrast; reading off the largest sample mean is not a hypothesis test of that pair.
+- **Why not D:** Recoding to 1/2/3 imposes a false ordering and equal spacing on nominal countries (see Question 2); it does not validly identify which pairs differ.
+- **Source:** [Ch. 3 (One-Way ANOVA), "Pairwise Comparisons and Multiple Testing"](../../notes/chapters/03-one-way-anova.html#sec-ch3-pairwise).
+
+:::
+
+### Question 10 — Family-wise error and its correction {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Answer · 2 pts · Applied · Notes Ch. 3]`**
+
+After the significant omnibus $F$, a researcher runs all three pairwise comparisons among the country means (USA–UK, USA–Germany, UK–Germany). **Select all** statements about multiple comparisons and the family-wise error rate (FWER) that are true.
+
+A. As the number of pairwise tests grows, the family-wise error rate — the probability of at least one false positive across the set — climbs above $.05$ if no correction is applied.
+
+B. Sidak, Bonferroni, and Tukey are procedures designed to control the family-wise Type I error rate across the set of comparisons.
+
+C. The Bonferroni correction lowers the per-comparison significance threshold to $\alpha / m$ for $m$ comparisons.
+
+D. Running each pairwise test at $\alpha = .05$ without correction keeps the family-wise error rate at exactly $.05$, no matter how many comparisons are made.
+
+E. With a large sample such as $N = 4{,}528$, a multiple-comparisons correction becomes unnecessary.
+
+#### Answer & Rationale
+
+**Correct answers: A, B, C**
+
+- **Why A is correct:** With $m$ independent tests each at level $.05$, the family-wise error rate is $1 - (1 - .05)^m$, which rises steeply with $m$ (about $.14$ for the three comparisons here — an approximate, **independence-based benchmark**; the three pairwise comparisons share data and are not exactly independent, so this is an upper-bound approximation rather than the exact family-wise rate) — well above the nominal $.05$.
+- **Why B is correct:** Sidak, Bonferroni, and Tukey are exactly the family-wise-error-controlling procedures; Homework 4 uses **Sidak's** method for the three country comparisons.
+- **Why C is correct:** Bonferroni divides the target $\alpha$ by the number of comparisons $m$, tightening each per-comparison threshold to $\alpha / m$ so the overall rate stays at or below $\alpha$.
+- **Why not D:** This is the core misconception — leaving each test at $.05$ *inflates* the family-wise rate as comparisons accumulate; it does **not** hold the overall rate at $.05$.
+- **Why not E:** A large sample changes *power*, not the *number* of comparisons. The family-wise inflation from running many tests is driven by the number of tests, not by $n$, so correction is still needed.
+- **Source:** [Ch. 3 (One-Way ANOVA), "The Multiple Testing Problem"](../../notes/chapters/03-one-way-anova.html#the-multiple-testing-problem).
+
+:::
+
+### Question 11 — Reading a Sidak-adjusted pairwise table {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 3]`**
+
+The Sidak-adjusted pairwise comparisons of the three country means are:
+
+| Comparison | Mean diff. | Std. error | $t$ | Sidak $p$ | Significant |
+|:-----------|-----------:|-----------:|----:|----------:|:-----------:|
+| USA $-$ UK | $-15.04$ | 2.74 | $-5.49$ | $< .001$ | Yes |
+| USA $-$ Germany | $5.40$ | 3.75 | $1.44$ | $.386$ | No |
+| UK $-$ Germany | $20.43$ | 3.19 | $6.41$ | $< .001$ | Yes |
+
+Based on this Sidak-adjusted table, which countries differ significantly in mean reading score?
+
+A. All three pairs of country means differ significantly from one another.
+
+B. Only the USA and the UK differ significantly; the other two comparisons are not significant.
+
+C. The UK differs significantly from both the USA and Germany, but the USA and Germany do **not** differ significantly from each other ($p = .386$).
+
+D. The USA and Germany differ significantly because their mean difference ($5.40$) is nonzero.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** Reading the **Sidak $p$** column against $.05$: USA–UK ($p < .001$) and UK–Germany ($p < .001$) are significant, but **USA–Germany is not** ($p = .386 > .05$). So the UK mean is significantly higher than both the USA and Germany, while the USA–Germany difference (about $5.4$ points) is not distinguishable from zero after correction.
+- **Why not A:** The USA–Germany row has Sidak $p = .386$, which is **not** significant; not all three pairs differ. This is precisely the question the omnibus $F$ could not settle on its own.
+- **Why not B:** This misses the UK–Germany comparison, which *is* significant ($p < .001$); the UK differs from Germany as well as from the USA.
+- **Why not D:** A nonzero mean difference is not the same as a significant one. The corrected $p = .386$ shows the USA–Germany gap is not significant. (Note that this differs from the *unadjusted* coefficient $p = .150$ for the same comparison in Question 5: both are non-significant, but the **Sidak-adjusted** table is the correct place to read pairwise significance, and the adjusted $p$ is larger because it accounts for the three comparisons.)
+- **Source:** [Ch. 3 (One-Way ANOVA), "Correcting for Multiple Comparisons"](../../notes/chapters/03-one-way-anova.html#correcting-for-multiple-comparisons).
+
+:::
+
+### Question 12 — Interpreting η² {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 3]`**
+
+The one-way ANOVA of reading score on country is highly significant ($F(2, 4525) = 21.76$, $p < .001$), and the model reports $\eta^2 = 0.0095$. Which interpretation is correct?
+
+A. There is about a $0.95\%$ probability that the three country means are equal.
+
+B. Country explains about $1\%$ of the variance, but $\eta^2$ is unrelated to $R^2$ and the two measure different things that should not be compared.
+
+C. Country explains about **1% of the variance** in reading scores (in one-way ANOVA $\eta^2 = R^2$); a tiny $\eta^2$ can co-occur with a very small $p$-value, especially in a large sample.
+
+D. The largest pairwise difference between country means is about $0.0095$ points.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** $\eta^2 = \text{SS}_{\text{between}} / \text{SS}_{\text{total}}$ is the proportion of outcome variance explained by group membership — here $0.0095$, about **1%**. In one-way ANOVA $\eta^2 = R^2$ exactly. Significance and effect size are distinct: with $N = 4{,}528$ the test is highly significant ($p < .001$) even though the effect is tiny, so "significant" does not mean "large."
+- **Why not A:** $\eta^2$ is a variance-explained effect size, **not** a $p$-value or the probability that $H_0$ is true.
+- **Why not B:** In one-way ANOVA $\eta^2$ and $R^2$ are **identical** — they measure the same proportion of variance explained.
+- **Why not D:** $\eta^2$ is a proportion of variance, not a difference in score units; it says nothing directly about the size of any single pairwise contrast.
+- **Source:** [Ch. 3 (One-Way ANOVA), "Eta-squared ($\eta^2$)"](../../notes/chapters/03-one-way-anova.html#eta-squared-eta2).
+
+:::
+
+## Coverage
+
+This quiz draws entirely from Lecture Notes Ch. 3 (One-Way ANOVA), mirroring Homework 4's three-country PISA reading example (USA, UK, Germany; $N = 4{,}528$; USA reference). The 12 items total **15 points** (Multiple Choice ×6, True/False ×3, Fill-in-the-Blank ×1, Matching ×1, Multiple Answer ×1) and span all three difficulty levels (Conceptual ×6, Applied ×5, Challenge ×1).
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | $k$ groups → $k-1$ dummies; omitted level = reference | Multiple Choice | Conceptual | 1 |
+| 2 | A single 1/2/3 code falsely orders nominal groups | True/False | Conceptual | 1 |
+| 3 | Intercept = reference mean; dummy coef = difference | Multiple Choice | Conceptual | 1 |
+| 4 | Recover a group mean = intercept + dummy coef (UK 538.18) | Fill-in-the-Blank | Applied | 2 |
+| 5 | Read an individual coefficient's significance (Germany $p = .150$) | Multiple Choice | Applied | 1 |
+| 6 | Significant $F$ ⇒ ≥1 mean differs, not all pairs | True/False | Conceptual | 1 |
+| 7 | Read/complete an ANOVA table: $F$, df $(k-1, n-k)$ | Matching | Applied | 2 |
+| 8 | Regression-with-dummies ≡ one-way ANOVA | True/False | Conceptual | 1 |
+| 9 | Significant $F$ ⇒ pairwise comparisons needed | Multiple Choice | Conceptual | 1 |
+| 10 | Family-wise error inflates; corrections control it | Multiple Answer | Applied | 2 |
+| 11 | Read a Sidak-adjusted table (USA–Germany $p = .386$ n.s.) | Multiple Choice | Challenge | 1 |
+| 12 | $\eta^2 = R^2$ = variance explained (0.0095); small $p$ ≠ large effect | Multiple Choice | Applied | 1 |
+
+: Quiz 4 item map. {.striped}

@@ -4,176 +4,209 @@ title: "Quiz Content Blueprints"
 
 ## Purpose
 
-A **blueprint** fixes, for each quiz, a list of **item slots** *before* any question is written. Each slot pins down one concept, its source in the [Lecture Notes](../notes/), the Blackboard item type, a difficulty tag, a point value, and (where the item uses data) a dataset. The blueprint is the **work order** that the question-authoring step consumes: it guarantees balanced coverage of the module's concepts, a sensible mix of item types and difficulty, and a clean ≈20-point total per quiz, so that no concept is over- or under-tested and no quiz drifts off length.
+A **blueprint** fixes, for each quiz, a list of **item slots** *before* any question is written. Each slot pins down one concept, its source in the [Lecture Notes](../../notes/), the Blackboard item type, a difficulty tag, a point value, and (where the item uses data) a dataset. The blueprint is the **work order** that the question-authoring step consumes: it guarantees balanced coverage of the module's concepts, a sensible mix of item types and difficulty, and a length right-sized to the paired homework, so that no concept is over- or under-tested.
 
-Every **Source** below cites a **verified section heading** from the Lecture Notes `.qmd` chapters. Point values follow the [Item-Writing Style Guide](style-guide.qmd): Multiple Choice (MC) and True/False (TF) = 1 pt; Multiple Answer (MA), Matching (MATCH), Fill-in-the-Blank numeric (FIB), and Fill-in-Multiple-Blanks (FIMB) = 2 pts. Each quiz is built to **15 items totaling exactly 20 points**.
+This quiz set is **redesigned to mirror the eight homework assignments one-to-one.** The homework is the course's carefully-curated statement of what matters; each quiz reinforces exactly the concepts its paired homework drills. Coverage therefore concentrates on dummy coding and reference groups, the regression ≡ *t*-test / ANOVA equivalences, adjusted-vs-unadjusted (ANCOVA) and confounding, interactions and simple slopes, and odds-ratio interpretation. The model-criticism "tail" the homework never assigns — nonlinear models, model selection, most OLS diagnostics, latent/GLM, and ordinal models — is **dropped**, except **four high-value diagnostics folded into the core quizzes** (see [Design notes](#sec-bp-notes)).
+
+Every **Source** below cites a **verified section heading** from the Lecture Notes `.qmd` chapters and links to its ground-truth HTML anchor. Point values follow the [Item-Writing Style Guide](style-guide.qmd): Multiple Choice (MC) and True/False (TF) = 1 pt; Multiple Answer (MA), Matching (MATCH), Fill-in-the-Blank numeric (FIB), and Fill-in-Multiple-Blanks (FIMB) = 2 pts.
 
 ::: {.callout-note}
-## How Phase 2 uses this
-When a quiz is authored, each slot becomes exactly one question, written to the slot's type/difficulty/source and keyed per the Style Guide. The slot's concept and the matching Lecture-Notes "Common Pitfall" supply the stem and the distractors. Datasets marked here are the *intended context*; a substitutable dataset (noted per quiz) may be swapped if it reads better.
+## How the authoring step uses this
+When a quiz is authored, each slot becomes exactly one question, written to the slot's type/difficulty/source and keyed per the Style Guide. Slots marked **reuse** lift a verified item from the prior quiz bank and re-skin its numbers to the paired homework's example; slots marked **new** are authored fresh from the cited homework problem. Distractors are drawn from the Lecture-Notes "Common Pitfall" callouts.
 :::
+
+## How the redesign maps to the homework
+
+| Quiz | ↔ HW | Lecture Notes | Folded diagnostic |
+|:-----|:----:|:--------------|:------------------|
+| Q1 Simple Linear Regression | HW1 | Ch 1 | — |
+| Q2 Dummy Variables & the *t*-Test | HW2 | Ch 1 | — |
+| Q3 Confounding & ANCOVA | HW3 | Ch 2 | collinearity inflates SE, not bias |
+| Q4 One-Way ANOVA & Multiple Comparisons | HW4 | Ch 3 | — |
+| Q5 Interactions & Simple Slopes | HW5 | Ch 4–5 | residuals-vs-fitted plot · VIF |
+| Q6 Two-Way ANOVA & Interaction | HW6 | Ch 3, 5 | — |
+| Q7 Logistic Regression & Odds Ratios | HW7 | Ch 9–10 | — |
+| Q8 Multiple Logistic & Simpson's Paradox | HW8 | Ch 10–11 | grouped Pearson goodness-of-fit |
 
 ## Global summary
 
-| Quiz | Module | Items | Points | MC | TF | FIB | FIMB | MATCH | MA | Conceptual | Applied | Challenge |
-|:-----|:-------|:-----:|:------:|:--:|:--:|:---:|:----:|:-----:|:--:|:----------:|:-------:|:---------:|
-| Q1 | Foundations | 15 | 20 | 7 | 3 | 3 | 0 | 1 | 1 | 9 | 4 | 2 |
-| Q2 | Categorical Predictors | 15 | 20 | 7 | 3 | 3 | 0 | 1 | 1 | 6 | 5 | 4 |
-| Q3 | Interactions | 15 | 20 | 8 | 2 | 2 | 1 | 1 | 1 | 5 | 6 | 4 |
-| Q4 | Model Building & Diagnostics | 15 | 20 | 8 | 2 | 3 | 0 | 2 | 0 | 5 | 5 | 5 |
-| Q5 | Logistic Regression | 15 | 20 | 7 | 3 | 3 | 0 | 1 | 1 | 6 | 5 | 4 |
-| Q6 | Logistic Diagnostics | 15 | 20 | 7 | 3 | 1 | 1 | 2 | 1 | 6 | 4 | 5 |
-| **Total** | | **90** | **120** | 44 | 16 | 15 | 2 | 8 | 5 | 37 | 29 | 24 |
+| Quiz | Items | Points | MC | TF | FIB | FIMB | MATCH | MA | Conceptual | Applied | Challenge |
+|:-----|:-----:|:------:|:--:|:--:|:---:|:----:|:-----:|:--:|:----------:|:-------:|:---------:|
+| Q1 | 9 | 12 | 5 | 1 | 1 | 1 | 1 | 0 | 4 | 4 | 1 |
+| Q2 | 9 | 12 | 3 | 3 | 1 | 1 | 1 | 0 | 5 | 3 | 1 |
+| Q3 | 10 | 13 | 5 | 2 | 1 | 1 | 0 | 1 | 6 | 2 | 2 |
+| Q4 | 12 | 15 | 6 | 3 | 1 | 0 | 1 | 1 | 6 | 5 | 1 |
+| Q5 | 13 | 17 | 6 | 3 | 2 | 1 | 1 | 0 | 5 | 6 | 2 |
+| Q6 | 11 | 16 | 4 | 2 | 2 | 2 | 1 | 0 | 4 | 5 | 2 |
+| Q7 | 10 | 14 | 3 | 3 | 2 | 1 | 1 | 0 | 3 | 6 | 1 |
+| Q8 | 11 | 15 | 5 | 2 | 2 | 1 | 1 | 0 | 5 | 4 | 2 |
+| **Total** | **85** | **114** | 37 | 19 | 12 | 8 | 7 | 2 | 38 | 35 | 12 |
 
-All six quizzes use at least five of the six item types; difficulty is weighted toward Conceptual + Applied with a Challenge minority (Q4/Q6 carry the most Challenge, as model criticism and diagnostics are the hardest modules).
+All eight quizzes use at least five of the six item types; difficulty is weighted toward Conceptual + Applied with a Challenge minority. Quizzes are right-sized to their homework (HW1/HW3/HW7 lighter; HW4/HW5/HW6/HW8 denser); the mastery score is a per-quiz percentage. *(Quiz 4 carries an optional 13th Bartlett item, omitted from these totals.)*
 
-## Quiz 1 — Foundations {#sec-bp-q1}
+## Quiz 1 — Simple Linear Regression {#sec-bp-q1}
 
-*Lecture Notes Ch. 1 (Simple Linear Regression), including single-binary-dummy material.*
+*↔ HW1 · Lecture Notes Ch. 1. HW1's GPA equations and six-line set; no data fitting.*
 
-| Slot | Learning target | Source (Ch. — "section") | Type | Difficulty | Pts | Dataset |
-|:-----|:----------------|:-------------------------|:----:|:----------:|:---:|:-------:|
-| Q1-01 | Distinguish response vs explanatory variable in a scenario | Ch. 1 — "The Simple Linear Regression Model" | MC | Conceptual | 1 | — |
-| Q1-02 | Interpret the slope in context (units of $y$ per 1-unit $x$) | Ch. 1 — "Interpreting the Intercept and Slope" | MC | Applied | 1 | gcse |
-| Q1-03 | Interpret the intercept; flag when it is extrapolated/meaningless | Ch. 1 — "Interpreting the Intercept and Slope" | MC | Conceptual | 1 | gcse |
-| Q1-04 | OLS minimizes the sum of *squared* residuals | Ch. 1 — "OLS Estimation" | TF | Conceptual | 1 | — |
-| Q1-05 | Fitted line passes through $(\bar{x},\bar{y})$; residuals sum to zero | Ch. 1 — "Two Key Consequences of the OLS Formulas" | MA | Conceptual | 2 | — |
-| Q1-06 | Compute $R^2$ from a variance decomposition (SSR/SST) | Ch. 1 — "The $R^2$ Statistic" | FIB | Applied | 2 | gcse |
-| Q1-07 | $R^2 = r^2$ in SLR; relate the sign of $r$ to the slope | Ch. 1 — "Pearson Correlation" | MC | Applied | 1 | gcse |
-| Q1-08 | Match the four assumptions to their meanings | Ch. 1 — "Model Assumptions" | MATCH | Conceptual | 2 | — |
-| Q1-09 | Diagnose an assumption violation from a residual-plot description | Ch. 1 — "Checking Each Assumption" | MC | Challenge | 1 | gcse |
-| Q1-10 | CI for the mean vs prediction interval — which is wider, and why | Ch. 1 — "Prediction Intervals" | MC | Conceptual | 1 | gcse |
-| Q1-11 | Compute a fitted value $\hat{y}$ from intercept + slope | Ch. 1 — "Prediction Intervals" | FIB | Applied | 2 | gcse |
-| Q1-12 | Regression to the mean as an artifact (not a real effect) | Ch. 1 — "Regression to the Mean" | MC | Challenge | 1 | gcse |
-| Q1-13 | A single binary dummy's coefficient = difference in group means | Ch. 1 — "Regression with a Dummy Variable" | FIB | Applied | 2 | classdata |
-| Q1-14 | Regression on a dummy ≡ two-sample $t$-test | Ch. 1 — "Equivalence with the Independent Samples $t$-test" | TF | Conceptual | 1 | classdata |
-| Q1-15 | "Association, not causation" — a significant slope is not a causal claim | Ch. 1 — "Association, Not Causation" | TF | Conceptual | 1 | gcse |
+| Slot | Learning target | Source (Ch — "section") | Type | Difficulty | Pts | Provenance |
+|:-----|:----------------|:------------------------|:----:|:----------:|:---:|:----------:|
+| Q1-01 | Response vs. explanatory from the research question | Ch 1 — ["The Simple Linear Regression Model"](../../notes/chapters/01-simple-linear-regression.html#sec-ch1-model) | MC | Conceptual | 1 | reuse |
+| Q1-02 | Interpret a slope in problem units (variable + direction + magnitude + units) | Ch 1 — ["Interpreting the Intercept and Slope"](../../notes/chapters/01-simple-linear-regression.html#sec-ch1-model) | MC | Applied | 1 | reuse |
+| Q1-03 | Slope sign → direction, magnitude → steepness; compare the lines (five distinct slopes) | Ch 1 — ["The Regression Function"](../../notes/chapters/01-simple-linear-regression.html#the-regression-function) | MATCH | Conceptual | 2 | new |
+| Q1-04 | Intercept = y at x = 0, read in context (incl. out of range) | Ch 1 — ["Interpreting the Intercept and Slope"](../../notes/chapters/01-simple-linear-regression.html#sec-ch1-model) | MC | Conceptual | 1 | reuse |
+| Q1-05 | Recognize ŷ = x as intercept 0 / slope 1; interpret both | Ch 1 — ["Interpreting the Intercept and Slope"](../../notes/chapters/01-simple-linear-regression.html#sec-ch1-model) | FIMB | Applied | 2 | new |
+| Q1-06 | Compute a fitted value ŷ by substitution | Ch 1 — ["OLS Estimation"](../../notes/chapters/01-simple-linear-regression.html#sec-ch1-ols) | FIB | Applied | 2 | reuse |
+| Q1-07 | Judge whether a prediction equation is realistic over the valid range | Ch 1 — ["Extrapolation"](../../notes/chapters/01-simple-linear-regression.html#extrapolation) | MC | Applied | 1 | new |
+| Q1-08 | A correct substitution outside the data range is unreliable (extrapolation) | Ch 1 — ["Extrapolation"](../../notes/chapters/01-simple-linear-regression.html#extrapolation) | TF | Conceptual | 1 | new |
+| Q1-09 | Synthesis: direction + relative steepness + realism together | Ch 1 — ["Extrapolation"](../../notes/chapters/01-simple-linear-regression.html#extrapolation) | MC | Challenge | 1 | new |
 
-**Coverage summary:** 20 pts · 15 items · MC×7, TF×3, FIB×3, MATCH×1, MA×1 · Conceptual×9 / Applied×4 / Challenge×2 · all of Ch. 1. **Datasets:** gcse, classdata. **Deliberate omission:** degrees-of-freedom mechanics (low misconception yield).
+**Coverage:** 9 items · 12 pts · MC×5, MATCH×1, FIMB×1, FIB×1, TF×1. **Omits:** OLS minimization/residual properties, R²/R²=r², the four assumptions, CI vs PI, regression to the mean, the dummy = *t*-test equivalence (→ Q2).
 
-## Quiz 2 — Categorical Predictors {#sec-bp-q2}
+## Quiz 2 — Dummy Variables & the *t*-Test {#sec-bp-q2}
 
-*Lecture Notes Ch. 2 (ANCOVA) + Ch. 3 (One-Way ANOVA).*
+*↔ HW2 · Lecture Notes Ch. 1. PISA US `wleread ~ female` (intercept 507.86, slope 27.70, Root MSE 94.633).*
 
-| Slot | Learning target | Source (Ch. — "section") | Type | Difficulty | Pts | Dataset |
-|:-----|:----------------|:-------------------------|:----:|:----------:|:---:|:-------:|
-| Q2-01 | ANCOVA = factor + continuous covariate; what each term adds | Ch. 2 — "The ANCOVA Model" | MC | Conceptual | 1 | gcse |
-| Q2-02 | "Controlling for" = holding the covariate fixed | Ch. 2 — "Concept Check: What Does 'Controlling For' Actually Mean?" | MC | Conceptual | 1 | gcse |
-| Q2-03 | Compute an adjusted group mean at the grand-mean covariate | Ch. 2 — "How Adjusted Means Are Computed" | FIB | Applied | 2 | gcse |
-| Q2-04 | Parallel-slopes assumption underlies ANCOVA | Ch. 2 — "Checking the Parallel Slopes Assumption" | TF | Challenge | 1 | gcse |
-| Q2-05 | Confounder vs mediator — classify a third variable | Ch. 2 — "Confounders vs Mediators" | MC | Challenge | 1 | — |
-| Q2-06 | Collinearity inflates SEs but does **not** bias coefficients | Ch. 2 — "The Effect of Collinearity" | TF | Challenge | 1 | gcse |
-| Q2-07 | Type I (sequential) vs Type III (partial) sums of squares | Ch. 2 — "Type I vs Type III Sums of Squares" | MC | Challenge | 1 | gcse |
-| Q2-08 | One-way ANOVA = regression with $k-1$ dummies | Ch. 3 — "ANOVA as Regression with Dummy Variables" | MC | Conceptual | 1 | instruction |
-| Q2-09 | Reference-group coding: dummy coefficient = group mean − reference; compute a group mean | Ch. 3 — "Interpreting the Coefficients" | FIB | Applied | 2 | instruction |
-| Q2-10 | Match ANOVA-table parts (SS, df, MS, F) to definitions | Ch. 3 — "The ANOVA Table" | MATCH | Conceptual | 2 | instruction |
-| Q2-11 | Compute $F = \text{MS}_\text{between}/\text{MS}_\text{within}$ from a partial table | Ch. 3 — "The $F$-test" | FIB | Applied | 2 | instruction |
-| Q2-12 | What a significant omnibus $F$ does (and does not) tell you | Ch. 3 — "The $F$-test" | MC | Conceptual | 1 | instruction |
-| Q2-13 | Multiple-testing problem; Tukey/Bonferroni control family-wise error | Ch. 3 — "Correcting for Multiple Comparisons" | MA | Applied | 2 | instruction |
-| Q2-14 | Planned/confirmatory vs exploratory/post-hoc comparisons | Ch. 3 — "Exploratory vs Confirmatory Approaches" | TF | Conceptual | 1 | instruction |
-| Q2-15 | Effect size $\eta^2$ as proportion of variance (vs $R^2$) | Ch. 3 — "$\eta^2$ vs $R^2$" | MC | Applied | 1 | instruction |
+| Slot | Learning target | Source (Ch — "section") | Type | Difficulty | Pts | Provenance |
+|:-----|:----------------|:------------------------|:----:|:----------:|:---:|:----------:|
+| Q2-01 | Map the coefficient table: intercept ↔ reference (male) mean, slope ↔ mean difference, intercept+slope ↔ comparison mean | Ch 1 — ["Regression with a Dummy Variable"](../../notes/chapters/01-simple-linear-regression.html#regression-with-a-dummy-variable) | MATCH | Conceptual | 2 | reuse |
+| Q2-02 | Interpret the dummy slope as a difference in means (var + dir + mag + units) | Ch 1 — ["Regression with a Dummy Variable"](../../notes/chapters/01-simple-linear-regression.html#regression-with-a-dummy-variable) | MC | Applied | 1 | reuse |
+| Q2-03 | Recover the comparison-group mean = intercept + slope (535.56) | Ch 1 — ["Regression with a Dummy Variable"](../../notes/chapters/01-simple-linear-regression.html#regression-with-a-dummy-variable) | FIB | Applied | 2 | reuse |
+| Q2-04 | The coefficient SE = sampling uncertainty of the estimated mean difference | Ch 1 — ["The $t$-test for the Slope"](../../notes/chapters/01-simple-linear-regression.html#the-t-test-for-the-slope) | MC | Conceptual | 1 | new |
+| Q2-05 | The dummy "regression line" = the two group means joined (only two fitted values) | Ch 1 — ["Regression with a Dummy Variable"](../../notes/chapters/01-simple-linear-regression.html#regression-with-a-dummy-variable) | TF | Conceptual | 1 | new |
+| Q2-06 | Test H₀: β₁ = 0 via t = est/SE, df = n−2; decide at α (t = 4.65, df = 1018) | Ch 1 — ["The $t$-test for the Slope"](../../notes/chapters/01-simple-linear-regression.html#the-t-test-for-the-slope) | FIMB | Applied | 2 | new |
+| Q2-07 | Regression *t* on a dummy ≡ pooled two-sample *t* (same \|t\|, df, p) | Ch 1 — ["Equivalence with the Independent Samples $t$-test"](../../notes/chapters/01-simple-linear-regression.html#equivalence-with-the-independent-samples-t-test) | TF | Conceptual | 1 | reuse |
+| Q2-08 | Root MSE = pooled within-group SD, not the combined SD (94.633 vs 95.586) | Ch 1 — ["Equivalence with the Independent Samples $t$-test"](../../notes/chapters/01-simple-linear-regression.html#equivalence-with-the-independent-samples-t-test) | MC | Challenge | 1 | new |
+| Q2-09 | An observational dummy "effect" = association, not causation | Ch 1 — ["Association, Not Causation"](../../notes/chapters/01-simple-linear-regression.html#the-regression-function) | TF | Conceptual | 1 | reuse |
 
-**Coverage summary:** 20 pts · 15 items · MC×7, TF×3, FIB×3, MATCH×1, MA×1 · Conceptual×6 / Applied×5 / Challenge×4 · Ch. 2 (×7) + Ch. 3 (×8). **Datasets:** gcse, instruction. **Deliberate omission:** Cohen's $d$ folded into the $\eta^2$ effect-size slot; OVB direction deferred to Q3 (sign reversal) to avoid duplication.
+**Coverage:** 9 items · 12 pts · MATCH×1, MC×3, FIB×1, TF×3, FIMB×1. **Omits:** continuous-x slope (Q1), ANCOVA / adjusted means (Q3), ≥3 groups / omnibus F (Q4).
 
-## Quiz 3 — Interactions {#sec-bp-q3}
+## Quiz 3 — Confounding & ANCOVA {#sec-bp-q3}
 
-*Lecture Notes Ch. 4 (Continuous Predictors) + Ch. 5 (Interactions).*
+*↔ HW3 · Lecture Notes Ch. 2. HW3's race + father's-education equations (raw diff +2 → adjusted −0.6); hosts the folded collinearity item.*
 
-| Slot | Learning target | Source (Ch. — "section") | Type | Difficulty | Pts | Dataset |
-|:-----|:----------------|:-------------------------|:----:|:----------:|:---:|:-------:|
-| Q3-01 | Effect modifier / moderator = the meaning of an interaction | Ch. 5 — "Effect Modifiers and Moderators" | MC | Conceptual | 1 | gcse |
-| Q3-02 | Match the three interaction types to examples (cont×cat, cat×cat, cont×cont) | Ch. 5 — "Continuous by Categorical Interaction" / "Categorical by Categorical Interaction" / "Continuous by Continuous Interaction" | MATCH | Conceptual | 2 | — |
-| Q3-03 | Interaction = a "difference of differences" (cell means) | Ch. 5 — "Interpreting the Cell Means" | MC | Applied | 1 | faculty |
-| Q3-04 | Adding an interaction makes the main effects conditional | Ch. 5 — "Adding an Interaction Changes the Meaning of ALL Coefficients!" | TF | Challenge | 1 | gcse |
-| Q3-05 | Recover a group-specific slope from main + interaction coefficients | Ch. 5 — "Deriving Group-Specific Equations" | FIB | Applied | 2 | gcse |
-| Q3-06 | Compute a conditional/simple slope at a chosen moderator value | Ch. 5 — "Probing the Interaction: Conditional Slopes" | FIB | Applied | 2 | gcse |
-| Q3-07 | Why center predictors before forming a product term | Ch. 5 — "Centering Is Essential" | MC | Challenge | 1 | crime |
-| Q3-08 | Symmetry of an interaction (X moderates Z ⇔ Z moderates X) | Ch. 5 — "The Symmetry of Interactions" | TF | Conceptual | 1 | — |
-| Q3-09 | Complete the interpretation of a cont×cat coefficient set | Ch. 5 — "Interpretation of Each Coefficient" | FIMB | Applied | 2 | gcse |
-| Q3-10 | Two-way ANOVA: testing the overall interaction | Ch. 5 — "Testing the Overall Interaction" | MC | Conceptual | 1 | faculty |
-| Q3-11 | Type II vs Type III SS in interaction models | Ch. 5 — "What Each Type Tests" | MC | Challenge | 1 | hsb_sub |
-| Q3-12 | Standardized (beta) coefficients; when standardizing is appropriate | Ch. 4 — "Standardized Coefficients" | MC | Conceptual | 1 | crime |
-| Q3-13 | Partial-regression (added-variable) plot shows the effect controlling for others | Ch. 4 — "Partial Regression Plots" | MC | Conceptual | 1 | crime |
-| Q3-14 | Sign reversal of a coefficient as omitted-variable bias (select all that hold) | Ch. 4 — "The Sign Reversal Phenomenon" | MA | Challenge | 2 | crime |
-| Q3-15 | Read a conditional effect off an interaction plot | Ch. 5 — "The School Difference Depends on LRT" | MC | Applied | 1 | gcse |
+| Slot | Learning target | Source (Ch — "section") | Type | Difficulty | Pts | Provenance |
+|:-----|:----------------|:------------------------|:----:|:----------:|:---:|:----------:|
+| Q3-01 | Parallel lines: both groups share slope β₁; only the intercept differs | Ch 2 — ["The ANCOVA Model"](../../notes/chapters/02-ancova.html#sec-ch2-model) | MC | Conceptual | 1 | reuse |
+| Q3-02 | Read the unadjusted difference from a dummy-only model (+2) | Ch 2 — ["Comparing Unadjusted vs Adjusted Differences"](../../notes/chapters/02-ancova.html#comparing-unadjusted-vs-adjusted-differences) | FIB | Applied | 2 | new |
+| Q3-03 | β₂ = the adjusted group difference = the constant vertical gap (−0.6) | Ch 2 — ["Comparing Unadjusted vs Adjusted Differences"](../../notes/chapters/02-ancova.html#comparing-unadjusted-vs-adjusted-differences) | MC | Conceptual | 1 | reuse |
+| Q3-04 | "Controlling for x" = comparing groups at the same x; statistical, not physical | Ch 2 — ["Estimation and Interpretation"](../../notes/chapters/02-ancova.html#sec-ch2-estimation) | MC | Conceptual | 1 | reuse |
+| Q3-05 | Compute adjusted group means at a fixed x, and the constant gap (white 11.2, non-white 11.8) | Ch 2 — ["Adjusted Group Means"](../../notes/chapters/02-ancova.html#adjusted-group-means) | FIMB | Applied | 2 | reuse |
+| Q3-06 | A confounder is associated with both the predictor and the outcome | Ch 2 — ["Confounding and Endogeneity"](../../notes/chapters/02-ancova.html#sec-ch2-confounding) | MC | Conceptual | 1 | reuse |
+| Q3-07 | "Controlling for x" changes the estimand; adjustment can shrink or reverse the raw sign | Ch 2 — ["Comparing Unadjusted vs Adjusted Differences"](../../notes/chapters/02-ancova.html#comparing-unadjusted-vs-adjusted-differences) | TF | Conceptual | 1 | new |
+| Q3-08 | Predict the direction of the adjusted-vs-raw gap from the confounding setup | Ch 2 — ["Omitted Variable Bias"](../../notes/chapters/02-ancova.html#sec-ch2-ovb) | MC | Challenge | 1 | new |
+| Q3-09 | Controlling for a both-related variable must change the coefficient | Ch 2 — ["The OVB Formula"](../../notes/chapters/02-ancova.html#the-ovb-formula) | TF | Conceptual | 1 | new |
+| Q3-10 | *(Fold)* Collinearity inflates SEs but does not bias coefficients; bias comes from omitting a confounder | Ch 2 — ["The Effect of Collinearity"](../../notes/chapters/02-ancova.html#the-effect-of-collinearity) | MA | Challenge | 2 | reuse |
 
-**Coverage summary:** 20 pts · 15 items · MC×8, TF×2, FIB×2, FIMB×1, MATCH×1, MA×1 · Conceptual×5 / Applied×6 / Challenge×4 · Ch. 5 (×11) + Ch. 4 (×4). **Datasets:** faculty, crime, hsb_sub, gcse. **Deliberate omission:** partial vs semi-partial correlation (overlaps the partial-plot slot); Johnson–Neyman (beyond the slot budget).
+**Coverage:** 10 items · 13 pts · MC×5, FIB×1, FIMB×1, TF×2, MA×1. **Omits:** numeric VIF (→ Q5), the parallel-*slopes* test / interaction (→ Q5), confounder-vs-mediator distinction, Type I/II/III SS.
 
-## Quiz 4 — Model Building & Diagnostics {#sec-bp-q4}
+## Quiz 4 — One-Way ANOVA & Multiple Comparisons {#sec-bp-q4}
 
-*Lecture Notes Ch. 6 (Nonlinear) + Ch. 7 (Model Building) + Ch. 8 (Diagnostics) — balanced 5/4/6.*
+*↔ HW4 · Lecture Notes Ch. 3. PISA 3-country (USA 523.15, UK 538.18, Germany 517.75; F(2,4525)=21.76; Sidak pairwise).*
 
-| Slot | Learning target | Source (Ch. — "section") | Type | Difficulty | Pts | Dataset |
-|:-----|:----------------|:-------------------------|:----:|:----------:|:---:|:-------:|
-| Q4-01 | LOWESS as a smoother to detect nonlinearity before fitting | Ch. 6 — "Detecting Nonlinearity with LOWESS" | MC | Conceptual | 1 | crime |
-| Q4-02 | Match log-level / level-log / log-log to their interpretations | Ch. 6 — "Log Interpretation Rules" | MATCH | Applied | 2 | gcse |
-| Q4-03 | Interpret a log-level slope as an approximate percent change | Ch. 6 — "Log Transformations" | FIB | Applied | 2 | crime |
-| Q4-04 | Polynomial regression: curvature and the danger of extrapolation | Ch. 6 — "Polynomial Extrapolation" | MC | Challenge | 1 | crime |
-| Q4-05 | Center before a polynomial; don't read poly coefficients in isolation | Ch. 6 — "Center Before Polynomial Regression" | TF | Conceptual | 1 | crime |
-| Q4-06 | Nested-model (incremental) $F$-test logic and the nesting requirement | Ch. 7 — "The Incremental $F$-Test" | MC | Conceptual | 1 | nels_data |
-| Q4-07 | Compute $\Delta R^2$ between nested models | Ch. 7 — "Computing $\Delta R^2$" | FIB | Applied | 2 | nels_data |
-| Q4-08 | $R^2$ always rises with more predictors → use adjusted $R^2$ / AIC / BIC | Ch. 7 — "$R^2$ Always Increases with More Predictors" | MC | Conceptual | 1 | nels_data |
-| Q4-09 | Stepwise/automatic selection finds structure in noise (GIGO) | Ch. 7 — "GIGO: Finding Structure in Pure Noise" | TF | Challenge | 1 | — |
-| Q4-10 | Match residual types (raw, semi-studentized, studentized, deleted) to definitions | Ch. 8 — "Types of Residuals" | MATCH | Conceptual | 2 | hsb_sub |
-| Q4-11 | Diagnose a violation from a residuals-vs-fitted pattern | Ch. 8 — "Reading the Residual Plot: A Visual Guide" | MC | Challenge | 1 | hsb_sub |
-| Q4-12 | Read a Q-Q plot for departures from normality | Ch. 8 — "Reading Q-Q Plots: A Quick Reference" | MC | Applied | 1 | hsb_sub |
-| Q4-13 | Leverage ≠ influence; Cook's distance vs hat value | Ch. 8 — "Cook's Distance" / "Leverage (Hat Values)" | MC | Challenge | 1 | crime |
-| Q4-14 | Compare VIF values to the ~5 / ~10 rule-of-thumb cutoffs | Ch. 8 — "Variance Inflation Factor (VIF)" | FIB | Applied | 2 | crime |
-| Q4-15 | Heteroscedasticity: coefficients fine, inference is not → robust SEs | Ch. 8 — "Heteroscedasticity: Coefficients Are Fine, Inference Is Not" | MC | Challenge | 1 | crime |
+| Slot | Learning target | Source (Ch — "section") | Type | Difficulty | Pts | Provenance |
+|:-----|:----------------|:------------------------|:----:|:----------:|:---:|:----------:|
+| Q4-01 | k groups → k−1 dummies; the omitted level is the reference | Ch 3 — ["Dummy Variable Coding"](../../notes/chapters/03-one-way-anova.html#dummy-variable-coding) | MC | Conceptual | 1 | reuse |
+| Q4-02 | A single numeric 1/2/3 code falsely orders nominal groups | Ch 3 — ["Coding Schemes"](../../notes/chapters/03-one-way-anova.html#sec-ch3-coding) | TF | Conceptual | 1 | reuse |
+| Q4-03 | Intercept = reference mean; each dummy coef = that group's mean − reference | Ch 3 — ["Interpreting the Coefficients"](../../notes/chapters/03-one-way-anova.html#interpreting-the-coefficients) | MC | Conceptual | 1 | reuse |
+| Q4-04 | Recover a group mean = intercept + dummy coefficient (UK 538.18) | Ch 3 — ["Interpreting the Coefficients"](../../notes/chapters/03-one-way-anova.html#interpreting-the-coefficients) | FIB | Applied | 2 | reuse |
+| Q4-05 | Read significance of an individual dummy from its p (Germany p = .150 n.s.) | Ch 3 — ["Interpreting the Coefficients"](../../notes/chapters/03-one-way-anova.html#interpreting-the-coefficients) | MC | Applied | 1 | new |
+| Q4-06 | A significant omnibus F means ≥1 mean differs — not that all pairs differ | Ch 3 — ["The $F$-test"](../../notes/chapters/03-one-way-anova.html#the-f-test) | TF | Conceptual | 1 | reuse |
+| Q4-07 | Read/complete an ANOVA table: F = MS_between/MS_within, df (k−1, n−k) | Ch 3 — ["The ANOVA Table"](../../notes/chapters/03-one-way-anova.html#sec-ch3-anova-table) | MATCH | Applied | 2 | reuse |
+| Q4-08 | Regression-with-dummies ≡ one-way ANOVA: same omnibus F, p, SSE, Root MSE | Ch 3 — ["ANOVA as Regression with Dummy Variables"](../../notes/chapters/03-one-way-anova.html#sec-ch3-model) | TF | Conceptual | 1 | new |
+| Q4-09 | A significant F ⇒ which pair? → pairwise comparisons needed | Ch 3 — ["Pairwise Comparisons and Multiple Testing"](../../notes/chapters/03-one-way-anova.html#sec-ch3-pairwise) | MC | Conceptual | 1 | reuse |
+| Q4-10 | Without correction the family-wise error rate inflates above α | Ch 3 — ["The Multiple Testing Problem"](../../notes/chapters/03-one-way-anova.html#the-multiple-testing-problem) | MA | Applied | 2 | reuse |
+| Q4-11 | Read which pairs differ from a Sidak-adjusted table (USA–Germany p = .386 n.s.) | Ch 3 — ["Correcting for Multiple Comparisons"](../../notes/chapters/03-one-way-anova.html#correcting-for-multiple-comparisons) | MC | Challenge | 1 | reuse |
+| Q4-12 | η² = R² = proportion of variance explained; a small p can co-occur with a tiny η² (0.0095) | Ch 3 — ["Eta-squared ($\eta^2$)"](../../notes/chapters/03-one-way-anova.html#eta-squared-eta2) | MC | Applied | 1 | reuse |
 
-**Coverage summary:** 20 pts · 15 items · MC×8, TF×2, FIB×3, MATCH×2 · Conceptual×5 / Applied×5 / Challenge×5 · Ch. 6 (×5) + Ch. 7 (×4) + Ch. 8 (×6). **Datasets:** crime, gcse, hsb_sub, nels_data. **Deliberate omission:** DFBETAS and splines/GAMs (slot budget); sensitivity-vs-deletion folded into the leverage/influence slot.
+**Coverage:** 12 items · 15 pts · MC×6, TF×3, FIB×1, MATCH×1, MA×1. *(Optional Q4-13: Bartlett checks equal variances, not equal means — TF, Ch 3 "Checking ANOVA Assumptions"; cut first.)* **Omits:** two-way ANOVA (Q6), ANCOVA (Q3), Type SS.
 
-## Quiz 5 — Logistic Regression {#sec-bp-q5}
+## Quiz 5 — Interactions & Simple Slopes {#sec-bp-q5}
 
-*Lecture Notes Ch. 9 (Simple Logistic) + Ch. 10 (Multiple Logistic).*
+*↔ HW5 · Lecture Notes Ch. 4–5 + 2 folded Ch-8 diagnostics. Langton faculty-salary table (women's SV slope −9504.21; gap 698.46 + 3932.71·SV).*
 
-| Slot | Learning target | Source (Ch. — "section") | Type | Difficulty | Pts | Dataset |
-|:-----|:----------------|:-------------------------|:----:|:----------:|:---:|:-------:|
-| Q5-01 | Why a linear probability model fails for a binary outcome (select all) | Ch. 9 — "The Linear Probability Model and Its Problems" | MA | Conceptual | 2 | titanic |
-| Q5-02 | The logistic function maps the linear predictor to (0,1) | Ch. 9 — "The Logistic Function as a Solution" | MC | Conceptual | 1 | titanic |
-| Q5-03 | Match probability / odds / log-odds to their ranges | Ch. 9 — "The Three Scales" | MATCH | Conceptual | 2 | — |
-| Q5-04 | Convert a probability to odds / log-odds (numeric) | Ch. 9 — "Conversion Formulas" | FIB | Applied | 2 | — |
-| Q5-05 | Linear on the logit scale; fit by MLE, not OLS | Ch. 9 — "OLS vs MLE" | TF | Conceptual | 1 | titanic |
-| Q5-06 | Coefficients live on the log-odds scale; sign → direction | Ch. 9 — "What the Parameters Mean" | MC | Conceptual | 1 | titanic |
-| Q5-07 | Odds ratio = $e^\beta$; compute it from a coefficient | Ch. 9 — "Exponentiated Coefficients" | FIB | Applied | 2 | titanic |
-| Q5-08 | A dummy's OR = ratio of the two groups' odds | Ch. 9 — "Computing the Odds Ratio Manually" | MC | Applied | 1 | disc |
-| Q5-09 | OR is **not** a probability/risk ratio (OR ≈ RR only when rare) | Ch. 9 — "Odds Ratios Are NOT Probability Ratios!" | TF | Challenge | 1 | titanic |
-| Q5-10 | Compute a predicted probability from fitted coefficients | Ch. 9 — "Predicted Probabilities from the Model" | FIB | Applied | 2 | titanic |
-| Q5-11 | Average marginal effect: what it reports and why it differs from $\beta$ | Ch. 9 — "Computing Average Marginal Effects" | MC | Applied | 1 | titanic |
-| Q5-12 | Adjusted odds ratios in multiple logistic regression ("controlling for") | Ch. 10 — "Adjusted Odds Ratios" | MC | Conceptual | 1 | berkeley |
-| Q5-13 | Simpson's Paradox = OVB/confounding on the logit scale | Ch. 10 — "Simpson's Paradox = OVB for Logistic Regression" | MC | Challenge | 1 | berkeley |
-| Q5-14 | Wald vs likelihood-ratio test — which to trust, and when | Ch. 10 — "Wald vs Likelihood Ratio: When to Use Which?" | MC | Challenge | 1 | titanic |
-| Q5-15 | Why CIs for ORs are asymmetric: $\exp(b \pm 1.96\,\text{SE})$ | Ch. 10 — "Why Asymmetric Confidence Intervals?" | TF | Challenge | 1 | titanic |
+| Slot | Learning target | Source (Ch — "section") | Type | Difficulty | Pts | Provenance |
+|:-----|:----------------|:------------------------|:----:|:----------:|:---:|:----------:|
+| Q5-01 | Interaction = "it depends": one predictor's slope varies with another's level | Ch 5 — ["Continuous by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cont-cat) | MC | Conceptual | 1 | reuse |
+| Q5-02 | Continuous main-effect coef = Δŷ per unit, holding others fixed | Ch 4 — ["Multiple Regression with Continuous Predictors"](../../notes/chapters/04-continuous-predictors.html#sec-ch4-model) | MC | Conceptual | 1 | new |
+| Q5-03 | Dummy main-effect coef = adjusted gap vs reference, sign tied to coded level | Ch 4 — ["Multiple Regression with Continuous Predictors"](../../notes/chapters/04-continuous-predictors.html#sec-ch4-model) | MC | Applied | 1 | new |
+| Q5-04 | With an interaction, lower-order coefficients become conditional (value at other var = 0) | Ch 5 — ["Interpretation of Each Coefficient"](../../notes/chapters/05-interactions.html#sec-ch5-coef-interpret) | TF | Challenge | 1 | reuse |
+| Q5-05 | Focal continuous slope = the reference-group slope only (men, −5571.50) | Ch 5 — ["Interpretation of Each Coefficient"](../../notes/chapters/05-interactions.html#sec-ch5-coef-interpret) | MC | Applied | 1 | new |
+| Q5-06 | Dummy main effect = group gap only at moderator = 0 (−698.46) | Ch 5 — ["Interpretation of Each Coefficient"](../../notes/chapters/05-interactions.html#sec-ch5-coef-interpret) | TF | Conceptual | 1 | new |
+| Q5-07 | Interaction coef = difference between the two groups' slopes | Ch 5 — ["The School Difference Depends on LRT"](../../notes/chapters/05-interactions.html#the-school-difference-depends-on-lrt) | MC | Conceptual | 1 | reuse |
+| Q5-08 | Compute a group-specific slope = β_focal + β_int (women's slope −9504.21) | Ch 5 — ["Deriving Group-Specific Equations"](../../notes/chapters/05-interactions.html#deriving-group-specific-equations) | FIB | Applied | 2 | reuse |
+| Q5-09 | Gap as a linear function of the moderator (698.46 + 3932.71·SV), widens | Ch 5 — ["The School Difference Depends on LRT"](../../notes/chapters/05-interactions.html#the-school-difference-depends-on-lrt) | FIMB | Applied | 2 | reuse |
+| Q5-10 | Do not read a non-significant main effect as "no effect" when an interaction is present | Ch 5 — ["Testing the Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-testing) | TF | Challenge | 1 | new |
+| Q5-11 | Symmetry: "x moderates z" ≡ "z moderates x" | Ch 5 — ["Continuous by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cont-cat) | MC | Conceptual | 1 | reuse |
+| Q5-12 | *(Fold)* Read residuals-vs-fitted: funnel ⇒ heteroscedasticity; curved LOESS ⇒ nonlinearity | Ch 8 — ["Residuals vs. Fitted Values Plot"](../../notes/chapters/08-model-diagnostics.html#sec-ch8-resid-fitted) | MATCH | Applied | 2 | reuse |
+| Q5-13 | *(Fold)* VIF = 1/(1−R²ⱼ); compute; ≥5 moderate / ≥10 serious; inflates SE only | Ch 8 — ["Variance Inflation Factor (VIF)"](../../notes/chapters/08-model-diagnostics.html#variance-inflation-factor-vif) | FIB | Applied | 2 | reuse |
 
-**Coverage summary:** 20 pts · 15 items · MC×7, TF×3, FIB×3, MATCH×1, MA×1 · Conceptual×6 / Applied×5 / Challenge×4 · Ch. 9 (×11) + Ch. 10 (×4). **Datasets:** titanic, disc (≈ disc2), berkeley (≈ berk_sub). **Deliberate omission:** ROC/threshold deferred to Q6 (classification lives in Ch. 11).
+**Coverage:** 13 items · 17 pts · MC×6, TF×3, MATCH×1, FIB×2, FIMB×1. **Omits:** centering/Johnson–Neyman, standardized betas, partial-regression plots, sign-reversal OVB, two-way cell means (Q6), the rest of Ch 8.
 
-## Quiz 6 — Logistic Diagnostics {#sec-bp-q6}
+## Quiz 6 — Two-Way ANOVA & Interaction {#sec-bp-q6}
 
-*Lecture Notes Ch. 11 (Logistic Diagnostics, central) + Ch. 12 (Latent/GLM) + Ch. 13 (Ordinal).*
+*↔ HW6 · Lecture Notes Ch. 5 (with Ch. 3). PISA country × test-language (interaction F(2,4522)=14.72; Germany simple effect 98.53).*
 
-| Slot | Learning target | Source (Ch. — "section") | Type | Difficulty | Pts | Dataset |
-|:-----|:----------------|:-------------------------|:----:|:----------:|:---:|:-------:|
-| Q6-01 | GOF tests (Pearson $X^2$, deviance $G^2$) require grouped, non-sparse data | Ch. 11 — "Goodness of Fit Tests" | MC | Conceptual | 1 | penalty |
-| Q6-02 | Sparseness with a continuous predictor invalidates $X^2$/$G^2$ | Ch. 11 — "The Sparseness Problem" | TF | Challenge | 1 | titanic |
-| Q6-03 | You must name *which* pseudo-$R^2$; McFadden 0.2–0.4 ≈ strong | Ch. 11 — "Which Pseudo $R^2$ Should I Report?" | MC | Conceptual | 1 | penalty |
-| Q6-04 | Match Cox–Snell / Nagelkerke / McFadden to their key property | Ch. 11 — "Six Common Pseudo $R^2$ Measures" | MATCH | Challenge | 2 | penalty |
-| Q6-05 | Compute accuracy / sensitivity / specificity from a classification table | Ch. 11 — "The Classification Table" | FIMB | Applied | 2 | titanic |
-| Q6-06 | Cohen's $\kappa$ adjusts classification agreement for chance | Ch. 11 — "Cohen's Kappa" | MC | Conceptual | 1 | penalty |
-| Q6-07 | Classification quality ≠ inferential validity | Ch. 11 — "Classification vs. Inference" | TF | Conceptual | 1 | — |
-| Q6-08 | Deviance vs Pearson residuals; binned residual plots | Ch. 11 — "Binned Residual Plot" | MC | Challenge | 1 | titanic |
-| Q6-09 | Calibration vs discrimination — what each assesses | Ch. 11 — "Calibration Plot" | MC | Challenge | 1 | titanic |
-| Q6-10 | Influence diagnostics for logistic: Cook's D / DFBETAS (select all) | Ch. 11 — "Influence Diagnostics: DFBETAS and Cook's Distance" | MA | Applied | 2 | penalty |
-| Q6-11 | Latent-variable formulation of binary outcomes (threshold-crossing) | Ch. 12 — "The Latent Variable Formulation" | MC | Conceptual | 1 | — |
-| Q6-12 | Logit vs probit: ≈1.7 scaling, near-identical fitted probabilities | Ch. 12 — "The 1.7 Rule of Thumb" | MC | Applied | 1 | titanic |
-| Q6-13 | GLM framework = random + systematic + link (match the components) | Ch. 12 — "The Three Components of a GLM" | MATCH | Conceptual | 2 | — |
-| Q6-14 | Cumulative-logit / proportional-odds model; compute a cumulative odds ratio | Ch. 13 — "The Cumulative Logit Model" | FIB | Applied | 2 | grades |
-| Q6-15 | Proportional-odds assumption; thresholds replace the intercept | Ch. 13 — "The Proportional Odds Assumption" | TF | Challenge | 1 | satisfaction |
+| Slot | Learning target | Source (Ch — "section") | Type | Difficulty | Pts | Provenance |
+|:-----|:----------------|:------------------------|:----:|:----------:|:---:|:----------:|
+| Q6-01 | A two-way ANOVA tests 2 main effects + their interaction; the interaction is the key test | Ch 5 — ["Categorical by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cat-cat) | MC | Conceptual | 1 | new |
+| Q6-02 | Read main + interaction F-tests with df from a Type-III table | Ch 5 — ["Testing the Overall Interaction"](../../notes/chapters/05-interactions.html#testing-the-overall-interaction) | FIMB | Applied | 2 | new |
+| Q6-03 | A significant interaction ⇒ one factor's effect is not constant; main effects become incomplete | Ch 5 — ["Categorical by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cat-cat) | TF | Conceptual | 1 | reuse |
+| Q6-04 | Interaction plot: parallel ⇒ none; non-parallel/converging ⇒ interaction | Ch 5 — ["Interpreting the Cell Means"](../../notes/chapters/05-interactions.html#interpreting-the-cell-means) | MC | Applied | 1 | reuse |
+| Q6-05 | Use cell means to quantify a simple effect (Germany 521.93 − 423.40 = 98.53) | Ch 5 — ["Interpreting the Cell Means"](../../notes/chapters/05-interactions.html#interpreting-the-cell-means) | FIB | Applied | 2 | new |
+| Q6-06 | Read an interaction as a difference of differences from a cell-means table | Ch 5 — ["Interpreting the Cell Means"](../../notes/chapters/05-interactions.html#interpreting-the-cell-means) | MC | Applied | 1 | reuse |
+| Q6-07 | Two-way ANOVA ≡ regression with dummies + products: same fitted values, R², Root MSE, F | Ch 5 — ["Categorical by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cat-cat) | TF | Conceptual | 1 | new |
+| Q6-08 | Map coefficients to cell means (intercept = reference cell; dummy = simple difference at reference level) | Ch 5 — ["Interpreting the Cell Means"](../../notes/chapters/05-interactions.html#interpreting-the-cell-means) | FIMB | Applied | 2 | new |
+| Q6-09 | Interaction dummy = how a factor's effect differs vs reference; recover simple effect = β_main + β_int (98.53) | Ch 5 — ["Deriving Group-Specific Equations"](../../notes/chapters/05-interactions.html#deriving-group-specific-equations) | FIB | Challenge | 2 | new |
+| Q6-10 | With a significant interaction, interpret simple/conditional effects, not main effects alone | Ch 5 — ["Categorical by Categorical Interaction"](../../notes/chapters/05-interactions.html#sec-ch5-cat-cat) | MC | Challenge | 1 | reuse |
+| Q6-11 | Match each term to its two-way component (main A / main B / interaction / cell mean) | Ch 5 — ["Testing the Overall Interaction"](../../notes/chapters/05-interactions.html#testing-the-overall-interaction) | MATCH | Conceptual | 2 | new |
 
-**Coverage summary:** 20 pts · 15 items · MC×7, TF×3, FIB×1, FIMB×1, MATCH×2, MA×1 · Conceptual×6 / Applied×4 / Challenge×5 · Ch. 11 (×10) + Ch. 12 (×3) + Ch. 13 (×2). **Datasets:** penalty, titanic, grades, satisfaction. **Note:** Ch. 11 carries the bulk because logistic diagnostics is the module's core; Ch. 12–13 receive lighter, concept-level coverage per the plan.
+**Coverage:** 11 items · 16 pts · MC×4, TF×2, FIB×2, FIMB×2, MATCH×1. **Omits:** continuous-× interactions / centering (Q5), one-way pairwise machinery (Q4), Type SS mechanics, three-way designs.
+
+## Quiz 7 — Logistic Regression & Odds Ratios {#sec-bp-q7}
+
+*↔ HW7 · Lecture Notes Ch. 9–10. Kalmijn published logistic table (exp(0.093)=1.10; exp(−0.921)=0.40 → 1/0.40=2.5; exp(0.212)=1.24 → +24%).*
+
+| Slot | Learning target | Source (Ch — "section") | Type | Difficulty | Pts | Provenance |
+|:-----|:----------------|:------------------------|:----:|:----------:|:---:|:----------:|
+| Q7-01 | The three model-output scales: β̂ (log-odds) → exp(β̂) (OR) → 100(exp(β̂)−1) (% change) | Ch 9 — ["The Three Scales"](../../notes/chapters/09-simple-logistic-regression.html#the-three-scales) | MATCH | Conceptual | 2 | reuse |
+| Q7-02 | Convert a coefficient to an odds ratio: OR = exp(β̂) (1.10) | Ch 9 — ["Exponentiated Coefficients"](../../notes/chapters/09-simple-logistic-regression.html#exponentiated-coefficients) | FIB | Applied | 2 | reuse |
+| Q7-03 | Interpret an adjusted OR for a continuous predictor (odds × OR per unit, holding others fixed) | Ch 9 — ["Odds Ratios for Continuous Predictors"](../../notes/chapters/09-simple-logistic-regression.html#odds-ratios-for-continuous-predictors) | MC | Applied | 1 | reuse |
+| Q7-04 | Interpret an adjusted OR for a 0/1 dummy (coded group vs reference odds) | Ch 10 — ["Adjusted Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-adjusted-or) | MC | Applied | 1 | reuse |
+| Q7-05 | Convert an OR to a % change in odds: 100·(OR−1) (+24%) | Ch 9 — ["Odds Ratios for Continuous Predictors"](../../notes/chapters/09-simple-logistic-regression.html#odds-ratios-for-continuous-predictors) | FIB | Applied | 2 | new |
+| Q7-06 | When OR < 1, use the reciprocal 1/OR — reversing the comparison group (2.5) | Ch 9 — ["Exponentiated Coefficients"](../../notes/chapters/09-simple-logistic-regression.html#exponentiated-coefficients) | MC | Applied | 1 | new |
+| Q7-07 | Build an OR CI: β̂ ± 1.96·SE on the log-odds scale first, then exponentiate ([0.275, 0.576]) | Ch 10 — ["Confidence Intervals for Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#confidence-intervals-for-odds-ratios) | FIMB | Applied | 2 | new |
+| Q7-08 | A reciprocal-OR CI reverses the endpoint order; a %-change CI applies 100·(OR−1) per endpoint | Ch 10 — ["Confidence Intervals for Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#confidence-intervals-for-odds-ratios) | TF | Challenge | 1 | new |
+| Q7-09 | An odds ratio is not a probability/risk ratio | Ch 9 — ["The Critical Distinction: OR vs Probability Ratio"](../../notes/chapters/09-simple-logistic-regression.html#the-critical-distinction-or-vs-probability-ratio) | TF | Conceptual | 1 | reuse |
+| Q7-10 | A back-transformed OR CI is asymmetric around exp(β̂) | Ch 10 — ["Confidence Intervals for Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#confidence-intervals-for-odds-ratios) | TF | Conceptual | 1 | reuse |
+
+**Coverage:** 10 items · 14 pts · MATCH×1, FIB×2, MC×3, FIMB×1, TF×3. **Omits:** LPM critique & S-curve, conversion drills, MLE-vs-OLS, predicted probabilities/AME, Wald-vs-LR theory (→ Q8), Simpson's (→ Q8), GOF.
+
+## Quiz 8 — Multiple Logistic & Simpson's Paradox {#sec-bp-q8}
+
+*↔ HW8 · Lecture Notes Ch. 10 + folded Ch. 11 GOF. Berkeley admissions (crude OR 0.64 → adjusted 0.97; Wald χ²(1)=0.12; grouped X²(4)=2.56).*
+
+| Slot | Learning target | Source (Ch — "section") | Type | Difficulty | Pts | Provenance |
+|:-----|:----------------|:------------------------|:----:|:----------:|:---:|:----------:|
+| Q8-01 | Read a collapsed table; compute a cell rate and odds = rate/(1−rate) | Ch 10 — ["Motivating Example: Berkeley Admissions"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-example) | FIB | Applied | 2 | new |
+| Q8-02 | Compute a crude (department-ignoring) odds ratio and interpret (0.64 ⇒ ~36% lower) | Ch 10 — ["Simpson's Paradox and Confounding"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-simpson) | FIB | Applied | 2 | new |
+| Q8-03 | A nominal predictor (dept 1–5) enters as a factor/dummies, not a continuous code | Ch 10 — ["The Multiple Logistic Regression Model"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-model) | MC | Conceptual | 1 | reuse |
+| Q8-04 | Interpret the adjusted OR as "holding department constant" (0.97) | Ch 10 — ["Adjusted Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-adjusted-or) | MC | Conceptual | 1 | reuse |
+| Q8-05 | Read an adjusted OR + CI; decide significance by whether the CI includes 1 ([0.82, 1.15]) | Ch 10 — ["Confidence Intervals for Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#confidence-intervals-for-odds-ratios) | TF | Conceptual | 1 | new |
+| Q8-06 | Contrast crude vs adjusted ORs; a large shift is the expected, correct behavior of adjustment | Ch 10 — ["Visualizing Crude vs Adjusted Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#visualizing-crude-vs-adjusted-odds-ratios) | MC | Applied | 1 | new |
+| Q8-07 | Explain the divergence as Simpson's paradox = OVB on the logit scale | Ch 10 — ["Simpson's Paradox and Confounding"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-simpson) | MC | Challenge | 1 | reuse |
+| Q8-08 | Resolved by adding the confounder as a covariate, not a product term; not a coding error | Ch 10 — ["Why the Reversal?"](../../notes/chapters/10-multiple-logistic-regression.html#why-the-reversal) | TF | Conceptual | 1 | reuse |
+| Q8-09 | Conduct/read a Wald test: z = β̂/SE, χ²(1) = z²; tie to the adjusted-OR/CI conclusion (χ² = 0.12) | Ch 10 — ["The Wald Test"](../../notes/chapters/10-multiple-logistic-regression.html#the-wald-test) | FIMB | Applied | 2 | reuse |
+| Q8-10 | *(Fold)* Grouped Pearson GOF over covariate patterns (10 = 5×2); df = #patterns − #params; n.s. ⇒ no lack of fit (X²(4)=2.56) | Ch 11 — ["Pearson Chi-Square ($X^2$)"](../../notes/chapters/11-logistic-diagnostics.html#sec-ch11-pearson-x2) | MC | Challenge | 1 | reuse |
+| Q8-11 | *(Fold)* Grouped ≠ summed individual residuals; a non-significant grouped X² ⇒ the additive model fits | Ch 11 — ["Covariate Patterns and Grouped Data"](../../notes/chapters/11-logistic-diagnostics.html#covariate-patterns-and-grouped-data) | MATCH | Conceptual | 2 | reuse |
+
+**Coverage:** 11 items · 15 pts · FIB×2, MC×5, TF×2, FIMB×1, MATCH×1. **Omits (strictly):** deviance G², sparseness / Hosmer–Lemeshow (Berkeley is all-categorical → grouped X² valid), classification/ROC/pseudo-R²/calibration, latent/probit (Ch 12), ordinal (Ch 13).
 
 ## Design notes {#sec-bp-notes}
 
-- **Misconception-anchored distractors.** Every Challenge/interpretation slot targets a concept that has a documented "Common Pitfall" in the notes — $R^2=r^2$ confusion, regression to the mean, collinearity-inflates-SE-but-not-bias, conditional vs marginal "main effects," leverage ≠ influence, $R^2$-always-rises, OR ≠ probability ratio, Simpson's Paradox, sparseness invalidating GOF, classification ≠ inference. These supply ready-made distractors.
-- **Calculation slots.** All FIB/FIMB slots are tagged Applied and ask for a single defensible number (predicted value, $R^2$, $F$, $\Delta R^2$, odds ratio, predicted probability, classification metric). The Style Guide requires a keyed value + tolerance for each.
-- **Substitutable datasets.** Q5 may use `disc2`/`berk_sub` in place of `disc`/`berkeley`; Q6 may use `satisfaction` in place of `grades`. The authoring step picks whichever motivating example reads most cleanly.
-- **Length discipline.** Each quiz is exactly 15 items / 20 points so the mastery percentage is computed on a common denominator across all six quizzes.
+- **Homework-mirrored coverage.** Every slot traces to a concept its paired homework drills. The model-criticism tail the homework never assigns (Ch 6 nonlinear, Ch 7 model selection, most of Ch 8, Ch 12 latent/GLM, Ch 13 ordinal) is dropped.
+- **Four folded diagnostics only.** Q3 (collinearity ≠ bias), Q5 (residuals-vs-fitted reading + VIF), and Q8 (grouped Pearson GOF) are the *only* items drawn from Ch 8 / Ch 11; each is a high-value, interpretive idea that the homework actually touches. Every other diagnostic is out of scope.
+- **Reuse-first.** ~53 of the ~85 slots reuse a verified-accurate item from the prior bank (re-skinned to the homework's example); the rest are authored fresh, most where the homework interprets a published table (Q5, Q7) or runs an identity the old chapter-organized quizzes never tested (Root MSE = pooled SD, ANOVA ≡ regression, reciprocal ORs, Simpson's-paradox GOF).
+- **Misconception-anchored distractors.** Every interpretation/Challenge slot targets a documented "Common Pitfall" — slope vs group mean, conditional vs marginal "main effects," collinearity-inflates-SE-but-not-bias, OR ≠ probability ratio, Simpson's paradox, grouped-GOF sparseness — which supply ready-made distractors.
+- **Calculation slots are few and load-bearing.** ~19 of 85 items are numeric (predicted value, R²/F, adjusted mean, women's slope, odds ratio, % change, Wald χ², grouped GOF); all use exact homework numbers, with a keyed value + tolerance per the Style Guide.
+- **Right-sized length.** Each quiz is sized to its homework's weight, not to a fixed point total; the mastery percentage is computed on each quiz's own denominator.
+- **Citations link to the exact notes section** via the ground-truth anchor (see the [Style Guide](style-guide.qmd#source-links)).

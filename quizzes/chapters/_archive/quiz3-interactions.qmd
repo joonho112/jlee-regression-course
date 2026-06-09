@@ -4,7 +4,7 @@ title: "Quiz 3: Interactions"
 
 ::: {.callout-note}
 ## About this quiz
-**Module:** Interactions  ·  **Available after:** Week 7  ·  **Source:** Lecture Notes, [Ch. 4 (Continuous Predictors)](../../notes/chapters/04-continuous-predictors.qmd) and [Ch. 5 (Interactions)](../../notes/chapters/05-interactions.qmd).
+**Module:** Interactions  ·  **Available after:** Week 7  ·  **Source:** Lecture Notes, [Ch. 4 (Continuous Predictors)](../../notes/chapters/04-continuous-predictors.html) and [Ch. 5 (Interactions)](../../notes/chapters/05-interactions.html).
 
 This quiz assesses interaction (moderation) effects: the meaning of effect modification, the three interaction types, reading a difference of differences, how main effects become conditional, deriving group-specific equations and conditional slopes, centering, the symmetry of interactions, two-way ANOVA and Type II/III sums of squares, plus standardized coefficients, partial-regression plots, and sign reversal from Ch. 4. Items are open-book and emphasize interpretation over computation.
 :::

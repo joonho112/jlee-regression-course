@@ -4,7 +4,7 @@ title: "Quiz 6: Logistic Diagnostics"
 
 ::: {.callout-note}
 ## About this quiz
-**Module:** Logistic Diagnostics  ·  **Available after:** Week 12  ·  **Source:** Lecture Notes, [Ch. 11 (Logistic Regression Diagnostics)](../../notes/chapters/11-logistic-diagnostics.qmd), [Ch. 12 (Latent Response Models and GLMs)](../../notes/chapters/12-latent-response-glm.qmd), and [Ch. 13 (Ordinal Models)](../../notes/chapters/13-ordinal-models.qmd).
+**Module:** Logistic Diagnostics  ·  **Available after:** Week 12  ·  **Source:** Lecture Notes, [Ch. 11 (Logistic Regression Diagnostics)](../../notes/chapters/11-logistic-diagnostics.html), [Ch. 12 (Latent Response Models and GLMs)](../../notes/chapters/12-latent-response-glm.html), and [Ch. 13 (Ordinal Models)](../../notes/chapters/13-ordinal-models.html).
 
 This quiz assesses logistic regression diagnostics: goodness-of-fit tests and the sparseness problem, pseudo-$R^2$ measures, the classification table (accuracy/sensitivity/specificity), Cohen's $\kappa$, classification vs inference, residual and calibration plots, influence diagnostics, plus the latent-variable / GLM framework and the proportional-odds (ordinal) model. Items are open-book and emphasize interpretation over computation.
 :::

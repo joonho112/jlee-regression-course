@@ -27,14 +27,22 @@ book:
 
   chapters:
     - index.qmd
-    - part: "Module Quizzes"
+    # Eight module quizzes, one per homework assignment (1:1 with the Homework Solutions book).
+    # Filenames are published URLs and freeze keys — change display titles in each qmd; rename only with redirects.
+    - part: "Part I: Linear Regression Foundations"
       chapters:
-        - chapters/quiz1-foundations.qmd
-        - chapters/quiz2-categorical.qmd
-        - chapters/quiz3-interactions.qmd
-        - chapters/quiz4-building-diagnostics.qmd
-        - chapters/quiz5-logistic.qmd
-        - chapters/quiz6-logistic-diagnostics.qmd
+        - chapters/quiz1-simple-regression.qmd
+        - chapters/quiz2-dummy-variables.qmd
+        - chapters/quiz3-confounding-ancova.qmd
+        - chapters/quiz4-one-way-anova.qmd
+    - part: "Part II: Multiple Regression and Interactions"
+      chapters:
+        - chapters/quiz5-interactions.qmd
+        - chapters/quiz6-two-way-anova.qmd
+    - part: "Part III: Logistic Regression"
+      chapters:
+        - chapters/quiz7-logistic-odds.qmd
+        - chapters/quiz8-multiple-logistic-simpsons.qmd
     - part: "Instructor Reference"
       chapters:
         - appendices/style-guide.qmd

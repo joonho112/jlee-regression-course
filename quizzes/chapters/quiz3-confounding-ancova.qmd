@@ -1,0 +1,329 @@
+---
+title: "Quiz 3: Confounding & ANCOVA"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Confounding & ANCOVA  ·  **Available after:** Week 4  ·  **Source:** Lecture Notes, [Ch. 2 (ANCOVA)](../../notes/chapters/02-ancova.html).
+
+This quiz assesses analysis of covariance and confounding as drilled in Homework 3: the parallel-lines model in which two groups share one covariate slope and differ only in intercept, the unadjusted group difference from a dummy-only model versus the adjusted difference from a model that controls for a covariate, the meaning of "controlling for" a covariate, computing adjusted group means at a fixed covariate value, what makes a variable a confounder, how adjustment can shrink or even reverse a raw group difference, and why collinearity inflates standard errors without biasing the coefficients. Items are open-book and emphasize interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 10 |
+| Total points | 13 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 4 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 3. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## Questions
+
+### Question 1 — Parallel lines in the ANCOVA model {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 2]`**
+
+A researcher models years of education ($y$) from father's education ($x$, continuous) and a white/non-white dummy ($z$, coded $z = 1$ for white and $z = 0$ for non-white) with the additive model
+
+$$\hat{y} = 3 + 0.8x - 0.6z.$$
+
+What is the geometric relationship between the fitted line for whites and the fitted line for non-whites?
+
+A. The two lines have the same slope ($0.8$) and differ only in their intercepts, so they are parallel.
+
+B. One line has slope $0.8$ and the other has slope $-0.6$, so the lines cross.
+
+C. The two lines have different slopes but the same intercept, so they fan out from a common point.
+
+D. The two lines are identical, because a single dummy cannot change the fitted equation.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** With no interaction term, the dummy $z$ enters only additively, so it shifts the intercept without touching the slope. Non-whites ($z = 0$) follow $\hat{y} = 3 + 0.8x$ and whites ($z = 1$) follow $\hat{y} = 2.4 + 0.8x$; both lines have the **same slope** ($0.8$), separated by a constant vertical gap. Same slope, different intercept means the lines are parallel.
+- **Why not B:** This is the HW3 Problem 2(b) misconception that "one line has slope $\beta_1$ and the other has slope $\beta_2$." The coefficient $-0.6$ multiplies the *dummy*, not $x$, so it is an intercept shift, not a second slope; a different slope per group would require an $x \times z$ interaction term, which is absent here.
+- **Why not C:** It is the *intercept* that differs by group, not the slope. Differing slopes that share an intercept describe an interaction (non-parallel lines crossing at $x = 0$), not the additive ANCOVA model, which forces one common slope.
+- **Why not D:** The dummy *does* change the equation — it lowers the white line's intercept by $0.6$; the two lines would coincide only if the dummy coefficient were zero.
+- **Source:** [Ch. 2 (ANCOVA), "The ANCOVA Model"](../../notes/chapters/02-ancova.html#sec-ch2-model).
+
+:::
+
+### Question 2 — Reading an unadjusted group difference {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 2]`**
+
+A dummy-only regression of years of education ($y$) on a white/non-white dummy ($z$, coded $z = 1$ for white and $z = 0$ for non-white), with no covariate, gives
+
+$$\hat{y} = 11 + 2z.$$
+
+What is the **unadjusted difference** in predicted years of education, **white minus non-white**? Enter a number (you may include a sign).
+
+Unadjusted difference (white − non-white) = ________
+
+#### Answer & Rationale
+
+**Correct answer: 2** (accept **1.9–2.1**, tolerance $\pm 0.1$)
+
+- **Why 2:** The white mean is $11 + 2(1) = 13$ and the non-white mean is $11 + 2(0) = 11$, so white − non-white $= 13 - 11 = +2$ years. In a dummy-only model the dummy coefficient *is* the raw difference in group means, so the answer reads directly off the coefficient on $z$ — whites are estimated to have 2 more years of education than non-whites, before any adjustment.
+- **Tolerance:** the $\pm 0.1$ window absorbs trivial rounding without admitting a wrong method.
+- **Common errors:** answering `13` or `11` reports a single *group mean* rather than the difference; answering `-2` flips the sign (it is white minus non-white, not non-white minus white) — all fall outside the window.
+- **Source:** [Ch. 2 (ANCOVA), "Comparing Unadjusted vs Adjusted Differences"](../../notes/chapters/02-ancova.html#comparing-unadjusted-vs-adjusted-differences).
+
+:::
+
+### Question 3 — The adjusted difference as a constant gap {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 2]`**
+
+In the adjusted model $\hat{y} = 3 + 0.8x - 0.6z$ (with $y$ = years of education, $x$ = father's education, $z = 1$ white / $z = 0$ non-white), the coefficient on $z$ is $-0.6$. Which statement correctly describes this $-0.6$?
+
+A. The constant vertical gap between the two parallel lines — the adjusted white − non-white difference — the same at every value of father's education.
+
+B. The gap between the two lines only at $x = 0$; at other values of father's education the gap differs.
+
+C. The raw difference of $+2$, just written with the opposite sign.
+
+D. A gap that grows wider as father's education increases.
+
+#### Answer & Rationale
+
+**Correct answer: A**
+
+- **Why A is correct:** At any fixed $x$, the white − non-white difference is $(2.4 + 0.8x) - (3 + 0.8x) = -0.6$ — the $x$ terms cancel, so the gap is **constant** at every value of father's education. Because the lines are parallel, $\beta_2 = -0.6$ is the adjusted group difference and equals the constant vertical distance between them: whites are predicted to have $0.6$ *fewer* years of education than non-whites at the same father's education.
+- **Why not B:** The constant gap is a property of the parallel-lines model at *every* $x$, not only at $x = 0$; the intercept shift does not "wear off" away from zero.
+- **Why not C:** $-0.6$ is the *adjusted* difference and is genuinely negative; it is not the unadjusted $+2$ re-signed. Adjustment changes the magnitude *and* the sign — it is a different quantity, not a relabeling.
+- **Why not D:** A gap that grows with $x$ would require non-parallel lines, i.e., an $x \times z$ interaction; in the additive model the gap never changes with father's education.
+- **Source:** [Ch. 2 (ANCOVA), "Comparing Unadjusted vs Adjusted Differences"](../../notes/chapters/02-ancova.html#comparing-unadjusted-vs-adjusted-differences).
+
+:::
+
+### Question 4 — The meaning of "controlling for" {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 2]`**
+
+In the fitted model $\hat{y} = 3 + 0.8x - 0.6z$, the $-0.6$ is the white − non-white difference "controlling for father's education." What does "controlling for father's education" actually mean here?
+
+A. Whites and non-whites were physically recruited so that the two groups had identical father's-education distributions before the data were collected.
+
+B. Father's education was removed from the dataset so that it can no longer influence years of education.
+
+C. The group difference is computed by comparing a white and a non-white person *at the same value of father's education*; it is a statistical operation within the regression, not a physical manipulation.
+
+D. Because father's education is held constant, the $-0.6$ automatically has a causal interpretation.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** "Holding father's education constant" means the model compares a white and a non-white person who share the same value of $x$; the predicted gap between them is exactly $-0.6$ regardless of which common $x$ is chosen. This is a *statistical* adjustment carried out inside the regression, not a physical intervention on anyone.
+- **Why not A:** No one was recruited to balance father's education; the groups differ on it in the data. Controlling for $x$ statistically adjusts for that imbalance — it does not pretend the imbalance was removed by design.
+- **Why not B:** Father's education is not discarded; it remains in the model as a predictor. "Controlling for" a variable means *including* it, not deleting it.
+- **Why not D:** A causal reading requires that *all* relevant confounders be accounted for. Statistically controlling for one covariate does not, by itself, license a causal claim about race.
+- **Source:** [Ch. 2 (ANCOVA), "Estimation and Interpretation"](../../notes/chapters/02-ancova.html#sec-ch2-estimation).
+
+:::
+
+### Question 5 — Computing adjusted group means {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 2]`**
+
+Using the adjusted model $\hat{y} = 3 + 0.8x - 0.6z$ (with $y$ = years of education, $x$ = father's education, $z = 1$ white / $z = 0$ non-white), evaluate the predicted means at **father's education $x = 11$** and complete the sentence: "At $x = 11$, the predicted education is **[blank1]** years for non-whites and **[blank2]** years for whites, so the white − non-white adjusted difference is **[blank3]** years."
+
+#### Answer & Rationale
+
+**Correct answers:** `[blank1]` = 11.8 (accept 11.7–11.9, tolerance $\pm 0.1$) · `[blank2]` = 11.2 (accept 11.1–11.3, tolerance $\pm 0.1$) · `[blank3]` = −0.6 (accept −0.7 to −0.5, tolerance $\pm 0.1$)
+
+- **`[blank1]` (non-white, $z = 0$):** $\hat{y} = 3 + 0.8(11) - 0.6(0) = 3 + 8.8 = 11.8$ years.
+- **`[blank2]` (white, $z = 1$):** $\hat{y} = 3 + 0.8(11) - 0.6(1) = 11.8 - 0.6 = 11.2$ years.
+- **`[blank3]` (white − non-white):** $11.2 - 11.8 = -0.6$ years — the same constant adjusted gap given by the dummy coefficient, here whites $0.6$ years lower.
+- **Common errors:** dropping the $-0.6$ dummy term reports $11.8$ for *both* groups (gap $0$); omitting the $0.8x$ slope term returns the bare intercepts ($3$ and $2.4$); reporting $+0.6$ flips the sign of the gap. The $\pm 0.1$ windows exclude each of these.
+- **Source:** [Ch. 2 (ANCOVA), "Adjusted Group Means"](../../notes/chapters/02-ancova.html#adjusted-group-means).
+
+:::
+
+### Question 6 — What makes a variable a confounder {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Conceptual · Notes Ch. 2]`**
+
+A researcher compares years of education across racial groups and worries that **father's education** confounds the comparison. For father's education to be a confounder of the race–education relationship, what must be true?
+
+A. Father's education must be associated with the outcome (years of education) only.
+
+B. Father's education must be associated with the predictor (race) only.
+
+C. Father's education must be associated with **both** the predictor (race) and the outcome (years of education).
+
+D. Any third variable measured alongside race and education automatically qualifies as a confounder.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** A confounder is a variable associated with **both** the predictor and the outcome. Father's education qualifies because it is related to race (the groups differ in average father's education) *and* to years of education (children of more-educated fathers tend to get more education). That dual association is exactly why ignoring it distorts the raw race comparison.
+- **Why not A:** A variable related to the outcome *only* — independent of race — does not bias the race coefficient; it cannot create a spurious race–education association.
+- **Why not B:** A variable related to the predictor *only* — independent of the outcome — likewise cannot confound, since it carries no information about education.
+- **Why not D:** Being a "third variable" is not the criterion. A variable must be associated with both the predictor and the outcome; many third variables (e.g., ones unrelated to either) are not confounders.
+- **Source:** [Ch. 2 (ANCOVA), "Confounding and Endogeneity"](../../notes/chapters/02-ancova.html#sec-ch2-confounding).
+
+:::
+
+### Question 7 — Adjustment changes the estimand {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 2]`**
+
+**True or False:** Because the white/non-white dummy coefficient means the same thing whether or not father's education is in the model, the $+2$ from the dummy-only model and the $-0.6$ from the adjusted model are just two roundings of a single number.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B is correct:** Adding father's education *changes the estimand*. The dummy-only coefficient is the **unadjusted** difference ($+2$); the coefficient with father's education included is the **adjusted** difference at a common value of father's education ($-0.6$). Here adjustment does not merely shrink the gap — it **reverses its sign**, from $+2$ to $-0.6$. The two coefficients answer different questions; they are not two roundings of one number.
+- **Why not A (True):** Treating the dummy coefficient as fixed "with or without $x$" is the documented misconception that "controlling for $x$" is decoration. The words "controlling for father's education" change *which comparison* the coefficient describes — a raw group difference versus a within-father's-education difference.
+- **Source:** [Ch. 2 (ANCOVA), "Comparing Unadjusted vs Adjusted Differences"](../../notes/chapters/02-ancova.html#comparing-unadjusted-vs-adjusted-differences).
+
+:::
+
+### Question 8 — Predicting the direction of the adjusted gap {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Challenge · Notes Ch. 2]`**
+
+In the United States, mean annual income for Black people ($\mu_1$) is lower than for white people ($\mu_2$). Education is lower on average for Black people, and income is positively related to education. Compared with the raw gap $\mu_2 - \mu_1$, the white − Black income difference **controlling for education** is:
+
+A. Greater than $\mu_2 - \mu_1$.
+
+B. Less than $\mu_2 - \mu_1$.
+
+C. Possibly equal to $\mu_2 - \mu_1$.
+
+D. Unknowable without fitting the model.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** Education is a confounder here — lower on average for Black people and positively related to income — so part of the raw income gap reflects the education gap. Comparing the two groups *at the same education level* removes that education-driven portion, so the education-adjusted income difference is **less than** the raw $\mu_2 - \mu_1$.
+- **Why not A:** Adjustment widens the gap only when the covariate suppresses the raw difference. Here education is higher in the group with higher raw income and positively tied to income, so adjusting *removes* a positive contribution — it cannot enlarge the gap.
+- **Why not C:** Because education is associated with both group and income, controlling for it **will**, given these associations, change the coefficient — it is left exactly unchanged only in the degenerate (knife-edge) case where the relevant associations cancel.
+- **Why not D:** The qualitative direction *is* knowable from the confounding setup — a covariate higher in the higher-income group and positively related to income shrinks the gap. The sign of the change is determined by the stated associations, without estimating the model.
+- **Source:** [Ch. 2 (ANCOVA), "Omitted Variable Bias"](../../notes/chapters/02-ancova.html#sec-ch2-ovb).
+
+:::
+
+### Question 9 — A confounder must change the coefficient {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 2]`**
+
+**True or False:** If a covariate is associated with **both** the predictor and the outcome, then adding it to the model can still leave the predictor's coefficient *exactly* unchanged.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B is correct:** By the omitted-variable-bias logic, the change in a coefficient when a covariate is added is governed by the covariate's association with *both* the predictor and the outcome. If the covariate is related to both (a confounder), that product is nonzero, so adding it **will**, given these associations, change the coefficient — it is left exactly unchanged only in the degenerate (knife-edge) case where the relevant associations cancel. The change may be small, but it is generically not exactly zero.
+- **Why not A (True):** Expecting a both-related covariate to leave the coefficient "exactly" unchanged contradicts the OVB formula; that outcome is precisely what the confounding setup rules out. A coefficient is left exactly unchanged only when the covariate is unrelated to the predictor *or* to the outcome — in which case it is not a confounder of that relationship.
+- **Source:** [Ch. 2 (ANCOVA), "The OVB Formula"](../../notes/chapters/02-ancova.html#the-ovb-formula).
+
+:::
+
+### Question 10 — Collinearity: precision, not bias {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Answer · 2 pts · Challenge · Notes Ch. 2]`**
+
+Two predictors in a regression — father's education and a closely related covariate — are highly collinear (strongly correlated with each other). **Select all** statements that are true.
+
+A. Collinearity inflates the standard errors of the affected coefficients, widening their confidence intervals.
+
+B. Collinearity leaves the coefficient estimates unbiased — in expectation they remain centered on their true values.
+
+C. Bias instead comes from *omitting* a relevant confounder, not from collinearity among included predictors.
+
+D. Collinearity biases the coefficient estimates toward zero, making the effects systematically too small.
+
+E. A large standard error is itself evidence that a coefficient is biased.
+
+#### Answer & Rationale
+
+**Correct answers: A, B, C**
+
+- **Why A is correct:** Collinearity makes the predictors' unique contributions hard to separate, which inflates the standard errors (the variance inflation factor measures exactly this) and widens the confidence intervals.
+- **Why B is correct:** Collinearity is a *variance* (precision) problem, not a *bias* problem — the point estimates stay centered on the true coefficients even as the intervals blow up.
+- **Why C is correct:** Systematic bias arises from *omitting* a relevant confounder (omitted-variable bias), not from correlation among the predictors already in the model. Including a collinear predictor costs precision, not unbiasedness.
+- **Why not D:** This conflates imprecision with bias. Collinearity does not pull the estimates toward zero; their expectation is unchanged.
+- **Why not E:** A large standard error signals *low precision*, not bias. Unbiased estimates can have large standard errors, and biased estimates can have small ones — the size of the SE says nothing about bias.
+- **Source:** [Ch. 2 (ANCOVA), "The Effect of Collinearity"](../../notes/chapters/02-ancova.html#the-effect-of-collinearity).
+
+:::
+
+## Coverage
+
+This quiz draws entirely from Lecture Notes Ch. 2 (ANCOVA), mirroring Homework 3's race + father's-education equations (the raw difference $+2$ reverses to the adjusted difference $-0.6$) and folding in the collinearity-vs-bias diagnostic. The 10 items total **13 points** (Multiple Choice ×5, True/False ×2, Fill-in-the-Blank ×1, Fill-in-Multiple-Blanks ×1, Multiple Answer ×1) and span all three difficulty levels, rising from reading the parallel-lines model to predicting the direction of adjustment and the collinearity-versus-bias distinction.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| 1 | Parallel lines: shared slope, different intercept | Multiple Choice | Conceptual | 1 |
+| 2 | Read the unadjusted difference from a dummy-only model (+2) | Fill-in-the-Blank | Applied | 2 |
+| 3 | Adjusted difference = constant vertical gap (−0.6) | Multiple Choice | Conceptual | 1 |
+| 4 | Meaning of "controlling for" a covariate | Multiple Choice | Conceptual | 1 |
+| 5 | Compute adjusted group means at a fixed $x$ (11.8, 11.2, −0.6) | Fill-in-Multiple-Blanks | Applied | 2 |
+| 6 | A confounder is associated with both predictor and outcome | Multiple Choice | Conceptual | 1 |
+| 7 | Adjustment changes the estimand; can reverse the sign | True/False | Conceptual | 1 |
+| 8 | Predict the direction of the adjusted-vs-raw gap | Multiple Choice | Challenge | 1 |
+| 9 | A both-related covariate must change the coefficient | True/False | Conceptual | 1 |
+| 10 | Collinearity inflates SE but does not bias coefficients | Multiple Answer | Challenge | 2 |
+
+: Quiz 3 item map. {.striped}

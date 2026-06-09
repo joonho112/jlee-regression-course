@@ -1,0 +1,331 @@
+---
+title: "Quiz 7: Logistic Regression & Odds Ratios"
+---
+
+::: {.callout-note}
+## About this quiz
+**Module:** Logistic Regression & Odds Ratios  ·  **Available after:** Week 10  ·  **Source:** Lecture Notes, [Ch. 9 (Simple Logistic Regression)](../../notes/chapters/09-simple-logistic-regression.html), with the adjusted-odds-ratio and confidence-interval items drawn from [Ch. 10 (Multiple Logistic Regression)](../../notes/chapters/10-multiple-logistic-regression.html).
+
+This quiz assesses how to read a logistic regression table on its three reporting scales — the coefficient ($\hat{\beta}$, a change in the log-odds), the odds ratio ($\exp(\hat{\beta})$, a multiplicative factor on the odds), and the percent change in the odds ($100(\exp(\hat{\beta}) - 1)$) — and how to interpret an *adjusted* odds ratio for a continuous predictor and for a 0/1 dummy, holding the other predictors fixed. It also drills the mechanics that trip students up: reading an odds ratio below 1 with its reciprocal (and reversing the comparison group), building an odds-ratio confidence interval on the log-odds scale **first** and then exponentiating, why the reciprocal interval reverses the endpoint order, why a back-transformed interval is asymmetric, and the central distinction that an **odds ratio is not a probability (risk) ratio**. Mirroring Homework 7, every item interprets the same published @kalmijn1994 logistic table for completing high school ($N = 6{,}092$); items are open-book, every coefficient is shown statically, and the emphasis is interpretation over computation.
+:::
+
+## Blackboard settings
+
+| Setting | Value |
+|:--------|:------|
+| Number of questions | 10 |
+| Total points | 14 |
+| Time limit | 60 minutes |
+| Attempts | Unlimited |
+| Score recorded | Highest |
+| Availability | After Week 10 |
+| Show correct answers | After the availability window closes |
+
+: Deployment settings for Quiz 7. Time limit and answer-release timing are proposed defaults (see the [Blackboard Setup](../appendices/blackboard-setup.qmd) appendix). {.striped}
+
+## The Logistic Regression Table
+
+Several items below refer to the table reproduced from @kalmijn1994, Table 2 (Model B) — maximum-likelihood logistic regression coefficients predicting whether a respondent **completed high school** ($1 =$ yes, $0 =$ no), for non-Hispanic white respondents raised by two parents ($N = 6{,}092$). Standard errors are in parentheses; \*$p<.05$, \*\*$p<.01$ (two-tailed). Every coefficient is **adjusted** — estimated holding the other predictors in Model B fixed.
+
+| Independent variable | Coefficient (SE) |
+|:---------------------|-----------------:|
+| Respondent's year of birth ($-63$ to $0$) | 0.350\*\* (0.033) |
+| Father's education (0 to 17) | 0.126\*\* (0.016) |
+| Mother's education (0 to 17) | 0.093\*\* (0.018) |
+| Father's occupation (1 to 9) | 0.295\*\* (0.047) |
+| Mother's occupation (0, 1 to 9) | 0.212\*\* (0.068) |
+| Mother employed ($1 =$ employed, $0 =$ not) | −0.921\*\* (0.189) |
+| Number of siblings | −0.162\*\* (0.016) |
+| Intercept | 0.747\*\* (0.247) |
+
+: Selected logistic regression coefficients from @kalmijn1994, Table 2 (Model B); the year-of-birth coefficient is multiplied by 10 as in the original. {.striped}
+
+## Questions
+
+### Question 1 — The three model-output scales {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Matching · 2 pts · Conceptual · Notes Ch. 9]`**
+
+A logistic regression coefficient can be reported on three related scales. Match each scale a piece of software might print (left) with what that number tells you about the predictor's effect (right).
+
+| Quantity reported | | What it tells you |
+|:------------------|:--|:------------------|
+| 1. $\hat{\beta}$ (the raw coefficient) | | X. The multiplicative factor applied to the **odds** for a one-unit increase in the predictor |
+| 2. $\exp(\hat{\beta})$ (the odds ratio) | | Y. The **percent change** in the odds for a one-unit increase in the predictor |
+| 3. $100\,(\exp(\hat{\beta}) - 1)$ | | Z. The additive change in the **log-odds** for a one-unit increase in the predictor |
+
+#### Answer & Rationale
+
+**Correct pairing: 1 → Z, 2 → X, 3 → Y**
+
+- **1 → Z:** The raw coefficient lives on the **log-odds (logit)** scale; it is the additive change in the log-odds per one-unit increase in the predictor — the scale on which the model is linear (e.g., $+0.093$ in log-odds per year of mother's education).
+- **2 → X:** Exponentiating gives the **odds ratio**, a *multiplicative* factor on the odds — the odds are multiplied by $\exp(\hat{\beta})$ for each one-unit increase (e.g., ×1.10).
+- **3 → Y:** Subtracting 1 and multiplying by 100 re-expresses that same factor as a **percent change in the odds** (e.g., an OR of 1.10 is a $+10\%$ change).
+- **The pattern to remember:** log-odds (additive) → odds ratio (multiplicative) → percent change in odds are three readings of one effect, moved by $\exp(\cdot)$ and then by $100(\cdot - 1)$. All three describe the *odds*, never the probability.
+- **Source:** [Ch. 9 (Simple Logistic Regression), "The Three Scales"](../../notes/chapters/09-simple-logistic-regression.html#the-three-scales).
+
+:::
+
+### Question 2 — Coefficient to odds ratio {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 9]`**
+
+In @kalmijn1994's Model B (above), the adjusted coefficient for **mother's education** is $\hat{\beta} = 0.093$. Convert this coefficient to an **odds ratio** using $\exp(\hat{\beta})$. Give your answer as a single number, rounded to two decimal places.
+
+Odds ratio = ________
+
+#### Answer & Rationale
+
+**Correct answer: 1.10** (accept **1.09–1.11**, tolerance $\pm 0.01$)
+
+- **Why 1.10:** the odds ratio is the *exponentiated* coefficient, $\exp(0.093) = 1.10$. Each additional year of mother's schooling multiplies the odds of completing high school by about 1.10, holding the other predictors fixed.
+- **Tolerance:** the $\pm 0.01$ window absorbs the rounding of $\exp(0.093) = 1.0975\ldots$ without admitting a wrong method.
+- **Common error:** reporting `0.093` forgets to exponentiate — that is the coefficient on the log-odds scale, not the odds ratio. Reporting `0.186` doubles the coefficient ($2 \times 0.093$); the conversion is exponentiation, not multiplication by 2. Both fall outside the window.
+- **Source:** [Ch. 9 (Simple Logistic Regression), "Exponentiated Coefficients"](../../notes/chapters/09-simple-logistic-regression.html#exponentiated-coefficients).
+
+:::
+
+### Question 3 — Interpreting a continuous-predictor odds ratio {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 9]`**
+
+For **mother's education**, Model B gives an adjusted odds ratio of $\exp(0.093) = 1.10$. Which statement best interprets this odds ratio?
+
+A. Each additional year of mother's education multiplies the odds of completing high school by about 0.093 (reading the coefficient itself as the odds multiplier).
+
+B. Holding the other predictors fixed, each additional year of mother's education multiplies the odds of completing high school by about 1.10.
+
+C. Each additional year of mother's education makes a respondent about 10% more likely to complete high school, holding the other predictors fixed.
+
+D. Holding the other predictors fixed, each additional year of mother's education adds 1.10 to the odds of completing high school.
+
+#### Answer & Rationale
+
+**Correct answer: B**
+
+- **Why B is correct:** an odds ratio is a *multiplicative* effect on the **odds** — the odds of completing high school are multiplied by $\exp(0.093) = 1.10$ for each one-year increase in mother's education. Because every Model-B coefficient is adjusted, the effect holds "the other predictors fixed," and the statement names the variable, the direction (odds rise), the magnitude (×1.10 per year), and the scale (odds).
+- **Why not A:** this reads the **raw coefficient** $0.093$ as if it were the odds multiplier. The coefficient lives on the log-odds scale; the odds ratio is its *exponential*, $\exp(0.093) = 1.10$, not $0.093$ itself. Treating the log-odds coefficient as the odds ratio is the misread this distractor captures.
+- **Why not C:** "10% more likely" is a statement about **probability** (relative risk). An OR of 1.10 multiplies the *odds* by 1.10; it does not raise the probability by 10% (see Question 9).
+- **Why not D:** an odds ratio multiplies the odds; it is not *added* to them. "Adds 1.10" treats a multiplicative factor as if it were additive.
+- **Source:** [Ch. 9 (Simple Logistic Regression), "Odds Ratios for Continuous Predictors"](../../notes/chapters/09-simple-logistic-regression.html#odds-ratios-for-continuous-predictors).
+
+:::
+
+### Question 4 — Interpreting a dummy-predictor odds ratio {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 10]`**
+
+**Mother employed** is coded $1 =$ employed, $0 =$ not employed (the reference group). Its coefficient is $\hat{\beta} = -0.921$, so the adjusted odds ratio is $\exp(-0.921) = 0.40$. Which statement best interprets this odds ratio?
+
+A. The odds of graduating for children of non-employed mothers are 0.40 times the odds for children of employed mothers, holding the other predictors fixed.
+
+B. Children of employed mothers have odds of graduating that are 0.40 *lower* than those of children of non-employed mothers, holding the other predictors fixed.
+
+C. Holding the other predictors fixed, the odds of graduating for children of employed mothers are 0.40 times the odds for children of non-employed mothers.
+
+D. Children of employed mothers are 0.40 times as likely to graduate as children of non-employed mothers, holding the other predictors fixed.
+
+#### Answer & Rationale
+
+**Correct answer: C**
+
+- **Why C is correct:** for a 0/1 dummy, the exponentiated coefficient is the ratio of the coded group's odds to the reference group's odds. Here the coded group (mother employed $= 1$) is compared to the reference (not employed $= 0$): the odds of graduating for children of *employed* mothers are $\exp(-0.921) = 0.40$ times those of children of *non-employed* mothers, holding the other predictors fixed.
+- **Why not A:** this reverses the comparison. An OR of 0.40 puts the *employed* group in the numerator; reading it as "non-employed are 0.40 times employed" inverts which group is compared to which (the reversed reading is the reciprocal, $1/0.40 = 2.5$ — see Question 6).
+- **Why not B:** an odds ratio is a *ratio*, not a difference. "0.40 lower" treats the multiplicative factor as a subtraction of odds.
+- **Why not D:** "0.40 times as likely" is a **probability** (relative-risk) statement. The 0.40 multiplies the *odds*, not the probability of graduating.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Adjusted Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#sec-ch10-adjusted-or).
+
+:::
+
+### Question 5 — Odds ratio to percent change in odds {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-the-Blank · 2 pts · Applied · Notes Ch. 9]`**
+
+For **mother's occupation**, Model B gives the coefficient $\hat{\beta} = 0.212$, so the odds ratio is $\exp(0.212) = 1.24$. Express this effect as a **percent change in the odds** of completing high school per one-point increase in the occupational index, using $100\,(\text{OR} - 1)$. Give your answer as a single number (a percentage; a positive number means an increase).
+
+Percent change in odds = ________ %
+
+#### Answer & Rationale
+
+**Correct answer: 24** (accept **23–25**, tolerance $\pm 1$)
+
+- **Why 24:** the percent change in odds is $100\,(\text{OR} - 1) = 100\,(1.24 - 1) = 24$. Each one-point increase in mother's occupational index is associated with about a **24% increase in the odds** of completing high school, holding the other predictors fixed.
+- **Tolerance:** the $\pm 1$ window absorbs whether 1.24 was carried to more decimals; it excludes the wrong-method answers below.
+- **Common error:** reporting `1.24` gives the odds ratio itself, not the percent change (it skips the "$-1$, then $\times 100$" step). Reporting `124` applies $100 \cdot \text{OR}$ and forgets to subtract 1 first — that would say the odds rise 124%, more than double. Both fall outside the window.
+- **Source:** [Ch. 9 (Simple Logistic Regression), "Odds Ratios for Continuous Predictors"](../../notes/chapters/09-simple-logistic-regression.html#odds-ratios-for-continuous-predictors).
+
+:::
+
+### Question 6 — Reciprocal odds ratio when OR < 1 {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Multiple Choice · 1 pt · Applied · Notes Ch. 9]`**
+
+For **mother employed** ($1 =$ employed, $0 =$ not), the odds ratio is $\exp(-0.921) = 0.40$, which is awkward to describe because it is below 1. A cleaner reading uses the reciprocal, $1/0.40 = 2.5$. Which statement reports this reciprocal correctly?
+
+A. Children of employed mothers have about 2.5 times the odds of completing high school as children of non-employed mothers.
+
+B. The odds of completing high school for children of employed mothers are about 60% lower (since $1 - 0.40 = 0.60$) than for children of non-employed mothers.
+
+C. The reciprocal of 0.40 is about 2.5, so children of employed mothers have about 2.5 times the odds of completing high school as children of non-employed mothers — the same comparison, just rescaled.
+
+D. Children of **non-employed** mothers have about 2.5 times the odds of completing high school as children of employed mothers, holding the other predictors fixed.
+
+#### Answer & Rationale
+
+**Correct answer: D**
+
+- **Why D is correct:** taking the reciprocal of an odds ratio also **reverses the comparison group**. The original OR of 0.40 compares employed → non-employed; its reciprocal, $1/0.40 = 2.5$, compares **non-employed → employed**. So children of *non-employed* mothers have about 2.5 times the odds of graduating as children of employed mothers, holding the others fixed — both the number (2.5) and the direction (non-employed vs employed) flip together.
+- **Why not A:** this reciprocates the number (2.5) but keeps the *original* group as the subject; the 2.5 belongs to the *non-employed* group, not the employed one.
+- **Why not B:** $1 - 0.40 = 0.60$ is not how odds ratios convert to "percent lower," and this abandons the reciprocal entirely. (A correct "60% lower" reading would come from $100\,(0.40 - 1)$, an OR statement, not from $1 - \text{OR}$.)
+- **Why not C:** it is *not* "the same comparison." Reciprocating the odds ratio necessarily flips the reference and comparison groups; calling it the same comparison is the error.
+- **Source:** [Ch. 9 (Simple Logistic Regression), "Exponentiated Coefficients"](../../notes/chapters/09-simple-logistic-regression.html#exponentiated-coefficients).
+
+:::
+
+### Question 7 — Building the odds-ratio confidence interval {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[Fill-in-Multiple-Blanks · 2 pts · Applied · Notes Ch. 10]`**
+
+For **mother employed**, Model B reports $\hat{\beta} = -0.921$ with $SE = 0.189$. Build the 95% confidence interval for the **odds ratio** the correct way: first form the interval on the **log-odds** scale, $\hat{\beta} \pm 1.96\,SE$, then **exponentiate** each endpoint.
+
+The log-odds interval is $-0.921 \pm 1.96(0.189) = [-1.291,\ -0.551]$. Exponentiate to get the odds-ratio interval:
+
+OR CI lower, $\exp(-1.291) =$ **[blank1]** ·  OR CI upper, $\exp(-0.551) =$ **[blank2]**
+
+(Round each endpoint to three decimal places.)
+
+#### Answer & Rationale
+
+**Correct answers:** `[blank1]` = **0.275** (accept **0.27–0.28**, tolerance $\pm 0.01$) · `[blank2]` = **0.576** (accept **0.57–0.58**, tolerance $\pm 0.01$)
+
+- **`[blank1]`:** $\exp(-1.291) = 0.275$ — the lower odds-ratio limit comes from exponentiating the *lower* log-odds limit.
+- **`[blank2]`:** $\exp(-0.551) = 0.576$ — the upper odds-ratio limit comes from exponentiating the *upper* log-odds limit. The full interval is $[0.275,\ 0.576]$, which excludes 1, consistent with the significant negative coefficient.
+- **Why the order matters:** the symmetric "$\pm 1.96\,SE$" formula is only valid on the **log-odds** scale, where the sampling distribution is approximately normal. You build the interval there *first* and exponentiate the endpoints; you never apply $\pm 1.96\,SE$ directly to the odds ratio. A common slip is to exponentiate $\hat{\beta}$ to 0.40 first and then do "$0.40 \pm 1.96(0.189)$," which applies the normal-approximation formula on the wrong scale and gives the wrong endpoints (see Question 10).
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Confidence Intervals for Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#confidence-intervals-for-odds-ratios).
+
+:::
+
+### Question 8 — Reciprocating a confidence interval {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Challenge · Notes Ch. 10]`**
+
+For **mother employed**, the odds-ratio confidence interval is $[0.275,\ 0.576]$. A student wants the **reciprocal** interval (so the limits read above 1, for the "non-employed vs employed" comparison) and writes: "Just take the reciprocal of each endpoint **in place**, giving $[1/0.275,\ 1/0.576] = [3.6,\ 1.7]$."
+
+**True or False:** This is the correct way to form the reciprocal confidence interval.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** taking reciprocals is *order-reversing* — because $1/x$ is decreasing, the *larger* odds ratio (0.576) yields the *smaller* reciprocal and the *smaller* odds ratio (0.275) yields the *larger* reciprocal. You must reciprocate **and reverse the endpoint order**, giving $[\,1/0.576,\ 1/0.275\,] = [1.7,\ 3.6]$, a properly ordered (low, high) interval. Reciprocating "in place" leaves the limits as $[3.6,\ 1.7]$, whose "lower" limit exceeds its "upper" limit.
+- **Why "True" is wrong:** it forgets that $1/x$ is a *decreasing* function, so reciprocating without swapping the endpoints leaves the interval written backwards. The reciprocal of the *upper* OR limit must become the *lower* reciprocal limit, and vice versa. (This mirrors reversing the comparison group when you reciprocate a single odds ratio, as in Question 6.)
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Confidence Intervals for Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#confidence-intervals-for-odds-ratios).
+
+:::
+
+### Question 9 — An odds ratio is not a probability ratio {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 9]`**
+
+For **mother's education**, the adjusted odds ratio is $\exp(0.093) = 1.10$.
+
+**True or False:** This odds ratio means that each additional year of mother's schooling makes a respondent about **10% more likely** to complete high school.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: B (False)**
+
+- **Why B (False) is correct:** "10% more likely" is a statement about **probability** (relative risk). An odds ratio of 1.10 multiplies the **odds** by 1.10 — about a 10% increase in the *odds*, not in the *probability*. An odds ratio is **not** a probability/risk ratio: the two coincide only when the outcome is rare (roughly $\pi < 0.10$ in both groups), and high-school completion is a common outcome in these data, so the percent change in the odds should not be reported as a percent change in the chance of the event.
+- **Why "True" is wrong:** equating "10% higher odds" with "10% more likely" is one of the most common errors in applied logistic regression. The correct phrasing is "the *odds* are about 10% higher," and converting to a probability change requires predicted probabilities, which depend on the baseline rate.
+- **Source:** [Ch. 9 (Simple Logistic Regression), "The Critical Distinction: OR vs Probability Ratio"](../../notes/chapters/09-simple-logistic-regression.html#the-critical-distinction-or-vs-probability-ratio).
+
+:::
+
+### Question 10 — A back-transformed odds-ratio CI is asymmetric {.unnumbered}
+
+::: {.panel-tabset}
+
+#### Question
+
+**`[True/False · 1 pt · Conceptual · Notes Ch. 10]`**
+
+For **mother employed**, the log-odds interval $[-1.291,\ -0.551]$ exponentiates to the odds-ratio interval $[0.275,\ 0.576]$, around the point estimate $\exp(-0.921) = 0.40$.
+
+**True or False:** Because exponentiating is a nonlinear transformation, the back-transformed odds-ratio interval is generally **asymmetric** around $\exp(\hat{\beta})$ — the point estimate is not the arithmetic midpoint of the two limits — even though the interval is symmetric on the log-odds scale.
+
+A. True
+
+B. False
+
+#### Answer & Rationale
+
+**Correct answer: A (True)**
+
+- **Why A (True) is correct:** the interval $\hat{\beta} \pm 1.96\,SE$ is symmetric on the **log-odds** scale, but $\exp(\cdot)$ is *nonlinear*, so the exponentiated endpoints are not equidistant from $\exp(\hat{\beta})$. Here the arithmetic midpoint of $[0.275,\ 0.576]$ is about $0.43$, not the point estimate $0.40$ — the estimate sits closer to the lower limit, confirming the asymmetry.
+- **Why "False" is wrong:** expecting $\exp(\hat{\beta})$ to fall at the arithmetic midpoint of its CI carries over an OLS habit (where a coefficient *is* centered in its symmetric interval) onto the odds-ratio scale. Symmetry holds only on the log-odds scale; after back-transforming, the interval is asymmetric — which also respects that odds ratios are bounded below by 0 with no upper bound.
+- **Source:** [Ch. 10 (Multiple Logistic Regression), "Confidence Intervals for Odds Ratios"](../../notes/chapters/10-multiple-logistic-regression.html#confidence-intervals-for-odds-ratios).
+
+:::
+
+## Coverage
+
+This quiz draws from Lecture Notes Ch. 9 (Simple Logistic Regression, 6 items) and Ch. 10 (Multiple Logistic Regression, 4 items), and mirrors Homework 7's interpretation of @kalmijn1994's published high-school-completion logistic table. The 10 items total **14 points** (Multiple Choice ×3, True/False ×3, Fill-in-the-Blank ×2, Fill-in-Multiple-Blanks ×1, Matching ×1) and span all three difficulty levels (Conceptual ×3, Applied ×6, Challenge ×1). The keyed correct responses are spread across the option letters.
+
+| # | Concept | Type | Difficulty | Pts |
+|:--|:--------|:-----|:-----------|:---:|
+| Q7-01 | The three scales: $\hat{\beta}$ → $\exp(\hat{\beta})$ → % change in odds | Matching | Conceptual | 2 |
+| Q7-02 | Coefficient to odds ratio, $\exp(0.093) = 1.10$ | Fill-in-the-Blank | Applied | 2 |
+| Q7-03 | Interpret a continuous-predictor adjusted OR (odds × 1.10) | Multiple Choice | Applied | 1 |
+| Q7-04 | Interpret a 0/1-dummy adjusted OR (0.40, employed vs reference) | Multiple Choice | Applied | 1 |
+| Q7-05 | Odds ratio to percent change in odds, $100(1.24-1) = +24\%$ | Fill-in-the-Blank | Applied | 2 |
+| Q7-06 | OR below 1: reciprocal $1/0.40 = 2.5$, reverse the comparison group | Multiple Choice | Applied | 1 |
+| Q7-07 | Build the OR CI: log-odds first, then exponentiate ($[0.275, 0.576]$) | Fill-in-Multiple-Blanks | Applied | 2 |
+| Q7-08 | Reciprocal-OR CI reverses the endpoint order ($[1.7, 3.6]$) | True/False | Challenge | 1 |
+| Q7-09 | An odds ratio is not a probability/risk ratio | True/False | Conceptual | 1 |
+| Q7-10 | A back-transformed OR CI is asymmetric around $\exp(\hat{\beta})$ | True/False | Conceptual | 1 |
+
+: Quiz 7 item map. {.striped}

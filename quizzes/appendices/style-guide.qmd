@@ -4,7 +4,7 @@ title: "Item-Writing Style Guide"
 
 ## Purpose
 
-This appendix is the **single contract** that every module quiz in this book follows. It standardizes how all **six module quizzes** are written so the chapters read as one consistent assessment instrument, and so any item can be authored, reviewed, revised, or deployed without re-deciding format each time.
+This appendix is the **single contract** that every module quiz in this book follows. It standardizes how all **eight module quizzes** are written so the chapters read as one consistent assessment instrument, and so any item can be authored, reviewed, revised, or deployed without re-deciding format each time.
 
 Concretely, this guide fixes:
 
@@ -12,8 +12,8 @@ Concretely, this guide fixes:
 - the **metadata tag** that opens every Question tab (type · points · difficulty · source);
 - the **point values** by item type and the per-quiz point total;
 - the **difficulty tags** (`Conceptual`, `Applied`, `Challenge`);
-- the **source citations** back to the [Lecture Notes](../notes/), down to the nearest section; and
-- the **master Blackboard deployment settings** shared across all six quizzes.
+- the **source citations** back to the [Lecture Notes](../../notes/), down to the nearest section; and
+- the **master Blackboard deployment settings** shared across all eight quizzes.
 
 The quizzes themselves are **mastery-based, open-book, unlimited-attempts, and auto-graded**. Every rule below follows from those four properties: items must be auto-gradable in Blackboard, they must reward reasoning rather than lookup, and because students may retake a quiz without limit, each item is a **diagnostic checkpoint** rather than a one-shot, high-stakes question.
 
@@ -36,7 +36,7 @@ These principles govern *what* a good item looks like, independent of its Blackb
 
 5. **Static-output rule.** Present any regression tables, model output, or numeric results as **typed, static markdown** — a hand-written pipe table or an inline number — **not** as a live R chunk. This book ships **without a committed `_freeze` cache**, so a live R chunk would force `quarto render` to actually execute the full package stack (`regdatasets`, `easystats`, and friends) in CI, where it can fail. Type the coefficient table; write the $R^2$ as text. Reserve **live R only for an essential figure** that cannot be supplied as a static image (e.g., a residual-vs-fitted plot the item asks the student to read) — and when you do, render it once and **commit its freeze** so CI never re-executes it. Rule of thumb: if it is a table or a number, type it; if it is a plot you truly need rendered, freeze it.
 
-6. **Originality.** **Never copy a question verbatim** from IMS, OpenIntro, Agresti, or any other source. Emulate their *style* only — reading real output, interpreting in context, stepwise difficulty, residual-plot judgment — and write **fresh items** from this course's own Lecture Notes (its examples, notation, and Key Takeaways) and the [`regdatasets`](../regdatasets/) datasets. This protects against copyright issues and keeps every item aligned to what this course actually taught.
+6. **Originality.** **Never copy a question verbatim** from IMS, OpenIntro, Agresti, or any other source. Emulate their *style* only — reading real output, interpreting in context, stepwise difficulty, residual-plot judgment — and write **fresh items** from this course's own Lecture Notes (its examples, notation, and Key Takeaways) and the [`regdatasets`](../../regdatasets/) datasets. This protects against copyright issues and keeps every item aligned to what this course actually taught.
 
 7. **Stepwise difficulty.** Within each quiz, order and tag items so difficulty rises from definition/reading (`Conceptual`) through calculation and output-reading (`Applied`) to assumption-checking, diagnosis, and synthesis (`Challenge`). Interpretation items generally precede the calculation items that depend on them.
 
@@ -366,7 +366,7 @@ D. <option>
 | Fill-in-the-Blank (numeric) | **2 pts** |
 | Fill-in-Multiple-Blanks | **2 pts** |
 
-The two single-response types (Multiple Choice, True/False) are worth **1 point**; the types that require assembling a set, a pairing, or a computed value (Multiple Answer, Matching, Fill-in-the-Blank, Fill-in-Multiple-Blanks) are worth **2 points**, reflecting their higher cognitive load. Each quiz totals **≈ 20 points**, and the **mastery percentage is computed from that total**. Mix 1-point and 2-point items to land near 20; the exact composition matters less than hitting the ~20-point target consistently across quizzes. (The mastery scale, per the [Preface](../index.qmd): Full ≥ 80%, Partial 60–79%, Minimal < 60%.)
+The two single-response types (Multiple Choice, True/False) are worth **1 point**; the types that require assembling a set, a pairing, or a computed value (Multiple Answer, Matching, Fill-in-the-Blank, Fill-in-Multiple-Blanks) are worth **2 points**, reflecting their higher cognitive load. Each quiz is **right-sized to its paired homework** (roughly 9–13 items, 12–17 points), and the **mastery percentage is computed from each quiz's own total**. Mix 1-point and 2-point items to fit the quiz's length; the exact point total matters less than balanced coverage of the quiz's learning targets. (The mastery scale, per the [Preface](../index.qmd): Full ≥ 80%, Partial 60–79%, Minimal < 60%.)
 
 ### Difficulty tags
 
@@ -384,22 +384,39 @@ Aim for a spread across all three within each quiz, weighted toward `Conceptual`
 
 > **Source:** Lecture Notes, Ch. 9 (Logistic Regression), "Interpreting odds ratios".
 
-That is: `Ch. N` + the chapter title in parentheses + the quoted section or heading the item draws on. Cite the **most specific heading** under which the tested idea is taught — not just the chapter. The chapter number must match the `Notes Ch. N` field in the item's metadata tag. When an item draws on a labeled callout, name it (e.g., `"Common Pitfall: odds ratios are not probability ratios"`), since those callouts are the documented source of the distractors. For computational review, the Answer tab may additionally point to the matching [R Lab Book](../labs/) chapter, but the **Lecture Notes citation is required**.
+That is: `Ch. N` + the chapter title in parentheses + the quoted section or heading the item draws on. Cite the **most specific heading** under which the tested idea is taught — not just the chapter. The chapter number must match the `Notes Ch. N` field in the item's metadata tag. When an item draws on a labeled callout, name it (e.g., `"Common Pitfall: odds ratios are not probability ratios"`), since those callouts are the documented source of the distractors. For computational review, the Answer tab may additionally point to the matching [R Lab Book](../../labs/) chapter, but the **Lecture Notes citation is required**.
 
 This convention lets any reviewer trace each item to where its concept was taught: it confirms alignment with the course content, locates the exact passage to consult when revising, and makes coverage gaps visible when the items are audited against the notes.
 
+### Hyperlink the citation to the exact section {#source-links}
+
+Because the quizzes double as **formative feedback**, the Source line must be a **live hyperlink to the nearest Lecture-Notes section**, not just a text citation. Use this exact form (the path is relative to a quiz chapter in `chapters/`):
+
+> **Source:** [Ch. 1 (Simple Linear Regression), "OLS Estimation"](../../notes/chapters/01-simple-linear-regression.html#sec-ch1-ols).
+
+That is: `[Ch. N (Title), "Section"](../../notes/chapters/NN-name.html#anchor-id)`. The `#anchor-id` is the **ground-truth `<section id>`** from the rendered notes HTML (math slugs to alphanumerics — `$R^2$` → `r2`, `$X^2$` → `x2`; periods and duplicate-heading `-1` suffixes survive). A student following the link should land on the precise passage the item draws on, ready to review.
+
+::: {.callout-important}
+## Three authoring guards (carry these into every item)
+1. **One objective per stem.** Never key a single True/False or Multiple-Choice item on *two* facts (e.g., "same null hypothesis **and** $F = t^2$"). Split it, or make it a Fill-in-Multiple-Blanks so each idea is scored independently.
+2. **De-bias option length.** The correct option must not be reliably the longest or most-qualified choice — a test-wiseness tell. Keep all options parallel in grammar, length, and specificity.
+3. **No recall-by-lookup.** Open-book matching items must require reasoning, not copying a formula straight from a notes table.
+:::
+
 ## Master Blackboard Settings
 
-These are the **shared deployment defaults for all six quizzes**. Each row is one quiz.
+These are the **shared deployment defaults for all eight quizzes**. Each row is one quiz.
 
 | Quiz | Available after | Time limit | Attempts | Score recorded | Target item count | Target points | Show correct answers |
 |:-----|:---------------:|:----------:|:--------:|:--------------:|:-----------------:|:-------------:|:--------------------:|
-| Quiz 1 — Foundations | Week 3 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
-| Quiz 2 — Categorical Predictors | Week 5 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
-| Quiz 3 — Interactions | Week 7 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
-| Quiz 4 — Model Building & Diagnostics | Week 9 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
-| Quiz 5 — Logistic Regression | Week 11 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
-| Quiz 6 — Logistic Diagnostics | Week 12 | 60 minutes | Unlimited | Highest | 12–15 | ≈ 20 | After availability window closes |
+| Quiz 1 — Simple Linear Regression | Week 2 | 60 minutes | Unlimited | Highest | 9 | 12 | After availability window closes |
+| Quiz 2 — Dummy Variables & the *t*-Test | Week 3 | 60 minutes | Unlimited | Highest | 9 | 12 | After availability window closes |
+| Quiz 3 — Confounding & ANCOVA | Week 4 | 60 minutes | Unlimited | Highest | 10 | 13 | After availability window closes |
+| Quiz 4 — One-Way ANOVA & Multiple Comparisons | Week 5 | 60 minutes | Unlimited | Highest | 12 | 15 | After availability window closes |
+| Quiz 5 — Interactions & Simple Slopes | Week 7 | 60 minutes | Unlimited | Highest | 13 | 17 | After availability window closes |
+| Quiz 6 — Two-Way ANOVA & Interaction | Week 8 | 60 minutes | Unlimited | Highest | 11 | 16 | After availability window closes |
+| Quiz 7 — Logistic Regression & Odds Ratios | Week 10 | 60 minutes | Unlimited | Highest | 10 | 14 | After availability window closes |
+| Quiz 8 — Multiple Logistic & Simpson's Paradox | Week 11 | 60 minutes | Unlimited | Highest | 11 | 15 | After availability window closes |
 
 ::: {.callout-note}
 ## Notes on the settings table
@@ -421,5 +438,5 @@ Run through this checklist for **every** new question, end to end, before consid
 7. **Build distractors from documented misconceptions** (Lecture Notes "Common Pitfall" callouts) — one diagnostic error per wrong option.
 8. **Key the answer.** Lead with the bold correct answer in the type-appropriate form, add the why-correct bullet, a why-not bullet per distractor, and — for numeric items — the keyed value and tolerance.
 9. **Cite the source.** `**Source:** Lecture Notes, Ch. N (<Title>), "<nearest section>".`
-10. **Self-check:** single unambiguous answer (single-select)? one objective? open-book-appropriate (not pure recall)? interpretation states variable/direction/magnitude/units? points keep the quiz near ~20? original (not copied from IMS/OpenIntro/Agresti)?
+10. **Self-check:** single unambiguous answer (single-select)? one objective? open-book-appropriate (not pure recall)? interpretation states variable/direction/magnitude/units? points fit the quiz's right-sized total? original (not copied from IMS/OpenIntro/Agresti)?
 11. **Render** with the markdown engine and confirm both tabs display correctly, the heading is `{.unnumbered}`, no live R was introduced, and any essential figure has a committed freeze.
