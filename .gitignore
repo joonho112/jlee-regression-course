@@ -21,7 +21,6 @@ site_libs/
 Thumbs.db
 
 # Local editor / tooling config (not part of the course materials)
-.claude/
 .vscode/
 .idea/
 
@@ -39,3 +38,6 @@ practice/_*/
 practice/ADR.md
 practice/extract/parser_*.py
 practice/extract/build_banks_a.py
+
+# website/ — internal QA/dev link-check scripts kept locally, not published
+website/scratch-*.R

@@ -1,8 +1,4 @@
 page-layout: article
-date-format: "MMMM D, YYYY"   # weekly session date shown in the .date-banner
 
-# Use the date-banner title-metadata partial on all content pages
-format:
-  html:
-    template-partials:
-      - ../html/title-metadata.html
+# Session pages are semester-agnostic — no dates, no date-banner.
+# (Each offering's term calendar is set by the instructor on Blackboard.)

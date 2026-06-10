@@ -4,7 +4,7 @@ title: "Datasets (regdatasets)"
 
 ## Overview
 
-All datasets used in {{< var course.number >}} are bundled in the **regdatasets** R package (v0.2.0). This package provides 24 curated educational datasets drawn from published research in education, psychology, and the social sciences. Each dataset is cleaned, documented, and ready for analysis.
+All datasets used in {{< var course.number >}} are bundled in the **regdatasets** R package (v0.2.0). This package provides {{< var materials.datasets >}} curated educational datasets drawn from published research in education, psychology, and the social sciences. Each dataset is cleaned, documented, and ready for analysis.
 
 {{< fa database >}} [**regdatasets Package Documentation**]({{< var books.regdatasets >}}){target="_blank"}
 
@@ -62,7 +62,7 @@ The table below lists the primary datasets referenced in homework assignments, l
 
 ::: {.callout-note}
 ## Additional datasets
-The `regdatasets` package contains 24 datasets in total. Many additional datasets appear in the R Lab Book and supplementary exercises. Run `data(package = "regdatasets")` to see the full list.
+The `regdatasets` package contains {{< var materials.datasets >}} datasets in total. Many additional datasets appear in the Lab Manual and supplementary exercises. Run `data(package = "regdatasets")` to see the full list.
 :::
 
 

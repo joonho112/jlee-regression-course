@@ -1,38 +1,34 @@
 ---
-title: "Week 2: Simple Linear Regression I"
-date: "2026-08-24"
+title: "Session 2 · Simple Linear Regression"
 ---
 
 ## Overview
 
-This week introduces the simple linear regression (SLR) model, the building block for everything that follows in the course. You will learn how ordinary least squares (OLS) estimation finds the best-fitting line through a cloud of data points, how to interpret the slope and intercept in context, and how R-squared summarizes model fit. These ideas carry directly into every subsequent regression topic.
+This session introduces the workhorse of the entire course: the simple linear regression model. We learn how a single straight line summarizes the relationship between two variables, what the slope and intercept actually mean, and how to fit and interpret a model with R's `lm()`. Everything that follows --- dummies, ANCOVA, and multiple predictors --- is a generalization of the ideas we establish here.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Write the population and sample SLR equations and define each term
-- Explain how OLS minimizes the sum of squared residuals to estimate slope and intercept
-- Interpret the slope and intercept in the context of a research problem
-- Calculate and interpret R-squared as the proportion of variance explained
-- Create and interpret scatterplots with fitted regression lines in R
+- State the simple linear regression model and define its slope and intercept.
+- Fit a simple linear regression in R using the `lm()` function.
+- Interpret the estimated slope and intercept in the context of the data.
+- Compute and interpret fitted values and residuals.
+- Distinguish between the population model and its sample estimates.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 1: Simple Linear Regression]({{< var books.lecture_notes >}}/chapters/01-simple-linear-regression.html){target="_blank"}
+- {{< fa book-open-reader >}} **Read:** [Chapter 1: Simple Linear Regression](/notes/chapters/01-simple-linear-regression.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 2: Simple Linear Regression](/labs/labs/lab02-simple-regression.html){target="_blank"}
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 02: Simple Regression in R]({{< var books.r_lab_book >}}/labs/lab02-simple-regression.html){target="_blank"}
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **SLR model** | A model predicting an outcome from a single predictor using a straight line |
-| **OLS estimation** | A method that finds slope and intercept by minimizing the sum of squared residuals |
-| **Slope (b1)** | The expected change in Y for a one-unit increase in X |
-| **Intercept (b0)** | The predicted value of Y when X equals zero |
-| **Residual** | The difference between an observed Y value and its predicted value |
-| **R-squared** | The proportion of variance in Y explained by the linear relationship with X |
-| **Fitted value** | The predicted Y for a given X based on the estimated regression equation |
+| **Simple linear regression** | A model relating an outcome to a single predictor through a straight line. |
+| **Slope** | The expected change in the outcome for a one-unit increase in the predictor. |
+| **Intercept** | The expected value of the outcome when the predictor equals zero. |
+| **Fitted value** | The model's predicted outcome for a given value of the predictor. |
+| **Residual** | The difference between an observed outcome and its fitted value. |
+| **Least squares** | The estimation method that chooses the line minimizing the sum of squared residuals. |
+| **`lm()`** | R's function for fitting linear models. |

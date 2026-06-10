@@ -5,28 +5,25 @@ title: Syllabus
 :::: {.grid .course-details}
 
 ::: {.g-col-12 .g-col-sm-6 .g-col-md-4}
-### Instructor
+### Course
 
-- {{< fa user >}} [{{< var instructor.name >}}]({{< var instructor.url >}})
-- {{< fa building >}} {{< var instructor.office >}}
-- {{< fa envelope >}} [{{< var instructor.email >}}](mailto:{{< var instructor.email >}})
-- {{< fa clock >}} {{< var instructor.office_hours >}}
+- {{< fa graduation-cap >}} {{< var course.level >}}
+- {{< fa laptop >}} {{< var course.modality >}}
+- {{< fa location-dot >}} {{< var course.location >}}
+- {{< fa building-columns >}} {{< var university.name >}}
 :::
 
 ::: {.g-col-12 .g-col-sm-6 .g-col-md-4}
-### Course Details
+### Instructor
 
-- {{< fa calendar >}} {{< var course.semester >}}
-- {{< fa calendar-days >}} {{< var course.dates >}}
-- {{< fa location-dot >}} {{< var course.location >}}
+- {{< fa chalkboard-user >}} **{{< var instructor.name >}}** *(set each term)*
+- {{< fa pen-nib >}} Developed by {{< var developer.name >}}
 :::
 
 ::: {.g-col-12 .g-col-md-4}
-### Contact Policy
+### This offering
 
-{{< var instructor.contact_policy >}}
-
-[{{< fa calendar-check >}} Schedule an appointment]({{< var instructor.appointment_url >}})
+Each time the course runs, the instructor sets contact details, office hours, and the term calendar. Check your section's landing page (e.g., Blackboard) for this term's specifics; this site is the authoritative source for **content and assessment design**.
 :::
 
 ::::
@@ -34,7 +31,7 @@ title: Syllabus
 
 ## Course Description
 
-**{{< var course.number >}}: {{< var course.title >}}** is a graduate-level course that develops practical competence in regression-based data analysis using R. This course follows a **"specific to general" pedagogical approach**, beginning with simple linear regression---a model most students have encountered---and progressively extending to more complex frameworks.
+**{{< var course.number >}}: {{< var course.title >}}** is a graduate-level course that develops practical competence in regression-based data analysis using R. It follows a **"specific to general" pedagogical approach**, beginning with simple linear regression---a model most students have encountered---and progressively extending to more complex frameworks.
 
 ### Learning Arc
 
@@ -44,10 +41,10 @@ We begin with **Simple Linear Regression** and expand to:
 - **Multiple Regression** --- adding continuous predictors and understanding confounding
 - **Interactions and Nonlinear Relationships** --- capturing complexity in data
 - **Model Building and Diagnostics** --- ensuring model validity
-- **Logistic Regression** --- extending to binary outcomes
+- **Logistic Regression** --- extending to binary and ordinal outcomes
 - **Generalized Linear Models** --- the unifying framework
 
-By semester's end, you'll understand that familiar tests like the *t*-test and ANOVA are simply special cases of the regression model.
+By the end of the course, you'll understand that familiar tests like the *t*-test and ANOVA are simply special cases of the regression model.
 
 
 ## Learning Objectives
@@ -59,7 +56,7 @@ By the end of this course, you will be able to:
 3. **Diagnose** violations of model assumptions and identify influential observations
 4. **Build** parsimonious models using confirmatory and exploratory strategies
 5. **Extend** regression to binary and ordinal outcomes via logistic and ordinal regression
-6. **Implement** all statistical analyses in R with reproducible, well-documented code
+6. **Implement** statistical analyses in R with reproducible, well-documented code
 7. **Communicate** statistical findings clearly to diverse audiences
 
 
@@ -67,14 +64,15 @@ By the end of this course, you will be able to:
 
 All course materials are **open-access** and free. You will also need R, RStudio, and internet access.
 
-### Textbooks and Resources
+### Textbooks and resources
 
 | Material | Description |
 |----------|-------------|
-| {{< fa book-open >}} [**Lecture Notes**]({{< var books.lecture_notes >}}){target="_blank"} | Primary textbook: 13 chapters covering theory, math, and R code |
-| {{< fa laptop-code >}} [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | 13 hands-on tutorials for applied practice |
-| {{< fa clipboard-list >}} [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines, examples, and rubrics for the course projects |
-| {{< fa database >}} [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package with 24 curated educational datasets |
+| {{< fa book-open >}} [**Lecture Notes**]({{< var books.lecture_notes >}}){target="_blank"} | Primary textbook: {{< var materials.chapters >}} chapters covering theory, math, and R code |
+| {{< fa laptop-code >}} [**Lab Manual**]({{< var books.r_lab_book >}}){target="_blank"} | {{< var materials.labs >}} hands-on R tutorials for applied practice |
+| {{< fa circle-question >}} [**Practice Quizzes**]({{< var books.practice_quizzes >}}){target="_blank"} | {{< var materials.quizzes >}} interactive, ungraded self-checks that mirror the graded Module Quizzes, with instant feedback |
+| {{< fa clipboard-list >}} [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines, worked examples, and rubrics for the {{< var materials.projects >}} course projects |
+| {{< fa database >}} [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package with {{< var materials.datasets >}} curated educational datasets |
 
 ### Software
 
@@ -87,69 +85,86 @@ For installation help, see the [R Setup Guide](/resource/r-setup.qmd).
 
 ## Course Structure
 
-This is a **fully asynchronous online course**. Each week, you will:
+This is a **fully asynchronous, self-paced online course** organized into **{{< var materials.sessions >}} sessions** (see the [Schedule](/schedule.qmd)). In each session you will:
 
 1. {{< fa book-open >}} **Read** the Lecture Notes chapter(s)
-2. {{< fa laptop-code >}} **Complete** the R Lab tutorial(s)
-3. {{< fa pencil >}} **Submit** Homework or Project Milestone (when due)
-4. {{< fa clipboard-check >}} **Take** the Module Quiz (when due)
+2. {{< fa laptop-code >}} **Complete** the matching R Lab tutorial
+3. {{< fa circle-question >}} **Self-check** with the interactive Practice Quiz
+4. {{< fa pencil >}} **Submit** Homework, a graded **Module Quiz**, or a Project milestone (when due)
 
-See the [Schedule](/schedule.qmd) for the 15-week outline.
-
-**Expected workload**: 10--12 hours per week for a 3-credit graduate course.
+**Expected workload**: approximately 10--12 hours per week for a 3-credit graduate course.
 
 
 ## Grading and Assessment
 
 ::: {.callout-note}
-## Grading Philosophy
+## Grading philosophy
 
-This course prioritizes **learning over perfection**. Homework is graded on completion (not correctness), and quizzes allow unlimited attempts. This approach reduces statistics anxiety and encourages genuine engagement with the material.
+This course prioritizes **learning over perfection**. Homework is graded on completion (not correctness), and graded quizzes allow unlimited attempts. This approach reduces statistics anxiety and encourages genuine engagement with the material.
 
-*Note: This website reflects the updated Fall 2026 assessment plan. If there are any discrepancies with earlier course documentation, this website is the authoritative source.*
+*This website is the authoritative source for the assessment design. If earlier course documents differ, follow the plan described here.*
 :::
 
 Your final grade is based on four components:
 
-### Grading Breakdown
+### Grading breakdown
+
+::: {.assessment-donut}
+<svg class="donut" viewBox="0 0 42 42" role="img" aria-label="Grade weighting: Homework 50 percent, Project 1 (Linear) 20 percent, Project 2 (Logistic) 20 percent, Module Quizzes 10 percent.">
+  <circle cx="21" cy="21" r="15.915" fill="none" stroke="#e5e7eb" stroke-width="5"/>
+  <circle cx="21" cy="21" r="15.915" fill="none" stroke="#0B3D66" stroke-width="5" stroke-dasharray="50 50" stroke-dashoffset="25"/>
+  <circle cx="21" cy="21" r="15.915" fill="none" stroke="#3E8E8A" stroke-width="5" stroke-dasharray="20 80" stroke-dashoffset="-25"/>
+  <circle cx="21" cy="21" r="15.915" fill="none" stroke="#A8431E" stroke-width="5" stroke-dasharray="20 80" stroke-dashoffset="-45"/>
+  <circle cx="21" cy="21" r="15.915" fill="none" stroke="#C9A227" stroke-width="5" stroke-dasharray="10 90" stroke-dashoffset="-65"/>
+  <text class="donut-hole-num" x="21" y="20.6" text-anchor="middle" font-size="6">100%</text>
+  <text class="donut-hole-lbl" x="21" y="25" text-anchor="middle" font-size="2.6">of grade</text>
+</svg>
+
+<ul class="donut-legend">
+<li><span class="sw" style="background:#0B3D66"></span> <strong>Homework</strong> — 50%</li>
+<li><span class="sw" style="background:#3E8E8A"></span> <strong>Project 1</strong> · Linear — 20%</li>
+<li><span class="sw" style="background:#A8431E"></span> <strong>Project 2</strong> · Logistic — 20%</li>
+<li><span class="sw" style="background:#C9A227"></span> <strong>Module Quizzes</strong> — 10%</li>
+</ul>
+:::
 
 | Category | Weight | Details |
 |----------|:------:|---------|
-| **Homework** | 50% | 8 assignments (completion-based) |
-| **Module Quizzes** | 10% | 6 quizzes (mastery-based, unlimited attempts) |
+| **Homework** | 50% | {{< var materials.homeworks >}} assignments (completion-based) |
+| **Module Quizzes** | 10% | {{< var materials.quizzes >}} quizzes (mastery-based, unlimited attempts) |
 | **Project 1: Linear Regression** | 20% | Proposal + Draft + Final Report |
 | **Project 2: Logistic Regression** | 20% | Proposal + Draft + Final Report |
 | **Total** | **100%** | |
 
-### Assignment Details
+### Assignment details
 
-**Homework (50%)**: Eight assignments, approximately biweekly. Odd-numbered homework focuses on conceptual questions (hand calculations, interpretation); even-numbered focuses on computational problems (R code, data analysis). Graded for **completion**: full credit for demonstrating genuine effort, zero for non-submission. A "meaningful attempt" means:
+**Homework (50%)**: {{< var materials.homeworks >}} assignments, roughly one every other session. They alternate between **conceptual** problems (hand calculations, interpretation) and **computational** problems (R code, data analysis). Graded for **completion** --- full credit for a genuine, meaningful attempt; zero for non-submission. A meaningful attempt means:
 
 - All problems are attempted (even if you are unsure of the answer)
-- For computational assignments: R code runs without errors
+- For computational work: your R code runs without errors
 - Written interpretations are included where requested
 
-**Module Quizzes (10%)**: Six concept-check quizzes with multiple-choice and short-answer questions. **Mastery-based**: unlimited attempts, highest score counts. Open-book and open-notes. Scoring 80% or higher earns full credit.
+**Module Quizzes (10%)**: {{< var materials.quizzes >}} concept-check quizzes (multiple-choice, short-answer, and more) delivered on Blackboard. **Mastery-based**: unlimited attempts, highest score counts, open-book and open-notes; scoring 80% or higher earns full credit. Each graded quiz has a matching **[interactive Practice Quiz]({{< var books.practice_quizzes >}}){target="_blank"}** --- ungraded, unlimited, with instant per-question feedback and deep links into the Lecture Notes --- use it to prepare.
 
 **Project 1: Linear Regression (20%)**: A complete linear regression analysis on a dataset of your choosing.
 
 | Component | Due | Weight |
 |-----------|:---:|:------:|
-| Proposal | Week 7 | 30% of Project 1 |
-| Draft | Week 9 | 30% of Project 1 |
-| Final Report | Week 12 | 40% of Project 1 |
+| Proposal | Session 7 | 30% of Project 1 |
+| Draft | Session 9 | 30% of Project 1 |
+| Final Report | Session 11 | 40% of Project 1 |
 
-**Project 2: Logistic Regression (20%)**: A complete logistic regression analysis, building on skills from Project 1.
+**Project 2: Logistic Regression (20%)**: A complete logistic regression analysis, building on the skills from Project 1.
 
 | Component | Due | Weight |
 |-----------|:---:|:------:|
-| Proposal | Week 12 | 20% of Project 2 |
-| Draft | Week 14 | 30% of Project 2 |
-| Final Report | Week 15 | 50% of Project 2 |
+| Proposal | Session 12 | 20% of Project 2 |
+| Draft | Session 14 | 30% of Project 2 |
+| Final Report | Session 15 | 50% of Project 2 |
 
 See the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed guidelines and worked examples.
 
-### Letter Grades
+### Letter grades
 
 | Grade | Range | | Grade | Range |
 |:-----:|:-----:|-|:-----:|:-----:|
@@ -161,13 +176,13 @@ See the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for de
 
 ## Course Policies
 
-### Late Work
+### Late work
 
-- **10% per day** deducted for late submissions
-- **Extensions** granted for documented hardships---email me with details
-- **Absolute cutoff**: No work accepted more than **7 days late** without prior arrangement
+- **Project milestones**: **10% per day** deducted for late submissions; absolute cutoff **7 days late** without prior arrangement.
+- **Homework** is completion-graded --- submit each assignment by its session to earn credit. If you fall behind, contact your instructor; extensions are routinely granted for documented hardships.
+- **Module Quizzes** allow unlimited attempts with no late penalty.
 
-### Academic Integrity
+### Academic integrity
 
 All work must comply with the [University of Alabama Academic Misconduct Policy](https://catalog.ua.edu/undergraduate/about/academic-regulations/student-expectations/academic-misconduct-policy/).
 
@@ -176,15 +191,15 @@ All work must comply with the [University of Alabama Academic Misconduct Policy]
 - You **may** use software tools and reference materials to learn concepts and debug code
 - You **must** understand, adapt, and be able to explain any code you submit
 - You **cannot** submit work that you do not understand or that substantially comes from outside assistance without meaningful revision and attribution
-- If in doubt, disclose outside assistance---transparency is never penalized
+- If in doubt, disclose outside assistance --- transparency is never penalized
 
-### Disability Accommodations
+### Disability accommodations
 
-Students with disabilities should register with the [Office of Disability Services (ODS)](https://ods.ua.edu/) and share their accommodation letter during the first week of class.
+Students with disabilities should register with the [Office of Disability Services (ODS)](https://ods.ua.edu/) and share their accommodation letter early in the term.
 
-### Religious Observances
+### Religious observances
 
-Contact me at least one week in advance if religious observances conflict with deadlines.
+Notify your instructor at least one week in advance if religious observances conflict with deadlines.
 
 ### Title IX
 
@@ -194,33 +209,31 @@ The University of Alabama is committed to providing a safe environment. For conf
 ## Getting Help
 
 ::: {.callout-important}
-## You Can Do This
+## You can do this
 
-Every programmer---from beginners to experts---gets stuck. It is 100% normal.
+Every programmer --- from beginners to experts --- gets stuck. It is 100% normal.
 
 When you're stuck:
 
 1. **Take a break.** Step away. Your subconscious will keep working.
-2. **Read the error message carefully.** Google "rstats [your error]".
-3. **Ask for help.** Email me or visit office hours.
-4. **Review the R Lab Book.** Work through the examples step by step.
+2. **Read the error message carefully.** Search "rstats [your error]".
+3. **Ask for help.** Reach out to your instructor or classmates.
+4. **Review the Lab Manual.** Work through the examples step by step.
 
-You will get unstuck. I promise.
+You will get unstuck.
 :::
 
-### Contact Me
+### Contacting your instructor
 
-- **Email**: [{{< var instructor.email >}}](mailto:{{< var instructor.email >}}) --- I aim to respond within 48 hours
-- **Urgent matters**: Include "BER 640 - URGENT" in the subject line
-- **Appointments**: [Schedule a meeting]({{< var instructor.appointment_url >}}) via Zoom or in-person
+Your instructor posts their preferred contact method, response-time policy, and office hours on your section's landing page (e.g., Blackboard), along with term-specific announcements and deadlines.
 
-### Additional Support
+### Additional support
 
 - **Counseling Center**: [counseling.sl.ua.edu](https://counseling.sl.ua.edu/) --- free, confidential support
 - **Dean of Students**: [dos.sl.ua.edu](https://dos.sl.ua.edu/) --- emergency financial assistance, food pantry, housing support
 - **Writing Center**: [writingcenter.ua.edu](https://writingcenter.ua.edu/)
 - **UA IT Help Desk**: [oit.ua.edu](https://oit.ua.edu/) --- (205) 348-5555
 
-### Course Resources
+### Course resources
 
 Browse the [Resources](/resource/index.qmd) page for R setup guides, dataset documentation, style guides, and FAQs.

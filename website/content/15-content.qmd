@@ -1,30 +1,35 @@
 ---
-title: "Week 15: Course Synthesis"
-date: "2026-11-30"
+title: "Session 15 · Course Synthesis: SLR → MLR → GLM"
 ---
 
 ## Overview
 
-This final week steps back to survey the full arc of the course, from simple linear regression through the Generalized Linear Model framework. Rather than introducing new techniques, the focus is on consolidation: connecting the models you have learned, reflecting on what statistical thinking means in practice, and considering how reproducible, evidence-based analysis can strengthen research in education and the social sciences. This is also the week to finalize and submit your course project.
+This wrap-up session has no new reading or lab --- instead, it invites you to look back across the whole arc. We began with the *t*-test and simple linear regression, saw a single dummy reproduce that *t*-test, watched several dummies become ANOVA, added continuous predictors for multiple regression, let effects bend through interactions, learned to trust models only after diagnostics, crossed to binary outcomes with logistic regression, and finally saw every one of these as a special case of the Generalized Linear Model. The goal now is to consolidate that journey: to see one family where you once saw many tools, and to choose the right member of it for a research question of your own.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Trace the progression from SLR to MLR to GLM and articulate how each extension addresses a limitation of the previous model
-- Explain how the GLM framework provides a unified view of regression for continuous, binary, count, and ordinal outcomes
-- Describe the role of reproducibility and transparent reporting in applied statistical work
-- Reflect on how your own understanding of regression and evidence-based reasoning has developed over the semester
+- Trace the conceptual arc from the *t*-test and simple regression through to the GLM.
+- Connect each milestone model to the ones before and after it as special or general cases.
+- Choose an appropriate model for a given research question and outcome type.
+- Reflect on the assumptions and diagnostics that decide whether a chosen model is trustworthy.
 
-## Project
+## This session's materials
 
-- {{< fa file-lines >}} [Project 2 Final](/assignment/project-2-final.qmd) — Due this week
+- {{< fa clipboard-list >}} **Project:** [Project 2 — Final Report due](/assignment/project-2-final.html)
 
-## Key Concepts
+For a guided review of any milestone below, revisit the [Lecture Notes](/notes/){target="_blank"}.
 
-| Concept | Description |
-|---------|-------------|
-| **Statistical unification** | The insight that many seemingly different models (OLS, logistic, Poisson, ordinal) share a common GLM structure |
-| **GLM framework** | The overarching Generalized Linear Model framework that encompasses all regression models studied in this course |
-| **Reproducibility** | The practice of documenting data, code, and analytic decisions so that results can be independently verified |
-| **Evidence-based practice** | Using rigorous statistical evidence to inform decisions in educational policy, program evaluation, and research |
+## Key concepts
+
+| Milestone | What it added to the arc |
+|-----------|--------------------------|
+| **Simple linear regression** | Modeling an outcome as a straight-line function of one continuous predictor. |
+| **Dummy = *t*-test** | A single 0/1 predictor reproduces the two-sample *t*-test exactly. |
+| **ANOVA** | Several dummies compare three or more group means within the regression framework. |
+| **Multiple regression** | Continuous and categorical predictors together, each interpreted holding the others fixed. |
+| **Interactions** | Letting one predictor's effect depend on the value of another. |
+| **Diagnostics** | Checking residuals, influence, and assumptions to judge whether a fitted model can be trusted. |
+| **Logistic regression** | Extending the framework to binary outcomes via the log-odds link. |
+| **Generalized Linear Model** | The unifying family from which every earlier model emerges as a special case. |

@@ -5,7 +5,7 @@ title: "Project 1 Draft"
 | | |
 |---|---|
 | **Project** | Project 1: Linear Regression |
-| **Due** | Week 9 |
+| **Due** | Session 9 |
 | **Weight** | 30% of Project 1 (which is 20% of final grade) |
 | **Related Guide** | [Project Guide]({{< var books.project_guide >}}){target="_blank"} |
 

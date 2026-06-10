@@ -1,7 +1,4 @@
 page-layout: article
 
-# Use the date-banner title-metadata partial on all assignment pages
-format:
-  html:
-    template-partials:
-      - ../html/title-metadata.html
+# Assignment pages are semester-agnostic — no dates / no date-banner.
+# (Due dates are expressed as "Session N"; each term maps sessions to its calendar.)

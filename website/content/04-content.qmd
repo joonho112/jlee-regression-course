@@ -1,37 +1,37 @@
 ---
-title: "Week 4: ANCOVA"
-date: "2026-09-07"
+title: "Session 4 · ANCOVA & Statistical Control"
 ---
 
 ## Overview
 
-This week introduces analysis of covariance (ANCOVA) through the lens of multiple regression with dummy variables. You will learn how adding a continuous covariate to a group-comparison model adjusts for pre-existing differences, producing more precise and less biased estimates of group effects. Understanding ANCOVA also sets the stage for the broader multiple regression framework in later weeks.
+This session combines a categorical predictor with a continuous covariate, giving us the analysis of covariance (ANCOVA). The payoff is the idea of statistical control: by holding a covariate constant, we can ask whether a group effect survives adjustment --- and watch a difference shrink, vanish, or even reverse once a confounder enters the model. This is a pivotal step in the course's move from simple comparisons toward genuine multiple regression.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Create and interpret dummy-coded variables for categorical predictors
-- Explain how ANCOVA adjusts group means for a continuous covariate
-- Interpret regression coefficients in a model with both categorical and continuous predictors
-- Describe the parallel regression lines assumption and its implications
-- Identify situations where omitted variable bias threatens causal inference
+- Specify an ANCOVA model with one categorical predictor and one continuous covariate.
+- Explain what it means to "control for" or "adjust for" a covariate.
+- Compare unadjusted and adjusted group effects and interpret the difference.
+- Recognize confounding and describe how adding a covariate can change a group effect.
+- Fit and interpret an ANCOVA model in R.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 2: ANCOVA]({{< var books.lecture_notes >}}/chapters/02-ancova.html){target="_blank"}
+- {{< fa book-open-reader >}} **Read:** [Chapter 2: ANCOVA](/notes/chapters/02-ancova.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 3: ANCOVA](/labs/labs/lab03-anova-ancova.html){target="_blank"}
+- {{< fa pencil >}} **Homework due:** [Homework 2: Dummy Variables](/assignment/hw02.html)
+- {{< fa circle-question >}} **Practice:** [Practice Quiz 2](/practice/chapters/quiz2-dummy-variables.html){target="_blank"}
+- {{< fa circle-check >}} **Graded quiz:** [Module Quiz 2](/assignment/quizzes.html#quiz-2)
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 03: ANOVA and ANCOVA in R]({{< var books.r_lab_book >}}/labs/lab03-anova-ancova.html){target="_blank"}
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Dummy coding** | Representing a categorical variable with 0/1 indicator variables |
-| **ANCOVA** | A model that compares group means after adjusting for one or more continuous covariates |
-| **Adjusted means** | Group means recalculated as if all groups had the same covariate value |
-| **Parallel lines** | The assumption that the covariate has the same slope in every group |
-| **Confounding** | When a third variable is associated with both the predictor and the outcome |
-| **Omitted variable bias (OVB)** | Bias in a coefficient caused by leaving a relevant variable out of the model |
+| **ANCOVA** | A model combining a categorical predictor with a continuous covariate. |
+| **Covariate** | A continuous variable included to adjust the estimated group effect. |
+| **Statistical control** | Isolating a predictor's effect by holding other variables constant. |
+| **Adjustment** | Re-estimating a group effect after accounting for a covariate. |
+| **Adjusted group effect** | The group difference that remains once the covariate is held fixed. |
+| **Confounding** | When a third variable distorts the apparent relationship between predictor and outcome. |
+| **Parallel slopes** | The ANCOVA assumption that the covariate's effect is the same across groups. |

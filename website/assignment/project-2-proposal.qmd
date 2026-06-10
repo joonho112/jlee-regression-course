@@ -5,7 +5,7 @@ title: "Project 2 Proposal"
 | | |
 |---|---|
 | **Project** | Project 2: Logistic Regression |
-| **Due** | Week 12 |
+| **Due** | Session 12 |
 | **Weight** | 20% of Project 2 (which is 20% of final grade) |
 | **Related Guide** | [Project Guide]({{< var books.project_guide >}}){target="_blank"} |
 

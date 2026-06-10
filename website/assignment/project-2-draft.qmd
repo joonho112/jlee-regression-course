@@ -5,7 +5,7 @@ title: "Project 2 Draft"
 | | |
 |---|---|
 | **Project** | Project 2: Logistic Regression |
-| **Due** | Week 14 |
+| **Due** | Session 14 |
 | **Weight** | 30% of Project 2 (which is 20% of final grade) |
 | **Related Guide** | [Project Guide]({{< var books.project_guide >}}){target="_blank"} |
 

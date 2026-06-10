@@ -3,108 +3,127 @@ title: "Schedule"
 sidebar: false
 toc: false
 page-layout: full
-code-copy: false
+code-tools: false
 ---
 
 ::: {.schedule-page}
 
-Here is the 15-week learning journey for **BER 640**. Each week pairs a lecture chapter with a hands-on R lab and (when due) homework, project milestones, and quizzes. Click a **topic** to open that week's page.
-
-::: {.schedule-meta}
-{{< fa calendar >}} {{< var course.semester >}} · {{< var course.dates >}} &nbsp;·&nbsp; {{< fa globe >}} {{< var course.days >}} — listed dates mark the start of each week; all coursework is asynchronous.
-:::
+Here is the {{< var materials.sessions >}}-session learning journey for **{{< var course.number >}}**. Each session pairs a Lecture Notes chapter with a hands-on R lab and — when due — homework, a graded quiz, practice, and project milestones. Click a **topic** to open that session's page, or any **icon** to open that material directly.
 
 ::: {.schedule-legend}
-[How to read:]{.schedule-legend-title} {{< fa book-open >}} Lecture &nbsp;·&nbsp; {{< fa laptop-code >}} Lab &nbsp;·&nbsp; {{< fa pencil >}} Homework &nbsp;·&nbsp; {{< fa clipboard-list >}} Project &nbsp;·&nbsp; {{< fa circle-check >}} Quiz
+[How to read:]{.schedule-legend-title} {{< fa book-open-reader >}} Notes &nbsp;·&nbsp; {{< fa laptop-code >}} Lab &nbsp;·&nbsp; {{< fa pencil >}} Homework &nbsp;·&nbsp; {{< fa circle-check >}} Quiz &nbsp;·&nbsp; {{< fa circle-question >}} Practice &nbsp;·&nbsp; {{< fa clipboard-list >}} Project &nbsp;—&nbsp; a [greyed]{.sched-none-inline} icon means none that session.
 :::
 
-```{ojs}
-//| echo: false
-sched = FileAttachment("data/schedule.csv").csv()
-```
+```{r}
+#| label: schedule
+#| echo: false
+#| message: false
+#| warning: false
+#| output: asis
 
-```{ojs}
-//| echo: false
-modNames = ({
-  "Welcome": "Getting Started",
-  "M1": "Foundations of Regression",
-  "M2": "Categorical Predictors",
-  "M3": "Multiple Regression & Interactions",
-  "M4": "Model Building & Diagnostics",
-  "M5": "Logistic Regression",
-  "M6": "Logistic Diagnostics",
-  "M7": "Generalized Linear Models",
-  "M8": "Synthesis"
+suppressPackageStartupMessages({
+  library(readr); library(dplyr); library(stringr); library(glue)
+  library(purrr); library(kableExtra)
 })
-```
 
-```{ojs}
-//| echo: false
-months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-fmtDate = function (d) {
-  if (!d) return "";
-  const p = d.split("-");
-  return months[(+p[1]) - 1] + " " + (+p[2]);
-}
-isEmpty = (v) => (!v || v === "--")
-cell = (v, label) => isEmpty(v)
-  ? html`<span class="sched-empty" aria-hidden="true">·</span><span class="visually-hidden">No ${label} scheduled</span>`
-  : v
-pad2 = (n) => String(n).padStart(2, "0")
-```
+sched <- read_csv("data/schedule.csv", show_col_types = FALSE)
 
-```{ojs}
-//| echo: false
-scheduleTable = {
-  const comps = [
-    { key: "lecture", icon: "book-open",      label: "Lecture" },
-    { key: "lab",     icon: "laptop-code",    label: "Lab" },
-    { key: "homework",icon: "pencil",         label: "Homework" },
-    { key: "project", icon: "clipboard-list", label: "Project" },
-    { key: "quiz",    icon: "circle-check",   label: "Quiz" }
-  ];
-  const body = [];
-  let cur = null;
-  for (const d of sched) {
-    if (d.module !== cur) {
-      cur = d.module;
-      body.push(html`<tr class="sched-group"><th scope="rowgroup" colspan="${3 + comps.length}">${modNames[cur] ?? cur}</th></tr>`);
-    }
-    body.push(html`<tr>
-      <th scope="row" class="sched-week">${d.week}</th>
-      <td class="sched-date">${fmtDate(d.date)}</td>
-      <td class="sched-topic"><a href="content/${pad2(d.week)}-content.html">${d.title}</a></td>
-      ${comps.map((c) => html`<td class="sched-${c.key}">${cell(d[c.key], c.label)}</td>`)}
-    </tr>`);
-  }
-  const table = html`<table class="schedule-table table">
-    <caption class="visually-hidden">BER 640 weekly schedule with dates, topics, lectures, labs, homework, projects, and quizzes.</caption>
-    <thead><tr>
-      <th scope="col" class="sched-week">Wk</th>
-      <th scope="col" class="sched-date">Date</th>
-      <th scope="col" class="sched-topic">Topic</th>
-      ${comps.map((c) => html`<th scope="col"><i class="fa-solid fa-${c.icon}" aria-hidden="true"></i> ${c.label}</th>`)}
-    </tr></thead>
-    <tbody>${body}</tbody>
-  </table>`;
-  const cards = html`<div class="schedule-cards" role="list" aria-label="BER 640 weekly schedule">
-    ${sched.map((d) => html`<article class="schedule-card" role="listitem">
-      <div class="schedule-card-top">
-        <span class="schedule-card-week">Week ${d.week}</span>
-        <span class="schedule-card-date">${fmtDate(d.date)}</span>
-      </div>
-      <h3><a href="content/${pad2(d.week)}-content.html">${d.title}</a></h3>
-      <p class="schedule-card-module">${modNames[d.module] ?? d.module}</p>
-      <dl class="schedule-card-items">
-        ${comps.filter((c) => !isEmpty(d[c.key])).map((c) => html`<div>
-          <dt><i class="fa-solid fa-${c.icon}" aria-hidden="true"></i>${c.label}</dt>
-          <dd>${d[c.key]}</dd>
-        </div>`)}
-      </dl>
-    </article>`)}
-  </div>`;
-  return html`<div class="schedule-scroll">${table}</div>${cards}`;
+## --- cell builders: a deep-link icon, or a greyed "none" icon -----------
+link_icon <- function(href, fa, title) {
+  glue('<a href="{href}" title="{title}" aria-label="{title}"><i class="fa-solid fa-{fa}"></i></a>')
 }
+none_icon <- function(fa, label) {
+  glue('<span class="sched-none" title="No {label} this session" aria-label="No {label} this session"><i class="fa-solid fa-{fa}"></i></span>')
+}
+join_links <- function(x) paste(x, collapse = " ")
+
+# Lecture notes (multi-value; digit-prefixed slug = chapter, else appendix)
+cell_notes <- function(s) {
+  if (is.na(s) || s == "") return(none_icon("book-open-reader", "reading"))
+  parts <- str_trim(str_split(s, ";")[[1]])
+  join_links(map_chr(parts, function(x) {
+    sub <- if (str_detect(x, "^[0-9]")) "chapters" else "appendices"
+    link_icon(glue("/notes/{sub}/{x}.html"), "book-open-reader", "Lecture notes")
+  }))
+}
+# Labs (multi-value; /labs/labs/<slug>.html)
+cell_labs <- function(s) {
+  if (is.na(s) || s == "") return(none_icon("laptop-code", "lab"))
+  parts <- str_trim(str_split(s, ";")[[1]])
+  join_links(map_chr(parts, ~ link_icon(glue("/labs/labs/{.x}.html"), "laptop-code", "R lab")))
+}
+# Homework -> website assignment PROMPT page (never the solutions book)
+cell_hw <- function(s) {
+  if (is.na(s) || s == "") return(none_icon("pencil", "homework"))
+  link_icon(glue("assignment/{s}.html"), "pencil", "Homework")
+}
+# Graded quiz -> student-facing quizzes overview (Blackboard for the real quiz);
+# NEVER the instructor /quizzes answer-key book.
+cell_quiz <- function(s) {
+  if (is.na(s) || s == "") return(none_icon("circle-check", "graded quiz"))
+  n <- str_extract(s, "(?<=quiz)[0-9]+")
+  link_icon(glue("assignment/quizzes.html#quiz-{n}"), "circle-check", glue("Module Quiz {n}"))
+}
+# Practice quiz -> student-facing /practice book
+cell_practice <- function(s) {
+  if (is.na(s) || s == "") return(none_icon("circle-question", "practice quiz"))
+  link_icon(glue("/practice/chapters/{s}.html"), "circle-question", "Practice quiz")
+}
+# Project milestone label -> website project page
+cell_project <- function(lbl) {
+  if (is.na(lbl) || lbl == "") return(none_icon("clipboard-list", "project milestone"))
+  pg <- lbl |> str_to_lower() |>
+    str_replace("^p1 ", "project-1-") |>
+    str_replace("^p2 ", "project-2-")
+  link_icon(glue("assignment/{pg}.html"), "clipboard-list", lbl)
+}
+pad2 <- function(n) str_pad(n, 2, pad = "0")
+
+part_name <- c(
+  "Welcome"   = "Welcome",
+  "I"         = "Part I · Foundations of Linear Regression",
+  "II"        = "Part II · Extensions of Linear Regression",
+  "III"       = "Part III · Model Evaluation",
+  "IV"        = "Part IV · Categorical Outcomes",
+  "Synthesis" = "Synthesis"
+)
+
+tbl <- sched %>%
+  mutate(
+    Session  = as.character(session),
+    Topic    = glue('<a href="content/{pad2(session)}-content.html">{title}</a>'),
+    Notes    = map_chr(notes, cell_notes),
+    Lab      = map_chr(labs, cell_labs),
+    HW       = map_chr(homework, cell_hw),
+    Quiz     = map_chr(quiz, cell_quiz),
+    Practice = map_chr(practice, cell_practice),
+    Project  = map_chr(project, cell_project)
+  )
+
+# contiguous Part groups for pack_rows()
+runs <- rle(tbl$part)
+pack_index <- setNames(runs$lengths, unname(part_name[runs$values]))
+
+ic <- function(fa, lbl) glue('<i class="fa-solid fa-{fa}" aria-hidden="true"></i> {lbl}')
+
+ktbl <- tbl %>%
+  select(Session, Topic, Notes, Lab, HW, Quiz, Practice, Project) %>%
+  kbl(
+    escape = FALSE,
+    align = "clcccccc",
+    col.names = c("Session", "Topic",
+                  ic("book-open-reader", "Notes"), ic("laptop-code", "Lab"),
+                  ic("pencil", "HW"), ic("circle-check", "Quiz"),
+                  ic("circle-question", "Practice"), ic("clipboard-list", "Project")),
+    table.attr = 'class="schedule-table table"'
+  ) %>%
+  kable_styling(full_width = TRUE) %>%
+  column_spec(1, width = "4em") %>%
+  column_spec(2, width = "16em") %>%
+  pack_rows(index = pack_index,
+            label_row_css = "background:#0B3D66;color:#fff;font-weight:700;")
+
+cat('<div class="schedule-scroll">\n', as.character(ktbl), '\n</div>', sep = "")
 ```
 
 :::

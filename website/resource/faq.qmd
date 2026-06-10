@@ -6,7 +6,7 @@ title: "Frequently Asked Questions"
 
 ### What if I'm new to R?
 
-That is completely fine --- no prior R experience is required for this course. Week 1 is devoted entirely to getting set up and learning the basics. Here is what we recommend:
+That is completely fine --- no prior R experience is required for this course. Session 1 is devoted entirely to getting set up and learning the basics. Here is what we recommend:
 
 1. Follow the [R & RStudio Setup Guide](r-setup.qmd) to install your software.
 2. Work through **Appendix A** of the Lecture Notes: [R Setup Guide]({{< var books.lecture_notes >}}/appendices/a-r-setup-guide.html){target="_blank"}.
@@ -14,7 +14,7 @@ That is completely fine --- no prior R experience is required for this course. W
 
 ::: {.callout-tip}
 ## Learning R takes practice
-You do not need to master R before the course begins. The R Lab Book provides guided, hands-on practice each week, and your skills will build incrementally over the semester.
+You do not need to master R before the course begins. The Lab Manual provides guided, hands-on practice each session, and your skills will build incrementally over the course.
 :::
 
 
@@ -30,7 +30,7 @@ Most students find that after 2--3 weeks of practice, they are comfortable with 
 
 ### Can I use Python instead of R?
 
-All course materials, labs, homework, and the project guide are built around R. While Python is an excellent language for data science, using it in this course would mean you cannot take advantage of the R Lab Book or the `regdatasets` package. For these reasons, **R is required** for all assignments and projects.
+All course materials, labs, homework, and the project guide are built around R. While Python is an excellent language for data science, using it in this course would mean you cannot take advantage of the Lab Manual or the `regdatasets` package. For these reasons, **R is required** for all assignments and projects.
 
 If you are interested in learning Python for statistics, we are happy to suggest resources outside of this course.
 
@@ -63,7 +63,7 @@ If you get an error during installation, make sure you have **R 4.3.0 or later**
 
 You have two options:
 
-1. **Use a dataset from the `regdatasets` package.** The package contains 24 curated datasets suitable for regression analysis. Run `data(package = "regdatasets")` to see the full list.
+1. **Use a dataset from the `regdatasets` package.** The package contains {{< var materials.datasets >}} curated datasets suitable for regression analysis. Run `data(package = "regdatasets")` to see the full list.
 2. **Use an external dataset.** You may bring your own data or use a publicly available dataset relevant to your research interests. External datasets must be approved by the instructor during the Project 1 Proposal stage.
 
 See the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed requirements and the dataset approval process.
@@ -76,7 +76,7 @@ See the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for de
 Homework in this course is graded on **completion**, not correctness. The goal is to practice and learn, not to produce perfect answers. Here is what we suggest:
 
 1. **Try first.** Spend a reasonable amount of time working through the problem.
-2. **Review the R Lab Book.** Work through the related lab examples step by step.
+2. **Review the Lab Manual.** Work through the related lab examples step by step.
 3. **Ask for help.** Email {{< var instructor.email >}} or visit office hours if you are stuck.
 4. **Submit what you have.** A good-faith effort earns full credit, even if incomplete.
 
@@ -102,9 +102,7 @@ Detailed rubrics, page budgets, checklists, and worked examples are available in
 
 ### How do I contact the instructor?
 
-Email is the best way to reach {{< var instructor.name_no_title >}} at [{{< var instructor.email >}}](mailto:{{< var instructor.email >}}). Expect a response within 48 hours for course-related questions. For urgent matters, include "BER 640 - URGENT" in the subject line.
-
-You can also [schedule an appointment]({{< var instructor.appointment_url >}}) for office hours.
+Your instructor for this term posts their preferred contact method, response-time policy, and office hours on the course's Blackboard page — see the [Syllabus](/syllabus.qmd) for the current term's details. For questions about course *content*, the Blackboard discussion board is often the fastest way to get help, since classmates may have the same question.
 
 
 ### Where do I find all the course materials?
@@ -114,6 +112,7 @@ All materials are open-access and linked from the course website:
 | Material | Link |
 |----------|------|
 | {{< fa book-open >}} Lecture Notes | [{{< var books.lecture_notes >}}]({{< var books.lecture_notes >}}){target="_blank"} |
-| {{< fa laptop-code >}} R Lab Book | [{{< var books.r_lab_book >}}]({{< var books.r_lab_book >}}){target="_blank"} |
+| {{< fa laptop-code >}} Lab Manual | [{{< var books.r_lab_book >}}]({{< var books.r_lab_book >}}){target="_blank"} |
 | {{< fa clipboard-list >}} Project Guide | [{{< var books.project_guide >}}]({{< var books.project_guide >}}){target="_blank"} |
 | {{< fa database >}} regdatasets | [{{< var books.regdatasets >}}]({{< var books.regdatasets >}}){target="_blank"} |
+| {{< fa circle-question >}} Practice Quizzes | [{{< var books.practice_quizzes >}}]({{< var books.practice_quizzes >}}){target="_blank"} |

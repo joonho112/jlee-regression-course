@@ -1,45 +1,35 @@
 ---
-title: "Week 11: Multiple Logistic Regression"
-date: "2026-10-26"
+title: "Session 11 · Simple Logistic Regression"
 ---
 
 ## Overview
 
-This week extends logistic regression to include multiple predictors. You will learn how to interpret adjusted odds ratios that account for confounding variables, compute average marginal effects to express results on the probability scale, and recognize Simpson's Paradox --- a situation where the direction of an association reverses after adjusting for a confounding variable. These tools are essential for drawing valid conclusions from observational data with binary outcomes.
+What happens when the outcome is yes/no rather than a number on a continuous scale? This session opens the second half of the course by extending regression to a binary response. We cannot model a probability with a straight line, so we introduce the logit link, which lets a single predictor act on the log-odds of the outcome. Along the way we meet odds and odds ratios --- the natural currency of logistic regression --- continuing the "specific → general" arc as the linear model generalizes to a new family of outcomes.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Fit and interpret a logistic regression model with multiple predictors
-- Distinguish between crude and adjusted odds ratios
-- Compute and interpret average marginal effects for logistic regression
-- Explain Simpson's Paradox and identify situations where confounding can reverse an observed association
-- Generate and interpret predicted probability plots for multiple logistic regression models
+- Explain why a linear model is ill-suited to a binary outcome.
+- Define odds and the logit (log-odds) transformation of a probability.
+- Fit a simple logistic regression with a single predictor in R.
+- Interpret the slope as a change in log-odds and exponentiate it into an odds ratio.
+- Convert fitted log-odds back into predicted probabilities.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 10: Multiple Logistic Regression]({{< var books.lecture_notes >}}/chapters/10-multiple-logistic-regression.html){target="_blank"}
+- {{< fa book-open-reader >}} **Read:** [Chapter 9: Simple Logistic Regression](/notes/chapters/09-simple-logistic-regression.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 9: Simple Logistic Regression](/labs/labs/lab09-logistic-intro.html){target="_blank"}
+- {{< fa clipboard-list >}} **Project:** [Project 1 — Final Report due](/assignment/project-1-final.html)
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 10: Multiple Logistic Regression]({{< var books.r_lab_book >}}/labs/lab10-logistic-extended.html){target="_blank"}
-
-## Homework
-
-- {{< fa pen-ruler >}} [Homework 07](/assignment/hw07.qmd) — Due this week
-- {{< fa pen-ruler >}} [Homework 08](/assignment/hw08.qmd) — Due this week
-
-## Quiz
-
-- {{< fa circle-question >}} **Quiz 5** — Covers Weeks 9--11 material
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Multiple logistic regression** | A logistic model with two or more predictors used to estimate the probability of a binary outcome |
-| **Adjusted odds ratio** | An odds ratio that accounts for the effects of other predictors in the model |
-| **Marginal effect** | The change in predicted probability associated with a one-unit change in a predictor, averaged across observations |
-| **Simpson's Paradox** | A phenomenon where an association observed in aggregated data reverses or disappears when the data are stratified by a confounding variable |
-| **Confounding in logistic regression** | A situation where a third variable distorts the estimated relationship between a predictor and a binary outcome |
+| **Binary outcome** | A response variable with two possible values, such as success/failure or yes/no. |
+| **Odds** | The ratio of the probability of an event to the probability of its complement. |
+| **Logit (log-odds)** | The natural logarithm of the odds; the scale on which logistic regression is linear. |
+| **Logit link** | The transformation that connects a probability to a linear predictor on the log-odds scale. |
+| **Odds ratio** | The multiplicative change in the odds associated with a one-unit increase in a predictor. |
+| **Simple logistic regression** | A logistic model with a single predictor of a binary outcome. |
+| **Predicted probability** | The fitted chance of the event, obtained by mapping the linear predictor back through the logistic function. |

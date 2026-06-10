@@ -1,31 +1,54 @@
 author: JoonHo Lee
 
+# ---------------------------------------------------------------------------
+# This is a reusable, instructor-agnostic curriculum. The INSTRUCTOR and the
+# TERM are set each time the course runs — the site itself stays neutral.
+# Content was developed by JoonHo Lee (acknowledged, but not hyperlinked).
+# ---------------------------------------------------------------------------
+
 instructor:
-  name: "Dr. JoonHo Lee"
-  name_no_title: "JoonHo Lee"
-  email: jlee296@ua.edu
-  url: "https://education.ua.edu/people/joonho-lee/"
-  github: joonho112
-  office: "Carmichael Hall, Room 307C"
+  name: "To be determined"
+  name_no_title: "To be determined"
+  email: ""
+  url: ""                    # intentionally blank — no personal hyperlink
+  office: "To be determined"
   office_hours: "By appointment"
   contact_policy: >-
-    Email is the best way to contact me. I will try to respond to all
-    course-related emails within 48 hours. For urgent matters, please
-    include "BER 640 - URGENT" in the subject line.
-  appointment_url: "https://calendly.com/joonho112"
+    Communication channels and office-hours policies are set by the instructor
+    for each offering; consult the current term's syllabus for details.
+  appointment_url: ""
+
+# Content developer — credited on the site as plain text (no hyperlink).
+developer:
+  name: "JoonHo Lee"
+  github: joonho112
 
 course:
   number: "BER 640"
   title: "Advanced Statistical Methods in Education"
   subtitle: "A Regression Approach with R"
-  semester: "Fall 2026"
+  level: "Graduate · 3 credit hours"
+  modality: "Online · Asynchronous"
   days: "Asynchronous Online"
   time: "Asynchronous"
   location: "Online (Blackboard)"
-  dates: "August 19 – December 4, 2026"
+  semester: ""               # intentionally blank — semester-agnostic
+  dates: ""                  # intentionally blank — no fixed dates
   github: "https://github.com/joonho112/jlee-regression-course"
   url: "https://joonho112.github.io/jlee-regression-course"
   copyright_year: "2026"
+
+# Single source of truth for material counts (referenced across pages so the
+# numbers can never drift out of sync again).
+materials:
+  sessions: "15"
+  chapters: "13"
+  labs: "13"
+  homeworks: "8"
+  quizzes: "8"
+  practice_quizzes: "8"
+  projects: "2"
+  datasets: "24"
 
 university:
   name: "University of Alabama"
@@ -39,13 +62,10 @@ department:
   name: "Department of Educational Studies in Psychology, Research Methodology, and Counseling"
   url: "https://education.ua.edu/departments/educational-studies/"
 
-# External course material URLs (now consolidated under the jlee-regression-course site)
+# External course-material URLs (site-root-relative; Quarto rewrites them via
+# site-url so they work locally and under /jlee-regression-course/ in production).
 books:
-  # Site-root-relative paths (leading slash). Quarto rewrites these to the
-  # correct page-relative link, so they work both locally (served at root)
-  # and in production (served under /jlee-regression-course/).
   lecture_notes: "/notes"
-  # homework_solutions removed from student-facing site (instructor-only resource)
   r_lab_book: "/labs"
   project_guide: "/project"
   regdatasets: "/regdatasets"

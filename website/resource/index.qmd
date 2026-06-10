@@ -4,32 +4,33 @@ title: "Resources"
 
 This page collects supplementary resources for **{{< var course.number >}}: {{< var course.title >}}**. Whether you are setting up R for the first time, transitioning from Stata, or looking for writing guidelines, you will find what you need here.
 
-## {{< fa rocket >}} Getting Started
+## {{< fa rocket >}} Getting started
 
 These resources help you set up your computing environment and get comfortable with R.
 
 | Resource | Description |
 |----------|-------------|
-| {{< fa download >}} [R & RStudio Setup Guide](r-setup.qmd) | Install R, RStudio, and essential packages --- or use the cloud alternative |
+| {{< fa download >}} [R & RStudio Setup Guide](r-setup.qmd) | Install R, RStudio, and essential packages — or use the cloud alternative |
 | {{< fa arrows-rotate >}} [Stata-to-R Cheat Sheet](stata-to-r.qmd) | Side-by-side command translations for students transitioning from Stata |
 
 ## {{< fa book >}} Reference
 
-These resources support your work throughout the semester.
+These resources support your work throughout the course.
 
 | Resource | Description |
 |----------|-------------|
-| {{< fa database >}} [Datasets (regdatasets)](datasets.qmd) | Overview of the 24 curated datasets used in this course |
+| {{< fa database >}} [Datasets (regdatasets)](datasets.qmd) | Overview of the {{< var materials.datasets >}} curated datasets used in this course |
 | {{< fa pen-ruler >}} [Writing & Style Guide](style-guide.qmd) | Formatting conventions and APA-style reporting guidelines for project reports |
 | {{< fa circle-question >}} [Frequently Asked Questions](faq.qmd) | Answers to common questions about the course, software, and assignments |
 
-## {{< fa book-open >}} Course Books
+## {{< fa book-open >}} Course materials
 
 All course materials are open-access and freely available online.
 
-| Material | Link |
-|----------|------|
-| {{< fa book-open >}} Lecture Notes | [{{< var books.lecture_notes >}}]({{< var books.lecture_notes >}}){target="_blank"} |
-| {{< fa laptop-code >}} R Lab Book | [{{< var books.r_lab_book >}}]({{< var books.r_lab_book >}}){target="_blank"} |
-| {{< fa clipboard-list >}} Project Guide | [{{< var books.project_guide >}}]({{< var books.project_guide >}}){target="_blank"} |
-| {{< fa database >}} regdatasets Package | [{{< var books.regdatasets >}}]({{< var books.regdatasets >}}){target="_blank"} |
+| Material | What it is |
+|----------|------------|
+| {{< fa book-open >}} [Lecture Notes]({{< var books.lecture_notes >}}){target="_blank"} | The narrative textbook — {{< var materials.chapters >}} chapters |
+| {{< fa laptop-code >}} [Lab Manual]({{< var books.r_lab_book >}}){target="_blank"} | Hands-on R tutorials — {{< var materials.labs >}} labs |
+| {{< fa circle-question >}} [Practice Quizzes]({{< var books.practice_quizzes >}}){target="_blank"} | Interactive, ungraded self-checks — {{< var materials.quizzes >}} quizzes |
+| {{< fa clipboard-list >}} [Project Guide]({{< var books.project_guide >}}){target="_blank"} | Guidelines + worked examples for the {{< var materials.projects >}} projects |
+| {{< fa database >}} [regdatasets Package]({{< var books.regdatasets >}}){target="_blank"} | {{< var materials.datasets >}} curated educational datasets |

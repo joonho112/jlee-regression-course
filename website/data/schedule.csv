@@ -1,16 +1,16 @@
-week,date,module,title,lecture,lab,homework,project,quiz
-1,2026-08-19,Welcome,Welcome & R Setup,--,Lab 01: Introduction to R,--,--,--
-2,2026-08-24,M1,Simple Linear Regression I,Ch 01,Lab 02: Simple Linear Regression,--,--,--
-3,2026-08-31,M1,Simple Linear Regression II,Ch 01 (cont.),Lab 02: Simple Linear Regression (cont.),HW 01; HW 02,--,Quiz 1
-4,2026-09-07,M2,ANCOVA,Ch 02,Lab 03: ANCOVA and Statistical Control,--,--,--
-5,2026-09-14,M2,One-Way ANOVA,Ch 03,Lab 04: One-Way ANOVA and Categorical Predictors,HW 03; HW 04,--,Quiz 2
-6,2026-09-21,M3,Continuous Predictors,Ch 04,Lab 05: Multiple Regression with Continuous Predictors,--,--,--
-7,2026-09-28,M3,Interactions,Ch 05,Lab 06: Interactions in Regression,HW 05; HW 06,Project 1 Proposal,Quiz 3
-8,2026-10-05,M4,Nonlinear Relationships,Ch 06,Lab 07: Nonlinear Relationships,--,--,--
-9,2026-10-12,M4,Model Building & Diagnostics,Ch 07; Ch 08,Lab 08: Model Building and Diagnostics,--,Project 1 Draft,Quiz 4
-10,2026-10-19,M5,Simple Logistic Regression,Ch 09,Lab 09: Simple Logistic Regression,--,--,--
-11,2026-10-26,M5,Multiple Logistic Regression,Ch 10,Lab 10: Multiple Logistic Regression,HW 07; HW 08,--,Quiz 5
-12,2026-11-02,M6,Logistic Diagnostics,Ch 11,Lab 11: Logistic Diagnostics and Classification,--,Project 1 Final; Project 2 Proposal,Quiz 6
-13,2026-11-09,M7,Latent Response & GLM,Ch 12,Lab 12: GLM Extensions,--,--,--
-14,2026-11-16,M7,Ordinal Models,Ch 13,Lab 13: Ordinal Outcomes,--,Project 2 Draft,--
-15,2026-11-30,M8,Course Synthesis,--,--,--,Project 2 Final,--
+session,part,module,title,notes,labs,homework,quiz,practice,project
+1,Welcome,Welcome,Orientation & R Setup,a-r-setup-guide,lab01-intro-to-r,,,,
+2,I,Foundations of Regression,Simple Linear Regression,01-simple-linear-regression,lab02-simple-regression,,,,
+3,I,Foundations of Regression,Dummies & the t-Test,01-simple-linear-regression,lab02-simple-regression,hw01,quiz1-simple-regression,quiz1-simple-regression,
+4,I,Categorical Predictors,ANCOVA & Statistical Control,02-ancova,lab03-anova-ancova,hw02,quiz2-dummy-variables,quiz2-dummy-variables,
+5,II,Categorical Predictors,One-Way ANOVA,03-one-way-anova,lab04-categorical-contrasts,hw03,quiz3-confounding-ancova,quiz3-confounding-ancova,
+6,II,Multiple Regression,Continuous Predictors,04-continuous-predictors,lab05-multiple-regression,hw04,quiz4-one-way-anova,quiz4-one-way-anova,
+7,II,Interactions,Interactions & Simple Slopes,05-interactions,lab06-interactions,,,,P1 Proposal
+8,II,Interactions,Two-Way ANOVA,05-interactions,lab06-interactions,hw05,quiz5-interactions,quiz5-interactions,
+9,II,Nonlinear Relationships,Nonlinear Relationships,06-nonlinear-relationships,lab07-model-building,hw06,quiz6-two-way-anova,quiz6-two-way-anova,P1 Draft
+10,III,Model Building & Diagnostics,Model Building & Diagnostics,07-model-building;08-model-diagnostics,lab08-diagnostics,,,,
+11,IV,Logistic Regression,Simple Logistic Regression,09-simple-logistic-regression,lab09-logistic-intro,,,,P1 Final
+12,IV,Logistic Regression,Multiple Logistic Regression,10-multiple-logistic-regression,lab10-logistic-extended,hw07,quiz7-logistic-odds,quiz7-logistic-odds,P2 Proposal
+13,IV,Logistic Regression,Logistic Diagnostics & Simpson's Paradox,11-logistic-diagnostics,lab11-logistic-diagnostics,hw08,quiz8-multiple-logistic-simpsons,quiz8-multiple-logistic-simpsons,
+14,IV,GLM & Ordinal Models,GLM Framework & Ordinal Models,12-latent-response-glm;13-ordinal-models,lab12-logistic-advanced;lab13-ordinal-outcomes,,,,P2 Draft
+15,Synthesis,Course Synthesis,SLR to MLR to GLM,,,,,,P2 Final

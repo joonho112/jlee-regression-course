@@ -6,36 +6,39 @@ title: "Module Quizzes"
 
 | | |
 |:--|:--|
-| **Quizzes** | 6 |
+| **Quizzes** | {{< var materials.quizzes >}} |
 | **Weight** | 10% of final grade |
 | **Platform** | Blackboard |
-| **Attempts** | Unlimited |
+| **Attempts** | Unlimited (highest score kept) |
 
 ## Purpose
 
-Module quizzes assess your understanding of key concepts from each lecture module. They are designed as a **mastery-based** learning tool --- you can retake each quiz as many times as needed to demonstrate understanding.
+Module quizzes check your understanding of each module's key concepts. They are **mastery-based** — retake each as many times as you need to demonstrate understanding. Open-book, open-notes.
 
 ::: {.callout-tip}
 ## Practice anytime, with instant feedback
-Sharpen up with the **[interactive Practice Quizzes]({{< var books.practice_quizzes >}}){target="_blank"}** --- the same kinds of questions, answered right in your browser with **instant, explained feedback** (why each option is right *or* wrong) and a running score that links back to the Lecture Notes. They are **ungraded and unlimited**; the *graded* module quizzes are the ones you take in Blackboard.
+Warm up with the **[interactive Practice Quizzes]({{< var books.practice_quizzes >}}){target="_blank"}** — the same kinds of questions, answered right in your browser with **instant, explained feedback** (why each option is right *or* wrong) and a running score that links back to the Lecture Notes. They are **ungraded and unlimited**; the *graded* Module Quizzes are the ones you take in Blackboard. Each row below links to its matching practice quiz.
 :::
 
-## Quiz Schedule
+## Quiz schedule
 
-| Quiz | Module | Topics | Available After |
-|:-----|:-------|:-------|:----------------|
-| Quiz 1 | Foundations of Regression | Simple regression, OLS, dummy variables | Week 3 |
-| Quiz 2 | Categorical Predictors | ANCOVA, one-way ANOVA, multiple comparisons | Week 5 |
-| Quiz 3 | Interactions | Interaction effects, two-way ANOVA, simple slopes | Week 7 |
-| Quiz 4 | Model Building & Diagnostics | Nonlinear relationships, model selection, residual diagnostics | Week 9 |
-| Quiz 5 | Logistic Regression | Odds ratios, predicted probabilities, Simpson's Paradox | Week 11 |
-| Quiz 6 | Logistic Diagnostics | Goodness of fit, classification, pseudo-$R^2$ | Week 12 |
+Each Module Quiz mirrors one homework and unlocks once its content is covered (see the [Schedule](/schedule.qmd)).
+
+| Quiz | Topic | Mirrors | Practice | Due by |
+|:--|:--|:--:|:--|:--:|
+| [Quiz 1]{#quiz-1} | Simple Linear Regression | HW 1 | [Practice 1]({{< var books.practice_quizzes >}}/chapters/quiz1-simple-regression.html){target="_blank"} | Session 3 |
+| [Quiz 2]{#quiz-2} | Dummy Variables & the *t*-Test | HW 2 | [Practice 2]({{< var books.practice_quizzes >}}/chapters/quiz2-dummy-variables.html){target="_blank"} | Session 4 |
+| [Quiz 3]{#quiz-3} | Confounding & ANCOVA | HW 3 | [Practice 3]({{< var books.practice_quizzes >}}/chapters/quiz3-confounding-ancova.html){target="_blank"} | Session 5 |
+| [Quiz 4]{#quiz-4} | One-Way ANOVA | HW 4 | [Practice 4]({{< var books.practice_quizzes >}}/chapters/quiz4-one-way-anova.html){target="_blank"} | Session 6 |
+| [Quiz 5]{#quiz-5} | Interactions & Simple Slopes | HW 5 | [Practice 5]({{< var books.practice_quizzes >}}/chapters/quiz5-interactions.html){target="_blank"} | Session 8 |
+| [Quiz 6]{#quiz-6} | Two-Way ANOVA | HW 6 | [Practice 6]({{< var books.practice_quizzes >}}/chapters/quiz6-two-way-anova.html){target="_blank"} | Session 9 |
+| [Quiz 7]{#quiz-7} | Logistic Regression & Odds Ratios | HW 7 | [Practice 7]({{< var books.practice_quizzes >}}/chapters/quiz7-logistic-odds.html){target="_blank"} | Session 12 |
+| [Quiz 8]{#quiz-8} | Multiple Logistic & Simpson's Paradox | HW 8 | [Practice 8]({{< var books.practice_quizzes >}}/chapters/quiz8-multiple-logistic-simpsons.html){target="_blank"} | Session 13 |
 
 ## Format
 
-- Each quiz contains multiple-choice and short-answer questions.
-- Questions focus on **conceptual understanding** rather than computation.
-- Quizzes are **open-book** and **open-notes**.
+- Multiple question formats: multiple choice, multiple answer, true/false, matching, numeric fill-in, and fill-in-the-blank.
+- **Open-book** and **open-notes**.
 - Your **highest score** across all attempts is recorded.
 
 ## Grading
@@ -44,14 +47,14 @@ Quizzes are graded on a mastery scale:
 
 | Score | Criteria |
 |:-----:|:---------|
-| Full credit | 80% or higher on the quiz |
-| Partial credit | 60--79% on the quiz |
-| Minimal credit | Below 60% on the quiz |
-| No credit | Quiz not attempted |
+| Full credit | 80% or higher |
+| Partial credit | 60–79% |
+| Minimal credit | Below 60% |
+| No credit | Not attempted |
 
 ## Tips
 
-- Take each quiz after completing the corresponding lecture and lab material.
-- Use your first attempt as a **self-assessment** to identify areas for review.
-- Review the [Lecture Notes]({{< var books.lecture_notes >}}){target="_blank"} and [R Lab Book]({{< var books.r_lab_book >}}){target="_blank"} before retaking a quiz.
-- There is no penalty for multiple attempts --- keep trying until you reach mastery.
+- Take each quiz after completing the matching lecture, lab, and **practice quiz**.
+- Use your first attempt as a **self-assessment** to find areas to review.
+- Review the [Lecture Notes]({{< var books.lecture_notes >}}){target="_blank"} and [Lab Manual]({{< var books.r_lab_book >}}){target="_blank"} before retaking.
+- No penalty for multiple attempts — keep going until you reach mastery.

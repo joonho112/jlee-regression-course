@@ -1,50 +1,36 @@
 ---
-title: "Week 7: Interactions"
-date: "2026-09-28"
+title: "Session 7 · Interactions & Simple Slopes"
 ---
 
 ## Overview
 
-This week introduces interaction effects, which allow the relationship between a predictor and the outcome to depend on the value of another variable. You will learn how to specify and interpret product terms for both continuous-by-categorical and continuous-by-continuous interactions, how to probe significant interactions using simple slopes and the Johnson-Neyman technique, and why centering predictors is critical before forming product terms.
+So far every predictor has had one fixed effect. This session relaxes that assumption with interaction terms, which let the slope of one predictor *depend on* the value of another --- the regression expression of moderation. By adding a product of two predictors and reading off simple slopes, we gain a flexible vocabulary for effects that change across conditions, a key generalization in the course's "specific → general" arc.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Construct and interpret product terms that represent interaction effects in a regression model
-- Compute and interpret simple slopes at meaningful values of the moderator
-- Apply the Johnson-Neyman technique to identify the region of significance for an interaction
-- Distinguish between continuous-by-categorical and continuous-by-continuous interactions
-- Create interaction plots that clearly communicate conditional relationships
+- Add a product of two predictors to a regression to model an interaction.
+- Interpret an interaction coefficient as the change in one predictor's slope per unit of the other.
+- Compute and report simple slopes at meaningful values of a moderator.
+- Distinguish a main (conditional) effect from an interaction effect.
+- Explain how moderation is represented by the product of two predictors.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 5: Interactions]({{< var books.lecture_notes >}}/chapters/05-interactions.html){target="_blank"}
+- {{< fa book-open-reader >}} **Read:** [Chapter 5: Interactions](/notes/chapters/05-interactions.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 6: Interactions](/labs/labs/lab06-interactions.html){target="_blank"}
+- {{< fa clipboard-list >}} **Project:** [Project 1 — Proposal due](/assignment/project-1-proposal.html)
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 06: Interactions]({{< var books.r_lab_book >}}/labs/lab06-interactions.html){target="_blank"}
-
-## Homework
-
-- {{< fa pen-ruler >}} [Homework 05](/assignment/hw05.qmd) — Due this week
-- {{< fa pen-ruler >}} [Homework 06](/assignment/hw06.qmd) — Due this week
-
-## Project
-
-- {{< fa diagram-project >}} [Project 1 Proposal](/assignment/project-1-proposal.qmd) — Due this week
-
-## Quiz
-
-- {{< fa circle-question >}} **Quiz 3** — Covers Weeks 5--7 material
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Interaction** | An effect in which the relationship between a predictor and the outcome varies across levels of another variable |
-| **Product term** | The multiplicative combination of two predictors added to a model to estimate their interaction |
-| **Simple slope** | The estimated effect of a focal predictor at a specific value of the moderator |
-| **Johnson-Neyman technique** | A method that identifies the range of moderator values for which the focal predictor effect is statistically significant |
-| **Moderation** | The conceptual framework in which one variable changes the strength or direction of another variable's effect |
-| **Probing interactions** | Follow-up analyses, such as simple slopes or regions of significance, that clarify the nature of a detected interaction |
+| **Interaction** | An effect in which one predictor's slope depends on the value of another predictor. |
+| **Product term** | The predictor formed by multiplying two predictors to capture their interaction. |
+| **Moderation** | The phenomenon, encoded by an interaction, of one variable altering another's effect. |
+| **Moderator** | The predictor whose value changes the slope of the focal predictor. |
+| **Simple slope** | The effect of the focal predictor evaluated at a specific value of the moderator. |
+| **Conditional (main) effect** | A predictor's slope when the other predictor in the product is zero. |
+| **Centering** | Rescaling predictors around their means so conditional effects are interpretable. |
+| **Interaction plot** | A graph of fitted lines that displays how a slope shifts across moderator values. |

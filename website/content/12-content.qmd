@@ -1,49 +1,38 @@
 ---
-title: "Week 12: Logistic Diagnostics"
-date: "2026-11-02"
+title: "Session 12 · Multiple Logistic Regression"
 ---
 
 ## Overview
 
-This week covers diagnostic and evaluation tools specific to logistic regression. Because there is no single R-squared equivalent for logistic models, you will learn several alternative measures of model performance: pseudo-R-squared statistics, the Hosmer-Lemeshow goodness-of-fit test, classification tables, sensitivity and specificity, and the ROC curve. You will also learn to use binned residual plots --- the logistic analogue of standard residual plots --- to assess model adequacy.
+Having modeled a binary outcome with one predictor, we now bring in several at once. Multiple logistic regression lets each predictor's effect be estimated while holding the others fixed, yielding adjusted odds ratios that separate genuine associations from confounded ones. We close by turning the fitted model outward --- computing predicted probabilities for profiles of interest --- mirroring the move from simple to multiple regression we made in the linear half of the course.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Compute and interpret deviance and pseudo-R-squared measures for logistic models
-- Apply the Hosmer-Lemeshow test to assess goodness of fit
-- Construct and interpret a classification table using a chosen probability threshold
-- Define and calculate sensitivity, specificity, and overall accuracy
-- Construct and interpret an ROC curve and compute the area under the curve (AUC)
-- Create and interpret binned residual plots for logistic regression
+- Fit a logistic regression with multiple predictors in R.
+- Interpret a coefficient as an adjusted log-odds effect, holding the other predictors constant.
+- Report and interpret adjusted odds ratios across several predictors.
+- Compute predicted probabilities for specified combinations of predictor values.
+- Compare nested logistic models to judge whether added predictors improve fit.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 11: Logistic Regression Diagnostics]({{< var books.lecture_notes >}}/chapters/11-logistic-diagnostics.html){target="_blank"}
+- {{< fa book-open-reader >}} **Read:** [Chapter 10: Multiple Logistic Regression](/notes/chapters/10-multiple-logistic-regression.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 10: Multiple Logistic Regression](/labs/labs/lab10-logistic-extended.html){target="_blank"}
+- {{< fa pencil >}} **Homework due:** [Homework 7: Logistic Interpretation](/assignment/hw07.html)
+- {{< fa circle-question >}} **Practice:** [Practice Quiz 7](/practice/chapters/quiz7-logistic-odds.html){target="_blank"}
+- {{< fa circle-check >}} **Graded quiz:** [Module Quiz 7](/assignment/quizzes.html#quiz-7)
+- {{< fa clipboard-list >}} **Project:** [Project 2 — Proposal due](/assignment/project-2-proposal.html)
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 11: Logistic Diagnostics and Classification]({{< var books.r_lab_book >}}/labs/lab11-logistic-diagnostics.html){target="_blank"}
-
-## Project
-
-- {{< fa file-circle-check >}} [Project 1 Final](/assignment/project-1-final.qmd) — Due this week
-- {{< fa diagram-project >}} [Project 2 Proposal](/assignment/project-2-proposal.qmd) — Due this week
-
-## Quiz
-
-- {{< fa circle-question >}} **Quiz 6** — Covers Weeks 10--12 material
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Deviance** | A measure of model fit for logistic regression analogous to the residual sum of squares in linear regression |
-| **Pseudo-R-squared** | An approximation of explained variance for logistic models, such as McFadden's or Nagelkerke's R-squared |
-| **Hosmer-Lemeshow test** | A goodness-of-fit test that groups observations by predicted probability and compares observed to expected frequencies |
-| **Sensitivity** | The proportion of actual positive cases correctly classified by the model (true positive rate) |
-| **Specificity** | The proportion of actual negative cases correctly classified by the model (true negative rate) |
-| **ROC curve** | A plot of sensitivity versus one minus specificity across all possible classification thresholds |
-| **AUC** | Area under the ROC curve; a single-number summary of discriminative ability ranging from 0.5 (chance) to 1.0 (perfect) |
-| **Binned residual plot** | A diagnostic plot that groups observations into bins by predicted probability and plots average residuals per bin |
+| **Multiple logistic regression** | A logistic model relating a binary outcome to two or more predictors. |
+| **Adjusted odds ratio** | The odds ratio for one predictor with the other predictors held constant. |
+| **Holding constant** | Isolating one predictor's effect by fixing the values of the others. |
+| **Confounding** | Distortion of an association by a third variable, which adjustment can help address. |
+| **Predicted probability** | The model-implied chance of the event for a given profile of predictor values. |
+| **Nested models** | A pair of logistic models in which one is a special case of the other, enabling a likelihood-based comparison. |
+| **Linear predictor** | The weighted sum of predictors on the log-odds scale that drives the fitted probability. |

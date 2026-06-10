@@ -1,15 +1,15 @@
 ---
-title: "HW 05: Interactions"
+title: "Homework 5: Interactions"
 ---
 
 | | |
 |---|---|
 | **Type** | Conceptual |
-| **Due** | Week 7 |
+| **Due** | Session 8 |
 | **Weight** | Part of Homework (50% of final grade) |
 | **Grading** | Completion-based |
-| **Related Reading** | [Ch 05: Interactions]({{< var books.lecture_notes >}}/chapters/05-interactions.html){target="_blank"} |
-| **Related Lab** | [Lab 05: Multiple Regression]({{< var books.r_lab_book >}}/labs/lab05-multiple-regression.html){target="_blank"} |
+| **Related Reading** | [Chapter 5: Interactions]({{< var books.lecture_notes >}}/chapters/05-interactions.html){target="_blank"} |
+| **Related Lab** | [Lab 6: Interactions]({{< var books.r_lab_book >}}/labs/lab06-interactions.html){target="_blank"} |
 
 ::: {.callout-note}
 ## Grading Policy

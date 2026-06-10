@@ -1,51 +1,38 @@
 ---
-title: "Week 9: Model Building & Diagnostics"
-date: "2026-10-12"
+title: "Session 9 · Nonlinear Relationships"
 ---
 
 ## Overview
 
-This week combines two essential topics in applied regression: model building strategies and regression diagnostics. You will learn how to approach variable selection using both confirmatory and exploratory strategies, understand information criteria for model comparison, and then apply a suite of diagnostic tools to evaluate model assumptions. Residual plots, Q-Q plots, and influence measures such as Cook's distance and DFBETAS will help you identify problematic observations and assess whether your model provides a reliable description of the data.
+Real relationships rarely follow a straight line, yet our model is called *linear*. This session resolves the apparent tension: by adding polynomial and transformed terms, we capture curvature while the model stays linear in its coefficients. It is a striking extension of the "specific → general" arc --- the same estimation machinery now bends to fit U-shapes, diminishing returns, and other curves, without abandoning the regression framework we have built.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Distinguish between confirmatory and exploratory approaches to model building
-- Apply forward selection, backward elimination, and stepwise procedures for variable selection
-- Use AIC and BIC to compare competing models and justify model choice
-- Construct and interpret residual plots and Q-Q plots to assess model assumptions
-- Calculate and interpret Cook's distance, DFBETAS, and leverage values to identify influential observations
-- Evaluate the practical impact of influential observations on regression conclusions
+- Diagnose when a straight-line fit fails to capture curvature in the data.
+- Add polynomial terms (e.g., a squared predictor) to model a nonlinear relationship.
+- Apply variable transformations, such as logs, to linearize a relationship.
+- Distinguish "linear in the parameters" from "linear in the predictors."
+- Interpret coefficients and fitted curves from a model with nonlinear terms.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 7: Model Building]({{< var books.lecture_notes >}}/chapters/07-model-building.html){target="_blank"}
-- {{< fa book-open >}} **Required**: [Chapter 8: Model Diagnostics]({{< var books.lecture_notes >}}/chapters/08-model-diagnostics.html){target="_blank"}
+- {{< fa book-open-reader >}} **Read:** [Chapter 6: Nonlinear Relationships](/notes/chapters/06-nonlinear-relationships.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 7: Nonlinear Relationships](/labs/labs/lab07-model-building.html){target="_blank"}
+- {{< fa pencil >}} **Homework due:** [Homework 6: Two-Way ANOVA](/assignment/hw06.html)
+- {{< fa circle-question >}} **Practice:** [Practice Quiz 6](/practice/chapters/quiz6-two-way-anova.html){target="_blank"}
+- {{< fa circle-check >}} **Graded quiz:** [Module Quiz 6](/assignment/quizzes.html#quiz-6)
+- {{< fa clipboard-list >}} **Project:** [Project 1 — Draft due](/assignment/project-1-draft.html)
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 08: Model Building and Diagnostics]({{< var books.r_lab_book >}}/labs/lab08-diagnostics.html){target="_blank"}
-
-## Project
-
-- {{< fa file-circle-check >}} [Project 1 Draft](/assignment/project-1-draft.qmd) — Due this week
-
-## Quiz
-
-- {{< fa circle-question >}} **Quiz 4** — Covers Weeks 7--9 material
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Forward selection** | A stepwise procedure that begins with no predictors and adds them one at a time based on statistical criteria |
-| **Backward elimination** | A stepwise procedure that begins with all candidate predictors and removes them one at a time |
-| **AIC** | Akaike Information Criterion; balances model fit and complexity, favoring parsimony |
-| **BIC** | Bayesian Information Criterion; similar to AIC but applies a stronger penalty for additional parameters |
-| **Residual plot** | A scatterplot of residuals against fitted values used to check linearity and constant variance assumptions |
-| **Q-Q plot** | A quantile-quantile plot comparing residual quantiles to theoretical normal quantiles to assess normality |
-| **Cook's distance** | A summary measure of how much all fitted values change when a single observation is deleted |
-| **DFBETAS** | A measure of how much each regression coefficient changes when a single observation is removed |
-| **Leverage** | A measure of how far an observation's predictor values are from the mean of all predictor values |
-| **Influential observation** | An observation whose removal substantially changes the fitted model or its conclusions |
+| **Nonlinear relationship** | An association between predictor and outcome that curves rather than following a straight line. |
+| **Polynomial term** | A power of a predictor, such as a squared term, added to a model to capture curvature. |
+| **Linear in the parameters** | The property that the model is a linear combination of its coefficients, even when the predictors are transformed. |
+| **Variable transformation** | A function, such as a log or square root, applied to a variable to linearize a relationship. |
+| **Log transformation** | Taking the logarithm of a variable, often used to model multiplicative or diminishing-returns effects. |
+| **Curvature** | The bending in a fitted relationship that a straight line cannot represent. |
+| **Fitted curve** | The estimated nonlinear function relating the predictor to the expected outcome. |

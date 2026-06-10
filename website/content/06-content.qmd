@@ -1,38 +1,38 @@
 ---
-title: "Week 6: Multiple Regression (Continuous Predictors)"
-date: "2026-09-21"
+title: "Session 6 · Continuous Predictors"
 ---
 
 ## Overview
 
-This week extends regression to models with two or more continuous predictors. You will learn how partial regression coefficients isolate the unique contribution of each predictor after controlling for the others, why centering predictors aids interpretation, and how to detect multicollinearity. These skills are essential for building and interpreting models that reflect the multivariate reality of most research questions.
+Having handled categorical predictors, we now let regression take in several *continuous* predictors at once. The payoff is statistical control: each partial slope reports the effect of one predictor while the others are held fixed, which is precisely the tool we need to reason about confounding. This is the heart of the course's "specific → general" arc, where a single-predictor line grows into a genuinely multivariable model.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Interpret partial regression coefficients as the effect of one predictor holding others constant
-- Explain how confounding variables can bias estimates and why statistical control matters
-- Apply centering and standardization to improve coefficient interpretability
-- Diagnose multicollinearity using tolerance and the variance inflation factor (VIF)
-- Compare unstandardized and standardized coefficients to assess relative predictor importance
+- Fit a multiple regression with two or more continuous predictors.
+- Interpret a partial slope as the effect of one predictor holding the others constant.
+- Explain how statistical control adjusts an estimate for confounding variables.
+- Contrast a predictor's marginal (simple) effect with its partial (adjusted) effect.
+- Describe how correlated predictors complicate the interpretation of partial slopes.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 4: Continuous Predictors]({{< var books.lecture_notes >}}/chapters/04-continuous-predictors.html){target="_blank"}
+- {{< fa book-open-reader >}} **Read:** [Chapter 4: Continuous Predictors](/notes/chapters/04-continuous-predictors.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 5: Multiple Regression](/labs/labs/lab05-multiple-regression.html){target="_blank"}
+- {{< fa pencil >}} **Homework due:** [Homework 4: One-Way ANOVA](/assignment/hw04.html)
+- {{< fa circle-question >}} **Practice:** [Practice Quiz 4](/practice/chapters/quiz4-one-way-anova.html){target="_blank"}
+- {{< fa circle-check >}} **Graded quiz:** [Module Quiz 4](/assignment/quizzes.html#quiz-4)
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 05: Multiple Regression]({{< var books.r_lab_book >}}/labs/lab05-multiple-regression.html){target="_blank"}
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Multiple regression** | A regression model with two or more predictors used to explain variation in an outcome |
-| **Partial regression coefficient** | The expected change in Y for a one-unit increase in a predictor, holding all other predictors constant |
-| **Confounding** | A situation where an omitted variable is related to both a predictor and the outcome, biasing the estimated effect |
-| **Centering** | Subtracting the mean from a predictor so that zero represents the sample average |
-| **Standardized coefficients** | Regression weights expressed in standard-deviation units, enabling comparison across predictors |
-| **Multicollinearity** | A condition where predictors are highly correlated, inflating the variance of coefficient estimates |
-| **VIF** | The variance inflation factor, a diagnostic that quantifies how much multicollinearity increases the standard error of a coefficient |
+| **Multiple regression** | A regression model with two or more predictors of a single outcome. |
+| **Partial slope** | The change in the outcome per one-unit change in a predictor, holding the others fixed. |
+| **Statistical control** | Adjusting a predictor's estimated effect for the other predictors in the model. |
+| **Confounding** | Distortion of a predictor's effect by a variable related to both it and the outcome. |
+| **Marginal effect** | A predictor's effect ignoring the other predictors, as in a simple regression. |
+| **Adjusted effect** | A predictor's effect after accounting for the other predictors in the model. |
+| **Held constant** | The condition under which a partial slope is interpreted, with other predictors fixed. |
+| **Correlated predictors** | Predictors that share variance, making their partial slopes harder to separate. |

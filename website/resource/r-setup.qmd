@@ -74,7 +74,7 @@ The table below lists the key R packages used throughout this course.
 | Package | Purpose | Used In |
 |---------|---------|---------|
 | `tidyverse` | Data wrangling and visualization (includes `ggplot2`, `dplyr`, `tidyr`, etc.) | All chapters |
-| `regdatasets` | Course-specific datasets (24 curated educational datasets) | All chapters |
+| `regdatasets` | Course-specific datasets ({{< var materials.datasets >}} curated educational datasets) | All chapters |
 | `car` | Companion to Applied Regression --- diagnostic tests, Type II/III SS | Chapters 5--9 |
 | `broom` | Tidy model output (`tidy()`, `glance()`, `augment()`) | All chapters |
 | `ggplot2` | Publication-quality graphics (included in `tidyverse`) | All chapters |

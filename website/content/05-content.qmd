@@ -1,47 +1,38 @@
 ---
-title: "Week 5: One-Way ANOVA"
-date: "2026-09-14"
+title: "Session 5 · One-Way ANOVA"
 ---
 
 ## Overview
 
-This week bridges the gap between regression with dummy variables and the classical analysis of variance (ANOVA) framework. You will learn how the F-test partitions total variance into between-group and within-group components, how to test omnibus hypotheses about group mean differences, and how planned contrasts and post-hoc corrections let you ask targeted follow-up questions. Understanding ANOVA as a special case of regression deepens your ability to analyze categorical predictors.
+Once a single 0/1 dummy can compare two groups, what about three or more? In this session we represent a categorical predictor with a *set* of dummies and find that the resulting regression is exactly one-way ANOVA --- the classic test for comparing several group means. The omnibus *F* test asks whether the groups differ at all, and multiple comparisons then locate *where* those differences lie, carrying the course's "specific → general" arc one step further.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Decompose total variance into between-group and within-group sums of squares
-- Construct and interpret the F-statistic for testing omnibus group differences
-- Apply planned contrasts and effect coding to test specific hypotheses about group means
-- Implement Bonferroni and other multiple-comparison corrections to control familywise error
-- Explain the equivalence between one-way ANOVA and regression with categorical predictors
+- Encode a categorical predictor with three or more levels as a set of dummy variables.
+- Interpret each dummy coefficient as a contrast against the reference group.
+- Conduct and interpret the omnibus *F* test for equality of group means.
+- Explain why one-way ANOVA is a special case of multiple regression.
+- Apply a multiple-comparison procedure and explain why it controls the family-wise error rate.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 3: One-Way ANOVA]({{< var books.lecture_notes >}}/chapters/03-one-way-anova.html){target="_blank"}
+- {{< fa book-open-reader >}} **Read:** [Chapter 3: One-Way ANOVA](/notes/chapters/03-one-way-anova.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 4: One-Way ANOVA](/labs/labs/lab04-categorical-contrasts.html){target="_blank"}
+- {{< fa pencil >}} **Homework due:** [Homework 3: Confounding & Multiple Regression](/assignment/hw03.html)
+- {{< fa circle-question >}} **Practice:** [Practice Quiz 3](/practice/chapters/quiz3-confounding-ancova.html){target="_blank"}
+- {{< fa circle-check >}} **Graded quiz:** [Module Quiz 3](/assignment/quizzes.html#quiz-3)
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 04: Categorical Predictors and Contrasts]({{< var books.r_lab_book >}}/labs/lab04-categorical-contrasts.html){target="_blank"}
-
-## Homework
-
-- {{< fa pen-ruler >}} [Homework 03](/assignment/hw03.qmd) — Due this week
-- {{< fa pen-ruler >}} [Homework 04](/assignment/hw04.qmd) — Due this week
-
-## Quiz
-
-- {{< fa circle-question >}} **Quiz 2** — Covers Weeks 3--5 material
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **One-way ANOVA** | A method for testing whether the means of three or more groups differ significantly |
-| **F-statistic** | The ratio of between-group variance to within-group variance used to test the omnibus null hypothesis |
-| **Between-group variance** | Variability in the outcome attributable to differences among group means |
-| **Within-group variance** | Variability in the outcome attributable to individual differences within groups |
-| **Planned contrasts** | Focused comparisons among group means specified before examining the data |
-| **Bonferroni correction** | An adjustment that divides the significance level by the number of comparisons to control familywise error |
-| **Effect coding** | A coding scheme where group membership is coded so that the intercept represents the grand mean |
+| **One-way ANOVA** | A method for comparing the means of three or more groups defined by a single categorical factor. |
+| **Set of dummies** | The collection of 0/1 indicators that together encode a *k*-level factor using *k* − 1 columns. |
+| **Omnibus *F* test** | A single test of the null hypothesis that all group means are equal. |
+| **Between-group variance** | Variation in the outcome explained by differences among the group means. |
+| **Within-group variance** | Residual variation in the outcome left unexplained within each group. |
+| **Multiple comparisons** | Follow-up tests that identify which specific pairs of group means differ. |
+| **Family-wise error rate** | The probability of at least one false positive across a family of comparisons. |
+| **ANOVA–regression equivalence** | The fact that one-way ANOVA is a regression on a set of dummy predictors. |

@@ -181,133 +181,8 @@ div.sidebar-item-container .active {
   box-shadow: inset 3px 0 0 $warning;   // gold "you are here" bar (no layout shift)
 }
 
-// ============================================
-// Homepage - Hero band
-// ============================================
-// Contained full-width band (NOT 100vw) on purpose: a viewport-width hero
-// risks a horizontal scrollbar and, via the usual body{overflow-x:hidden}
-// workaround, would break position:sticky TOCs on the content pages. With
-// page-layout:full the content column already spans most of the viewport.
-
-.hero {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  margin: -1.5rem 0 2.5rem;                 // tuck flush under the navbar accent border
-  background: linear-gradient(135deg, $ink 0%, $navy 100%);
-  color: $paper;
-  border-bottom: 3px solid $gold;
-  border-radius: 0 0 0.5rem 0.5rem;
-  overflow: hidden;                         // keep the gradient inside the rounded corners
-}
-
-.hero-inner {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: clamp(2.75rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 3rem);
-  text-align: left;
-}
-
-.hero-eyebrow {
-  display: inline-block;
-  font-family: $headings-font-family;       // Libre Franklin
-  font-weight: 600;
-  font-size: 0.85rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: $gold;                             // large/UI use of gold -> AA-safe
-  margin-bottom: 1rem;
-}
-
-.hero-title {
-  color: $paper;                            // override global h1 { color: $primary }
-  font-family: $headings-font-family;
-  font-weight: 700;
-  font-size: clamp(2.2rem, 5.2vw, 3.4rem);
-  line-height: 1.13;
-  letter-spacing: -0.01em;
-  border-bottom: none;                      // cancel any inherited heading rule
-  margin: 0 0 0.5rem;
-  overflow-wrap: break-word;                // never let a long word overflow the band
-}
-
-.hero-subtitle {
-  display: block;
-  font-family: $headings-font-family;
-  font-weight: 500;
-  font-size: 1.25rem;
-  color: rgba($paper, 0.85);
-  margin-bottom: 1.25rem;
-}
-
-.hero-lead {
-  display: block;
-  max-width: 60ch;
-  font-size: 1.2rem;
-  font-weight: 400;
-  line-height: 1.6;
-  color: rgba($paper, 0.92);
-  margin-bottom: 1.75rem;
-}
-
-.hero-cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem;
-  align-items: center;
-  margin-bottom: 1.5rem;
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-}
-
-// Dark-band CTA buttons (kept separate from light-page .btn-primary/.btn-secondary)
-.btn-hero-primary {
-  background-color: $gold;
-  border-color: $gold;
-  color: $ink;                              // ink on gold ~6:1 -> AA normal text
-  font-weight: 700;
-
-  &:hover {
-    background-color: #b18e1f;              // gold darkened ~7%
-    border-color: #b18e1f;
-    color: $ink;
-  }
-}
-
-.btn-hero-secondary {
-  background-color: rgba($paper, 0.12);
-  border: 1px solid rgba($paper, 0.45);
-  color: $paper;
-
-  &:hover {
-    background-color: rgba($paper, 0.22);
-    color: $paper;
-  }
-}
-
-.btn-hero-outline {
-  background-color: transparent;
-  border: 1px solid rgba($paper, 0.55);
-  color: $paper;
-
-  &:hover {
-    background-color: rgba($paper, 0.12);
-    color: $paper;
-  }
-}
-
-.hero-meta {
-  display: block;
-  font-size: 0.8rem;
-  letter-spacing: 0.04em;
-  color: rgba($paper, 0.70);                // ~6:1 on navy -> AA
-}
+// (Overhaul cleanup: the old dark `.hero` band + `.btn-hero-*` were removed.
+//  The homepage now uses the light `.hero-light` block defined later in this file.)
 
 // ============================================
 // Homepage - Course Details Grid
@@ -373,33 +248,11 @@ div.sidebar-item-container .active {
   }
 }
 
-// ============================================
-// Homepage - Learning Arc / roadmap panel
-// ============================================
-
-.learning-arc-panel {
-  margin: 1.5rem auto 2rem;
-  padding: 1.5rem 1.25rem;
-  max-width: 480px;   // hug the narrow top-down diagram (was 720 -> empty gutters)
-  background-color: #fff;
-  border: 1px solid $gray-200;
-  border-top: 3px solid $accent;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  text-align: center;
-
-  // centre the rendered mermaid diagram and keep it responsive
-  svg,
-  .mermaid {
-    display: block;
-    margin: 0 auto;
-    max-width: 100%;
-    height: auto;
-  }
-}
+// (Overhaul cleanup: the old mermaid `.learning-arc-panel` was removed — the
+//  homepage now uses the `.arc-figure` infographic block defined later.)
 
 // ============================================
-// Content date banner (title-metadata.html partial)
+// Content date banner (title-metadata.html partial) — dormant (no dated pages)
 // ============================================
 
 .date-banner {
@@ -646,14 +499,10 @@ body.nav-sidebar main.content {
 }
 
 @media (max-width: 760px) {
-  .schedule-scroll {
-    display: none;
-  }
-
-  .schedule-cards {
-    display: block;
-    margin: 1rem 0 2rem;
-  }
+  // The static R schedule table now scrolls horizontally on small screens
+  // (the old Observable-JS card view was removed in the overhaul).
+  .schedule-table { font-size: 0.85rem; }
+  .schedule-table td:nth-child(2) { min-width: 9em; word-break: normal; overflow-wrap: normal; }
 }
 
 .table thead {
@@ -908,3 +757,270 @@ blockquote {
     }
   }
 }
+
+// ============================================================
+// Course Website Overhaul — shared additions (2026-06)
+// The Cividis Ink system already covers most Heiss motifs (3px
+// accent rules, info-band cards, schedule headers, branded list
+// icons). These fill the remaining gaps for the redesigned
+// homepage / schedule / content pages. Hero + schedule-table
+// restyles live in their own phases.
+// ============================================================
+
+// --- Part-color badges (schedule & content Part grouping) ---
+.badge-part {
+  display: inline-block;
+  font-family: $headings-font-family;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff;
+  padding: 0.1rem 0.5rem;
+  border-radius: 2rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.badge-part-1   { background-color: $navy; }   // Part I   — Foundations
+.badge-part-2   { background-color: $slate; }  // Part II  — Extensions
+.badge-part-3   { background-color: $teal; }   // Part III — Model Evaluation
+.badge-part-4   { background-color: $rust; }   // Part IV  — Categorical Outcomes
+.badge-welcome  { background-color: $gray-600; }
+.badge-synthesis{ background-color: $plum; }
+
+// --- Font Awesome hanging-bullet lists (à la Heiss) ---
+// Pandoc can't class a <ul>, so wrap a list in  ::: {.fa-list}  and
+// prefix each item with  [{{< fa book >}}]{.fa-li}  for a hanging icon.
+.fa-list ul {
+  list-style: none;
+  margin-left: 1.6em;
+  padding-left: 0;
+}
+.fa-list ul > li {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+.fa-list ul > li > .fa-li {
+  position: absolute;
+  left: -1.6em;
+  width: 1.4em;
+  text-align: center;
+  color: $slate;
+}
+.fa-list ul ul { margin-left: 1.2em; }   // tame nested fa-lists if any
+
+// --- Homepage Learning Arc — native infographic (SVG arc band + Part panels) ---
+.learning-arc {
+  margin: 1.75rem 0 2rem;
+
+  .learning-arc-band {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 190px;
+    margin-bottom: 0.1rem;
+  }
+
+  .learning-arc-parts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .lap {
+    flex: 1 1 200px;
+    min-width: 170px;
+    background: #fff;
+    border: 1px solid $gray-200;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  .lap-head {
+    color: #fff;
+    font-family: $headings-font-family;
+    font-weight: 700;
+    font-size: 0.92rem;
+    line-height: 1.25;
+    padding: 0.5rem 0.75rem;
+  }
+  .lap-1 .lap-head { background: $navy; }
+  .lap-2 .lap-head { background: $slate; }
+  .lap-3 .lap-head { background: $teal; }
+  .lap-4 .lap-head { background: $rust; }
+
+  .lap ul {
+    list-style: none;
+    margin: 0;
+    padding: 0.55rem 0.8rem 0.7rem;
+  }
+  .lap li {
+    position: relative;
+    font-size: 0.92rem;
+    color: $gray-800;
+    padding: 0.18rem 0 0.18rem 0.95rem;
+    line-height: 1.35;
+  }
+  .lap li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.66em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+  .lap-1 li::before { background: $navy; }
+  .lap-2 li::before { background: $slate; }
+  .lap-3 li::before { background: $teal; }
+  .lap-4 li::before { background: $rust; }
+
+  .learning-arc-cap {
+    text-align: center;
+    font-size: 1rem;
+    color: $gray-700;
+    margin-top: 0.9rem;
+  }
+}
+
+// --- Generic 3px accent rule helper (Heiss motif), for ad-hoc use ---
+.accent-rule {
+  border-bottom: 3px solid $accent;
+  padding-bottom: 0.35rem;
+}
+
+// --- Light homepage hero (replaces the old dark .hero band) ---
+.hero-light {
+  max-width: 1080px;
+  margin: 1rem auto 0.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 3px solid $gray-200;   // Heiss 3px accent rule under the hero
+
+  .hero-eyebrow {
+    display: inline-block;
+    font-family: $headings-font-family;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $gold;
+    margin-bottom: 0.4rem;
+  }
+  .hero-title {
+    font-size: clamp(2rem, 4.2vw, 3.1rem);
+    line-height: 1.12;
+    color: $navy;
+    margin: 0.1rem 0 0.3rem;
+    border-bottom: none;   // override any default h1 underline
+    padding-bottom: 0;
+  }
+  .hero-subtitle {
+    display: block;
+    font-size: clamp(1.2rem, 2vw, 1.5rem);
+    color: $slate;
+    font-weight: 500;
+    margin-bottom: 0.8rem;
+  }
+  .hero-lead {
+    display: block;
+    font-size: 1.12rem;
+    max-width: 64ch;
+    color: $gray-700;
+    line-height: 1.5;
+    margin-bottom: 1.2rem;
+  }
+  .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+    .btn { font-weight: 600; }
+  }
+  .hero-meta {
+    display: block;
+    font-size: 0.92rem;
+    color: $gray-600;
+    i { color: $slate; margin-right: 0.2rem; }
+  }
+}
+
+// (.arc-parts text strip removed — replaced by the native .learning-arc graphic.)
+
+// --- Native assessment-breakdown donut (exact, accessible; Step 4.2) ---
+.assessment-donut {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.75rem;
+  margin: 1.25rem 0 1.75rem;
+
+  svg.donut {
+    width: 170px;
+    height: 170px;
+    flex-shrink: 0;
+  }
+  .donut-hole-num { font-weight: 700; fill: $navy; }
+  .donut-hole-lbl { font-weight: 600; fill: $gray-500; }
+
+  .donut-legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 1rem;
+
+    li { margin-bottom: 0.5rem; line-height: 1.4; }
+    .sw {
+      display: inline-block;
+      width: 0.9em;
+      height: 0.9em;
+      border-radius: 3px;
+      vertical-align: -0.08em;
+      margin-right: 0.5em;
+    }
+  }
+}
+
+// --- Static schedule table (R / kableExtra, Step 5.1) ---------------------
+.schedule-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.schedule-table {
+  width: 100%;
+  min-width: 680px;          // prevents the overflow-wrapper collapse on mobile; wrapper scrolls instead
+  font-size: 0.95rem;
+  margin: 0.5rem 0 1rem;
+
+  th, td { vertical-align: middle; padding: 0.5rem 0.4rem; text-align: center; }
+  thead th { background: $ink; color: #fff; border: none; }
+  thead th:nth-child(2) { text-align: left; }   // "Topic" header
+  thead th i { margin-right: 0.15rem; }
+
+  // material deep-link icons
+  td a i { color: $slate; font-size: 1.1rem; }
+  td a { text-decoration: none; }
+  td a:hover i { color: $navy; }
+
+  // greyed "none this session" icons
+  .sched-none i { color: $gray-300; font-size: 1.1rem; }
+
+  // session-number cell + topic cell
+  td:first-child { font-weight: 600; color: $gray-600; }
+  td:nth-child(2) { text-align: left; }
+  td:nth-child(2) a { font-weight: 500; color: $slate; text-decoration: none; }
+  td:nth-child(2) a:hover { color: $navy; text-decoration: underline; }
+
+  // pack_rows() Part header row (also styled inline via label_row_css)
+  tbody tr td[colspan] {
+    background: $navy;
+    color: #fff;
+    font-weight: 700;
+    text-align: left;
+    padding: 0.45rem 0.7rem;
+  }
+
+  tbody tr:not(.sched-group):nth-child(even) { background: $gray-50; }
+}
+
+.sched-none-inline { color: $gray-400; }

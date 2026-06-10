@@ -1,37 +1,38 @@
 ---
-title: "Week 8: Nonlinear Relationships"
-date: "2026-10-05"
+title: "Session 8 · Two-Way ANOVA"
 ---
 
 ## Overview
 
-This week moves beyond the straight-line assumption to model curvilinear relationships between predictors and outcomes. You will learn how polynomial terms, logarithmic transformations, and splines allow a regression model to capture nonlinear patterns in data. You will also learn how to compare competing models using information criteria such as AIC and BIC, giving you a principled way to balance fit and parsimony.
+Two-way ANOVA brings together the two threads we have been developing: categorical predictors as sets of dummies, and the interactions from Session 7. Crossing two factors gives two main effects plus their interaction, and the same product-term machinery now tells us whether the effect of one factor depends on the level of the other. It is a clean case study in how the course's "specific → general" arc lets one framework absorb a named technique.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Specify and interpret polynomial regression models with quadratic and higher-order terms
-- Apply and interpret log transformations to linearize skewed relationships
-- Explain how splines provide flexible, piecewise approximations to nonlinear patterns
-- Compare nested models using likelihood-ratio tests and evaluate competing models using AIC and BIC
-- Determine when a nonlinear specification meaningfully improves model fit over a linear baseline
+- Specify a two-way (factorial) ANOVA as a regression on two categorical factors and their interaction.
+- Distinguish the two main effects from the interaction effect.
+- Interpret a factorial interaction as one factor's effect depending on the level of the other.
+- Read a cell-means plot to judge whether an interaction is present.
+- Connect the *F* tests for main effects and interaction to the underlying regression model.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 6: Nonlinear Relationships]({{< var books.lecture_notes >}}/chapters/06-nonlinear-relationships.html){target="_blank"}
+- {{< fa book-open-reader >}} **Read:** [Chapter 5: Interactions](/notes/chapters/05-interactions.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 6: Interactions](/labs/labs/lab06-interactions.html){target="_blank"}
+- {{< fa pencil >}} **Homework due:** [Homework 5: Interactions](/assignment/hw05.html)
+- {{< fa circle-question >}} **Practice:** [Practice Quiz 5](/practice/chapters/quiz5-interactions.html){target="_blank"}
+- {{< fa circle-check >}} **Graded quiz:** [Module Quiz 5](/assignment/quizzes.html#quiz-5)
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 07: Nonlinear Relationships]({{< var books.r_lab_book >}}/labs/lab07-model-building.html){target="_blank"}
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Polynomial regression** | A regression model that includes squared or higher-power terms of a predictor to capture curvature |
-| **Quadratic term** | A squared predictor added to a model to allow the relationship to bend once (U-shape or inverted U) |
-| **Log transformation** | Applying the natural logarithm to a variable to reduce skewness or model proportional change |
-| **Curvilinear** | A pattern in which the relationship between a predictor and the outcome follows a curve rather than a straight line |
-| **Model comparison** | The process of evaluating two or more models to determine which best balances fit and complexity |
-| **AIC/BIC** | Information criteria that penalize model complexity; lower values indicate a better trade-off between fit and parsimony |
+| **Two-way ANOVA** | A factorial analysis comparing means across the levels of two categorical factors. |
+| **Factor** | A categorical predictor whose levels define the groups being compared. |
+| **Factorial design** | A design that crosses every level of one factor with every level of another. |
+| **Main effect** | The average effect of one factor, pooled across the levels of the other. |
+| **Interaction effect** | A pattern in which one factor's effect differs across the levels of the other. |
+| **Cell mean** | The average outcome for one combination of the two factors' levels. |
+| **Cell-means plot** | A graph of cell means used to judge main effects and interaction at a glance. |
+| **Factorial ANOVA as regression** | The representation of a two-way ANOVA as a regression with dummies and their products. |

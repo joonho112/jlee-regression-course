@@ -1,15 +1,15 @@
 ---
-title: "HW 03: Confounding & Multiple Regression"
+title: "Homework 3: Confounding & Multiple Regression"
 ---
 
 | | |
 |---|---|
 | **Type** | Conceptual |
-| **Due** | Week 5 |
+| **Due** | Session 5 |
 | **Weight** | Part of Homework (50% of final grade) |
 | **Grading** | Completion-based |
-| **Related Reading** | [Ch 02: ANCOVA]({{< var books.lecture_notes >}}/chapters/02-ancova.html){target="_blank"}, [Ch 04: Continuous Predictors]({{< var books.lecture_notes >}}/chapters/04-continuous-predictors.html){target="_blank"} |
-| **Related Lab** | [Lab 03: ANOVA & ANCOVA]({{< var books.r_lab_book >}}/labs/lab03-anova-ancova.html){target="_blank"} |
+| **Related Reading** | [Chapter 4: Continuous Predictors]({{< var books.lecture_notes >}}/chapters/04-continuous-predictors.html){target="_blank"} |
+| **Related Lab** | [Lab 5: Multiple Regression]({{< var books.r_lab_book >}}/labs/lab05-multiple-regression.html){target="_blank"} |
 
 ::: {.callout-note}
 ## Grading Policy

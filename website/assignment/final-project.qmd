@@ -18,9 +18,9 @@ In Project 1, you will conduct a **linear regression analysis** with a continuou
 
 | Component | Due | Weight | Description |
 |:----------|:---:|:------:|:------------|
-| [Proposal](project-1-proposal.qmd) | Week 7 | 30% | Research question, dataset, variable definitions |
-| [Draft](project-1-draft.qmd) | Week 9 | 30% | Complete analysis with output and preliminary interpretation |
-| [Final Report](project-1-final.qmd) | Week 12 | 40% | Polished report with all sections |
+| [Proposal](project-1-proposal.qmd) | Session 7 | 30% | Research question, dataset, variable definitions |
+| [Draft](project-1-draft.qmd) | Session 9 | 30% | Complete analysis with output and preliminary interpretation |
+| [Final Report](project-1-final.qmd) | Session 11 | 40% | Polished report with all sections |
 
 ### Grading
 
@@ -41,9 +41,9 @@ In Project 2, you will conduct a **logistic regression analysis** with a binary 
 
 | Component | Due | Weight | Description |
 |:----------|:---:|:------:|:------------|
-| [Proposal](project-2-proposal.qmd) | Week 12 | 20% | Research question, dataset, variable definitions |
-| [Draft](project-2-draft.qmd) | Week 14 | 30% | Complete logistic regression analysis with output, diagnostics, and preliminary interpretation |
-| [Final Report](project-2-final.qmd) | Week 15 | 50% | Polished report with all sections |
+| [Proposal](project-2-proposal.qmd) | Session 12 | 20% | Research question, dataset, variable definitions |
+| [Draft](project-2-draft.qmd) | Session 14 | 30% | Complete logistic regression analysis with output, diagnostics, and preliminary interpretation |
+| [Final Report](project-2-final.qmd) | Session 15 | 50% | Polished report with all sections |
 
 ### Grading
 
@@ -81,5 +81,4 @@ All milestones are submitted through **Blackboard**. Each submission should incl
 
 - {{< fa book >}} Start with the [Project Guide]({{< var books.project_guide >}}){target="_blank"} for detailed instructions and worked examples
 - {{< fa comments >}} Post questions to the Blackboard discussion board
-- {{< fa envelope >}} Email {{< var instructor.name >}} at [{{< var instructor.email >}}](mailto:{{< var instructor.email >}})
-- {{< fa calendar >}} Schedule an [appointment]({{< var instructor.appointment_url >}}) during office hours
+- {{< fa envelope >}} Contact your instructor — see the [Syllabus](/syllabus.qmd) for this term's contact details and office hours

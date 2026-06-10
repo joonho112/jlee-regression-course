@@ -1,130 +1,142 @@
 ---
+title: ""
 toc: false
 sidebar: false
 page-layout: full
 ---
 
-::: {.hero}
-::: {.hero-inner}
+::: {.hero-light}
 
-[BER 640 · Fall 2026]{.hero-eyebrow}
+[{{< var course.number >}} · Graduate Course]{.hero-eyebrow}
 
-# Advanced Statistical Methods in Education {.hero-title}
+# {{< var course.title >}} {.hero-title}
 
-[A Regression Approach with R]{.hero-subtitle}
+[{{< var course.subtitle >}}]{.hero-subtitle}
 
-[A graduate-level, R-driven tour of regression analysis for education researchers — from the simple linear model through ANOVA and logistic regression to the unifying Generalized Linear Model.]{.hero-lead}
+[A graduate-level, R-driven tour of regression analysis for education researchers — from the simple linear model through ANOVA and logistic regression to the unifying **Generalized Linear Model**.]{.hero-lead}
 
 ::: {.hero-cta}
-[{{< fa file-lines >}} Syllabus](syllabus.qmd){.btn .btn-hero-primary role="button"}
-[{{< fa calendar-days >}} Schedule](schedule.qmd){.btn .btn-hero-secondary role="button"}
-[{{< fa book-open >}} Lecture Notes]({{< var books.lecture_notes >}}){.btn .btn-hero-outline target="_blank" role="button"}
+[{{< fa file-lines >}} Syllabus](syllabus.qmd){.btn .btn-primary role="button"}
+[{{< fa calendar-days >}} Schedule](schedule.qmd){.btn .btn-outline-primary role="button"}
+[{{< fa book-open >}} Lecture Notes]({{< var books.lecture_notes >}}){.btn .btn-outline-primary target="_blank" role="button"}
 :::
 
-[Graduate · {{< var course.days >}} · {{< var course.dates >}} · {{< var university.name >}}]{.hero-meta}
-
-:::
 :::
 
 ::: {.grid .course-details}
 
 ::: {.g-col-4}
-### Instructor
-- {{< fa user >}} [{{< var instructor.name >}}]({{< var instructor.url >}})
-- {{< fa envelope >}} [{{< var instructor.email >}}](mailto:{{< var instructor.email >}})
-- {{< fa building >}} {{< var instructor.office >}}
-- {{< fa clock >}} {{< var instructor.office_hours >}}
-:::
-
-::: {.g-col-4}
-### Course Details
-- {{< fa calendar >}} {{< var course.semester >}}
-- {{< fa calendar-days >}} {{< var course.dates >}}
+### Course
+- {{< fa graduation-cap >}} {{< var course.level >}}
+- {{< fa laptop >}} {{< var course.modality >}}
 - {{< fa location-dot >}} {{< var course.location >}}
+- {{< fa building-columns >}} {{< var university.name >}}
 :::
 
 ::: {.g-col-4}
-### Course Materials
-- {{< fa book >}} [Lecture Notes]({{< var books.lecture_notes >}}){target="_blank"}
-- {{< fa laptop-code >}} [R Lab Book]({{< var books.r_lab_book >}}){target="_blank"}
-- {{< fa clipboard-list >}} [Project Guide]({{< var books.project_guide >}}){target="_blank"}
-- {{< fa database >}} [regdatasets Package]({{< var books.regdatasets >}}){target="_blank"}
+### Instructor & development
+- {{< fa chalkboard-user >}} **Instructor:** {{< var instructor.name >}} *(set each term)*
+- {{< fa pen-nib >}} **Developed by** {{< var developer.name >}}
+- {{< fa scale-balanced >}} Open-access · CC BY-NC-SA 4.0
+:::
+
+::: {.g-col-4}
+### Materials
+- {{< fa book-open >}} [Lecture Notes]({{< var books.lecture_notes >}}){target="_blank"}
+- {{< fa laptop-code >}} [Lab Manual]({{< var books.r_lab_book >}}){target="_blank"}
+- {{< fa circle-question >}} [Practice Quizzes]({{< var books.practice_quizzes >}}){target="_blank"}
 :::
 
 :::
+
+```{=html}
+<figure class="learning-arc" role="group" aria-label="The Learning Arc: the course's progression from specific to general, from the t-test to the GLM, across four Parts.">
+  <svg class="learning-arc-band" viewBox="0 0 1000 150" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
+    <!-- the evolving regression line: a straight t-test fit (left) -> an S-curve GLM (right) -->
+    <path d="M 40 100 C 170 97, 255 94, 360 89 C 480 83, 560 78, 660 58 C 765 37, 850 30, 962 27"
+          fill="none" stroke="#1A2A3A" stroke-width="2.6" stroke-linecap="round" opacity="0.82"/>
+    <!-- scatter dots: a cloud on the left, settling onto the curve on the right -->
+    <g fill="#1A2A3A" opacity="0.55">
+      <circle cx="72" cy="106" r="3"/><circle cx="115" cy="95" r="3"/><circle cx="165" cy="103" r="3"/>
+      <circle cx="215" cy="91" r="3"/><circle cx="268" cy="98" r="3"/><circle cx="320" cy="88" r="3"/>
+      <circle cx="430" cy="83" r="3"/><circle cx="520" cy="72" r="3"/><circle cx="610" cy="58" r="3"/>
+      <circle cx="715" cy="42" r="3"/><circle cx="820" cy="33" r="3"/>
+    </g>
+    <!-- stems descending from each Part node toward its card below -->
+    <g stroke-width="2.4" stroke-linecap="round">
+      <line x1="125" y1="96" x2="125" y2="132" stroke="#0B3D66"/>
+      <line x1="375" y1="87" x2="375" y2="132" stroke="#2C6E91"/>
+      <line x1="625" y1="63" x2="625" y2="132" stroke="#3E8E8A"/>
+      <line x1="875" y1="30" x2="875" y2="132" stroke="#A8431E"/>
+    </g>
+    <!-- the four Part nodes sitting on the curve (cool -> warm) -->
+    <circle cx="125" cy="96" r="8.5" fill="#0B3D66" stroke="#FBFAF7" stroke-width="2.5"/>
+    <circle cx="375" cy="87" r="8.5" fill="#2C6E91" stroke="#FBFAF7" stroke-width="2.5"/>
+    <circle cx="625" cy="63" r="8.5" fill="#3E8E8A" stroke="#FBFAF7" stroke-width="2.5"/>
+    <circle cx="875" cy="30" r="8.5" fill="#A8431E" stroke="#FBFAF7" stroke-width="2.5"/>
+    <!-- endpoint tags -->
+    <text x="46" y="143" font-family="'Libre Franklin',sans-serif" font-size="17" font-weight="600" fill="#0B3D66"><tspan font-style="italic">t</tspan>-test</text>
+    <text x="906" y="20" font-family="'Libre Franklin',sans-serif" font-size="19" font-weight="700" fill="#A8431E">GLM</text>
+  </svg>
+
+  <div class="learning-arc-parts">
+    <div class="lap lap-1">
+      <div class="lap-head">Part I · Foundations</div>
+      <ul><li>Simple Regression</li><li>ANCOVA</li></ul>
+    </div>
+    <div class="lap lap-2">
+      <div class="lap-head">Part II · Extensions</div>
+      <ul><li>ANOVA</li><li>Multiple Regression</li><li>Interactions</li><li>Nonlinear</li></ul>
+    </div>
+    <div class="lap lap-3">
+      <div class="lap-head">Part III · Model Evaluation</div>
+      <ul><li>Model Building</li><li>Diagnostics</li></ul>
+    </div>
+    <div class="lap lap-4">
+      <div class="lap-head">Part IV · Categorical Outcomes</div>
+      <ul><li>Logistic Regression</li><li>Ordinal Models</li><li>GLM</li></ul>
+    </div>
+  </div>
+
+  <figcaption class="learning-arc-cap"><strong>From the <em>t</em>-test to the GLM</strong> — <em>specific&nbsp;→&nbsp;general</em></figcaption>
+</figure>
+```
 
 ---
 
-## Course Overview
+## Course overview
 
-This course adopts a **"specific to general"** pedagogical approach, beginning with simple linear regression (a model most students have encountered) and progressively extending to more complex models. By the end of the semester, students will see that familiar tests like the t-test and ANOVA are special cases of the **Generalized Linear Model (GLM)**.
+This course adopts a **"specific to general"** pedagogical approach: it begins with simple linear regression — a model most students have already met — and progressively extends to richer models, until familiar tools like the *t*-test and ANOVA are revealed as special cases of the **Generalized Linear Model (GLM)**. Every example runs on real education data from the `regdatasets` package, using the tidyverse and easystats ecosystems, so the code works out of the box.
 
-### Learning Arc
-
-::: {.learning-arc-panel}
-
-```{mermaid}
-%%| fig-width: 9
-%%| fig-alt: "Course learning arc diagram showing four parts: Part I Foundations (SLR, ANCOVA/ANOVA), Part II Extensions (Multiple Regression, Interactions), Part III Model Quality (Diagnostics), Part IV Beyond Linear (Logistic Regression, GLM/Ordinal). Arrows show the progressive flow from simple to complex models."
-flowchart TD
-    subgraph P1["Part I: Foundations"]
-        A["SLR"] --> B["ANCOVA/ANOVA"]
-    end
-    subgraph P2["Part II: Extensions"]
-        C["Multiple Regression"] --> D["Interactions"]
-    end
-    subgraph P3["Part III: Model Quality"]
-        E["Diagnostics"]
-    end
-    subgraph P4["Part IV: Beyond Linear"]
-        F["Logistic Regression"] --> G["GLM/Ordinal"]
-    end
-
-    B --> C
-    D --> E
-    E --> F
-
-    style A fill:#0B3D66,color:#fff,stroke:#1A2A3A,stroke-width:2px
-    style B fill:#0B3D66,color:#fff,stroke:#1A2A3A,stroke-width:2px
-    style C fill:#2C6E91,color:#fff,stroke:#1A2A3A,stroke-width:2px
-    style D fill:#2C6E91,color:#fff,stroke:#1A2A3A,stroke-width:2px
-    style E fill:#6B3E7A,color:#fff,stroke:#1A2A3A,stroke-width:2px
-    style F fill:#A8431E,color:#fff,stroke:#1A2A3A,stroke-width:2px
-    style G fill:#A8431E,color:#fff,stroke:#1A2A3A,stroke-width:2px
-
-    style P1 fill:#E6EDF3,stroke:#0B3D66,stroke-width:2px,color:#1A2A3A
-    style P2 fill:#E5EEF3,stroke:#2C6E91,stroke-width:2px,color:#1A2A3A
-    style P3 fill:#EFEAF2,stroke:#6B3E7A,stroke-width:2px,color:#1A2A3A
-    style P4 fill:#F6E9E3,stroke:#A8431E,stroke-width:2px,color:#1A2A3A
-```
-
+::: {.callout-note appearance="simple"}
+**How it works.** This is a fully **asynchronous, self-paced** course. Each session you **read** a Lecture Notes chapter, **work through** the matching Lab, **check yourself** with a Practice Quiz, and **submit** homework or a project milestone when due. Assessment is completion-based homework plus mastery-based quizzes and two projects — see the [Syllabus](syllabus.qmd) for grading and the [Schedule](schedule.qmd) for the full outline. **No prior R experience required** — Session 1 starts from setup.
 :::
 
-The course progresses from foundational regression models (Part I) through extensions and diagnostics (Parts II--III) to categorical outcomes and the unifying GLM framework (Part IV).
+### What you will learn
 
-### What You Will Learn
+1. **Specify** linear and generalized linear models with continuous and categorical predictors, interactions, and nonlinear terms.
+2. **Interpret** coefficients, confidence intervals, and test statistics in substantive and statistical terms.
+3. **Diagnose** violations of model assumptions and identify influential observations.
+4. **Build** parsimonious models using confirmatory and exploratory strategies.
+5. **Extend** regression to binary and ordinal outcomes via logistic and ordinal models.
+6. **Implement** analyses in R with reproducible, well-documented code.
+7. **Communicate** statistical findings clearly to diverse audiences.
 
-1. **Specify and interpret** regression models with continuous and categorical predictors
-2. **Diagnose** model assumptions and identify influential observations
-3. **Build** models using both confirmatory and exploratory strategies
-4. **Extend** regression to binary and ordinal outcomes via logistic regression
-5. **Unify** all course models within the Generalized Linear Model (GLM) framework
-6. **Implement** all analyses in R with reproducible code
+## Course materials
 
-### Course Materials
+All materials are open-access and published together as one site:
 
-All course materials are open-access and published on GitHub Pages:
-
-| Material | Description |
-|----------|-------------|
-| [**Lecture Notes**]({{< var books.lecture_notes >}}){target="_blank"} | Primary textbook with theory, math, and R code (13 chapters) |
-| [**R Lab Book**]({{< var books.r_lab_book >}}){target="_blank"} | Hands-on R tutorials for each topic (13 labs) |
-| [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines and examples for the two course projects |
-| [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package with 24 curated datasets |
+| Material | What it is |
+|----------|------------|
+| [**Lecture Notes**]({{< var books.lecture_notes >}}){target="_blank"} | The narrative textbook — theory, math, and runnable R ({{< var materials.chapters >}} chapters) |
+| [**Lab Manual**]({{< var books.r_lab_book >}}){target="_blank"} | Hands-on R tutorials paralleling the notes ({{< var materials.labs >}} labs) |
+| [**Practice Quizzes**]({{< var books.practice_quizzes >}}){target="_blank"} ✨ | Interactive, ungraded self-check with instant feedback ({{< var materials.quizzes >}} quizzes) |
+| [**Project Guide**]({{< var books.project_guide >}}){target="_blank"} | Guidelines + worked examples for the {{< var materials.projects >}} course projects |
+| [**regdatasets**]({{< var books.regdatasets >}}){target="_blank"} | R package bundling {{< var materials.datasets >}} curated education datasets |
 
 ::: {.cta-secondary}
-[New to the course? Start here.]{.cta-secondary-title}
+[New here? Two steps to begin.]{.cta-secondary-title}
 
-[{{< fa download >}} Set up R & RStudio](resource/r-setup.qmd){.btn .btn-primary role="button"}
-[{{< fa play >}} Begin with Week 1](content/01-content.qmd){.btn .btn-outline-primary role="button"}
+[{{< fa play >}} Start Session 1](content/01-content.qmd){.btn .btn-primary role="button"}
+[{{< fa download >}} Set up R & RStudio](resource/r-setup.qmd){.btn .btn-outline-primary role="button"}
 :::

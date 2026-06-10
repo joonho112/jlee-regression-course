@@ -1,46 +1,37 @@
 ---
-title: "Week 3: Simple Linear Regression II"
-date: "2026-08-31"
+title: "Session 3 · Dummies & the *t*-Test"
 ---
 
 ## Overview
 
-This week completes our coverage of simple linear regression by turning from estimation to inference. You will learn how to test whether a regression slope is statistically significant, construct confidence intervals for parameters and predictions, and verify model assumptions. A key insight is the equivalence between the regression t-test and the independent-samples t-test when the predictor is binary.
+What happens when the predictor is a category rather than a number? In this session we plug a single 0/1 dummy variable into the regression we just learned and discover that it encodes a difference between two group means. Remarkably, this regression reproduces the classic two-sample *t*-test exactly --- our first concrete demonstration of the course's "specific → general" arc, in which a familiar test turns out to be a special case of regression.
 
-## Learning Objectives
+## Learning objectives
 
-By the end of this week, you will be able to:
+By the end of this session, you will be able to:
 
-- Conduct and interpret a hypothesis test for the regression slope
-- Construct and interpret confidence intervals for the slope and for predicted values
-- Distinguish between a confidence interval for the mean response and a prediction interval
-- Demonstrate that a two-group t-test is a special case of simple linear regression
-- Check regression assumptions using residual plots and diagnostic statistics
+- Code a categorical variable as a 0/1 dummy predictor.
+- Interpret the dummy coefficient as a difference between two group means.
+- Show that a regression on a single dummy reproduces the two-sample *t*-test.
+- Read the intercept as the mean of the reference group.
+- Connect the *t*-statistic and *p*-value from `lm()` to those from `t.test()`.
 
-## Readings
+## This session's materials
 
-- {{< fa book-open >}} **Required**: [Chapter 1: Simple Linear Regression]({{< var books.lecture_notes >}}/chapters/01-simple-linear-regression.html){target="_blank"} (inference sections)
+- {{< fa book-open-reader >}} **Read:** [Chapter 1: Simple Linear Regression](/notes/chapters/01-simple-linear-regression.html){target="_blank"}
+- {{< fa laptop-code >}} **Lab:** [Lab 2: Simple Linear Regression](/labs/labs/lab02-simple-regression.html){target="_blank"}
+- {{< fa pencil >}} **Homework due:** [Homework 1: Simple Linear Regression](/assignment/hw01.html)
+- {{< fa circle-question >}} **Practice:** [Practice Quiz 1](/practice/chapters/quiz1-simple-regression.html){target="_blank"}
+- {{< fa circle-check >}} **Graded quiz:** [Module Quiz 1](/assignment/quizzes.html#quiz-1)
 
-## R Lab
-
-- {{< fa laptop-code >}} [Lab 02: Simple Regression in R]({{< var books.r_lab_book >}}/labs/lab02-simple-regression.html){target="_blank"} (continued)
-
-## Homework
-
-- {{< fa pencil >}} [HW 01: Simple Regression](/assignment/hw01.qmd)
-- {{< fa pencil >}} [HW 02: Dummy Regression](/assignment/hw02.qmd)
-
-## Quiz
-
-- {{< fa circle-check >}} Quiz 1
-
-## Key Concepts
+## Key concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Hypothesis test** | A formal procedure for deciding whether a population parameter differs from a null value |
-| **p-value** | The probability of observing a test statistic as extreme as the one obtained, assuming the null is true |
-| **Confidence interval** | A range of plausible values for a parameter, based on repeated-sampling logic |
-| **Prediction interval** | A wider interval that accounts for both parameter uncertainty and individual variability |
-| **t-test equivalence** | The result that a two-group t-test is identical to SLR with a binary predictor |
-| **Assumptions** | Conditions (linearity, independence, normality, equal variance) required for valid inference |
+| **Dummy variable** | A 0/1 indicator that encodes membership in a category. |
+| **Reference group** | The category coded 0, against which the other group is compared. |
+| **Group mean difference** | The gap between the two groups' average outcomes, captured by the dummy coefficient. |
+| **Two-sample *t*-test** | A test comparing the means of two independent groups. |
+| **Dummy coefficient** | The estimated difference in means between the coded group and the reference group. |
+| **Regression–*t*-test equivalence** | The fact that a regression on one dummy yields the same inference as the two-sample *t*-test. |
+| **Intercept (with a dummy)** | The mean outcome of the reference group. |
